@@ -4,8 +4,10 @@ from sqlalchemy import create_engine
 import bonobo
 import bonobo_sqlalchemy
 
-sys.path.insert(0,'/Users/rsanderson/Development/getty/pipeline')
-#sys.path.insert(0,'/home/rsanderson/Development/pipeline')
+if os.path.exists('/Users/rsanderson'):
+	sys.path.insert(0,'/Users/rsanderson/Development/getty/pipeline')
+else:
+	sys.path.insert(0,'/home/rsanderson/Development/pipeline')
 
 from extracters.basic import *
 from extracters.crom import *

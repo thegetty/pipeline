@@ -1,7 +1,7 @@
 
 # Error log parser
 
-fh = open('remote_output/log_20190226.txt')
+fh = open('remote_output/log_20190227.txt')
 
 errors = []
 curr = []
@@ -12,9 +12,11 @@ for l in fh.readlines():
 		if curr:
 			errors.append(''.join(curr))
 		curr = []
-
 	elif l.find('return self.wrapped') > -1:
 		curr = []
+	elif l[0] != '\xe2':
+		# Drop stdout rather than stderr
+		continue
 	else:
 		curr.append(l)
 

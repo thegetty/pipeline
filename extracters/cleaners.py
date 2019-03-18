@@ -5,6 +5,20 @@ from datetime import datetime, timedelta
 CIRCA = 5 # years
 CIRCA_D = timedelta(days=365*CIRCA)
 
+share_re = re.compile("([0-9]+)/([0-9]+)")
+
+def share_parse(value):
+	if value is None:
+		return None
+	else:
+		m = share_re.match(value)
+		if m:
+			(t,b) = m.groups()
+			return float(t) / float(b)
+		else:
+			print("Could not parse raw share: %s" % value)
+			return None
+
 
 def date_parse(value, delim):
 	# parse a / or - or . date or range
@@ -167,7 +181,21 @@ def test_date_cleaner():
 
 	print("Tried %s dates" % x)
 
-if __name__ == "__main__":
-	test_date_cleaner()
+def test_share_parser():
+	import sqlite3
+	c = sqlite3.connect('/Users/rsanderson/Development/getty/pipeline/data/raw_gpi.sqlite')
+	res = c.execute("SELECT DISTINCT joint_own_sh_1 FROM raw_knoedler")
+	x = 0
+	for s in res:
+		x += 1
+		# print(share_parse(s[0]))
+	res = c.execute("SELECT DISTINCT joint_own_sh_2 FROM raw_knoedler")
+	for s in res:
+		x += 1
+		# print(share_parse(s[0]))
+	print("Tried %s shares" % x)
 
+if __name__ == "__main__":
+	# test_date_cleaner()
+	test_share_parser()
 

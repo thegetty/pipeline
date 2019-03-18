@@ -305,7 +305,6 @@ def make_la_object(data: dict):
 			#l.label = _row_label(s[2], s[3], s[4])
 			aa.referred_to_by = l
 
-	vi = model.VisualItem()
 	add_vi = False
 	for t in data['tags']:
 		aatv = "aat:%s" % t['aat']
@@ -321,11 +320,9 @@ def make_la_object(data: dict):
 			prod.technique = model.Type(ident=aaturi, label=t['label'])
 		elif t['type'] == 'subject':
 			# XXX NOTE WELL -- Matt put these under subject but they're just classifications
-			vi.classified_as = model.Type(ident=aaturi, label=t['label'])
 			add_vi = True
 		elif t['type'] == 'depicts':
 			# what depicted in VI
-			vi.represents = model.Type(ident=aaturi, label=t['label'])
 			add_vi = True
 		elif t['type'] == 'object_material':
 			# material of object
@@ -337,22 +334,44 @@ def make_la_object(data: dict):
 			what.part = supp
 		elif t['type'] == 'style':
 			# style
-			vi.style = model.Type(ident=aaturi, label=t['label'])
 			add_vi = True
 		else:
 			print("UNKNOWN TAG TYPE: %s" % t['type'])
 
-	# Need to make a separate Visual Work resource if add_vi is true
-	# XXX FIXME
-	#if add_vi:
-	#	what.shows = vi
+	if add_vi:
+		# This will be built in a different fork
+		vi = model.VisualItem(ident="urn:uuid:%s" % data['vizitem_uuid'])		
+		what.shows = vi
 
 	data['_LOD_OBJECT'] = what
 	return data
 
 
+def make_la_vizitem(data: dict):
+	vi = model.VisualItem(ident="urn:uuid:%s" % data['vizitem_uuid'])
+	add_vi = False
+	for t in data['tags']:
+		aaturi = "http://vocab.getty.edu/aat/%s" % t['aat']
+		if t['type'] == 'depicts':
+			# what depicted in VI
+			vi.represents = model.Type(ident=aaturi, label=t['label'])
+			add_vi = True
+		elif t['type'] == 'subject':
+			# XXX NOTE WELL -- Matt put these under subject but they're just classifications
+			vi.classified_as = model.Type(ident=aaturi, label=t['label'])
+			add_vi = True
+		elif t['type'] == 'style':
+			# style
+			vi.style = model.Type(ident=aaturi, label=t['label'])
+			add_vi = True
+
+	if add_vi:
+		data['_LOD_OBJECT'] = vi
+		return data
+	else:
+		return None
+
 def make_la_purchase(data: dict):
-	do_property_interest = False
 
 	what = model.Acquisition(ident="urn:uuid:%s" % data['uuid'])
 	try:
@@ -367,15 +386,20 @@ def make_la_purchase(data: dict):
 
 	for o in data['objects']:
 		what.transferred_title_of = model.ManMadeObject(ident="urn:uuid:%s" % o['uuid'], label=o['label'])
+		if 'phase_info' in o:
+			what.initiated = model.Phase(ident="urn:uuid:%s" % o['phase_info']['uuid'])
 	for b in data['buyers']:
 		# XXX Could [indeed very very likely to] be Group
 		if b['type'] in ["Person", "Actor"]:				
-			what.transferred_title_to = model.Person(ident="urn:uuid:%s" % b['uuid'], label=b['label'])
+			try:
+				what.transferred_title_to = model.Person(ident="urn:uuid:%s" % b['uuid'], label=b['label'])
+			except:
+				print(b)
+				raise
+
 		else:
 			what.transferred_title_to = model.Group(ident="urn:uuid:%s" % b['uuid'], label=b['label'])
-		if b['share'] != 1.0:
-			do_property_interest = True
-			print("NOT HANDLED SHARES FOR %s" % data['uid'])
+
 	for s in data['sellers']:
 		if s['type'] in ['Person', 'Actor']:
 			what.transferred_title_from = model.Person(ident="urn:uuid:%s" % s['uuid'], label=s['label'])
@@ -418,9 +442,53 @@ def make_la_purchase(data: dict):
 	data['_LOD_OBJECT'] = what
 	return data
 
-def make_la_sale(data: dict):
+def make_la_phase(data: dict):
 
-	do_property_interest = False
+	phase = vocab.OwnershipPhase(ident="urn:uuid:%s" % data['uuid'])
+	try:
+		phase.label = "Ownership Phase of %s" % data['object_label']
+	except:
+		phase.label = "Ownership Phase of unknown object"
+
+
+	what = model.ManMadeObject(ident="urn:uuid:%s" % data['object_uuid'], label=data['object_label'])
+	phase.phase_of = what
+	pi = model.PropertyInterest()
+	pi.interest_for = what
+
+	if 'p_year' in data and data['p_year']:
+		ts = model.TimeSpan()
+		ts.begin_of_the_begin = "%s-%s-%sT00:00:00" % (data['p_year'], data['p_month'], data['p_day'])
+		phase.timespan = ts
+		# End comes from sale
+		if 's_type' in data:	
+			stype = data['s_type']
+			if stype != "Sold": 
+				# XXX Not sure what to do with these, see below!
+				print("Non 'sold' transaction (%s) is end of ownership phase for %s" % (pinfo[1], pinfo[0]))
+			else:				
+				ts.end_of_the_end = "%s-%s-%sT00:00:00" % (data['s_year'], data['s_month'], data['s_day'])
+
+	for b in data['buyers']:
+		if b['type'] in ["Person", "Actor"]:				
+			pi.claimed_by = model.Person(ident="urn:uuid:%s" % b['uuid'], label=b['label'])
+		else:
+			pi.claimed_by = model.Group(ident="urn:uuid:%s" % b['uuid'], label=b['label'])
+
+		if b['share'] != 1.0:
+			pip = model.PropertyInterest()
+			pip.claimed_by = pi.claimed_by
+			pip.interest_for = pi.interest_for
+			pi.interest_part = pip
+			d = Dimension()
+			pip.dimension = d
+			d.value = b['share']
+			d.unit = vocab.instances['percent']
+
+	data['_LOD_OBJECT'] = phase
+	return data
+
+def make_la_sale(data: dict):
 
 	if data['type'] != "Sold":
 		print("Matt's notes say not to generate acquisitions for non-Sold, but not what to do instead")
@@ -430,6 +498,9 @@ def make_la_sale(data: dict):
 	what.label = "Sale of %s by %s" % (data['objects'][0]['label'], data['sellers'][0]['label'])
 	for o in data['objects']:
 		what.transferred_title_of = model.ManMadeObject(ident="urn:uuid:%s" % o['uuid'], label=o['label'])
+		if 'phase' in o:
+			what.terminates = model.Phase(ident="urn:uuid:%s" % o['phase'])
+
 	for b in data['sellers']:
 		if b['type'] in ["Person", "Actor"]:				
 			what.transferred_title_to = model.Person(ident="urn:uuid:%s" % b['uuid'], label=b['label'])
@@ -437,7 +508,7 @@ def make_la_sale(data: dict):
 			what.transferred_title_to = model.Group(ident="urn:uuid:%s" % b['uuid'], label=b['label'])
 		if b['share'] != 1.0:
 			do_property_interest = True
-			print("NOT HANDLED SHARES FOR %s" % data['uid'])
+			print("NOT HANDLED SHARES FOR SALE %s" % data['uid'])
 	for s in data['buyers']:
 		if s['type'] in ['Person', 'Actor']:
 			what.transferred_title_from = model.Person(ident="urn:uuid:%s" % s['uuid'], label=s['label'])
@@ -513,6 +584,34 @@ def make_la_inventory(data: dict):
 
 	data['_LOD_OBJECT'] = what
 	return data
+
+def make_la_prev_post(data: dict):
+
+	what = model.Acquisition(ident="urn:uuid:%s" % data['uuid'])
+	what.label = "%s of object by %s" % (data['acq_type'], data['owner_label'])
+
+	if data['owner_type'] in ["Person", "Actor"]:				
+		who = model.Person(ident="urn:uuid:%s" % data['owner_uuid'], label=data['owner_label'])
+	else:
+		who = model.Group(ident="urn:uuid:%s" % data['owner_uuid'], label=data['owner_label'])
+
+	if data['acq_type'] == 'purchase':
+		what.transferred_title_to = who
+	else:
+		what.transferred_title_from = who
+
+	# XXX Should we capture labels
+	obj = model.ManMadeObject(ident="urn:uuid:%s" % data['object_uuid'])
+	what.transferred_title_of = obj
+
+	if 'prev_uuid' in data and data['prev_uuid']:
+		prev = model.Acquisition(ident="urn:uuid:%s" % data['prev_uuid'])
+		what.occurs_after = prev
+
+	data['_LOD_OBJECT'] = what
+	return data
+
+
 
 class Serializer(Configurable):
 	compact = Option(default=True)

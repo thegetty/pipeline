@@ -34,7 +34,8 @@ else:
 	LIMIT     =10000000
 	PACK_SIZE =10000000
 	SRLZ = Serializer(compact=True)
-	WRITER = ArchesWriter()
+	WRITER = FileWriter(directory=output_file_path)
+	# WRITER = ArchesWriter()
 
 
 

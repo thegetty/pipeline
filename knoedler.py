@@ -7,7 +7,7 @@ import bonobo_sqlalchemy
 if os.path.exists('/Users/rsanderson'):
 	sys.path.insert(0,'/Users/rsanderson/Development/getty/pipeline')
 else:
-	sys.path.insert(0,'/home/rsanderson/Development/pipeline')
+	sys.path.insert(0,'/home/rsanderson/Development/provenance/pipeline')
 
 from extracters.basic import *
 from extracters.crom import *

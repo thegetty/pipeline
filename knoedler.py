@@ -25,8 +25,8 @@ def get_services():
 ### Pipeline
 
 if DEBUG:
-	LIMIT     = 50
-	PACK_SIZE = 50
+	LIMIT     = 150
+	PACK_SIZE = 150
 	SRLZ = Serializer(compact=False)
 	WRITER = FileWriter(directory=output_file_path)
 	# WRITER = ArchesWriter()

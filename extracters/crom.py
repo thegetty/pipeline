@@ -396,9 +396,12 @@ def make_la_purchase(data: dict):
 			except:
 				print(b)
 				raise
-
 		else:
-			what.transferred_title_to = model.Group(ident="urn:uuid:%s" % b['uuid'], label=b['label'])
+			try:
+				what.transferred_title_to = model.Group(ident="urn:uuid:%s" % b['uuid'], label=b['label'])
+			except:
+				print(b)
+				raise
 
 	for s in data['sellers']:
 		if s['type'] in ['Person', 'Actor']:
@@ -470,15 +473,17 @@ def make_la_phase(data: dict):
 				ts.end_of_the_end = "%s-%s-%sT00:00:00" % (data['s_year'], data['s_month'], data['s_day'])
 
 	for b in data['buyers']:
+
 		if b['type'] in ["Person", "Actor"]:				
-			pi.claimed_by = model.Person(ident="urn:uuid:%s" % b['uuid'], label=b['label'])
+			who = model.Person(ident="urn:uuid:%s" % b['uuid'], label=b['label'])
 		else:
-			pi.claimed_by = model.Group(ident="urn:uuid:%s" % b['uuid'], label=b['label'])
+			who = model.Group(ident="urn:uuid:%s" % b['uuid'], label=b['label'])
+		pi.claimed_by = who
 
 		if b['share'] != 1.0:
 			pip = model.PropertyInterest()
-			pip.claimed_by = pi.claimed_by
-			pip.interest_for = pi.interest_for
+			pip.claimed_by = who
+			pip.interest_for = what
 			pi.interest_part = pip
 			d = Dimension()
 			pip.dimension = d

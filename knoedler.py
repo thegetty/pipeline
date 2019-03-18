@@ -222,27 +222,27 @@ def get_graph():
 	graph = bonobo.Graph()
 
 	# Sales
-	if 1:
+	if not DEBUG or 1:
 		add_sales(graph)
 
 	# Here we do both missing purchases and inventory events
-	if 1:
+	if not DEBUG or 1:
 		add_missing(graph)
 
 	# Pre/Post owners
-	if 1:
+	if not DEBUG or 1:
 		add_pre_post(graph)
 
 	# Objects
-	if 0:
+	if not DEBUG or 1:
 		add_objects(graph)
 
 	# People
-	if 0:
+	if not DEBUG or 1:
 		add_people(graph)
 
 	# Documents
-	if 0:
+	if not DEBUG or 1:
 		add_documents(graph)
 
 	return graph

@@ -1,13 +1,39 @@
+from bonobo.config import use
+from .cleaners import ymd_to_datetime
+
 from cromulent import model, vocab
 from cromulent.model import factory
-
-from bonobo.config import Configurable, Option, use
 factory.auto_id_type = 'uuid'
 vocab.add_art_setter()
 
+def add_crom_data(data: dict, what=None):
+	data['_CROM_FACTORY'] = factory
+	data['_LOD_OBJECT'] = what
+	return data
+
+vocab.register_aat_class("Clock", {"parent": model.ManMadeObject, "id": "300041575", "label": "Clock"})
+vocab.register_aat_class("Cards", {"parent": model.ManMadeObject, "id":"300211294", "label": "Playing Cards"})
+object_type_map = {
+	"Painting": vocab.Painting,
+	"Drawing": vocab.Drawing,
+	"Sculpture": vocab.Sculpture,
+	"Photograph": vocab.Photograph,
+	"Print": vocab.Print,
+	"Book": vocab.Book,
+	"Tapestry": vocab.Tapestry,
+	"Decorative Art": vocab.DecArts,
+	"Clocks": vocab.Clock,
+	"Maps": vocab.Map,
+	"Clothing": vocab.Clothing,
+	"Playing Cards": vocab.Cards,
+	"Furniture": vocab.Furniture
+}
+dimTypes = {300055624: vocab.Diameter, 300055644: vocab.Height, 300055647: vocab.Width}
+dimUnits = {300379100: vocab.instances["inches"], 300379098: vocab.instances["cm"]}
+
+
 # Here we take the data that has been collected and map it into Linked Art
 # This should just be mapping, not data collection, manipulation or validation
-
 
 ### XXX This is the data from STAR, but not all the data we have about these objects
 ### Need to consider data from Rosetta, ASpace etc.
@@ -27,8 +53,7 @@ def make_la_book(data: dict):
 	ident = vocab.LocalNumber()
 	ident.content = str(data['identifier'])
 	book.identified_by = ident
-	data['_LOD_OBJECT'] = book
-	return data
+	return add_crom_data(data=data, what=book)
 
 def make_la_page(data: dict):
 	page = vocab.Page(ident="urn:uuid:%s" % data['uuid'])
@@ -61,8 +86,8 @@ def make_la_page(data: dict):
 	# book.label = "Book"
 	page.part_of = book 
 
-	data['_LOD_OBJECT'] = page
-	return data
+	return add_crom_data(data=data, what=page)
+
 
 def make_la_row(data: dict):
 	row = model.LinguisticObject(ident="urn:uuid:%s" % data['uuid'])
@@ -90,8 +115,7 @@ def make_la_row(data: dict):
 	# page.label = "Page"
 	row.part_of = page
 
-	data['_LOD_OBJECT'] = row
-	return data
+	return add_crom_data(data=data, what=row)
 
 def make_la_person(data: dict):
 	who = model.Person(ident="urn:uuid:%s" % data['uuid'])
@@ -173,30 +197,7 @@ def make_la_person(data: dict):
 			#	pl.referred_to_by = l			
 			who.residence = pl
 
-	data['_LOD_OBJECT'] = who
-	return data
-
-
-vocab.register_aat_class("Clock", {"parent": model.ManMadeObject, "id": "300041575", "label": "Clock"})
-vocab.register_aat_class("Cards", {"parent": model.ManMadeObject, "id":"300211294", "label": "Playing Cards"})
-object_type_map = {
-	"Painting": vocab.Painting,
-	"Drawing": vocab.Drawing,
-	"Sculpture": vocab.Sculpture,
-	"Photograph": vocab.Photograph,
-	"Print": vocab.Print,
-	"Book": vocab.Book,
-	"Tapestry": vocab.Tapestry,
-	"Decorative Art": vocab.DecArts,
-	"Clocks": vocab.Clock,
-	"Maps": vocab.Map,
-	"Clothing": vocab.Clothing,
-	"Playing Cards": vocab.Cards,
-	"Furniture": vocab.Furniture
-}
-dimTypes = {300055624: vocab.Diameter, 300055644: vocab.Height, 300055647: vocab.Width}
-dimUnits = {300379100: vocab.instances["inches"], 300379098: vocab.instances["cm"]}
-
+	return add_crom_data(data=data, what=who)
 
 ###
 ### Labels are commented out as resource-instance won't accept them
@@ -343,8 +344,7 @@ def make_la_object(data: dict):
 		vi = model.VisualItem(ident="urn:uuid:%s" % data['vizitem_uuid'])		
 		what.shows = vi
 
-	data['_LOD_OBJECT'] = what
-	return data
+	return add_crom_data(data=data, what=what)
 
 
 def make_la_vizitem(data: dict):
@@ -366,9 +366,9 @@ def make_la_vizitem(data: dict):
 			add_vi = True
 
 	if add_vi:
-		data['_LOD_OBJECT'] = vi
-		return data
+		return add_crom_data(data=data, what=vi)
 	else:
+		# This None will terminate processing on this branch, as there is no VI
 		return None
 
 def make_la_purchase(data: dict):
@@ -427,8 +427,11 @@ def make_la_purchase(data: dict):
 
 	if data['year']:
 		t = model.TimeSpan()	
-		t.begin_of_the_begin = "%s-%s-%sT00:00:00" % (data['year'], data['month'], data['day'])
-		t.end_of_the_end = "%s-%s-%sT23:59:59" % (data['year'], data['month'], data['day'])
+		nm = model.Name()
+		nm.content = "%s %s %s" % (data['year'], data['month'], data['day'])
+		t.identified_by = nm
+		t.begin_of_the_begin = ymd_to_datetime(data['year'], data['month'], data['day'])
+		t.end_of_the_end = ymd_to_datetime(data['year'], data['month'], data['day'], which="end")
 		what.timespan = t
 	for s in data['sources']:
 		what.referred_to_by = model.LinguisticObject(ident="urn:uuid:%s" % s[1], label=_row_label(s[2], s[3], s[4]))
@@ -442,8 +445,7 @@ def make_la_purchase(data: dict):
 		n.content = data['k_note']
 		what.referred_to_by = n
 
-	data['_LOD_OBJECT'] = what
-	return data
+	return add_crom_data(data=data, what=what)
 
 def make_la_phase(data: dict):
 
@@ -453,7 +455,6 @@ def make_la_phase(data: dict):
 	except:
 		phase.label = "Ownership Phase of unknown object"
 
-
 	what = model.ManMadeObject(ident="urn:uuid:%s" % data['object_uuid'], label=data['object_label'])
 	phase.phase_of = what
 	pi = model.PropertyInterest()
@@ -461,7 +462,7 @@ def make_la_phase(data: dict):
 
 	if 'p_year' in data and data['p_year']:
 		ts = model.TimeSpan()
-		ts.begin_of_the_begin = "%s-%s-%sT00:00:00" % (data['p_year'], data['p_month'], data['p_day'])
+		ts.begin_of_the_begin = ymd_to_datetime(data['p_year'], data['p_month'], data['p_day'])
 		phase.timespan = ts
 		# End comes from sale
 		if 's_type' in data:	
@@ -470,10 +471,12 @@ def make_la_phase(data: dict):
 				# XXX Not sure what to do with these, see below!
 				print("Non 'sold' transaction (%s) is end of ownership phase for %s" % (pinfo[1], pinfo[0]))
 			else:				
-				ts.end_of_the_end = "%s-%s-%sT00:00:00" % (data['s_year'], data['s_month'], data['s_day'])
+				ts.end_of_the_end = ymd_to_datetime(data['s_year'], data['s_month'], data['s_day'], which="end")
+		nm = model.Name()
+		nm.content = "%s %s %s to %s %s %s" % (data['p_year'], data['p_month'], data['p_day'], data['s_year'], data['s_month'], data['s_day'])
+		ts.identified_by = nm
 
 	for b in data['buyers']:
-
 		if b['type'] in ["Person", "Actor"]:				
 			who = model.Person(ident="urn:uuid:%s" % b['uuid'], label=b['label'])
 		else:
@@ -485,13 +488,12 @@ def make_la_phase(data: dict):
 			pip.claimed_by = who
 			pip.interest_for = what
 			pi.interest_part = pip
-			d = Dimension()
+			d = model.Dimension()
 			pip.dimension = d
 			d.value = b['share']
 			d.unit = vocab.instances['percent']
 
-	data['_LOD_OBJECT'] = phase
-	return data
+	return add_crom_data(data=data, what=phase)
 
 def make_la_sale(data: dict):
 
@@ -541,8 +543,11 @@ def make_la_sale(data: dict):
 
 	if data['year']:
 		t = model.TimeSpan()
-		t.begin_of_the_begin = "%s-%s-%sT00:00:00" % (data['year'], data['month'], data['day'])
-		t.end_of_the_end = "%s-%s-%sT23:59:59" % (data['year'], data['month'], data['day'])
+		nm = model.Name()
+		nm.content = "%s %s %s" % (data['year'], data['month'], data['day'])
+		t.identified_by = nm
+		t.begin_of_the_begin = ymd_to_datetime(data['year'], data['month'], data['day'])
+		t.end_of_the_end = ymd_to_datetime(data['year'], data['month'], data['day'], which="end")
 		what.timespan = t
 	for s in data['sources']:
 		what.referred_to_by = model.LinguisticObject(ident="urn:uuid:%s" % s[1], label=_row_label(s[2], s[3], s[4]))
@@ -556,8 +561,7 @@ def make_la_sale(data: dict):
 		n.content = data['share_note']
 		what.referred_to_by = n
 
-	data['_LOD_OBJECT'] = what
-	return data
+	return add_crom_data(data=data, what=what)
 
 def make_la_inventory(data: dict):
 
@@ -575,8 +579,11 @@ def make_la_inventory(data: dict):
 
 	if data['year']:
 		t = model.TimeSpan()
-		t.begin_of_the_begin = "%s-%s-%sT00:00:00" % (data['year'], data['month'], data['day'])
-		t.end_of_the_end = "%s-%s-%sT23:59:59" % (data['year'], data['month'], data['day'])
+		nm = model.Name()
+		nm.content = "%s %s %s" % (data['year'], data['month'], data['day'])
+		t.identified_by = nm		
+		t.begin_of_the_begin = ymd_to_datetime(data['year'], data['month'], data['day'])
+		t.end_of_the_end = ymd_to_datetime(data['year'], data['month'], data['day'], which="end")
 		what.timespan = t
 
 	for s in data['sources']:
@@ -587,8 +594,7 @@ def make_la_inventory(data: dict):
 		n.content = data['note']
 		what.referred_to_by = n
 
-	data['_LOD_OBJECT'] = what
-	return data
+	return add_crom_data(data=data, what=what)
 
 def make_la_prev_post(data: dict):
 
@@ -613,18 +619,5 @@ def make_la_prev_post(data: dict):
 		prev = model.Acquisition(ident="urn:uuid:%s" % data['prev_uuid'])
 		what.occurs_after = prev
 
-	data['_LOD_OBJECT'] = what
-	return data
+	return add_crom_data(data=data, what=what)
 
-
-
-class Serializer(Configurable):
-	compact = Option(default=True)
-	def __call__(self, data: dict):	
-		js = factory.toString(data['_LOD_OBJECT'], self.compact)		
-		data['_OUTPUT'] = js
-		return data
-
-def print_jsonld(data: dict):
-	print(data['_OUTPUT'])
-	return data

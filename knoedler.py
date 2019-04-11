@@ -9,8 +9,9 @@ if os.path.exists('/Users/rsanderson'):
 else:
 	sys.path.insert(0,'/home/rsanderson/Development/provenance/pipeline')
 
-from extracters.basic import *
-from extracters.crom import *
+from extracters.basic import AddArchesModel, AddFieldNames, Serializer, deep_copy, Offset
+from extracters.knoedler_data import *
+from extracters.knoedler_linkedart import *
 from extracters.arches import ArchesWriter, FileWriter
 from settings import *
 
@@ -25,8 +26,8 @@ def get_services():
 ### Pipeline
 
 if DEBUG:
-	LIMIT     = 150
-	PACK_SIZE = 150
+	LIMIT     = 200
+	PACK_SIZE = 200
 	SRLZ = Serializer(compact=False)
 	WRITER = FileWriter(directory=output_file_path)
 	# WRITER = ArchesWriter()
@@ -42,8 +43,8 @@ else:
 def add_sales(graph):
 	graph.add_chain(
 		bonobo_sqlalchemy.Select('SELECT * from knoedler_purchase_info', engine='gpi', limit=LIMIT, pack_size=PACK_SIZE),
-		AddFieldNames(key="purchase_info"),
-		AddArchesModel(model='b5fdce59-2e41-11e9-b1c2-a4d18cec433a'),
+		AddFieldNames(key="purchase_info", field_names=all_names),
+		AddArchesModel(model=arches_models['Acquisition']),
 		add_uuid,
 		add_purchase_people,
 		add_purchase_thing,
@@ -55,7 +56,7 @@ def add_sales(graph):
 
 	graph.add_chain(
 		fan_object_phases,
-		AddArchesModel(model='17871ac7-2e42-11e9-87b2-a4d18cec433a'),
+		AddArchesModel(model=arches_models['Phase']),
 		make_la_phase,
 		SRLZ,
 		WRITER,
@@ -67,8 +68,8 @@ def add_sales(graph):
 
 	graph.add_chain(
 		bonobo_sqlalchemy.Select('SELECT * from knoedler_sale_info', engine='gpi', limit=LIMIT, pack_size=PACK_SIZE),
-		AddFieldNames(key="sale_info"),
-		AddArchesModel(model='b5fdce59-2e41-11e9-b1c2-a4d18cec433a'),
+		AddFieldNames(key="sale_info", field_names=all_names),
+		AddArchesModel(model=arches_models['Acquisition']),
 		add_uuid,
 		add_sale_people,
 		add_sale_thing, # includes adding reference to phase it terminates
@@ -84,8 +85,9 @@ def add_missing(graph):
 	graph.add_chain(
 		bonobo_sqlalchemy.Select('SELECT pi_record_no, object_id, inventory_event_id, sale_event_id, purchase_event_id FROM knoedler WHERE inventory_event_id NOT NULL', 
 			engine='gpi', limit=LIMIT, pack_size=PACK_SIZE),
+		Offset(offset=150),
 		find_raw,
-		AddFieldNames(key="raw"),
+		AddFieldNames(key="raw", field_names=all_names),
 		# bonobo.PrettyPrinter(),	
 		make_missing_purchase_data,
 		make_missing_shared
@@ -93,7 +95,7 @@ def add_missing(graph):
 
 	graph.add_chain(
 		make_missing_purchase,
-		AddArchesModel(model='b5fdce59-2e41-11e9-b1c2-a4d18cec433a'),
+		AddArchesModel(model=arches_models['Acquisition']),
 		#bonobo.PrettyPrinter(),
 		make_la_purchase,
 		SRLZ,
@@ -104,7 +106,7 @@ def add_missing(graph):
 	# This actually makes /all/ the inventory activities
 	graph.add_chain(
 		make_inventory,
-		AddArchesModel(model='24c45975-3955-11e9-80f0-a4d18cec433a'),
+		AddArchesModel(model=arches_models['Activity']),
 		# bonobo.PrettyPrinter(),
 		make_la_inventory,
 		SRLZ,
@@ -126,13 +128,13 @@ def add_pre_post(graph):
 		bonobo_sqlalchemy.Select('SELECT pp.rowid, pp.post_owner_uid, pp.object_id, p.person_ulan, p.person_label ' +\
 			' FROM knoedler_post_owners as pp, gpi_people as p ' +\
 			' WHERE p.person_uid = pp.post_owner_uid', engine='gpi', limit=LIMIT, pack_size=PACK_SIZE),
-			AddFieldNames(key="prev_post_owners"),
+			AddFieldNames(key="prev_post_owners", field_names=all_names),
 	)
 	chain2 = graph.nodes[-1]
 
 	for cin in [chain1, chain2]:
 		graph.add_chain(
-			AddArchesModel(model='b5fdce59-2e41-11e9-b1c2-a4d18cec433a'),
+			AddArchesModel(model=arches_models['Acquisition']),
 			fan_prev_post_purchase_sale,
 			make_la_prev_post,
 			SRLZ,
@@ -144,7 +146,7 @@ def add_objects(graph):
 	graph.add_chain(
 		bonobo_sqlalchemy.Select('SELECT DISTINCT object_id FROM knoedler', engine='gpi', limit=LIMIT, pack_size=PACK_SIZE),
 		make_objects,
-		AddArchesModel(model='2486c17d-2e42-11e9-bd33-a4d18cec433a'),
+		AddArchesModel(model=arches_models['ManMadeObject']),
 		add_uuid,
 		make_objects_names,
 		make_objects_dims,
@@ -157,7 +159,7 @@ def add_objects(graph):
 
 	graph.add_chain(
 		deep_copy,
-		AddArchesModel(model='504dcf0a-2e42-11e9-b4e2-a4d18cec433a'),
+		AddArchesModel(model=arches_models['VisualItem']),
 		make_la_vizitem,
 		SRLZ,
 		WRITER,
@@ -172,8 +174,8 @@ def add_people(graph):
 		bonobo_sqlalchemy.Select('SELECT DISTINCT peeps.* from gpi_people as peeps, gpi_people_names_references as ref, gpi_people_names as names ' + \
 			'WHERE peeps.person_uid = names.person_uid AND names.person_name_id = ref.person_name_id and ref.source_record_id like "KNO%"', \
 			engine='gpi', limit=LIMIT, pack_size=PACK_SIZE),
-		AddFieldNames(key="gpi_people"),
-		AddArchesModel(model='0b47366e-2e42-11e9-9018-a4d18cec433a'),
+		AddFieldNames(key="gpi_people", field_names=all_names),
+		AddArchesModel(model=arches_models['Person']),
 		add_uuid,
 		add_person_names,
 		add_person_aat_labels,
@@ -190,19 +192,19 @@ def add_documents(graph):
 	graph.add_chain(
 		bonobo_sqlalchemy.Select('SELECT DISTINCT stock_book_no FROM knoedler ORDER BY stock_book_no', engine='gpi', limit=LIMIT, pack_size=PACK_SIZE),
 		make_stock_books,
-		AddArchesModel(model='41a41e47-2e42-11e9-b5ee-a4d18cec433a'),
+		AddArchesModel(model=arches_models['LinguisticObject']),
 		add_uuid,
 		make_la_book,
 
 		fan_pages,
 		bonobo.Limit(100),
-		AddArchesModel(model='41a41e47-2e42-11e9-b5ee-a4d18cec433a'),
+		AddArchesModel(model=arches_models['LinguisticObject']),
 		add_uuid,
 		make_la_page,
 
 		fan_rows,
 		bonobo.Limit(100),
-		AddArchesModel(model='41a41e47-2e42-11e9-b5ee-a4d18cec433a'),
+		AddArchesModel(model=arches_models['LinguisticObject']),
 		add_uuid,
 		make_la_row
 	)
@@ -222,7 +224,7 @@ def get_graph():
 	graph = bonobo.Graph()
 
 	# Sales
-	if not DEBUG or 1:
+	if not DEBUG or 0:
 		add_sales(graph)
 
 	# Here we do both missing purchases and inventory events
@@ -230,19 +232,19 @@ def get_graph():
 		add_missing(graph)
 
 	# Pre/Post owners
-	if not DEBUG or 1:
+	if not DEBUG or 0:
 		add_pre_post(graph)
 
 	# Objects
-	if not DEBUG or 1:
+	if not DEBUG or 0:
 		add_objects(graph)
 
 	# People
-	if not DEBUG or 1:
+	if not DEBUG or 0:
 		add_people(graph)
 
 	# Documents
-	if not DEBUG or 1:
+	if not DEBUG or 0:
 		add_documents(graph)
 
 	return graph

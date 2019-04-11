@@ -1,0 +1,44 @@
+
+### Processing box setup
+
+yum install python36-devel
+yum install gcc
+yum install python36-setuptools
+yum install emacs
+yum install git
+
+mkdir -p /data/input/provenance/knoedler/
+mkdir -p /data2/output/provenance/knoedler/
+chown -R rsanderson:rsanderson /data/input
+chown -R rsanderson:rsanderson /data2/output
+
+sudo easy_install-3.6 pip
+sudo /usr/local/bin/pip3 install --upgrade pip
+sudo /usr/local/bin/pip3 install --upgrade setuptools
+sudo /usr/local/bin/pip3 install bonobo-sqlalchemy
+sudo /usr/local/bin/pip3 install cromulent
+sudo /usr/local/bin/pip3 install lxml
+sudo /usr/local/bin/pip3 install awscli
+
+mkdir -p /home/rsanderson/Development/provenance/
+cd /home/rsanderson/Development/provenance/
+git clone https://github.com/thegetty/pipeline
+
+# Now to fetch input data to the right place
+
+### --- Need to configure AWS access keys here ---
+
+cd /home/rsanderson/Development/provenance/pipeline/
+aws s3 cp s3://jpgt-or-provenance-01/provenance_batch/home/rsanderson/settings.py .
+
+cd /data/input/provenance/knoedler/
+aws s3 cp s3://jpgt-or-provenance-01/provenance_batch/data/gpi.sqlite.gz .
+gunzip gpi.sqlite.gz
+aws s3 cp s3://jpgt-or-provenance-01/provenance_batch/data/raw_gpi.sqlite.gz .
+gunzip raw_gpi.sqlite.gz
+aws s3 cp s3://jpgt-or-provenance-01/provenance_batch/data/uuid_cache.sqlite .
+
+
+
+
+

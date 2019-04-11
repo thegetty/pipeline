@@ -1,4 +1,4 @@
-from bonobo.config import Configurable, Option, use
+from bonobo.config import Configurable, Option
 import requests
 import os
 

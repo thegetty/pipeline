@@ -1,6 +1,7 @@
 
 import re
 from datetime import datetime, timedelta
+import calendar
 
 CIRCA = 5 # years
 CIRCA_D = timedelta(days=365*CIRCA)
@@ -18,6 +19,39 @@ def share_parse(value):
 		else:
 			print("Could not parse raw share: %s" % value)
 			return None
+
+def ymd_to_datetime(year, month, day, which="begin"):
+
+	# These might raise ValueError if the string is not an int
+	# which is fine at this stage
+	if type(year) is not int:
+		year = int(year)
+	if type(month) is not int:
+		month = int(month)
+	if type(day) is not int:
+		day = int(day)
+
+	if not month:
+		if which == "begin":
+			month = 1
+		else:
+			month = 12
+	if not day:
+		if which == "begin":
+			day = 1
+		else:
+			# number of days in month
+			day = calendar.monthrange(year, month)[1]
+
+	ystr = "%04d" % abs(year)
+	if year < 0:
+		ystr = "-" + ystr
+
+	if which == "begin":
+		return "%s-%02d-%02dT00:00:00" % (ystr, month, day)
+	else:
+		return "%s-%02d-%02dT23:59:59" % (ystr, month, day)		
+
 
 
 def date_parse(value, delim):

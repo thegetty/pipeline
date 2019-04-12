@@ -49,7 +49,7 @@ def _row_label(book, page, row):
 
 def make_la_book(data: dict):
 	book = vocab.AccountBook(ident="urn:uuid:%s" % data['uuid'])
-	book.label = _book_label(data['identifier'])
+	book._label = _book_label(data['identifier'])
 	ident = vocab.LocalNumber()
 	ident.content = str(data['identifier'])
 	book.identified_by = ident
@@ -57,7 +57,7 @@ def make_la_book(data: dict):
 
 def make_la_page(data: dict):
 	page = vocab.Page(ident="urn:uuid:%s" % data['uuid'])
-	page.label = _page_label(data['parent']['identifier'], data['identifier'])
+	page._label = _page_label(data['parent']['identifier'], data['identifier'])
 	ident = vocab.LocalNumber()
 	ident.content = str(data['identifier'])
 	page.identified_by = ident
@@ -83,7 +83,7 @@ def make_la_page(data: dict):
 		page.part = l
 
 	book = model.LinguisticObject(ident="urn:uuid:%s" % data['parent']['uuid'])
-	# book.label = "Book"
+	# book._label = "Book"
 	page.part_of = book 
 
 	return add_crom_data(data=data, what=page)
@@ -91,7 +91,7 @@ def make_la_page(data: dict):
 
 def make_la_row(data: dict):
 	row = model.LinguisticObject(ident="urn:uuid:%s" % data['uuid'])
-	row.label = _row_label(data['parent']['parent']['identifier'], data['parent']['identifier'], data['identifier'])
+	row._label = _row_label(data['parent']['parent']['identifier'], data['parent']['identifier'], data['identifier'])
 	ident = vocab.LocalNumber()
 	ident.content = data['star_id']
 	row.identified_by = ident
@@ -112,14 +112,14 @@ def make_la_row(data: dict):
 		row.referred_to_by = note3		
 
 	page = model.LinguisticObject(ident="urn:uuid:%s" % data['parent']['uuid'])
-	# page.label = "Page"
+	# page._label = "Page"
 	row.part_of = page
 
 	return add_crom_data(data=data, what=row)
 
 def make_la_person(data: dict):
 	who = model.Person(ident="urn:uuid:%s" % data['uuid'])
-	who.label = str(data['label'])
+	who._label = str(data['label'])
 
 	for ns in ['aat_nationality_1', 'aat_nationality_2','aat_nationality_3']:
 		# add nationality
@@ -130,7 +130,7 @@ def make_la_person(data: dict):
 				break
 			natl = vocab.Nationality(ident="http://vocab.getty.edu/aat/%s" % n)
 			who.classified_as = natl
-			natl.label = str(data[ns+'_label'])
+			natl._label = str(data[ns+'_label'])
 		else:
 			break
 
@@ -146,7 +146,7 @@ def make_la_person(data: dict):
 		if data['active_late']:
 			ts.begin_of_the_end = "%s-01-01:00:00:00Z" % (data['active_late'],)
 			ts.end_of_the_end = "%s-01-01:00:00:00Z" % (data['active_late']+1,)
-		ts.label = "%s-%s" % (data['active_early'], data['active_late'])
+		ts._label = "%s-%s" % (data['active_early'], data['active_late'])
 		act.timespan = ts
 		who.carried_out = act
 
@@ -156,9 +156,9 @@ def make_la_person(data: dict):
 		if 'birth_clean' in data:
 			ts.begin_of_the_begin = data['birth_clean'][0].strftime("%Y-%m-%dT%H:%M:%SZ")
 			ts.end_of_the_end = data['birth_clean'][1].strftime("%Y-%m-%dT%H:%M:%SZ")
-		ts.label = data['birth']
+		ts._label = data['birth']
 		b.timespan = ts
-		b.label = "Birth of %s" % who.label
+		b._label = "Birth of %s" % who._label
 		who.born = b
 
 	if data['death']:
@@ -167,9 +167,9 @@ def make_la_person(data: dict):
 		if 'death_clean' in data:
 			ts.begin_of_the_begin = data['death_clean'][0].strftime("%Y-%m-%dT%H:%M:%SZ")
 			ts.end_of_the_end = data['death_clean'][1].strftime("%Y-%m-%dT%H:%M:%SZ")
-		ts.label = data['death']
+		ts._label = data['death']
 		d.timespan = ts
-		d.label = "Death of %s" % who.label
+		d._label = "Death of %s" % who._label
 		who.died = d
 
 	# Add names
@@ -178,7 +178,7 @@ def make_la_person(data: dict):
 		n.content = name[0]
 		for ref in name[1:]:
 			l = model.LinguisticObject(ident="urn:uuid:%s" % ref[1])
-			# l.label = _row_label(ref[2][0], ref[2][1], ref[2][2])
+			# l._label = _row_label(ref[2][0], ref[2][1], ref[2][2])
 			n.referred_to_by = l
 		who.identified_by = n
 
@@ -187,13 +187,13 @@ def make_la_person(data: dict):
 	if 'places' in data:
 		for p in data['places']:
 			pl = model.Place()
-			#pl.label = p['label']
+			#pl._label = p['label']
 			#nm = model.Name()
 			#nm.content = p['label']
 			#pl.identified_by = nm 
 			#for s in p['sources']:
 			#		l = model.LinguisticObject(ident="urn:uuid:%s" % s[1])
-				# l.label = _row_label(s[2], s[3], s[4])
+				# l._label = _row_label(s[2], s[3], s[4])
 			#	pl.referred_to_by = l			
 			who.residence = pl
 
@@ -218,7 +218,7 @@ def make_la_object(data: dict):
 		# add source as part_of, as this is transcription
 		for s in dv['sources']:
 			l = model.LinguisticObject(ident="urn:uuid:%s" % s[1])
-			#l.label = _row_label(s[2], s[3], s[4])			
+			#l._label = _row_label(s[2], s[3], s[4])			
 			ds.referred_to_by = l
 		what.referred_to_by = ds
 
@@ -228,27 +228,27 @@ def make_la_object(data: dict):
 		# add source as part_of, as this is transcription
 		for s in dm['sources']:
 			l = model.LinguisticObject(ident="urn:uuid:%s" % s[1])
-			#l.label = _row_label(s[2], s[3], s[4])			
+			#l._label = _row_label(s[2], s[3], s[4])			
 			ds.referred_to_by = l
 		what.referred_to_by = ds
 
 	for n in data['names']:
 		name = vocab.Title()
 		if n['pref']:
-			what.label = n['value']
+			what._label = n['value']
 			name.classified_as = vocab.instances['primary']
 		name.content = n['value']
 
 		for s in n['sources']:
 			l = model.LinguisticObject(ident="urn:uuid:%s" % s[1])
-			#l.label = _row_label(s[2], s[3], s[4])
+			#l._label = _row_label(s[2], s[3], s[4])
 			name.referred_to_by = l
 		what.identified_by = name
 
 	if not hasattr(what, 'label') and hasattr(what, 'identified_by'):
-		what.label = what.identified_by[0].content
+		what._label = what.identified_by[0].content
 	else:
-		what.label = "Unlabeled Object"
+		what._label = "Unlabeled Object"
 
 	for dim in data['dimensions_clean']:
 		d = dimTypes.get(dim['type'], model.Dimension)()
@@ -256,7 +256,7 @@ def make_la_object(data: dict):
 		d.unit = dimUnits[dim['unit']]
 		for s in dim['sources']:
 			l = model.LinguisticObject(ident="urn:uuid:%s" % s[1])
-			#l.label = _row_label(s[2], s[3], s[4])
+			#l._label = _row_label(s[2], s[3], s[4])
 			d.referred_to_by = l
 		what.dimension = d
 
@@ -281,20 +281,20 @@ def make_la_object(data: dict):
 		# XXX FIXME this is the arches issue with multiple resource-instance models
 		#who = model.Person(ident="urn:uuid:%s" % a['uuid'])
 		who = model.Actor(ident="urn:uuid:%s" % a['uuid'])
-		# who.label = a['label']
+		# who._label = a['label']
 		prod.carried_out_by = who		
 
 		for s in a['sources']:
 			# Can't associate with the relationship directly (as it's a source for carried_out_by)
 			# So just add to the Production, which is still true, and 99.9% of the time is sufficient
 			l = model.LinguisticObject(ident="urn:uuid:%s" % s[1])
-			#l.label = _row_label(s[2], s[3], s[4])
+			#l._label = _row_label(s[2], s[3], s[4])
 			prod.referred_to_by = l
 
 	for a in former:
 		fprod = model.Production()
 		who = model.Person(ident="urn:uuid:%s" % a['uuid'])
-		who.label = a['label']		
+		who._label = a['label']		
 		fprod.carried_out_by = who
 		aa = model.AttributeAssignment()
 		what.attributed_by = aa
@@ -303,7 +303,7 @@ def make_la_object(data: dict):
 		for s in a['sources']:
 			# Conversely, this is correct, as the LO refers to the AA carried out by Knoedler
 			l = model.LinguisticObject(ident="urn:uuid:%s" % s[1])
-			#l.label = _row_label(s[2], s[3], s[4])
+			#l._label = _row_label(s[2], s[3], s[4])
 			aa.referred_to_by = l
 
 	add_vi = False
@@ -375,14 +375,14 @@ def make_la_purchase(data: dict):
 
 	what = model.Acquisition(ident="urn:uuid:%s" % data['uuid'])
 	try:
-		what.label = "Purchase of %s by %s" % (data['objects'][0]['label'], data['buyers'][0]['label'])
+		what._label = "Purchase of %s by %s" % (data['objects'][0]['label'], data['buyers'][0]['label'])
 	except IndexError:
 		if not data['buyers']:
-			what.label = "Purchase of %s" % data['objects'][0]['label']
+			what._label = "Purchase of %s" % data['objects'][0]['label']
 		else:
 			# No objects??
 			print("Acquisition record (%s) has no objects! " % data['uid'])
-			what.label = "Purchase?"
+			what._label = "Purchase?"
 
 	for o in data['objects']:
 		what.transferred_title_of = model.ManMadeObject(ident="urn:uuid:%s" % o['uuid'], label=o['label'])
@@ -414,7 +414,7 @@ def make_la_purchase(data: dict):
 	if data['dec_amount']:
 		p = model.Payment()
 		am = model.MonetaryAmount()
-		am.label = "%s %s" % (data['amount'], data['currency'])
+		am._label = "%s %s" % (data['amount'], data['currency'])
 		am.value = data['dec_amount']
 		am.currency = model.Currency(ident="http://vocab.getty.edu/aat/%s" % data['currency_aat'], label=data['currency'])
 		p. paid_amount = am
@@ -451,9 +451,9 @@ def make_la_phase(data: dict):
 
 	phase = vocab.OwnershipPhase(ident="urn:uuid:%s" % data['uuid'])
 	try:
-		phase.label = "Ownership Phase of %s" % data['object_label']
+		phase._label = "Ownership Phase of %s" % data['object_label']
 	except:
-		phase.label = "Ownership Phase of unknown object"
+		phase._label = "Ownership Phase of unknown object"
 
 	what = model.ManMadeObject(ident="urn:uuid:%s" % data['object_uuid'], label=data['object_label'])
 	phase.phase_of = what
@@ -502,7 +502,7 @@ def make_la_sale(data: dict):
 		print("Generating it, and we can sort it out later")
 
 	what = model.Acquisition(ident="urn:uuid:%s" % data['uuid'])
-	what.label = "Sale of %s by %s" % (data['objects'][0]['label'], data['sellers'][0]['label'])
+	what._label = "Sale of %s by %s" % (data['objects'][0]['label'], data['sellers'][0]['label'])
 	for o in data['objects']:
 		what.transferred_title_of = model.ManMadeObject(ident="urn:uuid:%s" % o['uuid'], label=o['label'])
 		if 'phase' in o:
@@ -529,7 +529,7 @@ def make_la_sale(data: dict):
 	if data['dec_amount']:
 		p = model.Payment()
 		am = model.MonetaryAmount()
-		am.label = "%s %s" % (data['amount'], data['currency'])
+		am._label = "%s %s" % (data['amount'], data['currency'])
 		am.value = data['dec_amount']
 		am.currency = model.Currency(ident="http://vocab.getty.edu/aat/%s" % data['currency_aat'], label=data['currency'])
 		p.paid_amount = am
@@ -567,7 +567,7 @@ def make_la_inventory(data: dict):
 
 	what = vocab.Inventorying()
 	date = "%s-%s-%s" % (data['year'], data['month'], data['day'])
-	what.label = "Inventory taking for %s on %s" % (data['objects'][0]['label'], date)
+	what._label = "Inventory taking for %s on %s" % (data['objects'][0]['label'], date)
 
 	o = data['objects'][0]
 	obj = model.ManMadeObject(ident="urn:uuid:%s" % o['uuid'], label=o['label'])
@@ -599,7 +599,7 @@ def make_la_inventory(data: dict):
 def make_la_prev_post(data: dict):
 
 	what = model.Acquisition(ident="urn:uuid:%s" % data['uuid'])
-	what.label = "%s of object by %s" % (data['acq_type'], data['owner_label'])
+	what._label = "%s of object by %s" % (data['acq_type'], data['owner_label'])
 
 	if data['owner_type'] in ["Person", "Actor"]:				
 		who = model.Person(ident="urn:uuid:%s" % data['owner_uuid'], label=data['owner_label'])

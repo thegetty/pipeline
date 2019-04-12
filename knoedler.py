@@ -85,7 +85,6 @@ def add_missing(graph):
 	graph.add_chain(
 		bonobo_sqlalchemy.Select('SELECT pi_record_no, object_id, inventory_event_id, sale_event_id, purchase_event_id FROM knoedler WHERE inventory_event_id NOT NULL', 
 			engine='gpi', limit=LIMIT, pack_size=PACK_SIZE),
-		Offset(offset=150),
 		find_raw,
 		AddFieldNames(key="raw", field_names=all_names),
 		# bonobo.PrettyPrinter(),	
@@ -197,13 +196,11 @@ def add_documents(graph):
 		make_la_book,
 
 		fan_pages,
-		bonobo.Limit(100),
 		AddArchesModel(model=arches_models['LinguisticObject']),
 		add_uuid,
 		make_la_page,
 
 		fan_rows,
-		bonobo.Limit(100),
 		AddArchesModel(model=arches_models['LinguisticObject']),
 		add_uuid,
 		make_la_row

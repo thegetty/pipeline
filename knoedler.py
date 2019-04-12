@@ -9,7 +9,7 @@ if os.path.exists('/Users/rsanderson'):
 else:
 	sys.path.insert(0,'/home/rsanderson/Development/provenance/pipeline')
 
-from extracters.basic import AddArchesModel, AddFieldNames, Serializer, deep_copy, Offset
+from extracters.basic import AddArchesModel, AddFieldNames, Serializer, deep_copy, Offset, add_uuid
 from extracters.knoedler_data import *
 from extracters.knoedler_linkedart import *
 from extracters.arches import ArchesWriter, FileWriter
@@ -26,8 +26,8 @@ def get_services():
 ### Pipeline
 
 if DEBUG:
-	LIMIT     = 200
-	PACK_SIZE = 200
+	LIMIT     = 10
+	PACK_SIZE = 10
 	SRLZ = Serializer(compact=False)
 	WRITER = FileWriter(directory=output_file_path)
 	# WRITER = ArchesWriter()
@@ -107,9 +107,9 @@ def add_missing(graph):
 	graph.add_chain(
 		make_inventory,
 		AddArchesModel(model=arches_models['Activity']),
-		# bonobo.PrettyPrinter(),
 		make_la_inventory,
 		SRLZ,
+		bonobo.PrettyPrinter(),
 		WRITER,
 		_input=make_missing_shared
 	)
@@ -119,7 +119,7 @@ def add_pre_post(graph):
 		bonobo_sqlalchemy.Select('SELECT pp.rowid, pp.previous_owner_uid, pp.object_id, p.person_ulan, p.person_label ' +\
 			' FROM knoedler_previous_owners as pp, gpi_people as p ' +\
 			' WHERE p.person_uid = pp.previous_owner_uid', engine='gpi', limit=LIMIT, pack_size=PACK_SIZE),
-			AddFieldNames(key="prev_post_owners"),
+			AddFieldNames(key="prev_post_owners", field_names=all_names),
 			add_prev_prev
 	)
 	chain1 = graph.nodes[-1]
@@ -224,7 +224,7 @@ def get_graph():
 	graph = bonobo.Graph()
 
 	# Sales
-	if not DEBUG or 0:
+	if not DEBUG or 1:
 		add_sales(graph)
 
 	# Here we do both missing purchases and inventory events
@@ -232,19 +232,19 @@ def get_graph():
 		add_missing(graph)
 
 	# Pre/Post owners
-	if not DEBUG or 0:
+	if not DEBUG or 1:
 		add_pre_post(graph)
 
 	# Objects
-	if not DEBUG or 0:
+	if not DEBUG or 1:
 		add_objects(graph)
 
 	# People
-	if not DEBUG or 0:
+	if not DEBUG or 1:
 		add_people(graph)
 
 	# Documents
-	if not DEBUG or 0:
+	if not DEBUG or 1:
 		add_documents(graph)
 
 	return graph

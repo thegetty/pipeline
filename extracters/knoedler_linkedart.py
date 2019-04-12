@@ -565,7 +565,7 @@ def make_la_sale(data: dict):
 
 def make_la_inventory(data: dict):
 
-	what = vocab.Inventorying()
+	what = vocab.Inventorying(ident="urn:uuid:%s" % data['uuid'])
 	date = "%s-%s-%s" % (data['year'], data['month'], data['day'])
 	what._label = "Inventory taking for %s on %s" % (data['objects'][0]['label'], date)
 

@@ -83,7 +83,11 @@ def add_sales(graph):
 
 def add_missing(graph):
 	graph.add_chain(
-		bonobo_sqlalchemy.Select('SELECT pi_record_no, object_id, inventory_event_id, sale_event_id, purchase_event_id FROM knoedler WHERE inventory_event_id NOT NULL', 
+		bonobo_sqlalchemy.Select('''
+			SELECT pi_record_no, object_id, inventory_event_id, sale_event_id, purchase_event_id
+			FROM knoedler
+			WHERE inventory_event_id NOT NULL
+			''', 
 			engine='gpi', limit=LIMIT, pack_size=PACK_SIZE),
 		find_raw,
 		AddFieldNames(key="raw", field_names=all_names),
@@ -115,18 +119,24 @@ def add_missing(graph):
 
 def add_pre_post(graph):
 	graph.add_chain(
-		bonobo_sqlalchemy.Select('SELECT pp.rowid, pp.previous_owner_uid, pp.object_id, p.person_ulan, p.person_label ' +\
-			' FROM knoedler_previous_owners as pp, gpi_people as p ' +\
-			' WHERE p.person_uid = pp.previous_owner_uid', engine='gpi', limit=LIMIT, pack_size=PACK_SIZE),
+		bonobo_sqlalchemy.Select('''
+			SELECT pp.rowid, pp.previous_owner_uid, pp.object_id, p.person_ulan, p.person_label
+			FROM knoedler_previous_owners AS pp
+				JOIN gpi_people as p ON (p.person_uid = pp.previous_owner_uid)
+			''', engine='gpi', limit=LIMIT, pack_size=PACK_SIZE),
 			AddFieldNames(key="prev_post_owners", field_names=all_names),
 			add_prev_prev
 	)
 	chain1 = graph.nodes[-1]
 
 	graph.add_chain(
-		bonobo_sqlalchemy.Select('SELECT pp.rowid, pp.post_owner_uid, pp.object_id, p.person_ulan, p.person_label ' +\
-			' FROM knoedler_post_owners as pp, gpi_people as p ' +\
-			' WHERE p.person_uid = pp.post_owner_uid', engine='gpi', limit=LIMIT, pack_size=PACK_SIZE),
+		bonobo_sqlalchemy.Select('''
+			SELECT pp.rowid, pp.post_owner_uid, pp.object_id, p.person_ulan, p.person_label
+			FROM
+				knoedler_post_owners AS pp
+				JOIN gpi_people as p ON (p.person_uid = pp.post_owner_uid)
+			''',
+			engine='gpi', limit=LIMIT, pack_size=PACK_SIZE),
 			AddFieldNames(key="prev_post_owners", field_names=all_names),
 	)
 	chain2 = graph.nodes[-1]
@@ -170,8 +180,15 @@ def add_objects(graph):
 
 def add_people(graph):
 	graph.add_chain(
-		bonobo_sqlalchemy.Select('SELECT DISTINCT peeps.* from gpi_people as peeps, gpi_people_names_references as ref, gpi_people_names as names ' + \
-			'WHERE peeps.person_uid = names.person_uid AND names.person_name_id = ref.person_name_id and ref.source_record_id like "KNO%"', \
+		bonobo_sqlalchemy.Select('''
+			SELECT DISTINCT peeps.*
+			FROM
+				gpi_people AS peeps
+				JOIN gpi_people_names AS names ON (peeps.person_uid = names.person_uid)
+				JOIN gpi_people_names_references AS ref ON (names.person_name_id = ref.person_name_id)
+			WHERE
+				ref.source_record_id LIKE "KNO%"
+			''',
 			engine='gpi', limit=LIMIT, pack_size=PACK_SIZE),
 		AddFieldNames(key="gpi_people", field_names=all_names),
 		AddArchesModel(model=arches_models['Person']),

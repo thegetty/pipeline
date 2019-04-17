@@ -45,8 +45,8 @@ def deep_copy(data):
 def get_actor_type(ulan, uuid_cache, default="Actor"):
 	if not ulan:
 		return "Actor"
-	s = 'SELECT type FROM actor_type WHERE ulan="%s"' % ulan
-	res = uuid_cache.execute(s)
+	s = 'SELECT type FROM actor_type WHERE ulan = :ulan'
+	res = uuid_cache.execute(s, ulan=ulan)
 	v = res.fetchone()
 	if v:
 		return v[0]
@@ -77,7 +77,7 @@ def get_aat_label(term, gpi=None):
 	if term in aat_label_cache:
 		return aat_label_cache[term]
 	else:
-		res = gpi.execute('SELECT aat_label FROM aat WHERE aat_id=%s' % (term,))
+		res = gpi.execute('SELECT aat_label FROM aat WHERE aat_id = :id', id=term)
 		l = res.fetchone()
 		if l:
 			aat_label_cache[term] = l[0]

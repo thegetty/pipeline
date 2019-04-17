@@ -63,7 +63,11 @@ def make_objects(object_id, gpi=None, uuid_cache=None):
 	fields = ['recno', 'book', 'page', 'row', 'subject', 'genre', 'object_type', 'materials', 'dimensions']
 	for f in fields[4:]:
 		data[f] = []
-	s = 'SELECT pi_record_no, stock_book_no, page_number, row_number, subject, genre, object_type, materials, dimensions FROM knoedler WHERE object_id="%s"' % object_id
+	s = '''
+		SELECT pi_record_no, stock_book_no, page_number, row_number, subject, genre, object_type, materials, dimensions
+		FROM knoedler
+		WHERE object_id="%s"
+		''' % object_id
 	res = gpi.execute(s)
 	for r in res:
 		# multiple rows per object with different information possible
@@ -94,9 +98,16 @@ def make_objects(object_id, gpi=None, uuid_cache=None):
 @use('gpi')
 def make_objects_artists(data, gpi=None, uuid_cache=None):
 	object_id = data['uid']
-	s = 'SELECT a.artist_uid, peep.person_label, peep.person_ulan, a.artist_attribution_mod, a.attribution_is_preferred, a.star_record_no, k.stock_book_no, k.page_number, k.row_number ' + \
-		'FROM knoedler_artists as a, gpi_people as peep, knoedler as k ' + \
-		'WHERE a.object_id="%s" AND peep.person_uid = a.artist_uid AND k.star_record_no = a.star_record_no' % object_id
+	s = '''
+		SELECT
+			a.artist_uid, peep.person_label, peep.person_ulan, a.artist_attribution_mod, a.attribution_is_preferred, a.star_record_no, k.stock_book_no, k.page_number, k.row_number
+		FROM
+			knoedler_artists AS a
+			JOIN gpi_people AS peep ON (peep.person_uid = a.artist_uid)
+			JOIN knoedler AS k ON (k.star_record_no = a.star_record_no)
+		WHERE
+			a.object_id="%s"
+		''' % object_id
 	res = gpi.execute(s)
 
 	artists = []
@@ -138,10 +149,16 @@ def make_objects_dims(data, gpi=None, uuid_cache=None):
 	object_id = data['uid']
 
 	# Pull in parsed dimensions
-	s = 'SELECT d.object_id, d.star_record_no, d.dimension_value, d.dimension_unit_aat, d.dimension_type_aat, ' + \
-		'k.stock_book_no, k.page_number, k.row_number, k.object_type FROM knoedler_dimensions as d, knoedler as k ' + \
-		'WHERE k.star_record_no = d.star_record_no AND d.object_id = "%s"' % object_id
-	res = gpi.execute(s)
+	s = '''
+		SELECT
+			d.object_id, d.star_record_no, d.dimension_value, d.dimension_unit_aat, d.dimension_type_aat,
+			k.stock_book_no, k.page_number, k.row_number, k.object_type
+		FROM
+			knoedler_dimensions AS d
+			JOIN knoedler as k ON (k.star_record_no = d.star_record_no)
+		WHERE d.object_id = :id
+		'''
+	res = gpi.execute(s, id=object_id)
 	dfields = ['object_id', 'star_record_no', 'value', 'unit', 'type', 'book', 'page', 'row', 'obj_type']
 	dimByType = {300055624: [], 300055644: [], 300055647: [], 300072633: [], 300055642: []}
 	dims = []
@@ -178,9 +195,16 @@ def make_objects_names(data, gpi=None, uuid_cache=None):
 	object_id = data['uid']
 	# Pull in object names
 	tfields = ['value', 'preferred', 'star_no', 'book', 'page', 'row']
-	s = 'SELECT t.title, t.is_preferred_title, t.star_record_no, k.stock_book_no, k.page_number, k.row_number ' + \
-		'FROM knoedler_object_titles as t, knoedler as k WHERE t.star_record_no = k.star_record_no AND t.object_id = "%s"' % object_id
-	res = gpi.execute(s)
+	s = '''
+		SELECT
+			t.title, t.is_preferred_title, t.star_record_no, k.stock_book_no, k.page_number, k.row_number
+		FROM
+			knoedler_object_titles AS t
+			JOIN knoedler AS k ON (t.star_record_no = k.star_record_no)
+		WHERE
+			t.object_id = :id
+		'''
+	res = gpi.execute(s, id=object_id)
 	names = []
 	nameByVal = {}
 	for row in res:
@@ -225,8 +249,8 @@ def make_objects_tags_ids(data, gpi=None, uuid_cache=None):
 			"knoedler_materials_technique_aat": "technique", "knoedler_style_aat": "style", 
 			"knoedler_subject_classified_as_aat": "subject"}
 
-	s = 'SELECT tag_type, aat_term FROM knoedler_object_tags WHERE object_id="%s"' % object_id
-	res = gpi.execute(s)
+	s = 'SELECT tag_type, aat_term FROM knoedler_object_tags WHERE object_id = :id'
+	res = gpi.execute(s, id=object_id)
 	tags = []
 	for tag in res:
 		lbl = get_aat_label(tag[1], gpi=gpi)
@@ -234,8 +258,8 @@ def make_objects_tags_ids(data, gpi=None, uuid_cache=None):
 	data['tags'] = tags
 
 	# Pull in Identifiers
-	s = 'SELECT knoedler_number FROM knoedler_object_identifiers WHERE object_id="%s"' % object_id
-	res = gpi.execute(s)
+	s = 'SELECT knoedler_number FROM knoedler_object_identifiers WHERE object_id = :id'
+	res = gpi.execute(s, id=object_id)
 	ids = [str(x[0]) for x in res]
 	data['knoedler_ids'] = ids
 
@@ -255,11 +279,17 @@ def make_objects_tags_ids(data, gpi=None, uuid_cache=None):
 @use('gpi')
 @use('uuid_cache')
 def add_purchase_people(thing: dict, gpi=None, uuid_cache=None):	
-	s = 'SELECT b.purchase_buyer_uid, b.purchase_buyer_share, p.person_label, p.person_ulan ' + \
-		'FROM knoedler_purchase_buyers AS b, gpi_people as p ' + \
-		'WHERE b.purchase_event_id="%s" AND b.purchase_buyer_uid=p.person_uid' % thing['uid']
+	s = '''
+		SELECT
+			b.purchase_buyer_uid, b.purchase_buyer_share, p.person_label, p.person_ulan
+		FROM
+			knoedler_purchase_buyers AS b
+			JOIN gpi_people as p ON (b.purchase_buyer_uid = p.person_uid)
+		WHERE
+			b.purchase_event_id = :id
+		'''
 	buyers = []
-	res = gpi.execute(s)
+	res = gpi.execute(s, id=thing['uid'])
 
 	shares = False
 	for row in res:
@@ -270,11 +300,17 @@ def add_purchase_people(thing: dict, gpi=None, uuid_cache=None):
 			shares = True
 	thing['buyers'] = buyers
 
-	s = 'SELECT s.purchase_seller_uid, s.purchase_seller_auth_mod, p.person_label, p.person_ulan ' + \
-		'FROM knoedler_purchase_sellers AS s, gpi_people as p ' + \
-		'WHERE s.purchase_event_id="%s" AND s.purchase_seller_uid=p.person_uid' % thing['uid']
+	s = '''
+		SELECT
+			s.purchase_seller_uid, s.purchase_seller_auth_mod, p.person_label, p.person_ulan
+		FROM
+			knoedler_purchase_sellers AS s
+			JOIN gpi_people as p ON (s.purchase_seller_uid = p.person_uid)
+		WHERE
+			s.purchase_event_id = :id
+		'''
 	sellers = []
-	res = gpi.execute(s)
+	res = gpi.execute(s, id=thing['uid'])
 	for row in res:
 		uu = fetch_uuid(row[0], uuid_cache)
 		atype = get_actor_type(str(row[3]), uuid_cache)
@@ -285,10 +321,17 @@ def add_purchase_people(thing: dict, gpi=None, uuid_cache=None):
 @use('gpi')
 @use('uuid_cache')
 def add_purchase_thing(thing: dict, gpi=None, uuid_cache=None):
-	s = 'SELECT k.star_record_no, k.stock_book_no, k.page_number, k.row_number, k.object_id, n.title ' + \
-		'FROM knoedler as k, knoedler_object_titles as n ' + \
-		'WHERE k.object_id = n.object_id AND n.is_preferred_title = 1 AND k.purchase_event_id="%s"' % thing['uid']
-	res = gpi.execute(s)
+	s = '''
+		SELECT
+			k.star_record_no, k.stock_book_no, k.page_number, k.row_number, k.object_id, n.title
+		FROM
+			knoedler AS k
+			JOIN knoedler_object_titles AS n ON (k.object_id = n.object_id)
+		WHERE
+			 n.is_preferred_title = 1
+			 AND k.purchase_event_id = :id
+		'''
+	res = gpi.execute(s, id=thing['uid'])
 
 	thing['sources'] = []
 	thing['objects'] = []
@@ -307,11 +350,17 @@ def add_ownership_phase_purchase(data: dict, gpi=None, uuid_cache=None):
 	# Coming from a purchase event, need to collect sale data
 	# current data is only knoedler_purchase_info
 	puid = data['uid']
-	s = 'SELECT k.star_record_no, k.sale_event_id, k.object_id, s.transaction_type, s.sale_date_year, s.sale_date_month, s.sale_date_day ' + \
-		'FROM knoedler as k, knoedler_sale_info as s ' + \
-		'WHERE s.sale_event_id = k.sale_event_id AND k.purchase_event_id = "%s"' % puid
+	s = '''
+		SELECT
+			k.star_record_no, k.sale_event_id, k.object_id, s.transaction_type, s.sale_date_year, s.sale_date_month, s.sale_date_day
+		FROM
+			knoedler AS k
+			JOIN knoedler_sale_info AS s ON (s.sale_event_id = k.sale_event_id)
+		WHERE
+			k.purchase_event_id = :id
+		'''
 
-	gr = gpi.execute(s)
+	gr = gpi.execute(s, id=puid)
 	res = gr.fetchall()
 
 	if res:
@@ -350,22 +399,34 @@ def fan_object_phases(data: dict):
 @use('gpi')
 @use('uuid_cache')
 def add_sale_people(thing: dict, gpi=None, uuid_cache=None):	
-	s = 'SELECT s.sale_buyer_uid, p.person_label, p.person_ulan, s.sale_buyer_mod, s.sale_buyer_auth_mod ' + \
-		'FROM knoedler_sale_buyers AS s, gpi_people as p ' + \
-		'WHERE s.sale_event_id="%s" AND s.sale_buyer_uid=p.person_uid' % thing['uid']
+	s = '''
+		SELECT
+			s.sale_buyer_uid, p.person_label, p.person_ulan, s.sale_buyer_mod, s.sale_buyer_auth_mod
+		FROM
+			knoedler_sale_buyers AS s
+			JOIN gpi_people AS p ON (s.sale_buyer_uid = p.person_uid)
+		WHERE
+			s.sale_event_id = :id
+		'''
 	buyers = []
-	res = gpi.execute(s)
+	res = gpi.execute(s, id=thing['uid'])
 	for row in res:
 		uu = fetch_uuid(row[0], uuid_cache)
 		atype = get_actor_type(str(row[2]), uuid_cache)
 		buyers.append({'uuid': uu, 'ulan': row[2], 'type': atype, 'label': str(row[1]), 'mod': row[3], 'auth_mod': row[4]})
 	thing['buyers'] = buyers
 
-	s = 'SELECT s.sale_seller_uid, p.person_label, p.person_ulan, s.sale_seller_share ' + \
-		'FROM knoedler_sale_sellers AS s, gpi_people as p ' + \
-		'WHERE s.sale_event_id="%s" AND s.sale_seller_uid=p.person_uid' % thing['uid']
+	s = '''
+		SELECT
+			s.sale_seller_uid, p.person_label, p.person_ulan, s.sale_seller_share
+		FROM
+			knoedler_sale_sellers AS s
+			JOIN gpi_people AS p ON (s.sale_seller_uid = p.person_uid)
+		WHERE
+			s.sale_event_id = :id
+		'''
 	sellers = []
-	res = gpi.execute(s)
+	res = gpi.execute(s, id=thing['uid'])
 	for row in res:
 		uu = fetch_uuid(row[0], uuid_cache)
 		atype = get_actor_type(str(row[2]), uuid_cache)
@@ -376,10 +437,17 @@ def add_sale_people(thing: dict, gpi=None, uuid_cache=None):
 @use('gpi')
 @use('uuid_cache')
 def add_sale_thing(thing: dict, gpi=None, uuid_cache=None):
-	s = 'SELECT k.star_record_no, k.stock_book_no, k.page_number, k.row_number, k.object_id, n.title ' + \
-		'FROM knoedler as k, knoedler_object_titles as n ' + \
-		'WHERE k.object_id = n.object_id AND n.is_preferred_title = 1 AND k.sale_event_id="%s"' % thing['uid']
-	res = gpi.execute(s)
+	s = '''
+		SELECT
+			k.star_record_no, k.stock_book_no, k.page_number, k.row_number, k.object_id, n.title
+		FROM
+			knoedler AS k
+			JOIN knoedler_object_titles AS n ON (k.object_id = n.object_id)
+		WHERE
+			n.is_preferred_title = 1
+			AND k.sale_event_id = :id
+		'''
+	res = gpi.execute(s, id=thing['uid'])
 	thing['sources'] = []
 	thing['objects'] = []
 	for row in res:
@@ -394,8 +462,8 @@ def add_sale_thing(thing: dict, gpi=None, uuid_cache=None):
 @use('raw')
 def find_raw(*row, raw=None):
 	(recno, obj_id, inv_id, sale_id, purch_id) = row
-	s = 'SELECT * FROM raw_knoedler WHERE pi_record_no="%s"' % recno
-	res = raw.execute(s)
+	s = 'SELECT * FROM raw_knoedler WHERE pi_record_no = :id'
+	res = raw.execute(s, id=recno)
 	t = list(res.fetchone())
 	t.extend([obj_id, inv_id, sale_id, purch_id])
 	return tuple(t)
@@ -492,8 +560,8 @@ def make_missing_shared(data: dict, gpi=None, uuid_cache=None):
 	data['uuid'] = fetch_uuid(data['uid'], uuid_cache)
 
 	# Build the object reference (just UUID and label)
-	s = "SELECT title FROM knoedler_object_titles WHERE is_preferred_title=1 AND object_id = '%s'" % (data['object_id'])		
-	res = gpi.execute(s)
+	s = "SELECT title FROM knoedler_object_titles WHERE is_preferred_title=1 AND object_id = :id"
+	res = gpi.execute(s, id=data['object_id'])
 	label = res.fetchone()[0]
 	data['objects'] = [{'uuid': fetch_uuid(data['object_id'], uuid_cache), 'label': label}]
 
@@ -510,9 +578,15 @@ def make_missing_shared(data: dict, gpi=None, uuid_cache=None):
 		data['year'] = int(data['year'])
 
 	# Add Source
-	s = 'SELECT k.stock_book_no, k.page_number, k.row_number FROM knoedler as k ' \
-		'WHERE k.pi_record_no = "%s"' % data['pi_id']
-	res =  gpi.execute(s)
+	s = '''
+		SELECT
+			k.stock_book_no, k.page_number, k.row_number
+		FROM
+			knoedler as k
+		WHERE
+			k.pi_record_no = :id
+		'''
+	res =  gpi.execute(s, id=data['pi_id'])
 	(book, page, row) = res.fetchone()
 	uu = fetch_uuid("K-ROW-%s-%s-%s" % (book, page, row), uuid_cache)
 	data['sources'] = [[None, uu, book, page, row]]
@@ -533,15 +607,23 @@ def make_missing_purchase(data: dict, gpi=None, uuid_cache=None):
 		for sell in data['sellers']:
 			if sell['name'] is None and sell['ulan'] is None:
 				continue
+			
 			if sell['ulan'] is not None:
-				s = "SELECT person_uid, person_label FROM gpi_people WHERE person_ulan = %s" % (sell['ulan'])
+				s = "SELECT person_uid, person_label FROM gpi_people WHERE person_ulan = :ulan"
+				res = gpi.execute(s, ulan=sell['ulan'])
 			else:
-				s = "SELECT DISTINCT names.person_uid, names.person_name as uid " \
-					"FROM gpi_people_names_references as ref, gpi_people_names as names " \
-					'WHERE ref.person_name_id = names.person_name_id AND ref.source_record_id = "KNOEDLER-%s" and ' \
-					'names.person_name = "%s"' % (data['star_id'], sell['name'])
+				s = '''
+					SELECT
+						DISTINCT names.person_uid, names.person_name as uid
+					FROM
+						gpi_people_names_references AS ref
+						JOIN gpi_people_names AS names ON (ref.person_name_id = names.person_name_id)
+					WHERE
+						ref.source_record_id = :id
+						AND names.person_name = :name
+					'''
+				res = gpi.execute(s, id="KNOEDLER-%s" % data['star_id'], name=sell['name'])
 
-			res = gpi.execute(s)
 			rows = res.fetchall()
 			if len(rows) == 1:
 				(puid, plabel) = rows[0]
@@ -561,14 +643,21 @@ def make_missing_purchase(data: dict, gpi=None, uuid_cache=None):
 				# find type based on ULAN, otherwise default to Group			
 				if buy['ulan'] is not None:
 					ptyp = get_actor_type(buy['ulan'], uuid_cache, default="Group")
-					s = "SELECT person_uid FROM gpi_people WHERE person_ulan = %s" % (buy['ulan'])
+					s = "SELECT person_uid FROM gpi_people WHERE person_ulan = :ulan"
+					res = gpi.execute(s, ulan=buy['ulan'])
 				else:
 					ptyp = "Group"
-					s = "SELECT DISTINCT names.person_uid " \
-					"FROM gpi_people_names_references as ref, gpi_people_names as names " \
-					'WHERE ref.person_name_id = names.person_name_id AND ref.source_record_id = "KNOEDLER-%s" and ' \
-					'names.person_name = "%s"' % (data['star_id'], buy['name'])
-				res = gpi.execute(s)
+					s = '''
+					SELECT
+						DISTINCT names.person_uid
+					FROM
+						gpi_people_names_references AS ref
+						JOIN gpi_people_names as names ON (ref.person_name_id = names.person_name_id)
+					WHERE
+						ref.source_record_id = :id
+						AND names.person_name = :name
+					'''
+					res = gpi.execute(s, id="KNOEDLER-%s" % data['star_id'], name=buy['name'])
 				rows = res.fetchall()
 				if len(rows) == 1:
 					puid = rows[0][0]
@@ -597,9 +686,16 @@ def make_inventory(data: dict):
 @use('gpi')
 def add_prev_prev(data: dict, gpi=None):
 
-	s = 'SELECT rowid FROM knoedler_previous_owners ' \
-		'WHERE rowid < %s AND object_id = "%s" ORDER BY rowid ASC LIMIT 1' % (int(data['rowid']), data['object_uid'])
-	res = gpi.execute(s)
+	s = '''
+		SELECT rowid
+		FROM knoedler_previous_owners
+		WHERE
+			rowid < :row
+			AND object_id = :id
+		ORDER BY rowid ASC
+		LIMIT 1
+		'''
+	res = gpi.execute(s, row=int(data['rowid']), id=data['object_uid'])
 	rows = res.fetchall()
 	if len(rows):
 		data['prev_uid'] = "%s_sale" % rows[0][0]
@@ -634,17 +730,23 @@ def fan_prev_post_purchase_sale(data: dict, uuid_cache=None):
 @use('gpi')
 @use('uuid_cache')
 def add_person_names(thing: dict, gpi=None, uuid_cache=None):
-	s = 'SELECT * FROM gpi_people_names WHERE person_uid="%s"' % (thing['uid'])
+	s = 'SELECT * FROM gpi_people_names WHERE person_uid = :id'
 	thing['names'] = []
-	for r in gpi.execute(s):
+	for r in gpi.execute(s, id=thing['uid']):
 		name = [r[0]]
 		nid = r[2]
 		# s2 = 'SELECT source_record_id from gpi_people_names_references WHERE 
 		#    person_name_id=%r' % (nid,)
-		s2 = 'SELECT k.star_record_no, k.stock_book_no, k.page_number, k.row_number ' \
-			'FROM knoedler AS k, gpi_people_names_references AS ref WHERE k.star_record_no ' \
-			'= ref.source_record_id AND ref.person_name_id=%r' % (nid,)
-		for r2 in gpi.execute(s2):
+		s2 = '''
+			SELECT
+				k.star_record_no, k.stock_book_no, k.page_number, k.row_number
+			FROM
+				knoedler AS k
+				JOIN gpi_people_names_references AS ref ON (k.star_record_no = ref.source_record_id)
+			WHERE
+				ref.person_name_id = :id
+			'''
+		for r2 in gpi.execute(s2, id=nid):
 			# uid, book, page, row
 			val = [r2[0]]
 
@@ -675,10 +777,17 @@ def add_person_locations(data: dict, gpi=None, uuid_cache=None):
 	fields = ['loc', 'recno', 'book', 'page', 'row']
 	fields2 = ['loc', 'auth', 'recno', 'book', 'page', 'row']
 
-	s = "SELECT s.purchase_seller_loc, k.star_record_no, k.stock_book_no, k.page_number, k.row_number " + \
-		" FROM knoedler_purchase_sellers as s, knoedler as k " + \
-		" WHERE s.purchase_seller_uid ='%s' AND s.purchase_event_id = k.purchase_event_id" % data['uid']
-	for row in gpi.execute(s):
+	s = '''
+		SELECT
+			s.purchase_seller_loc, k.star_record_no, k.stock_book_no, k.page_number, k.row_number
+		FROM
+			knoedler_purchase_sellers AS s
+			JOIN knoedler as k ON (s.purchase_event_id = k.purchase_event_id)
+		WHERE
+			s.purchase_seller_uid = :id
+		'''
+	for row in gpi.execute(s, id=data['uid']):
+		print(row)
 		if row[0]:
 			pl = dict(zip(fields, row))
 			print(pl)
@@ -690,13 +799,18 @@ def add_person_locations(data: dict, gpi=None, uuid_cache=None):
 			else:
 				places[pl['loc']] = [source]
 
-	s = 'SELECT s.sale_buyer_loc, s.sale_buyer_addr, k.star_record_no, k.stock_book_no, k.page_number, k.row_number ' + \
-		' FROM knoedler_sale_buyers as s, knoedler as k ' + \
-		" WHERE sale_buyer_uid = '%s' AND s.sale_event_id = k.sale_event_id" % data['uid']
-	for row in gpi.execute(s):
+	s = '''
+		SELECT
+			s.sale_buyer_loc, s.sale_buyer_addr, k.star_record_no, k.stock_book_no, k.page_number, k.row_number
+		FROM
+			knoedler_sale_buyers AS s
+			JOIN knoedler as k ON (s.sale_event_id = k.sale_event_id)
+		WHERE
+			sale_buyer_uid = :id
+		'''
+	for row in gpi.execute(s, id=data['uid']):
 		if row[0] or row[1]:
 			pl = dict(zip(fields2, row))
-			print(pl)
 			uu = fetch_uuid("K-ROW-%s-%s-%s" % (pl['book'], pl['page'], pl['row']), uuid_cache)
 			source = [pl['recno'], uu, pl['book'], pl['page'], pl['row']]
 			if pl['auth'] in places:
@@ -727,8 +841,8 @@ def make_stock_books(*thing):
 @use('gpi')
 def fan_pages(thing: dict, gpi=None):
 	# For each incoming book, find all the pages
-	s = 'SELECT DISTINCT page_number, link, main_heading, subheading FROM knoedler WHERE stock_book_no = %s ORDER BY page_number' % (thing['identifier'])
-	for r in gpi.execute(s):
+	s = 'SELECT DISTINCT page_number, link, main_heading, subheading FROM knoedler WHERE stock_book_no = :id ORDER BY page_number'
+	for r in gpi.execute(s, id=thing['identifier']):
 		page = {'parent': thing, 'identifier': r[0], 'image': r[1], 'heading': r[2], 'subheading': r[3], 
 			'uid': 'K-PAGE-%s-%s' % (thing['identifier'], r[0])}
 		yield page
@@ -736,10 +850,17 @@ def fan_pages(thing: dict, gpi=None):
 @use('gpi')
 def fan_rows(thing: dict, gpi=None):
 	# For each incoming book, find all the pages
-	s = 'SELECT DISTINCT row_number, star_record_no, pi_record_no, description, working_note, verbatim_notes ' + \
-		'FROM knoedler WHERE stock_book_no = %s AND page_number = %s ORDER BY row_number' % \
-		(thing['parent']['identifier'], thing['identifier'])
-	for r in gpi.execute(s):
+	s = '''
+		SELECT
+			DISTINCT row_number, star_record_no, pi_record_no, description, working_note, verbatim_notes
+		FROM
+			knoedler
+		WHERE
+			stock_book_no = :book
+			AND page_number = :page
+		ORDER BY row_number
+		'''
+	for r in gpi.execute(s, book=thing['parent']['identifier'], page=thing['identifier']):
 		row = {'parent': thing, 'identifier': r[0], 'star_id': r[1], 'pi_id': r[2], 'description': r[3],
 			'working': r[4], 'verbatim': r[5],
 			'uid': 'K-ROW-%s-%s-%s' % (thing['parent']['identifier'], thing['identifier'], r[0])}

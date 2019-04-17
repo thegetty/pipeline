@@ -22,7 +22,7 @@ def get_services():
 ### Pipeline
 
 if DEBUG:
-	LIMIT     = 10
+	LIMIT     = os.environ.get('GETTY_PIPELINE_LIMIT', 10)
 	PACK_SIZE = 10
 	SRLZ = Serializer(compact=False)
 	WRITER = FileWriter(directory=output_file_path)

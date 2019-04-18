@@ -1,13 +1,9 @@
+#!/usr/bin/env python3
 
 import sys, os
 from sqlalchemy import create_engine
 import bonobo
 import bonobo_sqlalchemy
-
-if os.path.exists('/Users/rsanderson'):
-	sys.path.insert(0,'/Users/rsanderson/Development/getty/pipeline')
-else:
-	sys.path.insert(0,'/home/rsanderson/Development/provenance/pipeline')
 
 from extracters.basic import AddArchesModel, AddFieldNames, Serializer, deep_copy, Offset, add_uuid
 from extracters.knoedler_data import *
@@ -26,7 +22,7 @@ def get_services():
 ### Pipeline
 
 if DEBUG:
-	LIMIT     = 10
+	LIMIT     = os.environ.get('GETTY_PIPELINE_LIMIT', 10)
 	PACK_SIZE = 10
 	SRLZ = Serializer(compact=False)
 	WRITER = FileWriter(directory=output_file_path)

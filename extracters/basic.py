@@ -1,9 +1,11 @@
 # Extracters
 
 from bonobo.config import Configurable, Service, Option, use
+import sys
 import uuid
 import copy
 import pprint
+import difflib
 
 # ~~~~ Core Functions ~~~~
 
@@ -90,6 +92,7 @@ def get_aat_label(term, gpi=None):
 
 class Trace(Configurable):
 	name = Option()
+	diff = Option(default=False)
 	ordinals = Option(default=(1,))
 	trace_counter = Service('trace_counter')
 
@@ -104,8 +107,18 @@ class Trace(Configurable):
 		id = thing[key]
 		seq = thing[skey]
 		if id in self.ordinals:
-			formatted = pprint.pformat({k: v for k, v in thing.items() if k not in (key, skey)})
-			print('===========> %s #%d: sequence %d\n%s' % (self.name, id, seq, formatted))
+			formatted = pprint.pformat({k: v for k, v in thing.items() if not k.startswith('__trace_')})
+			if self.diff:
+				previous = thing.get('__trace_%d_%d' % (id, seq-1))
+				print('===========> %s #%d: sequence %d' % (self.name, id, seq))
+				if previous:
+					lines = difflib.ndiff(previous.splitlines(keepends=True), formatted.splitlines(keepends=True))
+					sys.stdout.writelines(lines)
+				else:
+					print(formatted)
+			else:
+				print(formatted)
+			thing['__trace_%d_%d' % (id, seq)] = formatted
 		return thing
 
 

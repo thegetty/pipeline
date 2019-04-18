@@ -1,8 +1,9 @@
 # Extracters
 
-from bonobo.config import Configurable, Option, use
+from bonobo.config import Configurable, Service, Option, use
 import uuid
 import copy
+import pprint
 
 # ~~~~ Core Functions ~~~~
 
@@ -86,6 +87,26 @@ def get_aat_label(term, gpi=None):
 			print("Implement lookup to AAT via http")
 			return "XXX - FIX ME"
 		return l[0]
+
+class Trace(Configurable):
+	name = Option()
+	ordinals = Option(default=(1,))
+	trace_counter = Service('trace_counter')
+
+	def __call__(self, thing: dict, trace_counter):
+		key = '__trace_id'
+		skey = '__trace_seq'
+		if not key in thing:
+			thing[key] = next(trace_counter)
+			thing[skey] = 1
+		else:
+			thing[skey] += 1
+		id = thing[key]
+		seq = thing[skey]
+		if id in self.ordinals:
+			formatted = pprint.pformat({k: v for k, v in thing.items() if k not in (key, skey)})
+			print('===========> %s #%d: sequence %d\n%s' % (self.name, id, seq, formatted))
+		return thing
 
 
 ### Linked Art related functions

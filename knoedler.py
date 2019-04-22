@@ -114,7 +114,7 @@ def add_missing(graph):
 	)
 
 def add_pre_post(graph):
-	graph.add_chain(
+	chain1 = graph.add_chain(
 		bonobo_sqlalchemy.Select('''
 			SELECT pp.rowid, pp.previous_owner_uid, pp.object_id, p.person_ulan, p.person_label
 			FROM knoedler_previous_owners AS pp
@@ -123,9 +123,8 @@ def add_pre_post(graph):
 			AddFieldNames(key="prev_post_owners", field_names=all_names),
 			add_prev_prev
 	)
-	chain1 = graph.nodes[-1]
 
-	graph.add_chain(
+	chain2 = graph.add_chain(
 		bonobo_sqlalchemy.Select('''
 			SELECT pp.rowid, pp.post_owner_uid, pp.object_id, p.person_ulan, p.person_label
 			FROM
@@ -135,9 +134,8 @@ def add_pre_post(graph):
 			engine='gpi', limit=LIMIT, pack_size=PACK_SIZE),
 			AddFieldNames(key="prev_post_owners", field_names=all_names),
 	)
-	chain2 = graph.nodes[-1]
 
-	for cin in [chain1, chain2]:
+	for cin in [chain1.output, chain2.output]:
 		graph.add_chain(
 			AddArchesModel(model=arches_models['Acquisition']),
 			fan_prev_post_purchase_sale,

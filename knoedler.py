@@ -3,9 +3,10 @@
 import sys, os
 from sqlalchemy import create_engine
 import bonobo
+import itertools
 import bonobo_sqlalchemy
 
-from extracters.basic import AddArchesModel, AddFieldNames, Serializer, deep_copy, Offset, add_uuid
+from extracters.basic import AddArchesModel, AddFieldNames, Serializer, deep_copy, Offset, add_uuid, Trace
 from extracters.knoedler_data import *
 from extracters.knoedler_linkedart import *
 from extracters.arches import ArchesWriter, FileWriter
@@ -14,6 +15,7 @@ from settings import *
 # Set up environment
 def get_services():
     return {
+    	'trace_counter': itertools.count(),
         'gpi': create_engine(gpi_engine),
  		'uuid_cache': create_engine(uuid_cache_engine),
  		'raw': create_engine(raw_engine)
@@ -83,11 +85,11 @@ def add_missing(graph):
 			SELECT pi_record_no, object_id, inventory_event_id, sale_event_id, purchase_event_id
 			FROM knoedler
 			WHERE inventory_event_id NOT NULL
-			''', 
+			''',
 			engine='gpi', limit=LIMIT, pack_size=PACK_SIZE),
 		find_raw,
 		AddFieldNames(key="raw", field_names=all_names),
-		# bonobo.PrettyPrinter(),	
+		# bonobo.PrettyPrinter(),
 		make_missing_purchase_data,
 		make_missing_shared
 	)
@@ -98,7 +100,7 @@ def add_missing(graph):
 		#bonobo.PrettyPrinter(),
 		make_la_purchase,
 		SRLZ,
-		WRITER,			
+		WRITER,
 		_input=make_missing_shared
 	)
 
@@ -145,7 +147,7 @@ def add_pre_post(graph):
 			SRLZ,
 			WRITER,
 			_input = cin
-		)	
+		)
 
 def add_objects(graph):
 	graph.add_chain(
@@ -198,7 +200,7 @@ def add_people(graph):
 	)
 
 	if DEBUG and SPAM:
-		graph.add_chain(print_jsonld, _input=len(graph.nodes)-1)	
+		graph.add_chain(print_jsonld, _input=len(graph.nodes)-1)
 
 def add_documents(graph):
 	graph.add_chain(
@@ -227,7 +229,7 @@ def add_documents(graph):
 			_input = xin
 		)
 		if DEBUG and SPAM:
-			graph.add_chain(print_jsonld, _input=len(graph.nodes)-1)	
+			graph.add_chain(print_jsonld, _input=len(graph.nodes)-1)
 
 
 def get_graph():

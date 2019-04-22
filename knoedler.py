@@ -52,7 +52,7 @@ def add_sales(graph):
 		WRITER
 	)
 
-	graph.add_chain(
+	phases = graph.add_chain(
 		fan_object_phases,
 		AddArchesModel(model=arches_models['Phase']),
 		make_la_phase,
@@ -62,9 +62,9 @@ def add_sales(graph):
 	)
 
 	if DEBUG and SPAM:
-		graph.add_chain(print_jsonld, _input=len(graph.nodes)-1)
+		graph.add_chain(print_jsonld, _input=phases.output)
 
-	graph.add_chain(
+	acqs = graph.add_chain(
 		bonobo_sqlalchemy.Select('SELECT * from knoedler_sale_info', engine='gpi', limit=LIMIT, pack_size=PACK_SIZE),
 		AddFieldNames(key="sale_info", field_names=all_names),
 		AddArchesModel(model=arches_models['Acquisition']),
@@ -77,7 +77,7 @@ def add_sales(graph):
 	)
 
 	if DEBUG and SPAM:
-		graph.add_chain(print_jsonld, _input=len(graph.nodes)-1)
+		graph.add_chain(print_jsonld, _input=acqs.output)
 
 def add_missing(graph):
 	graph.add_chain(
@@ -116,7 +116,7 @@ def add_missing(graph):
 	)
 
 def add_pre_post(graph):
-	graph.add_chain(
+	chain1 = graph.add_chain(
 		bonobo_sqlalchemy.Select('''
 			SELECT pp.rowid, pp.previous_owner_uid, pp.object_id, p.person_ulan, p.person_label
 			FROM knoedler_previous_owners AS pp
@@ -125,9 +125,8 @@ def add_pre_post(graph):
 			AddFieldNames(key="prev_post_owners", field_names=all_names),
 			add_prev_prev
 	)
-	chain1 = graph.nodes[-1]
 
-	graph.add_chain(
+	chain2 = graph.add_chain(
 		bonobo_sqlalchemy.Select('''
 			SELECT pp.rowid, pp.post_owner_uid, pp.object_id, p.person_ulan, p.person_label
 			FROM
@@ -137,9 +136,8 @@ def add_pre_post(graph):
 			engine='gpi', limit=LIMIT, pack_size=PACK_SIZE),
 			AddFieldNames(key="prev_post_owners", field_names=all_names),
 	)
-	chain2 = graph.nodes[-1]
 
-	for cin in [chain1, chain2]:
+	for cin in [chain1.output, chain2.output]:
 		graph.add_chain(
 			AddArchesModel(model=arches_models['Acquisition']),
 			fan_prev_post_purchase_sale,
@@ -164,7 +162,7 @@ def add_objects(graph):
 		WRITER
 	)
 
-	graph.add_chain(
+	visitems = graph.add_chain(
 		deep_copy,
 		AddArchesModel(model=arches_models['VisualItem']),
 		make_la_vizitem,
@@ -174,10 +172,10 @@ def add_objects(graph):
 	)
 
 	if DEBUG and SPAM:
-		graph.add_chain(print_jsonld, _input=len(graph.nodes)-1)
+		graph.add_chain(print_jsonld, _input=visitems.output)
 
 def add_people(graph):
-	graph.add_chain(
+	people = graph.add_chain(
 		bonobo_sqlalchemy.Select('''
 			SELECT DISTINCT peeps.*
 			FROM
@@ -200,7 +198,7 @@ def add_people(graph):
 	)
 
 	if DEBUG and SPAM:
-		graph.add_chain(print_jsonld, _input=len(graph.nodes)-1)
+		graph.add_chain(print_jsonld, _input=people.output)
 
 def add_documents(graph):
 	graph.add_chain(
@@ -223,13 +221,13 @@ def add_documents(graph):
 
 	# create subsequent branches
 	for xin in [make_la_book, make_la_page, make_la_row]:
-		graph.add_chain(
+		out = graph.add_chain(
 			SRLZ,
 			WRITER,
 			_input = xin
 		)
 		if DEBUG and SPAM:
-			graph.add_chain(print_jsonld, _input=len(graph.nodes)-1)
+			graph.add_chain(print_jsonld, _input=out.output)
 
 
 def get_graph():

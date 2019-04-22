@@ -1,8 +1,11 @@
 # Extracters
 
-from bonobo.config import Configurable, Option, use
+from bonobo.config import Configurable, Service, Option, use
+import sys
 import uuid
 import copy
+import pprint
+import difflib
 
 # ~~~~ Core Functions ~~~~
 
@@ -86,6 +89,37 @@ def get_aat_label(term, gpi=None):
 			print("Implement lookup to AAT via http")
 			return "XXX - FIX ME"
 		return l[0]
+
+class Trace(Configurable):
+	name = Option()
+	diff = Option(default=False)
+	ordinals = Option(default=(1,))
+	trace_counter = Service('trace_counter')
+
+	def __call__(self, thing: dict, trace_counter):
+		key = '__trace_id'
+		skey = '__trace_seq'
+		if not key in thing:
+			thing[key] = next(trace_counter)
+			thing[skey] = 1
+		else:
+			thing[skey] += 1
+		id = thing[key]
+		seq = thing[skey]
+		if id in self.ordinals:
+			formatted = pprint.pformat({k: v for k, v in thing.items() if not k.startswith('__trace_')})
+			if self.diff:
+				previous = thing.get('__trace_%d_%d' % (id, seq-1))
+				print('===========> %s #%d: sequence %d' % (self.name, id, seq))
+				if previous:
+					lines = difflib.ndiff(previous.splitlines(keepends=True), formatted.splitlines(keepends=True))
+					sys.stdout.writelines(lines)
+				else:
+					print(formatted)
+			else:
+				print(formatted)
+			thing['__trace_%d_%d' % (id, seq)] = formatted
+		return thing
 
 
 ### Linked Art related functions

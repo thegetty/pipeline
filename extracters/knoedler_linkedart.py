@@ -123,7 +123,7 @@ def make_la_person(data: dict):
 
 	for ns in ['aat_nationality_1', 'aat_nationality_2','aat_nationality_3']:
 		# add nationality
-		n = data[ns]
+		n = data.get(ns)
 		# XXX Strip out antique / modern anonymous as a nationality
 		if n:
 			if int(n) in [300310546,300264736]:
@@ -137,7 +137,7 @@ def make_la_person(data: dict):
 	# nationality field can contain other information, but not useful.
 	# XXX Intentionally ignored but validate with GRI
 
-	if data['active_early'] or data['active_late']:
+	if data.get('active_early') or data.get('active_late'):
 		act = vocab.Active()
 		ts = model.TimeSpan()
 		if data['active_early']:
@@ -150,7 +150,7 @@ def make_la_person(data: dict):
 		act.timespan = ts
 		who.carried_out = act
 
-	if data['birth']:
+	if data.get('birth'):
 		b = model.Birth()
 		ts = model.TimeSpan()
 		if 'birth_clean' in data:
@@ -161,7 +161,7 @@ def make_la_person(data: dict):
 		b._label = "Birth of %s" % who._label
 		who.born = b
 
-	if data['death']:
+	if data.get('death'):
 		d = model.Death()
 		ts = model.TimeSpan()
 		if 'death_clean' in data:
@@ -173,7 +173,7 @@ def make_la_person(data: dict):
 		who.died = d
 
 	# Add names
-	for name in data['names']:
+	for name in data.get('names', []):
 		n = model.Name()
 		n.content = name[0]
 		for ref in name[1:]:

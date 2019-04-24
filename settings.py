@@ -17,6 +17,7 @@ DEBUG = os.environ.get('GETTY_PIPELINE_DEBUG', False)
 SPAM = os.environ.get('GETTY_PIPELINE_VERBOSE', False)
 
 if os.path.exists('/Users/rsanderson'):
+	aat_engine = 'sqlite:////Users/rsanderson/Development/getty/provenance/matt/gpi.sqlite'
 	gpi_engine = 'sqlite:////Users/rsanderson/Development/getty/provenance/matt/gpi.sqlite'
 	uuid_cache_engine = 'sqlite:////Users/rsanderson/Development/getty/pipeline/uuid_cache.sqlite'
 	raw_engine = 'sqlite:////Users/rsanderson/Development/getty/pipeline/data/raw_gpi.sqlite'
@@ -24,6 +25,7 @@ if os.path.exists('/Users/rsanderson'):
 	DEBUG = True
 	SPAM = False
 else:
+	aat_engine = 'sqlite:///%s/aat.sqlite' % (data_path,)
 	gpi_engine = 'sqlite:///%s/gpi.sqlite' % (data_path,)
 	uuid_cache_engine = 'sqlite:///%s/uuid_cache.sqlite' % (data_path,)
 	raw_engine = 'sqlite:///%s/raw_gpi.sqlite' % (data_path,)

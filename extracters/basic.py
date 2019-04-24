@@ -79,12 +79,12 @@ def add_uuid(thing: dict, uuid_cache=None):
 	thing['uuid'] = row[0]
 	return thing
 
-@use('gpi')
-def get_aat_label(term, gpi=None):
+@use('aat')
+def get_aat_label(term, aat=None):
 	if term in aat_label_cache:
 		return aat_label_cache[term]
 	else:
-		res = gpi.execute('SELECT aat_label FROM aat WHERE aat_id = :id', id=term)
+		res = aat.execute('SELECT aat_label FROM aat WHERE aat_id = :id', id=term)
 		l = res.fetchone()
 		if l:
 			aat_label_cache[term] = l[0]

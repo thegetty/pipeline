@@ -16,6 +16,7 @@ from settings import *
 def get_services():
     return {
     	'trace_counter': itertools.count(),
+        'aat': create_engine(aat_engine),
         'gpi': create_engine(gpi_engine),
  		'uuid_cache': create_engine(uuid_cache_engine),
  		'raw': create_engine(raw_engine)

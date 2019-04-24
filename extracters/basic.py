@@ -112,6 +112,9 @@ class Trace(Configurable):
 		seq = thing[skey]
 		if id in self.ordinals:
 			formatted = pprint.pformat({k: v for k, v in thing.items() if not k.startswith('__trace_')})
+			if formatted[0] == '{' and formatted[-1] == '}':
+				# adding newlines and a trailing comma helps with making a sensible diff
+				formatted = '{\n ' + formatted[1:-1] + ',\n}\n'
 			if self.diff:
 				previous = thing.get('__trace_%d_%d' % (id, seq-1))
 				print('===========> %s #%d: sequence %d' % (self.name, id, seq))

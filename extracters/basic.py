@@ -63,16 +63,20 @@ def fetch_uuid(key, uuid_cache):
 @use('uuid_cache')
 def add_uuid(thing: dict, uuid_cache=None):
 	# Need access to select from the uuid_cache
-	s = 'SELECT uuid FROM mapping WHERE key="%s"' % (thing['uid']) 
-	res = uuid_cache.execute(s)
+	uid = thing['uid']
+	s = 'SELECT uuid FROM mapping WHERE key = :uid'
+	res = uuid_cache.execute(s, uid=uid)
 	row = res.fetchone()
 	if row is None:
 		uu = str(uuid.uuid4())
-		c = 'INSERT INTO mapping (key, uuid) VALUES ("%s", "%s")' % (thing['uid'], uu)
-		uuid_cache.execute(c)
+		c = 'INSERT OR IGNORE INTO mapping (key, uuid) VALUES (:uid, :uuid)'
+		uuid_cache.execute(c, uid, uu)
 		thing['uuid'] = uu
-	else:
-		thing['uuid'] = row[0]
+		res = uuid_cache.execute(s, uid=uid)
+		row = res.fetchone()
+		if row is None:
+			raise Exception('Failed to add and access a new UUID for key %r' % (uid,))
+	thing['uuid'] = row[0]
 	return thing
 
 @use('gpi')

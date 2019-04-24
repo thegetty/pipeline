@@ -6,13 +6,8 @@ import lxml.etree
 class XMLReader(FileReader):
 	xpath = Option(str, required=True)
 
-	@Method(positional=False)
-	def loader(self, file):
-		root = lxml.etree.parse(filename)
-		return root
-
 	def read(self, file, *, fs):
-		root = self.loader(file.read())
+		root = lxml.etree.parse(file)
 		for e in root.xpath(self.xpath):
 			yield e
 

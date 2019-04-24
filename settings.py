@@ -11,6 +11,7 @@ arches_models = {
 	"LinguisticObject": "41a41e47-2e42-11e9-b5ee-a4d18cec433a"
 }
 
+aata_data_path = os.environ.get('GETTY_PIPELINE_AATA_INPUT', '/data/input/aata')
 data_path = os.environ.get('GETTY_PIPELINE_INPUT', '/data/input/provenance/knoedler')
 output_file_path = os.environ.get('GETTY_PIPELINE_OUTPUT', '/data2/output/provenance/knoedler')
 DEBUG = os.environ.get('GETTY_PIPELINE_DEBUG', False)

@@ -759,11 +759,11 @@ def add_person_names(thing: dict, gpi=None, uuid_cache=None):
 
 @use('gpi')
 def add_person_aat_labels(data: dict, gpi=None):
-	if data['aat_nationality_1']:
+	if data.get('aat_nationality_1'):
 		data['aat_nationality_1_label'] = get_aat_label(data['aat_nationality_1'], gpi=gpi)
-	if data['aat_nationality_2']:
+	if data.get('aat_nationality_2'):
 		data['aat_nationality_2_label'] = get_aat_label(data['aat_nationality_2'], gpi=gpi)
-	if data['aat_nationality_3']:
+	if data.get('aat_nationality_3'):
 		data['aat_nationality_4_label'] = get_aat_label(data['aat_nationality_3'], gpi=gpi)
 	return data
 
@@ -826,8 +826,10 @@ def add_person_locations(data: dict, gpi=None, uuid_cache=None):
 	return data
 
 def clean_dates(data: dict):
-	data['birth_clean'] = date_cleaner(data['birth'])
-	data['death_clean'] = date_cleaner(data['death'])
+	if data.get('birth'):
+		data['birth_clean'] = date_cleaner(data['birth'])
+	if data.get('death'):
+		data['death_clean'] = date_cleaner(data['death'])
 	return data
 
 

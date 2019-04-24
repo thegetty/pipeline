@@ -150,6 +150,10 @@ def make_la_person(data: dict):
 		act.timespan = ts
 		who.carried_out = act
 
+	if data.get('events'):
+		for event in data['events']:
+			who.carried_out = event
+
 	if data.get('birth'):
 		b = model.Birth()
 		ts = model.TimeSpan()

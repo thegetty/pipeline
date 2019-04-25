@@ -3,13 +3,9 @@ from .cleaners import ymd_to_datetime
 
 from cromulent import model, vocab
 from cromulent.model import factory
+from extracters.linkedart import add_crom_data
 factory.auto_id_type = 'uuid'
 vocab.add_art_setter()
-
-def add_crom_data(data: dict, what=None):
-	data['_CROM_FACTORY'] = factory
-	data['_LOD_OBJECT'] = what
-	return data
 
 vocab.register_aat_class("Clock", {"parent": model.ManMadeObject, "id": "300041575", "label": "Clock"})
 vocab.register_aat_class("Cards", {"parent": model.ManMadeObject, "id":"300211294", "label": "Playing Cards"})

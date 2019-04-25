@@ -35,7 +35,7 @@ def get_services(**kwargs):
 ### Pipeline
 
 if DEBUG:
-	print("In DEBUGGING mode")
+	sys.stderr.write("In DEBUGGING mode\n")
 	LIMIT		= os.environ.get('GETTY_PIPELINE_LIMIT', 10)
 	PACK_SIZE	= 10
 	SRLZ		= Serializer(compact=False)
@@ -57,6 +57,8 @@ class AddDataDependentArchesModel(Configurable):
 
 def get_graph(files, **kwargs):
 	graph = bonobo.Graph()
+	if DEBUG:
+		files = [files[0]]
 
 	for f in files:
 		aata_records = XMLReader(f, xpath='/AATA_XML/record', fs='fs.data.aata')

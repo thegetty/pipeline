@@ -182,6 +182,13 @@ def make_la_person(data: dict):
 			n.referred_to_by = l
 		who.identified_by = n
 
+	for id, type in data.get('identifiers', []):
+		ident = model.Identifier()
+		ident.content = id
+		if type is not None:
+			ident.classified_as = type
+		who.identified_by = ident
+
 	# Locations are names of residence places (P74 -> E53)
 	# XXX FIXME: Places are their own model
 	if 'places' in data:

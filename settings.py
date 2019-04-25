@@ -11,12 +11,14 @@ arches_models = {
 	"LinguisticObject": "41a41e47-2e42-11e9-b5ee-a4d18cec433a"
 }
 
+aata_data_path = os.environ.get('GETTY_PIPELINE_AATA_INPUT', '/data/input/aata')
 data_path = os.environ.get('GETTY_PIPELINE_INPUT', '/data/input/provenance/knoedler')
 output_file_path = os.environ.get('GETTY_PIPELINE_OUTPUT', '/data2/output/provenance/knoedler')
 DEBUG = os.environ.get('GETTY_PIPELINE_DEBUG', False)
 SPAM = os.environ.get('GETTY_PIPELINE_VERBOSE', False)
 
 if os.path.exists('/Users/rsanderson'):
+	aat_engine = 'sqlite:////Users/rsanderson/Development/getty/provenance/matt/gpi.sqlite'
 	gpi_engine = 'sqlite:////Users/rsanderson/Development/getty/provenance/matt/gpi.sqlite'
 	uuid_cache_engine = 'sqlite:////Users/rsanderson/Development/getty/pipeline/uuid_cache.sqlite'
 	raw_engine = 'sqlite:////Users/rsanderson/Development/getty/pipeline/data/raw_gpi.sqlite'
@@ -24,6 +26,7 @@ if os.path.exists('/Users/rsanderson'):
 	DEBUG = True
 	SPAM = False
 else:
+	aat_engine = 'sqlite:///%s/aat.sqlite' % (data_path,)
 	gpi_engine = 'sqlite:///%s/gpi.sqlite' % (data_path,)
 	uuid_cache_engine = 'sqlite:///%s/uuid_cache.sqlite' % (data_path,)
 	raw_engine = 'sqlite:///%s/raw_gpi.sqlite' % (data_path,)

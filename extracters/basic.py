@@ -63,24 +63,28 @@ def fetch_uuid(key, uuid_cache):
 @use('uuid_cache')
 def add_uuid(thing: dict, uuid_cache=None):
 	# Need access to select from the uuid_cache
-	s = 'SELECT uuid FROM mapping WHERE key="%s"' % (thing['uid']) 
-	res = uuid_cache.execute(s)
+	uid = thing['uid']
+	s = 'SELECT uuid FROM mapping WHERE key = :uid'
+	res = uuid_cache.execute(s, uid=uid)
 	row = res.fetchone()
 	if row is None:
 		uu = str(uuid.uuid4())
-		c = 'INSERT INTO mapping (key, uuid) VALUES ("%s", "%s")' % (thing['uid'], uu)
-		uuid_cache.execute(c)
+		c = 'INSERT OR IGNORE INTO mapping (key, uuid) VALUES (:uid, :uuid)'
+		uuid_cache.execute(c, uid, uu)
 		thing['uuid'] = uu
-	else:
-		thing['uuid'] = row[0]
+		res = uuid_cache.execute(s, uid=uid)
+		row = res.fetchone()
+		if row is None:
+			raise Exception('Failed to add and access a new UUID for key %r' % (uid,))
+	thing['uuid'] = row[0]
 	return thing
 
-@use('gpi')
-def get_aat_label(term, gpi=None):
+@use('aat')
+def get_aat_label(term, aat=None):
 	if term in aat_label_cache:
 		return aat_label_cache[term]
 	else:
-		res = gpi.execute('SELECT aat_label FROM aat WHERE aat_id = :id', id=term)
+		res = aat.execute('SELECT aat_label FROM aat WHERE aat_id = :id', id=term)
 		l = res.fetchone()
 		if l:
 			aat_label_cache[term] = l[0]
@@ -108,6 +112,9 @@ class Trace(Configurable):
 		seq = thing[skey]
 		if id in self.ordinals:
 			formatted = pprint.pformat({k: v for k, v in thing.items() if not k.startswith('__trace_')})
+			if formatted[0] == '{' and formatted[-1] == '}':
+				# adding newlines and a trailing comma helps with making a sensible diff
+				formatted = '{\n ' + formatted[1:-1] + ',\n}\n'
 			if self.diff:
 				previous = thing.get('__trace_%d_%d' % (id, seq-1))
 				print('===========> %s #%d: sequence %d' % (self.name, id, seq))

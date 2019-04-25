@@ -12,6 +12,14 @@ def make_la_record(data: dict):
 	otype = data['object_type']
 	object = otype(ident="urn:uuid:%s" % data['uuid'])
 	object._label = data['label']
+	name = model.Name()
+	name.content = data['label']
+	object.identified_by = name
+	for t in data.get('translations', []):
+		title = model.Name()
+		title.translation_of = name
+		object.identified_by = title
+	
 	return add_crom_data(data=data, what=object)
 
 def make_la_abstract(data: dict):

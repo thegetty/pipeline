@@ -1,8 +1,7 @@
 #!/usr/bin/env python3
 
-# TODO: refactor code from knoedler files that is actually just linkedart related
+# TODO: refactor code from knoedler files (e.g. knoedler_linkedart.*) that is actually just linkedart related
 # TODO: ensure that multiple serializations to the same uuid are merged. e.g. a journal article with two authors, that each get asserted as carrying out the creation event.
-# TODO: move xml-related code to just the first extract node. all other nodes should be based on a resulting dict to allow re-use with non-xml source data.
 
 import pprint
 import sys, os
@@ -18,10 +17,9 @@ from cromulent import model, vocab
 from extracters.xml import XMLReader
 from extracters.basic import AddArchesModel, AddFieldNames, Serializer, deep_copy, Offset, add_uuid, Trace
 from extracters.aata_data import make_aata_article_dict, make_aata_authors, make_aata_abstract, add_aata_object_type, make_aata_imprint_orgs
-from extracters.knoedler_data import add_person_aat_labels
 from extracters.knoedler_linkedart import *
 from extracters.arches import ArchesWriter, FileWriter
-from extracters.linkedart import make_la_organization
+from extracters.linkedart import make_la_organization, make_la_record, make_la_abstract
 from settings import *
 
 # Set up environment
@@ -57,15 +55,6 @@ class AddDataDependentArchesModel(Configurable):
 		data['_ARCHES_MODEL'] = self.models['LinguisticObject']
 		return data
 
-def make_la_record(data: dict):
-	otype = data['object_type']
-	object = otype(ident="urn:uuid:%s" % data['uuid'])
-	object._label = data['label']
-	return add_crom_data(data=data, what=object)
-
-def make_la_abstract(data: dict):
-	return add_crom_data(data=data, what=data['_LOD_OBJECT'])
-
 def get_graph(files, **kwargs):
 	graph = bonobo.Graph()
 
@@ -93,7 +82,6 @@ def get_graph(files, **kwargs):
 			make_aata_authors,
 			AddArchesModel(model=arches_models['Person']),
 			add_uuid,
-			add_person_aat_labels,
 			make_la_person,
 			_input=articles.output
 		)

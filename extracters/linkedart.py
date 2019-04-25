@@ -8,6 +8,22 @@ def add_crom_data(data: dict, what=None):
 	data['_LOD_OBJECT'] = what
 	return data
 
+def make_la_record(data: dict):
+	otype = data['object_type']
+	object = otype(ident="urn:uuid:%s" % data['uuid'])
+	object._label = data['label']
+	return add_crom_data(data=data, what=object)
+
+def make_la_abstract(data: dict):
+	a = data['_LOD_OBJECT']
+	for id, type in data.get('identifiers', []):
+		ident = model.Identifier()
+		ident.content = id
+		if type is not None:
+			ident.classified_as = type
+		a.identified_by = ident
+	return add_crom_data(data=data, what=a)
+
 def make_la_organization(data: dict):
 	who = model.Group(ident="urn:uuid:%s" % data['uuid'])
 	who._label = str(data['label'])
@@ -16,7 +32,6 @@ def make_la_organization(data: dict):
 		for event in data['events']:
 			who.carried_out = event
 
-	# Add names
 	for name in data.get('names', []):
 		n = model.Name()
 		n.content = name[0]
@@ -26,9 +41,11 @@ def make_la_organization(data: dict):
 			n.referred_to_by = l
 		who.identified_by = n
 
-	for id in data.get('identifiers', []):
+	for id, type in data.get('identifiers', []):
 		ident = model.Identifier()
 		ident.content = id
+		if type is not None:
+			ident.classified_as = type
 		who.identified_by = ident
 
 	return add_crom_data(data=data, what=who)

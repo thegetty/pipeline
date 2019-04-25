@@ -1,13 +1,16 @@
 # TODO: move cromulent model code out of this module
+# TODO: move xml-related code to just the first extract node (and related functions). all other nodes should be based on a resulting dict to allow re-use with non-xml source data.
 
 # AATA Extracters
 
-from cromulent import model, vocab
+import pprint
 from bonobo.config import use
-from extracters.cleaners import date_cleaner, share_parse
-from .basic import fetch_uuid, get_actor_type, get_aat_label
 import copy
 import lxml.etree
+
+from cromulent import model, vocab
+from extracters.cleaners import date_cleaner, share_parse
+from .basic import fetch_uuid, get_actor_type, get_aat_label
 
 def language_object_from_code(code):
 	languages = {
@@ -36,13 +39,14 @@ def make_aata_imprint_org_dict(e, parent_object, parent_data, event):
 		name = aid.findtext('display_term')
 		auth_id = aid.findtext('gaia_auth_id')
 		auth_type = aid.findtext('gaia_auth_type')
+		localIdentifier = None # TODO: aat:LocalIdentifier?
 		yield {
 			'_source_element': e,
 			'parent': parent_object,
 			'parent_data': parent_data,
 			'label': name,
 			'names': [(name,)],
-			'identifiers': [auth_id],
+			'identifiers': [(auth_id, localIdentifier)],
 			'events': [event],
 			'uid': 'AATA-Org-%s-%s-%s' % (auth_type, auth_id, name)
 		}
@@ -77,13 +81,14 @@ def make_aata_author_dict(e, parent_object, parent_data, event):
 		name = aid.findtext('display_term')
 		auth_id = aid.findtext('gaia_auth_id')
 		auth_type = aid.findtext('gaia_auth_type')
+		localIdentifier = None # TODO: aat:LocalIdentifier?
 		yield {
 			'_source_element': e,
 			'parent': parent_object,
 			'parent_data': parent_data,
 			'label': name,
 			'names': [(name,)],
-			'identifiers': [auth_id],
+			'identifiers': [(auth_id, localIdentifier)],
 			'events': [event],
 			'uid': 'AATA-P-%s-%s-%s' % (auth_type, auth_id, name)
 		}
@@ -112,6 +117,10 @@ def make_aata_abstract(data):
 	data = author_data['parent_data']
 	e = data['_source_element']
 	object = data['_LOD_OBJECT']
+	rids = [e.text for e in e.findall('./record_id_group/record_id')]
+	lids = [e.text for e in e.findall('./record_id_group/legacy_id')]
+	localIdentifier = None # TODO: aat:LocalIdentifier?
+	legacyIdentifier = None # TODO: aat:LegacyIdentifier?
 	for ag in e.xpath('./abstract_group'):
 		abstract = model.LinguisticObject()
 		a = ag.find('./abstract')
@@ -135,10 +144,15 @@ def make_aata_abstract(data):
 					abstract.language = l
 
 			abstract.refers_to = object
+			
+			localIds = [(i, localIdentifier) for i in rids]
+			legacyIds = [(i, legacyIdentifier) for i in lids]
+			
 			yield {
 				'_LOD_OBJECT': abstract,
 				'_source_element': ag,
 				'parent': object,
+				'identifiers': localIds + legacyIds,
 				'content': content,
 				'uid': 'AATA-A-%s-%s' % (data['uid'], content)
 			}

@@ -30,6 +30,47 @@ def make_aata_article_dict(e):
 		'uid': 'AATA-%s-%s-%s' % (doc_type, rid, title)
 	}
 
+def make_aata_imprint_org_dict(e, parent_object, parent_data, event):
+	aid = e.find('./organization_id')
+	if aid is not None:
+		name = aid.findtext('display_term')
+		auth_id = aid.findtext('gaia_auth_id')
+		auth_type = aid.findtext('gaia_auth_type')
+		yield {
+			'_source_element': e,
+			'parent': parent_object,
+			'parent_data': parent_data,
+			'label': name,
+			'names': [(name,)],
+			'identifiers': [auth_id],
+			'events': [event],
+			'uid': 'AATA-Org-%s-%s-%s' % (auth_type, auth_id, name)
+		}
+	else:
+		print('*** No organization_id found for record %s:' % (parent,))
+		print(lxml.etree.tostring(e).decode('utf-8'))
+
+def make_aata_imprint_orgs(data):
+	e = data['_source_element']
+	object = data['_LOD_OBJECT']
+# 	ExtractXPath(xpath='./imprint_group/related_organization[organization_type = "Publisher"]/organization/organization_id/display_term'),
+	for ig in e.xpath('./imprint_group/related_organization'):
+		event = model.Activity()
+		object.used_for = event
+		role = ig.findtext('organization_type')
+		activity_names = {
+			'Distributor': 'Distributing',
+			'Publisher': 'Publishing',
+			# TODO: Handle roles: Organization, Sponsor, University
+		}
+		if role in activity_names:
+			event._label = activity_names[role]
+		else:
+			print('*** No/unknown organization role (%r) found for imprint_group in %s:' % (role, object,))
+			print(lxml.etree.tostring(ig).decode('utf-8'))
+		for o in ig.xpath('./organization'):
+			yield from make_aata_imprint_org_dict(o, parent_object=object, parent_data=data, event=event)
+
 def make_aata_author_dict(e, parent_object, parent_data, event):
 	aid = e.find('./author_id')
 	if aid is not None:
@@ -41,6 +82,8 @@ def make_aata_author_dict(e, parent_object, parent_data, event):
 			'parent': parent_object,
 			'parent_data': parent_data,
 			'label': name,
+			'names': [(name,)],
+			'identifiers': [auth_id],
 			'events': [event],
 			'uid': 'AATA-P-%s-%s-%s' % (auth_type, auth_id, name)
 		}

@@ -55,73 +55,87 @@ class AddDataDependentArchesModel(Configurable):
 		data['_ARCHES_MODEL'] = self.models['LinguisticObject']
 		return data
 
+def add_articles_chain(graph, records):
+	articles = graph.add_chain(
+		Limit(LIMIT),
+		make_aata_article_dict,
+		add_uuid,
+		add_aata_object_type,
+		make_la_record,
+		AddDataDependentArchesModel(models=arches_models),
+		_input=records.output
+	)
+	if True:
+		# write ARTICLES data
+		graph.add_chain(
+			SRLZ,
+			WRITER,
+			_input=articles.output
+		)
+	return articles
+
+def add_people_chain(graph, articles):
+	people = graph.add_chain(
+		make_aata_authors,
+		AddArchesModel(model=arches_models['Person']),
+		add_uuid,
+		make_la_person,
+		_input=articles.output
+	)
+	if True:
+		# write PEOPLE data
+		graph.add_chain(
+			SRLZ,
+			WRITER,
+			_input=people.output
+		)
+	return people
+
+def add_abstracts_chain(graph, people):
+	abstracts = graph.add_chain(
+		make_aata_abstract,
+		AddArchesModel(model=arches_models['LinguisticObject']),
+		add_uuid,
+		make_la_abstract,
+		_input=people.output
+	)
+	if True:
+		# write ABSTRACTS data
+		graph.add_chain(
+			SRLZ,
+			WRITER,
+			_input=abstracts.output
+		)
+	return abstracts
+
+def add_organizations_chain(graph, articles):
+	organizations = graph.add_chain(
+		make_aata_imprint_orgs,
+		AddArchesModel(model='XXX-Organization-Model'), # TODO: model for organizations?
+		add_uuid,
+		make_la_organization,
+		_input=articles.output
+	)
+	if True:
+		# write ORGANIZATIONS data
+		graph.add_chain(
+			SRLZ,
+			WRITER,
+			_input=organizations.output
+		)
+	return organizations
+
 def get_graph(files, **kwargs):
 	graph = bonobo.Graph()
 	if DEBUG:
 		files = [files[0]]
 
 	for f in files:
-		aata_records = XMLReader(f, xpath='/AATA_XML/record', fs='fs.data.aata')
-		articles = graph.add_chain(
-			aata_records,
-			Limit(LIMIT),
-			make_aata_article_dict,
-			add_uuid,
-			add_aata_object_type,
-			make_la_record,
-			AddDataDependentArchesModel(models=arches_models),
-		)
-		
-		if True:
-			# write ARTICLES data
-			graph.add_chain(
-				SRLZ,
-				WRITER,
-				_input=articles.output
-			)
-		
-		people = graph.add_chain(
-			make_aata_authors,
-			AddArchesModel(model=arches_models['Person']),
-			add_uuid,
-			make_la_person,
-			_input=articles.output
-		)
-		
-		if True:
-			# write PEOPLE data
-			graph.add_chain(
-				SRLZ,
-				WRITER,
-				_input=people.output
-			)
-
-		abstracts = graph.add_chain(
-			make_aata_abstract,
-			AddArchesModel(model=arches_models['LinguisticObject']),
-			add_uuid,
-			make_la_abstract,
-			_input=people.output
-		)
-
-		if True:
-			# write ABSTRACTS data
-			graph.add_chain(
-				SRLZ,
-				WRITER,
-				_input=abstracts.output
-			)
-
-		graph.add_chain(
-			make_aata_imprint_orgs,
-			AddArchesModel(model='XXX-Organization-Model'), # TODO: model for organizations?
-			add_uuid,
-			make_la_organization,
-			SRLZ,
-			WRITER,
-			_input=articles.output
-		)
-
+		records = graph.add_chain(XMLReader(f, xpath='/AATA_XML/record', fs='fs.data.aata'))
+		articles = add_articles_chain(graph, records)
+		people = add_people_chain(graph, articles)
+		abstracts = add_abstracts_chain(graph, people)
+		organizations = add_organizations_chain(graph, articles)
 
 	return graph
 

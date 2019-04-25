@@ -1,16 +1,19 @@
 # TODO: move cromulent model code out of this module
-# TODO: move xml-related code to just the first extract node (and related functions). all other nodes should be based on a resulting dict to allow re-use with non-xml source data.
 
 # AATA Extracters
 
 import pprint
 from bonobo.config import use
 import copy
+import uuid
+import hashlib
 import lxml.etree
 
 from cromulent import model, vocab
 from extracters.cleaners import date_cleaner, share_parse
 from .basic import fetch_uuid, get_actor_type, get_aat_label
+
+# utility functions
 
 def language_object_from_code(code):
 	languages = {
@@ -22,140 +25,102 @@ def language_object_from_code(code):
 	except KeyError:
 		print('*** No AAT link for language %r' % (language,))
 
+# main article chain
+
 def make_aata_article_dict(e):
 	doc_type = e.findtext('./record_desc_group/doc_type')
 	title_type = e.findtext('./title_group/title_type')
 	title = e.findtext('./title_group[title_type = "Analytic"]/title')
 	rid = e.findtext('./record_id_group/record_id')
+	organizations = list(_xml_extract_organizations(e))
+	authors = list(_xml_extract_authors(e))
+	abstracts = list(_xml_extract_abstracts(e))
+		
 	return {
 		'_source_element': e,
 		'label': title,
+		'_document_type': e.findtext('./record_desc_group/doc_type'),
+		'_organizations': list(organizations),
+		'_authors': list(authors),
+		'_abstracts': list(abstracts),
 		'uid': 'AATA-%s-%s-%s' % (doc_type, rid, title)
 	}
 
-def make_aata_imprint_org_dict(e, parent_object, parent_data, event):
-	aid = e.find('./organization_id')
-	if aid is not None:
-		name = aid.findtext('display_term')
-		auth_id = aid.findtext('gaia_auth_id')
-		auth_type = aid.findtext('gaia_auth_type')
-		localIdentifier = None # TODO: aat:LocalIdentifier?
-		yield {
-			'_source_element': e,
-			'parent': parent_object,
-			'parent_data': parent_data,
-			'label': name,
-			'names': [(name,)],
-			'identifiers': [(auth_id, localIdentifier)],
-			'events': [event],
-			'uid': 'AATA-Org-%s-%s-%s' % (auth_type, auth_id, name)
-		}
-	else:
-		print('*** No organization_id found for record %s:' % (parent,))
-		print(lxml.etree.tostring(e).decode('utf-8'))
-
-def make_aata_imprint_orgs(data):
-	e = data['_source_element']
-	object = data['_LOD_OBJECT']
-# 	ExtractXPath(xpath='./imprint_group/related_organization[organization_type = "Publisher"]/organization/organization_id/display_term'),
-	for ig in e.xpath('./imprint_group/related_organization'):
-		event = model.Activity()
-		object.used_for = event
-		role = ig.findtext('organization_type')
-		activity_names = {
-			'Distributor': 'Distributing',
-			'Publisher': 'Publishing',
-			# TODO: Handle roles: Organization, Sponsor, University
-		}
-		if role in activity_names:
-			event._label = activity_names[role]
-		else:
-			print('*** No/unknown organization role (%r) found for imprint_group in %s:' % (role, object,))
-			print(lxml.etree.tostring(ig).decode('utf-8'))
-		for o in ig.xpath('./organization'):
-			yield from make_aata_imprint_org_dict(o, parent_object=object, parent_data=data, event=event)
-
-def make_aata_author_dict(e, parent_object, parent_data, event):
-	aid = e.find('./author_id')
-	if aid is not None:
-		name = aid.findtext('display_term')
-		auth_id = aid.findtext('gaia_auth_id')
-		auth_type = aid.findtext('gaia_auth_type')
-		localIdentifier = None # TODO: aat:LocalIdentifier?
-		yield {
-			'_source_element': e,
-			'parent': parent_object,
-			'parent_data': parent_data,
-			'label': name,
-			'names': [(name,)],
-			'identifiers': [(auth_id, localIdentifier)],
-			'events': [event],
-			'uid': 'AATA-P-%s-%s-%s' % (auth_type, auth_id, name)
-		}
-	else:
-		print('*** No author_id found for record %s:' % (parent,))
-		print(lxml.etree.tostring(e).decode('utf-8'))
-
-def make_aata_authors(data):
-	e = data['_source_element']
-	object = data['_LOD_OBJECT']
-	event = model.Creation()
-	object.created_by = event
-	for ag in e.xpath('./authorship_group'):
-		subevent = model.Creation()
-		event.part = subevent
-		role = ag.findtext('author_role')
-		if role is None:
-			print('*** No author role found for authorship group in %s:' % (object,))
-			print(lxml.etree.tostring(ag).decode('utf-8'))
-		subevent._label = role
-		for a in ag.xpath('./author'):
-			yield from make_aata_author_dict(a, parent_object=object, parent_data=data, event=subevent)
-
-def make_aata_abstract(data):
-	author_data = data
-	data = author_data['parent_data']
-	e = data['_source_element']
-	object = data['_LOD_OBJECT']
-	rids = [e.text for e in e.findall('./record_id_group/record_id')]
-	lids = [e.text for e in e.findall('./record_id_group/legacy_id')]
+def _xml_extract_abstracts(e):
 	localIdentifier = None # TODO: aat:LocalIdentifier?
 	legacyIdentifier = None # TODO: aat:LegacyIdentifier?
+
+	rids = [e.text for e in e.findall('./record_id_group/record_id')]
+	lids = [e.text for e in e.findall('./record_id_group/legacy_id')]
 	for ag in e.xpath('./abstract_group'):
-		abstract = model.LinguisticObject()
 		a = ag.find('./abstract')
 		author_abstract_flag = ag.findtext('./author_abstract_flag')
 		if a is not None:
-			if author_abstract_flag == 'yes':
-				event = model.Creation()
-				abstract.created_by = event
-				event.carried_out_by = author_data['_LOD_OBJECT']
-			else:
-				# TODO: what about the creation event when author_abstract_flag != 'yes'?
-				pass
-
 			content = a.text
 			language = a.attrib.get('lang')
-			abstract.content = content
-			abstract.classified_as = model.Type(ident='http://vocab.getty.edu/aat/300026032', label='Abstract') # TODO: is this the right aat URI?
-			if language is not None:
-				l = language_object_from_code(language)
-				if l is not None:
-					abstract.language = l
-
-			abstract.refers_to = object
 			
 			localIds = [(i, localIdentifier) for i in rids]
 			legacyIds = [(i, legacyIdentifier) for i in lids]
-			
 			yield {
-				'_LOD_OBJECT': abstract,
-				'_source_element': ag,
-				'parent': object,
-				'identifiers': localIds + legacyIds,
 				'content': content,
-				'uid': 'AATA-A-%s-%s' % (data['uid'], content)
+				'language': language,
+				'author_abstract_flag': (author_abstract_flag == 'yes'),
+				'identifiers': localIds + legacyIds,
 			}
+
+def _xml_extract_organizations(e):
+	localIdentifier = None # TODO: aat:LocalIdentifier?
+	legacyIdentifier = None # TODO: aat:LegacyIdentifier?
+
+	for ig in e.xpath('./imprint_group/related_organization'):
+		role = ig.findtext('organization_type')
+		for o in ig.xpath('./organization'):
+			aid = o.find('./organization_id')
+			if aid is not None:
+				name = aid.findtext('display_term')
+				auth_id = aid.findtext('gaia_auth_id')
+				auth_type = aid.findtext('gaia_auth_type')
+				localIdentifier = None # TODO: aat:LocalIdentifier?
+				yield {
+					'label': name,
+					'role': role,
+					'names': [(name,)],
+					'identifiers': [(auth_id, localIdentifier)],
+					'uid': 'AATA-Org-%s-%s-%s' % (auth_type, auth_id, name)
+				}
+			else:
+				print('*** No organization_id found for record %s:' % (o,))
+				print(lxml.etree.tostring(ig).decode('utf-8'))
+
+def _xml_extract_authors(e):
+	localIdentifier = None # TODO: aat:LocalIdentifier?
+	legacyIdentifier = None # TODO: aat:LegacyIdentifier?
+
+	for ag in e.xpath('./authorship_group'):
+		role = ag.findtext('author_role')
+		for a in ag.xpath('./author'):
+			aid = a.find('./author_id')
+			if aid is not None:
+				name = aid.findtext('display_term')
+				auth_id = aid.findtext('gaia_auth_id')
+				auth_type = aid.findtext('gaia_auth_type')
+				localIdentifier = None # TODO: aat:LocalIdentifier?
+				author = {}
+				if role is not None:
+					author['creation_role'] = role
+				else:
+					print('*** No author role found for authorship group in %s:' % (object,))
+					print(lxml.etree.tostring(ag).decode('utf-8'))
+				author.update({
+					'label': name,
+					'names': [(name,)],
+					'identifiers': [(auth_id, localIdentifier)],
+					'uid': 'AATA-P-%s-%s-%s' % (auth_type, auth_id, name)
+				})
+				yield author
+			else:
+				print('*** No author_id found for record %s:' % (parent,))
+				print(lxml.etree.tostring(a).decode('utf-8'))
 
 def add_aata_object_type(data):
 	doc_types = { # should this be in settings (or elsewhere)?
@@ -169,8 +134,92 @@ def add_aata_object_type(data):
 		'TH': vocab.Thesis,
 		'TR': vocab.TechnicalReport
 	}
-	e = data['_source_element']
-	atype = e.findtext('./record_desc_group/doc_type')
+	atype = data['_document_type']
 	data['object_type'] = doc_types[atype]
 	return data
 
+# imprint organizations chain (publishers, distributors)
+
+def make_aata_imprint_orgs(data):
+	e = data['_source_element']
+	object = data['_LOD_OBJECT']
+	organizations = data['_organizations']
+	for o in organizations:
+		event = model.Activity()
+		object.used_for = event
+		role = o.get('role')
+		if role is not None:
+			activity_names = {
+				'Distributor': 'Distributing',
+				'Publisher': 'Publishing',
+				# TODO: Handle roles: Organization, Sponsor, University
+			}
+			if role in activity_names:
+				event._label = activity_names[role]
+			else:
+				print('*** No/unknown organization role (%r) found for imprint_group in %s:' % (role, object,))
+				print(lxml.etree.tostring(ig).decode('utf-8'))
+		
+		org = {k: v for k, v in o.items()}
+		org.update({
+			'events': [event],
+			'parent': object,
+			'parent_data': data,
+		})
+		yield org
+
+# article authors chain
+
+def make_aata_authors(data):
+	object = data['_LOD_OBJECT']
+	event = model.Creation()
+	object.created_by = event
+	
+	for a in data.get('_authors', []):
+		subevent = model.Creation()
+		event.part = subevent
+		role = a.get('creation_role')
+		if role is not None:
+			subevent._label = role
+		author = {k: v for k, v in a.items()}
+		author.update({
+			'parent': object,
+			'parent_data': data,
+			'events': [subevent],
+		})
+		yield author
+
+# article abstract chain
+
+def make_aata_abstract(author_data):
+	data = author_data['parent_data']
+	object = data['_LOD_OBJECT']
+	for a in data.get('_abstracts', []):
+		abstract = model.LinguisticObject()
+		if a.get('author_abstract_flag'):
+			event = model.Creation()
+			abstract.created_by = event
+			event.carried_out_by = author_data['_LOD_OBJECT']
+		else:
+			# TODO: what about the creation event when author_abstract_flag != 'yes'?
+			pass
+
+		abstract_dict = {k: v for k, v in a.items()}
+
+		abstract.content = a.get('content')
+		abstract.classified_as = model.Type(ident='http://vocab.getty.edu/aat/300026032', label='Abstract') # TODO: is this the right aat URI?
+		abstract.refers_to = object
+		langcode = a.get('language')
+		if langcode is not None:
+			l = language_object_from_code(langcode)
+			if l is not None:
+				abstract.language = l
+				abstract_dict['language'] = l
+
+		abstract_dict = {k: v for k, v in a.items()}
+		abstract_dict.update({
+			'_LOD_OBJECT': abstract,
+			'parent': object,
+			'uid': 'AATA-A-%s-%s' % (data['uid'], hashlib.sha224(a['content'].encode('utf-8')).hexdigest())
+		})
+		yield abstract_dict

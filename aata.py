@@ -72,7 +72,7 @@ def get_graph(files, **kwargs):
 			AddDataDependentArchesModel(models=arches_models),
 		)
 		
-		if False:
+		if True:
 			# write ARTICLES data
 			graph.add_chain(
 				SRLZ,

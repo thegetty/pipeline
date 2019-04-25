@@ -151,7 +151,7 @@ def make_aata_imprint_orgs(data):
 				event._label = activity_names[role]
 			else:
 				print('*** No/unknown organization role (%r) found for imprint_group in %s:' % (role, object,))
-				print(lxml.etree.tostring(o).decode('utf-8'))
+				pprint.pprint(o)
 		
 		org = {k: v for k, v in o.items()}
 		org.update({

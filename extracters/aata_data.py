@@ -13,6 +13,9 @@ from cromulent import model, vocab
 from extracters.cleaners import date_cleaner, share_parse
 from .basic import fetch_uuid, get_actor_type, get_aat_label
 
+localIdentifier = None # TODO: aat:LocalIdentifier?
+legacyIdentifier = None # TODO: aat:LegacyIdentifier?
+
 # utility functions
 
 def language_object_from_code(code):
@@ -29,13 +32,13 @@ def language_object_from_code(code):
 
 def make_aata_article_dict(e):
 	doc_type = e.findtext('./record_desc_group/doc_type')
-	title_type = e.findtext('./title_group/title_type')
 	title = e.findtext('./title_group[title_type = "Analytic"]/title')
+	translations = [t.text for t in e.xpath('./title_group[title_type = "Analytic"]/title_translated')]
 	rid = e.findtext('./record_id_group/record_id')
 	organizations = list(_xml_extract_organizations(e))
 	authors = list(_xml_extract_authors(e))
 	abstracts = list(_xml_extract_abstracts(e))
-		
+
 	return {
 		'_source_element': e,
 		'label': title,
@@ -43,13 +46,11 @@ def make_aata_article_dict(e):
 		'_organizations': list(organizations),
 		'_authors': list(authors),
 		'_abstracts': list(abstracts),
+		'translations': list(translations),
 		'uid': 'AATA-%s-%s-%s' % (doc_type, rid, title)
 	}
 
 def _xml_extract_abstracts(e):
-	localIdentifier = None # TODO: aat:LocalIdentifier?
-	legacyIdentifier = None # TODO: aat:LegacyIdentifier?
-
 	rids = [e.text for e in e.findall('./record_id_group/record_id')]
 	lids = [e.text for e in e.findall('./record_id_group/legacy_id')]
 	for ag in e.xpath('./abstract_group'):
@@ -69,9 +70,6 @@ def _xml_extract_abstracts(e):
 			}
 
 def _xml_extract_organizations(e):
-	localIdentifier = None # TODO: aat:LocalIdentifier?
-	legacyIdentifier = None # TODO: aat:LegacyIdentifier?
-
 	for ig in e.xpath('./imprint_group/related_organization'):
 		role = ig.findtext('organization_type')
 		for o in ig.xpath('./organization'):
@@ -80,7 +78,6 @@ def _xml_extract_organizations(e):
 				name = aid.findtext('display_term')
 				auth_id = aid.findtext('gaia_auth_id')
 				auth_type = aid.findtext('gaia_auth_type')
-				localIdentifier = None # TODO: aat:LocalIdentifier?
 				yield {
 					'label': name,
 					'role': role,
@@ -90,12 +87,9 @@ def _xml_extract_organizations(e):
 				}
 			else:
 				print('*** No organization_id found for record %s:' % (o,))
-				print(lxml.etree.tostring(ig).decode('utf-8'))
+				print(lxml.etree.tostring(o).decode('utf-8'))
 
 def _xml_extract_authors(e):
-	localIdentifier = None # TODO: aat:LocalIdentifier?
-	legacyIdentifier = None # TODO: aat:LegacyIdentifier?
-
 	for ag in e.xpath('./authorship_group'):
 		role = ag.findtext('author_role')
 		for a in ag.xpath('./author'):
@@ -104,7 +98,6 @@ def _xml_extract_authors(e):
 				name = aid.findtext('display_term')
 				auth_id = aid.findtext('gaia_auth_id')
 				auth_type = aid.findtext('gaia_auth_type')
-				localIdentifier = None # TODO: aat:LocalIdentifier?
 				author = {}
 				if role is not None:
 					author['creation_role'] = role
@@ -126,7 +119,7 @@ def add_aata_object_type(data):
 	doc_types = { # should this be in settings (or elsewhere)?
 		'AV': vocab.AudioVisualContent,
 		'BA': vocab.Chapter,
-		'BC': vocab.Monograph, # TODO: is this right?
+		'BC': vocab.Monograph, # TODO: is this right for a "Book - Collective"?
 		'BM': vocab.Monograph,
 		'JA': vocab.Article,
 		'JW': vocab.Issue,
@@ -152,13 +145,13 @@ def make_aata_imprint_orgs(data):
 			activity_names = {
 				'Distributor': 'Distributing',
 				'Publisher': 'Publishing',
-				# TODO: Handle roles: Organization, Sponsor, University
+				# TODO: Need to also handle roles: Organization, Sponsor, University
 			}
 			if role in activity_names:
 				event._label = activity_names[role]
 			else:
 				print('*** No/unknown organization role (%r) found for imprint_group in %s:' % (role, object,))
-				print(lxml.etree.tostring(ig).decode('utf-8'))
+				print(lxml.etree.tostring(o).decode('utf-8'))
 		
 		org = {k: v for k, v in o.items()}
 		org.update({
@@ -180,7 +173,7 @@ def make_aata_authors(data):
 		event.part = subevent
 		role = a.get('creation_role')
 		if role is not None:
-			subevent._label = role
+			subevent._label = 'Creation sub-event for %s' % (role,)
 		author = {k: v for k, v in a.items()}
 		author.update({
 			'parent': object,

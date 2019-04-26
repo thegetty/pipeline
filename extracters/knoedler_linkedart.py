@@ -49,14 +49,12 @@ def make_la_book(data: dict):
 	ident = vocab.LocalNumber()
 	ident.content = str(data['identifier'])
 	book.identified_by = ident
-	try:
-		booknum = int(data['identifier'])
-		d = vocab.SequencePosition()
-		d.value = booknum
-		d.unit = vocab.instances['numbers']
-		book.dimension = d		
-	except:
-		pass
+
+	booknum = int(data['identifier'])
+	d = vocab.SequencePosition()
+	d.value = booknum
+	d.unit = vocab.instances['numbers']
+	book.dimension = d		
 
 	return add_crom_data(data=data, what=book)
 
@@ -66,14 +64,12 @@ def make_la_page(data: dict):
 	ident = vocab.LocalNumber()
 	ident.content = str(data['identifier'])
 	page.identified_by = ident
-	try:
-		pagenum = int(data['identifier'])
-		d = vocab.SequencePosition()
-		d.value = pagenum
-		d.unit = vocab.instances['numbers']
-		page.dimension = d		
-	except:
-		pass
+
+	pagenum = int(data['identifier'])
+	d = vocab.SequencePosition()
+	d.value = pagenum
+	d.unit = vocab.instances['numbers']
+	page.dimension = d		
 
 	# XXX This is a shortcut to avoid minting physical objects with depictions
 	# We should consider how terrible that is
@@ -107,14 +103,11 @@ def make_la_row(data: dict):
 	row = model.LinguisticObject(ident="urn:uuid:%s" % data['uuid'])
 	row._label = _row_label(data['parent']['parent']['identifier'], data['parent']['identifier'], data['identifier'])
 
-	try:
-		rownum = int(data['identifier'])
-		d = vocab.SequencePosition()
-		d.value = rownum
-		d.unit = vocab.instances['numbers']
-		row.dimension = d		
-	except:
-		pass	
+	rownum = int(data['identifier'])
+	d = vocab.SequencePosition()
+	d.value = rownum
+	d.unit = vocab.instances['numbers']
+	row.dimension = d		
 
 	ident = vocab.LocalNumber()
 	ident.content = data['star_id']
@@ -183,7 +176,10 @@ def make_la_person(data: dict):
 		ts = model.TimeSpan()
 		if 'birth_clean' in data and data['birth_clean']:
 			ts.begin_of_the_begin = data['birth_clean'][0].strftime("%Y-%m-%dT%H:%M:%SZ")
-			ts.end_of_the_end = data['birth_clean'][1].strftime("%Y-%m-%dT%H:%M:%SZ")
+			try:
+				ts.end_of_the_end = data['birth_clean'][1].strftime("%Y-%m-%dT%H:%M:%SZ")
+			except:
+				print("birth_clean [sic] not that clean: %r" % data['birth_clean'])				
 		ts._label = data['birth']
 		b.timespan = ts
 		b._label = "Birth of %s" % who._label

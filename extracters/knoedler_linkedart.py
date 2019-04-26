@@ -480,7 +480,8 @@ def make_la_phase(data: dict):
 			else:				
 				ts.end_of_the_end = ymd_to_datetime(data['s_year'], data['s_month'], data['s_day'], which="end")
 		nm = model.Name()
-		nm.content = "%s %s %s to %s %s %s" % (data['p_year'], data['p_month'], data['p_day'], data['s_year'], data['s_month'], data['s_day'])
+		nm.content = "%s %s %s to %s %s %s" % (data.get('p_year', '????'), data.get('p_month', '??'), 
+			data.get('p_day', '??'), data.get('s_year', '????'), data.get('s_month', '??'), data.get('s_day', '??'))
 		ts.identified_by = nm
 
 	for b in data['buyers']:

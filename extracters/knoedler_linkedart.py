@@ -49,6 +49,12 @@ def make_la_book(data: dict):
 	ident = vocab.LocalNumber()
 	ident.content = str(data['identifier'])
 	book.identified_by = ident
+	try:
+		booknum = int(data['identifier'])
+		
+	except:
+		pass
+
 	return add_crom_data(data=data, what=book)
 
 def make_la_page(data: dict):

@@ -27,14 +27,14 @@ def ymd_to_datetime(year, month, day, which="begin"):
 		try:
 			year = int(year)
 		except:
-			print("DATE CLEAN: year is %r" % year)
-			year = None
+			print("DATE CLEAN: year is %r; returning None" % year)
+			return None
 
 	if type(month) is not int:
 		try:
 			month = int(month)
 		except:
-			print("DATE CLEAN: month is %r" % month)
+			print("DATE CLEAN: month is %r; continuing with %s" % (month, "earliest" if which=="begin" else "latest"))
 			month = None
 
 	if type(day) is not int:
@@ -43,24 +43,19 @@ def ymd_to_datetime(year, month, day, which="begin"):
 		except:
 			day = None
 
-	if not year:
-		if which == "begin":
-			year = 0
-		else:
-			year = 9999
-
-	if not month or month > 12 or month < 0:
+	if not month or month > 12 or month < 1:
 		if which == "begin":
 			month = 1
 		else:
 			month = 12
 
 	try:
+		# month or year could be out of range, so catch exceptions
 		maxday = calendar.monthrange(year, month)[1]
 	except:
 		maxday = 31
 		
-	if not day or day > maxday or day < 0:
+	if not day or day > maxday or day < 1:
 		if which == "begin":
 			day = 1
 		else:

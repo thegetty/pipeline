@@ -27,7 +27,7 @@ class MakeLinkedArtLinguisticObject(MakeLinkedArtRecord):
 	def set_properties(self, data, object):
 		title_type = model.Type(ident='http://vocab.getty.edu/aat/300055726', label='Title') # TODO: is this the right aat URI?
 		name = None
-		if data.get('label'):
+		if 'label' in data:
 			object._label = data['label']
 			name = model.Name()
 			name.classified_as = title_type
@@ -57,7 +57,7 @@ class MakeLinkedArtOrganization(MakeLinkedArtRecord):
 	def set_properties(self, data, object):
 		object._label = str(data['label'])
 
-		if data.get('events'):
+		if 'events' in data:
 			for event in data['events']:
 				object.carried_out = event
 

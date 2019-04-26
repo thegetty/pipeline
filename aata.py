@@ -19,7 +19,7 @@ from extracters.basic import AddArchesModel, AddFieldNames, Serializer, deep_cop
 from extracters.aata_data import make_aata_article_dict, make_aata_authors, make_aata_abstract, add_aata_object_type, make_aata_imprint_orgs
 from extracters.knoedler_linkedart import *
 from extracters.arches import ArchesWriter, FileWriter
-from extracters.linkedart import make_la_organization, MakeLinkedArtLinguisticObject, MakeLinkedArtAbstract
+from extracters.linkedart import MakeLinkedArtLinguisticObject, MakeLinkedArtAbstract, MakeLinkedArtOrganization
 from settings import *
 
 # Set up environment
@@ -113,7 +113,7 @@ def add_organizations_chain(graph, articles):
 		make_aata_imprint_orgs,
 		AddArchesModel(model='XXX-Organization-Model'), # TODO: model for organizations?
 		add_uuid,
-		make_la_organization,
+		MakeLinkedArtOrganization(),
 		_input=articles.output
 	)
 	if True:

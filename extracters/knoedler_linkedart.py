@@ -51,7 +51,11 @@ def make_la_book(data: dict):
 	book.identified_by = ident
 	try:
 		booknum = int(data['identifier'])
-		
+		d = Dimension()
+		d.value = booknum
+		d.unit = Type(ident="http://vocab.getty.edu/aat/300055665", label="Numbers")
+		d.classified_as = Type(ident="http://vocab.getty.edu/aat/300010269", label="Position")
+		book.dimension = d		
 	except:
 		pass
 
@@ -63,6 +67,16 @@ def make_la_page(data: dict):
 	ident = vocab.LocalNumber()
 	ident.content = str(data['identifier'])
 	page.identified_by = ident
+	try:
+		pagenum = int(data['identifier'])
+		d = Dimension()
+		d.value = pagenum
+		d.unit = Type(ident="http://vocab.getty.edu/aat/300055665", label="Numbers")
+		d.classified_as = Type(ident="http://vocab.getty.edu/aat/300010269", label="Position")
+		page.dimension = d		
+	except:
+		pass
+
 	# XXX This is a shortcut to avoid minting physical objects with depictions
 	# We should consider how terrible that is
 	if 'image' in data:
@@ -94,6 +108,17 @@ def make_la_page(data: dict):
 def make_la_row(data: dict):
 	row = model.LinguisticObject(ident="urn:uuid:%s" % data['uuid'])
 	row._label = _row_label(data['parent']['parent']['identifier'], data['parent']['identifier'], data['identifier'])
+
+	try:
+		rownum = int(data['identifier'])
+		d = Dimension()
+		d.value = rownum
+		d.unit = Type(ident="http://vocab.getty.edu/aat/300055665", label="Numbers")
+		d.classified_as = Type(ident="http://vocab.getty.edu/aat/300010269", label="Position")
+		row.dimension = d		
+	except:
+		pass	
+
 	ident = vocab.LocalNumber()
 	ident.content = data['star_id']
 	row.identified_by = ident

@@ -194,7 +194,10 @@ def make_la_person(data: dict):
 		ts = model.TimeSpan()
 		if 'death_clean' in data and data['death_clean']:
 			ts.begin_of_the_begin = data['death_clean'][0].strftime("%Y-%m-%dT%H:%M:%SZ")
-			ts.end_of_the_end = data['death_clean'][1].strftime("%Y-%m-%dT%H:%M:%SZ")
+			try:
+				ts.end_of_the_end = data['death_clean'][1].strftime("%Y-%m-%dT%H:%M:%SZ")
+			except:
+				print("death_clean [sic] not that clean: %r" % data['death_clean'])
 		ts._label = data['death']
 		d.timespan = ts
 		d._label = "Death of %s" % who._label
@@ -429,14 +432,14 @@ def make_la_purchase(data: dict):
 			try:
 				what.transferred_title_to = model.Person(ident="urn:uuid:%s" % b['uuid'], label=b['label'])
 			except:
-				print(b)
-				raise
+				print("Could not build person in make_la_purchase: %r" % b)
+				# ????
 		else:
 			try:
 				what.transferred_title_to = model.Group(ident="urn:uuid:%s" % b['uuid'], label=b['label'])
 			except:
-				print(b)
-				raise
+				print("Could not build group in make_la_purchase: %r" % b)
+				# What to do??
 
 	for s in data['sellers']:
 		if s['type'] in ['Person', 'Actor']:

@@ -15,11 +15,28 @@ import sqlite3
 
 from cromulent import model, vocab
 from extracters.xml import XMLReader
-from extracters.basic import AddArchesModel, AddFieldNames, Serializer, deep_copy, Offset, add_uuid, Trace
-from extracters.aata_data import make_aata_article_dict, make_aata_authors, make_aata_abstract, add_aata_object_type, make_aata_imprint_orgs
+from extracters.basic import \
+			add_uuid, \
+			AddArchesModel, \
+			AddFieldNames, \
+			deep_copy, \
+			Offset, \
+			Serializer, \
+			Trace
+from extracters.aata_data import \
+			add_aata_object_type, \
+			make_aata_abstract, \
+			make_aata_article_dict, \
+			make_aata_authors, \
+			make_aata_imprint_orgs, \
+			extract_imprint_orgs, \
+			CleanDateToSpan
 from extracters.knoedler_linkedart import *
 from extracters.arches import ArchesWriter, FileWriter
-from extracters.linkedart import MakeLinkedArtLinguisticObject, MakeLinkedArtAbstract, MakeLinkedArtOrganization
+from extracters.linkedart import \
+			MakeLinkedArtAbstract, \
+			MakeLinkedArtLinguisticObject, \
+			MakeLinkedArtOrganization
 from settings import *
 
 # Set up environment
@@ -110,6 +127,8 @@ def add_abstracts_chain(graph, people):
 
 def add_organizations_chain(graph, articles):
 	organizations = graph.add_chain(
+		extract_imprint_orgs,
+		CleanDateToSpan(key='publication_date'),
 		make_aata_imprint_orgs,
 		AddArchesModel(model='XXX-Organization-Model'), # TODO: model for organizations?
 		add_uuid,

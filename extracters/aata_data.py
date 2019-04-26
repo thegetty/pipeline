@@ -4,6 +4,7 @@
 
 import pprint
 from bonobo.config import use
+from bonobo.config import Configurable, Option
 import copy
 import uuid
 import lxml.etree
@@ -76,6 +77,11 @@ def _xml_extract_organizations(e, aata_id):
 	i = -1
 	for ig in e.xpath('./imprint_group/related_organization'):
 		role = ig.findtext('organization_type')
+		properties = {}
+		for pair in ig.xpath('./additional_org_info'):
+			key = pair.findtext('label')
+			value = pair.findtext('value')
+			properties[key] = value
 		for o in ig.xpath('./organization'):
 			i += 1
 			aid = o.find('./organization_id')
@@ -88,6 +94,7 @@ def _xml_extract_organizations(e, aata_id):
 					'_aata_record_organization_seq': i,
 					'label': name,
 					'role': role,
+					'properties': properties,
 					'names': [(name,)],
 					'identifiers': [(auth_id, localIdentifier)],
 					'uid': 'AATA-Org-%s-%s-%s' % (auth_type, auth_id, name)
@@ -129,8 +136,8 @@ def _xml_extract_authors(e, aata_id):
 				})
 				yield author
 			else:
-				print('*** No author_id found for record %s:' % (e,))
-				print(lxml.etree.tostring(a).decode('utf-8'))
+				print('*** No author_id found for record %s:' % (aata_id,))
+# 				print(lxml.etree.tostring(a).decode('utf-8'))
 
 def add_aata_object_type(data):
 	doc_types = { # should this be in settings (or elsewhere)?
@@ -150,13 +157,13 @@ def add_aata_object_type(data):
 
 # imprint organizations chain (publishers, distributors)
 
-def make_aata_imprint_orgs(data):
-	e = data['_source_element']
+def extract_imprint_orgs(data):
 	object = data['_LOD_OBJECT']
 	organizations = data['_organizations']
 	for o in organizations:
-		event = model.Activity()
-		object.used_for = event
+		org = {k: v for k, v in o.items()}
+		
+		properties = o.get('properties')
 		role = o.get('role')
 		if role is not None:
 			activity_names = {
@@ -165,18 +172,65 @@ def make_aata_imprint_orgs(data):
 				# TODO: Need to also handle roles: Organization, Sponsor, University
 			}
 			if role in activity_names:
-				event._label = activity_names[role]
+				org['event_label'] = activity_names[role]
 			else:
 				print('*** No/unknown organization role (%r) found for imprint_group in %s:' % (role, object,))
 				pprint.pprint(o)
-		
-		org = {k: v for k, v in o.items()}
+
+			if role == 'Publisher' and 'DatesOfPublication' in properties:
+				pubdate = properties['DatesOfPublication']
+				org['publication_date'] = pubdate
+
 		org.update({
-			'events': [event],
 			'parent': object,
 			'parent_data': data,
 		})
 		yield org
+
+class CleanDateToSpan(Configurable):
+	'''
+	Supplied with a key name, attempt to parse the value in `input[key]`` as a date or
+	date range, and create a new `TimeSpan` object for the parsed date(s). Store the
+	resulting timespan in `input[key + '_span']`.
+	'''
+	
+	key = Option(str, required=True)
+	optional = Option(bool, default=True)
+	
+	def __call__(self, data):
+		if self.key in data:
+			value = data[self.key]
+			try:
+				date_from, date_to = date_cleaner(value)
+				ts = model.TimeSpan()
+				if date_from is not None:
+					ts.begin_of_the_begin = date_from.strftime("%Y-%m-%dT%H:%M:%SZ")
+				if date_to is not None:
+					ts.end_of_the_end = date_to.strftime("%Y-%m-%dT%H:%M:%SZ")
+				data['%s_span' % self.key] = ts
+			except:
+				print('*** Unknown date format: %r' % (value,))
+				return NOT_MODIFIED
+			return data
+		else:
+			if not self.optional:
+				print('*** key %r is not in the data object:' % (self.key,))
+				pprint.pprint(data)
+			return NOT_MODIFIED
+
+def make_aata_imprint_orgs(o: dict):
+	event = model.Activity()
+	object = o['parent']
+	object.used_for = event
+	event._label = o.get('event_label')
+	if 'publication_date_span' in o:
+		ts = o['publication_date_span']
+		event.timespan = ts
+	org = {k: v for k, v in o.items()}
+	org.update({
+		'events': [event],
+	})
+	yield org
 
 # article authors chain
 
@@ -188,10 +242,8 @@ def make_aata_authors(data):
 	authors = data.get('_authors', [])
 	if not len(authors):
 		if len(data.get('_abstracts', [])) > 0:
-			print('*** Found record without any authors.')
-			print('*** This is a problem as the record has at least one abstract:')
-			pprint.pprint(data)
-			raise Exception
+			print('*** Found record without any authors; This is a problem as the record has at least one abstract: %r' % (data['_aata_record_id'],))
+# 			pprint.pprint(data)
 
 	for a in authors:
 		subevent = model.Creation()

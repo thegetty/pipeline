@@ -22,26 +22,50 @@ def share_parse(value):
 
 def ymd_to_datetime(year, month, day, which="begin"):
 
-	# These might raise ValueError if the string is not an int
-	# which is fine at this stage
-	if type(year) is not int:
-		year = int(year)
-	if type(month) is not int:
-		month = int(month)
-	if type(day) is not int:
-		day = int(day)
 
-	if not month:
+	if type(year) is not int:
+		try:
+			year = int(year)
+		except:
+			print("DATE CLEAN: year is %r" % year)
+			year = None
+
+	if type(month) is not int:
+		try:
+			month = int(month)
+		except:
+			print("DATE CLEAN: month is %r" % month)
+			month = None
+
+	if type(day) is not int:
+		try:
+			day = int(day)
+		except:
+			day = None
+
+	if not year:
+		if which == "begin":
+			year = 0
+		else:
+			year = 9999
+
+	if not month or month > 12 or month < 0:
 		if which == "begin":
 			month = 1
 		else:
 			month = 12
-	if not day:
+
+	try:
+		maxday = calendar.monthrange(year, month)[1]
+	except:
+		maxday = 31
+		
+	if not day or day > maxday or day < 0:
 		if which == "begin":
 			day = 1
 		else:
 			# number of days in month
-			day = calendar.monthrange(year, month)[1]
+			day = maxday
 
 	ystr = "%04d" % abs(year)
 	if year < 0:

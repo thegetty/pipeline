@@ -111,7 +111,7 @@ def add_missing(graph):
 		AddArchesModel(model=arches_models['Activity']),
 		make_la_inventory,
 		SRLZ,
-		bonobo.PrettyPrinter(),
+		# bonobo.PrettyPrinter(),
 		WRITER,
 		_input=make_missing_shared
 	)

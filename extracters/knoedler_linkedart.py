@@ -51,10 +51,9 @@ def make_la_book(data: dict):
 	book.identified_by = ident
 	try:
 		booknum = int(data['identifier'])
-		d = model.Dimension()
+		d = vocab.SequencePosition()
 		d.value = booknum
-		d.unit = model.Type(ident="http://vocab.getty.edu/aat/300055665", label="Numbers")
-		d.classified_as = model.Type(ident="http://vocab.getty.edu/aat/300010269", label="Position")
+		d.unit = vocab.instances['numbers']
 		book.dimension = d		
 	except:
 		pass
@@ -69,10 +68,9 @@ def make_la_page(data: dict):
 	page.identified_by = ident
 	try:
 		pagenum = int(data['identifier'])
-		d = model.Dimension()
+		d = vocab.SequencePosition()
 		d.value = pagenum
-		d.unit = model.Type(ident="http://vocab.getty.edu/aat/300055665", label="Numbers")
-		d.classified_as = model.Type(ident="http://vocab.getty.edu/aat/300010269", label="Position")
+		d.unit = vocab.instances['numbers']
 		page.dimension = d		
 	except:
 		pass
@@ -111,10 +109,9 @@ def make_la_row(data: dict):
 
 	try:
 		rownum = int(data['identifier'])
-		d = model.Dimension()
+		d = vocab.SequencePosition()
 		d.value = rownum
-		d.unit = model.Type(ident="http://vocab.getty.edu/aat/300055665", label="Numbers")
-		d.classified_as = model.Type(ident="http://vocab.getty.edu/aat/300010269", label="Position")
+		d.unit = vocab.instances['numbers']
 		row.dimension = d		
 	except:
 		pass	
@@ -184,7 +181,7 @@ def make_la_person(data: dict):
 	if data.get('birth'):
 		b = model.Birth()
 		ts = model.TimeSpan()
-		if 'birth_clean' in data:
+		if 'birth_clean' in data and data['birth_clean']:
 			ts.begin_of_the_begin = data['birth_clean'][0].strftime("%Y-%m-%dT%H:%M:%SZ")
 			ts.end_of_the_end = data['birth_clean'][1].strftime("%Y-%m-%dT%H:%M:%SZ")
 		ts._label = data['birth']
@@ -195,7 +192,7 @@ def make_la_person(data: dict):
 	if data.get('death'):
 		d = model.Death()
 		ts = model.TimeSpan()
-		if 'death_clean' in data:
+		if 'death_clean' in data and data['death_clean']:
 			ts.begin_of_the_begin = data['death_clean'][0].strftime("%Y-%m-%dT%H:%M:%SZ")
 			ts.end_of_the_end = data['death_clean'][1].strftime("%Y-%m-%dT%H:%M:%SZ")
 		ts._label = data['death']
@@ -507,7 +504,7 @@ def make_la_phase(data: dict):
 			stype = data['s_type']
 			if stype != "Sold": 
 				# XXX Not sure what to do with these, see below!
-				print("Non 'sold' transaction (%s) is end of ownership phase for %s" % (pinfo[1], pinfo[0]))
+				print("Non 'sold' transaction (%s) is end of ownership phase for %s" % (stype, data['object_uuid'])  )
 			else:				
 				ts.end_of_the_end = ymd_to_datetime(data['s_year'], data['s_month'], data['s_day'], which="end")
 		nm = model.Name()

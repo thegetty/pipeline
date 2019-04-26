@@ -166,15 +166,12 @@ def make_objects_dims(data, gpi=None, uuid_cache=None):
 		dimdata = dict(zip(dfields, dim))
 		# see if we have the same value, if so don't create a new Dimension
 		newdim = None
-		if 'type' in dimdata:
-			for d in dimByType[dimdata['type']]:
-				if d['value'] == dimdata['value']:
-					newdim = d
-					break
-		else:
-			# no type for this dimension :(
-			# Assert "Unknown" (aka 'size (general extent)')
-			dimdata['type'] = 300055642
+		if not 'type' in dimdata or not dimdata['type']:
+			dimdata['type'] = 300055642			
+		for d in dimByType[dimdata['type']]:
+			if d['value'] == dimdata['value']:
+				newdim = d
+				break
 
 		if newdim is None:
 			# create a new Dimension of appropriate type
@@ -631,10 +628,12 @@ def make_missing_purchase(data: dict, gpi=None, uuid_cache=None):
 				puu = fetch_uuid(puid, uuid_cache)
 				ptyp = get_actor_type(sell['ulan'], uuid_cache)
 			else:
+				print("In make_missing_purchase, cleaning sellers:")
 				print("Data: %r" % data)
 				print("Seller: %r" % sell)
-				print("Sent: %s %s Got: %s" % (sell['name'], sell['ulan'], len(rows)))
-				raise ValueError("No matching person")
+				print("Rows: %r" % rows)
+				# print("Sent: %s %s Got: %s" % (sell['name'], sell['ulan'], len(rows)))
+				continue
 			new_sellers.append({'type': ptyp, 'uuid': puu, 'label': plabel, 'mod': ''})
 		data['sellers'] = new_sellers
 
@@ -664,9 +663,10 @@ def make_missing_purchase(data: dict, gpi=None, uuid_cache=None):
 					puid = rows[0][0]
 					puu = fetch_uuid(puid, uuid_cache)
 				else:
+					print("In make_missing_purchase, cleaning buyers:")
 					print("Data: %r" % data)
 					print("buyer: %r" % buy)
-					print("Sent: %s %s Got: %s" % (buy['name'], buy['ulan'], len(rows)))
+					# print("Sent: %s %s Got: %s" % (buy.get('name', '')], buy['ulan'], len(rows)))
 					continue				
 				buy['type'] = ptyp
 				buy['uuid'] = puu

@@ -49,12 +49,7 @@ def ymd_to_datetime(year, month, day, which="begin"):
 		else:
 			month = 12
 
-	try:
-		# month or year could be out of range, so catch exceptions
-		maxday = calendar.monthrange(year, month)[1]
-	except:
-		maxday = 31
-		
+	maxday = calendar.monthrange(year, month)[1]		
 	if not day or day > maxday or day < 1:
 		if which == "begin":
 			day = 1

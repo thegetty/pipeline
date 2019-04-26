@@ -166,15 +166,12 @@ def make_objects_dims(data, gpi=None, uuid_cache=None):
 		dimdata = dict(zip(dfields, dim))
 		# see if we have the same value, if so don't create a new Dimension
 		newdim = None
-		if 'type' in dimdata:
-			for d in dimByType[dimdata['type']]:
-				if d['value'] == dimdata['value']:
-					newdim = d
-					break
-		else:
-			# no type for this dimension :(
-			# Assert "Unknown" (aka 'size (general extent)')
-			dimdata['type'] = 300055642
+		if not 'type' in dimdata or not dimdata['type']:
+			dimdata['type'] = 300055642			
+		for d in dimByType[dimdata['type']]:
+			if d['value'] == dimdata['value']:
+				newdim = d
+				break
 
 		if newdim is None:
 			# create a new Dimension of appropriate type
@@ -465,9 +462,13 @@ def find_raw(*row, raw=None):
 	(recno, obj_id, inv_id, sale_id, purch_id) = row
 	s = 'SELECT * FROM raw_knoedler WHERE pi_record_no = :id'
 	res = raw.execute(s, id=recno)
-	t = list(res.fetchone())
-	t.extend([obj_id, inv_id, sale_id, purch_id])
-	return tuple(t)
+	fo = res.fetchone()
+	if fo:
+		t = list(fo)
+		t.extend([obj_id, inv_id, sale_id, purch_id])
+		return tuple(t)
+	else:
+		return None
 
 def make_missing_purchase_data(data: dict, uuid_cache=None):
 	# This is the raw data from the export, as Matt screwed up the processing for purchases :(
@@ -631,10 +632,12 @@ def make_missing_purchase(data: dict, gpi=None, uuid_cache=None):
 				puu = fetch_uuid(puid, uuid_cache)
 				ptyp = get_actor_type(sell['ulan'], uuid_cache)
 			else:
+				print("In make_missing_purchase, cleaning sellers:")
 				print("Data: %r" % data)
 				print("Seller: %r" % sell)
-				print("Sent: %s %s Got: %s" % (sell['name'], sell['ulan'], len(rows)))
-				raise ValueError("No matching person")
+				print("Rows: %r" % rows)
+				# print("Sent: %s %s Got: %s" % (sell['name'], sell['ulan'], len(rows)))
+				continue
 			new_sellers.append({'type': ptyp, 'uuid': puu, 'label': plabel, 'mod': ''})
 		data['sellers'] = new_sellers
 
@@ -658,15 +661,16 @@ def make_missing_purchase(data: dict, gpi=None, uuid_cache=None):
 						ref.source_record_id = :id
 						AND names.person_name = :name
 					'''
-					res = gpi.execute(s, id="KNOEDLER-%s" % data['star_id'], name=buy['name'])
+					res = gpi.execute(s, id="KNOEDLER-%s" % data['star_id'], name=buy.get('name', ''))
 				rows = res.fetchall()
 				if len(rows) == 1:
 					puid = rows[0][0]
 					puu = fetch_uuid(puid, uuid_cache)
 				else:
+					print("In make_missing_purchase, cleaning buyers:")
 					print("Data: %r" % data)
 					print("buyer: %r" % buy)
-					print("Sent: %s %s Got: %s" % (buy['name'], buy['ulan'], len(rows)))
+					# print("Sent: %s %s Got: %s" % (buy.get('name', '')], buy['ulan'], len(rows)))
 					continue				
 				buy['type'] = ptyp
 				buy['uuid'] = puu

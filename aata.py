@@ -19,16 +19,16 @@ from extracters.basic import AddArchesModel, AddFieldNames, Serializer, deep_cop
 from extracters.aata_data import make_aata_article_dict, make_aata_authors, make_aata_abstract, add_aata_object_type, make_aata_imprint_orgs
 from extracters.knoedler_linkedart import *
 from extracters.arches import ArchesWriter, FileWriter
-from extracters.linkedart import make_la_organization, make_la_record, make_la_abstract
+from extracters.linkedart import MakeLinkedArtLinguisticObject, MakeLinkedArtAbstract, MakeLinkedArtOrganization
 from settings import *
 
 # Set up environment
 def get_services(**kwargs):
 	return {
 		'trace_counter': itertools.count(),
-        'gpi': create_engine(gpi_engine),
-        'aat': create_engine(aat_engine),
- 		'uuid_cache': create_engine(uuid_cache_engine),
+		'gpi': create_engine(gpi_engine),
+		'aat': create_engine(aat_engine),
+		'uuid_cache': create_engine(uuid_cache_engine),
 		'fs.data.aata': bonobo.open_fs(aata_data_path)
 	}
 
@@ -36,7 +36,7 @@ def get_services(**kwargs):
 
 if DEBUG:
 	sys.stderr.write("In DEBUGGING mode\n")
-	LIMIT		= os.environ.get('GETTY_PIPELINE_LIMIT', 10)
+	LIMIT		= int(os.environ.get('GETTY_PIPELINE_LIMIT', 10))
 	PACK_SIZE	= 10
 	SRLZ		= Serializer(compact=False)
 	WRITER		= FileWriter(directory=output_file_path)
@@ -61,7 +61,7 @@ def add_articles_chain(graph, records):
 		make_aata_article_dict,
 		add_uuid,
 		add_aata_object_type,
-		make_la_record,
+		MakeLinkedArtLinguisticObject(),
 		AddDataDependentArchesModel(models=arches_models),
 		_input=records.output
 	)
@@ -96,7 +96,7 @@ def add_abstracts_chain(graph, people):
 		make_aata_abstract,
 		AddArchesModel(model=arches_models['LinguisticObject']),
 		add_uuid,
-		make_la_abstract,
+		MakeLinkedArtAbstract(),
 		_input=people.output
 	)
 	if True:
@@ -113,7 +113,7 @@ def add_organizations_chain(graph, articles):
 		make_aata_imprint_orgs,
 		AddArchesModel(model='XXX-Organization-Model'), # TODO: model for organizations?
 		add_uuid,
-		make_la_organization,
+		MakeLinkedArtOrganization(),
 		_input=articles.output
 	)
 	if True:
@@ -129,6 +129,7 @@ def get_graph(files, **kwargs):
 	graph = bonobo.Graph()
 	if DEBUG:
 		files = [files[0]]
+		sys.stderr.write("Processing %s\n" % (files[0],))
 
 	for f in files:
 		records = graph.add_chain(XMLReader(f, xpath='/AATA_XML/record', fs='fs.data.aata'))

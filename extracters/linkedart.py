@@ -8,52 +8,70 @@ def add_crom_data(data: dict, what=None):
 	data['_LOD_OBJECT'] = what
 	return data
 
-def make_la_record(data: dict):
-	otype = data['object_type']
-	object = otype(ident="urn:uuid:%s" % data['uuid'])
-	object._label = data['label']
-	name = model.Name()
-	name.content = data['label']
-	object.identified_by = name
-	for t in data.get('translations', []):
-		title = model.Name()
-		title.translation_of = name
-		object.identified_by = title
+class MakeLinkedArtRecord:
+	def set_properties(self, data, object):
+		pass
+
+	def __call__(self, data: dict):
+		if '_LOD_OBJECT' in data:
+			object = data['_LOD_OBJECT']
+		else:
+			otype = data['object_type']
+			object = otype(ident="urn:uuid:%s" % data['uuid'])
+		self.set_properties(data, object)
+		
+		return add_crom_data(data=data, what=object)
+
+class MakeLinkedArtLinguisticObject(MakeLinkedArtRecord):
+	def set_properties(self, data, object):
+		if data.get('label'):
+			object._label = data['label']
+			title_type = model.Type(ident='http://vocab.getty.edu/aat/300055726', label='Title') # TODO: is this the right aat URI?
+			name = model.Name()
+			name.classified_as = title_type
+			name.content = data['label']
+			object.identified_by = name
+		
+		for t in data.get('translations', []):
+			title = model.Name()
+			title.classified_as = title_type
+			title.translation_of = name
+			object.identified_by = title
+
+class MakeLinkedArtAbstract(MakeLinkedArtLinguisticObject):
+	def set_properties(self, data, object):
+		super().set_properties(data, object)
+		for id, type in data.get('identifiers', []):
+			ident = model.Identifier()
+			ident.content = id
+			if type is not None:
+				ident.classified_as = type
+			object.identified_by = ident
+
+class MakeLinkedArtOrganization(MakeLinkedArtRecord):
+	def set_properties(self, data, object):
+		object._label = str(data['label'])
+
+		if data.get('events'):
+			for event in data['events']:
+				object.carried_out = event
+
+		for name in data.get('names', []):
+			n = model.Name()
+			n.content = name[0]
+			for ref in name[1:]:
+				l = model.LinguisticObject(ident="urn:uuid:%s" % ref[1])
+				# l._label = _row_label(ref[2][0], ref[2][1], ref[2][2])
+				n.referred_to_by = l
+			object.identified_by = n
+
+		for id, type in data.get('identifiers', []):
+			ident = model.Identifier()
+			ident.content = id
+			if type is not None:
+				ident.classified_as = type
+			object.identified_by = ident
 	
-	return add_crom_data(data=data, what=object)
-
-def make_la_abstract(data: dict):
-	a = data['_LOD_OBJECT']
-	for id, type in data.get('identifiers', []):
-		ident = model.Identifier()
-		ident.content = id
-		if type is not None:
-			ident.classified_as = type
-		a.identified_by = ident
-	return add_crom_data(data=data, what=a)
-
-def make_la_organization(data: dict):
-	who = model.Group(ident="urn:uuid:%s" % data['uuid'])
-	who._label = str(data['label'])
-
-	if data.get('events'):
-		for event in data['events']:
-			who.carried_out = event
-
-	for name in data.get('names', []):
-		n = model.Name()
-		n.content = name[0]
-		for ref in name[1:]:
-			l = model.LinguisticObject(ident="urn:uuid:%s" % ref[1])
-			# l._label = _row_label(ref[2][0], ref[2][1], ref[2][2])
-			n.referred_to_by = l
-		who.identified_by = n
-
-	for id, type in data.get('identifiers', []):
-		ident = model.Identifier()
-		ident.content = id
-		if type is not None:
-			ident.classified_as = type
-		who.identified_by = ident
-
-	return add_crom_data(data=data, what=who)
+	def __call__(self, data: dict):
+		data['object_type'] = model.Group
+		return super().__call__(data)

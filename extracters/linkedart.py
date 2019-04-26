@@ -8,31 +8,49 @@ def add_crom_data(data: dict, what=None):
 	data['_LOD_OBJECT'] = what
 	return data
 
-def make_la_record(data: dict):
-	otype = data['object_type']
-	object = otype(ident="urn:uuid:%s" % data['uuid'])
-	object._label = data['label']
-	name = model.Name()
-	name.content = data['label']
-	object.identified_by = name
-	for t in data.get('translations', []):
-		title = model.Name()
-		title.translation_of = name
-		object.identified_by = title
-	
-	return add_crom_data(data=data, what=object)
+class MakeLinkedArtRecord:
+	def set_properties(self, data, object):
+		pass
 
-def make_la_abstract(data: dict):
-	a = data['_LOD_OBJECT']
-	for id, type in data.get('identifiers', []):
-		ident = model.Identifier()
-		ident.content = id
-		if type is not None:
-			ident.classified_as = type
-		a.identified_by = ident
-	return add_crom_data(data=data, what=a)
+	def __call__(self, data: dict):
+		if '_LOD_OBJECT' in data:
+			object = data['_LOD_OBJECT']
+		else:
+			otype = data['object_type']
+			object = otype(ident="urn:uuid:%s" % data['uuid'])
+		self.set_properties(data, object)
+		
+		return add_crom_data(data=data, what=object)
+
+class MakeLinkedArtLinguisticObject(MakeLinkedArtRecord):
+	def set_properties(self, data, object):
+		if data.get('label'):
+			object._label = data['label']
+			title_type = model.Type(ident='http://vocab.getty.edu/aat/300055726', label='Title') # TODO: is this the right aat URI?
+			name = model.Name()
+			name.classified_as = title_type
+			name.content = data['label']
+			object.identified_by = name
+		
+		for t in data.get('translations', []):
+			title = model.Name()
+			title.classified_as = title_type
+			title.translation_of = name
+			object.identified_by = title
+
+class MakeLinkedArtAbstract(MakeLinkedArtLinguisticObject):
+	def set_properties(self, data, object):
+		super().set_properties(data, object)
+		for id, type in data.get('identifiers', []):
+			ident = model.Identifier()
+			ident.content = id
+			if type is not None:
+				ident.classified_as = type
+			object.identified_by = ident
 
 def make_la_organization(data: dict):
+	# TODO: turn this into a MakeLinkedArtRecord subclass
+	# TODO: - figure out how to construct the model.Group in the subclass without data having either an _LOD_OBJECT or object_type key
 	who = model.Group(ident="urn:uuid:%s" % data['uuid'])
 	who._label = str(data['label'])
 

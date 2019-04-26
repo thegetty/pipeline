@@ -233,7 +233,8 @@ def make_objects_names(data, gpi=None, uuid_cache=None):
 
 @use('gpi')
 @use('uuid_cache')
-def make_objects_tags_ids(data, gpi=None, uuid_cache=None):
+@use('aat')
+def make_objects_tags_ids(data, gpi=None, uuid_cache=None, aat=None):
 	object_id = data['uid']
 	# Pull in "tags"
 	# knoedler_depicts_aat - https://linked.art/model/object/aboutness/#depiction
@@ -253,7 +254,7 @@ def make_objects_tags_ids(data, gpi=None, uuid_cache=None):
 	res = gpi.execute(s, id=object_id)
 	tags = []
 	for tag in res:
-		lbl = get_aat_label(tag[1], gpi=gpi)
+		lbl = get_aat_label(tag[1], aat=aat)
 		tags.append({"type": tagMap[tag[0]], "aat": str(tag[1]), "label": lbl})
 	data['tags'] = tags
 
@@ -757,14 +758,14 @@ def add_person_names(thing: dict, gpi=None, uuid_cache=None):
 		thing['names'].append(name)
 	return thing
 
-@use('gpi')
-def add_person_aat_labels(data: dict, gpi=None):
+@use('aat')
+def add_person_aat_labels(data: dict, aat=None):
 	if data.get('aat_nationality_1'):
-		data['aat_nationality_1_label'] = get_aat_label(data['aat_nationality_1'], gpi=gpi)
+		data['aat_nationality_1_label'] = get_aat_label(data['aat_nationality_1'], aat=aat)
 	if data.get('aat_nationality_2'):
-		data['aat_nationality_2_label'] = get_aat_label(data['aat_nationality_2'], gpi=gpi)
+		data['aat_nationality_2_label'] = get_aat_label(data['aat_nationality_2'], aat=aat)
 	if data.get('aat_nationality_3'):
-		data['aat_nationality_4_label'] = get_aat_label(data['aat_nationality_3'], gpi=gpi)
+		data['aat_nationality_4_label'] = get_aat_label(data['aat_nationality_3'], aat=aat)
 	return data
 
 @use('gpi')

@@ -49,6 +49,16 @@ def make_la_book(data: dict):
 	ident = vocab.LocalNumber()
 	ident.content = str(data['identifier'])
 	book.identified_by = ident
+	try:
+		booknum = int(data['identifier'])
+		d = model.Dimension()
+		d.value = booknum
+		d.unit = model.Type(ident="http://vocab.getty.edu/aat/300055665", label="Numbers")
+		d.classified_as = model.Type(ident="http://vocab.getty.edu/aat/300010269", label="Position")
+		book.dimension = d		
+	except:
+		pass
+
 	return add_crom_data(data=data, what=book)
 
 def make_la_page(data: dict):
@@ -57,6 +67,16 @@ def make_la_page(data: dict):
 	ident = vocab.LocalNumber()
 	ident.content = str(data['identifier'])
 	page.identified_by = ident
+	try:
+		pagenum = int(data['identifier'])
+		d = model.Dimension()
+		d.value = pagenum
+		d.unit = model.Type(ident="http://vocab.getty.edu/aat/300055665", label="Numbers")
+		d.classified_as = model.Type(ident="http://vocab.getty.edu/aat/300010269", label="Position")
+		page.dimension = d		
+	except:
+		pass
+
 	# XXX This is a shortcut to avoid minting physical objects with depictions
 	# We should consider how terrible that is
 	if 'image' in data:
@@ -88,6 +108,17 @@ def make_la_page(data: dict):
 def make_la_row(data: dict):
 	row = model.LinguisticObject(ident="urn:uuid:%s" % data['uuid'])
 	row._label = _row_label(data['parent']['parent']['identifier'], data['parent']['identifier'], data['identifier'])
+
+	try:
+		rownum = int(data['identifier'])
+		d = model.Dimension()
+		d.value = rownum
+		d.unit = model.Type(ident="http://vocab.getty.edu/aat/300055665", label="Numbers")
+		d.classified_as = model.Type(ident="http://vocab.getty.edu/aat/300010269", label="Position")
+		row.dimension = d		
+	except:
+		pass	
+
 	ident = vocab.LocalNumber()
 	ident.content = data['star_id']
 	row.identified_by = ident
@@ -480,7 +511,8 @@ def make_la_phase(data: dict):
 			else:				
 				ts.end_of_the_end = ymd_to_datetime(data['s_year'], data['s_month'], data['s_day'], which="end")
 		nm = model.Name()
-		nm.content = "%s %s %s to %s %s %s" % (data['p_year'], data['p_month'], data['p_day'], data['s_year'], data['s_month'], data['s_day'])
+		nm.content = "%s %s %s to %s %s %s" % (data.get('p_year', '????'), data.get('p_month', '??'), 
+			data.get('p_day', '??'), data.get('s_year', '????'), data.get('s_month', '??'), data.get('s_day', '??'))
 		ts.identified_by = nm
 
 	for b in data['buyers']:

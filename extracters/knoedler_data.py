@@ -462,9 +462,13 @@ def find_raw(*row, raw=None):
 	(recno, obj_id, inv_id, sale_id, purch_id) = row
 	s = 'SELECT * FROM raw_knoedler WHERE pi_record_no = :id'
 	res = raw.execute(s, id=recno)
-	t = list(res.fetchone())
-	t.extend([obj_id, inv_id, sale_id, purch_id])
-	return tuple(t)
+	fo = res.fetchone()
+	if fo:
+		t = list(res.fetchone())
+		t.extend([obj_id, inv_id, sale_id, purch_id])
+		return tuple(t)
+	else:
+		return None
 
 def make_missing_purchase_data(data: dict, uuid_cache=None):
 	# This is the raw data from the export, as Matt screwed up the processing for purchases :(
@@ -657,7 +661,7 @@ def make_missing_purchase(data: dict, gpi=None, uuid_cache=None):
 						ref.source_record_id = :id
 						AND names.person_name = :name
 					'''
-					res = gpi.execute(s, id="KNOEDLER-%s" % data['star_id'], name=buy['name'])
+					res = gpi.execute(s, id="KNOEDLER-%s" % data['star_id'], name=buy.get('name', ''))
 				rows = res.fetchall()
 				if len(rows) == 1:
 					puid = rows[0][0]

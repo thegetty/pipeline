@@ -175,11 +175,10 @@ def make_la_person(data: dict):
 		b = model.Birth()
 		ts = model.TimeSpan()
 		if 'birth_clean' in data and data['birth_clean']:
-			ts.begin_of_the_begin = data['birth_clean'][0].strftime("%Y-%m-%dT%H:%M:%SZ")
-			try:
-				ts.end_of_the_end = data['birth_clean'][1].strftime("%Y-%m-%dT%H:%M:%SZ")
-			except:
-				print("birth_clean [sic] not that clean: %r" % data['birth_clean'])				
+			if data['birth_clean'][0]:
+				ts.begin_of_the_begin = data['birth_clean'][0].strftime("%Y-%m-%dT%H:%M:%SZ")
+			if data['birth_clean'][1]:
+				ts.end_of_the_end = data['birth_clean'][1].strftime("%Y-%m-%dT%H:%M:%SZ")			
 		ts._label = data['birth']
 		b.timespan = ts
 		b._label = "Birth of %s" % who._label
@@ -189,11 +188,10 @@ def make_la_person(data: dict):
 		d = model.Death()
 		ts = model.TimeSpan()
 		if 'death_clean' in data and data['death_clean']:
-			ts.begin_of_the_begin = data['death_clean'][0].strftime("%Y-%m-%dT%H:%M:%SZ")
-			try:
+			if data['death_clean'][0]:
+				ts.begin_of_the_begin = data['death_clean'][0].strftime("%Y-%m-%dT%H:%M:%SZ")
+			if data['death_clean'][1]:
 				ts.end_of_the_end = data['death_clean'][1].strftime("%Y-%m-%dT%H:%M:%SZ")
-			except:
-				print("death_clean [sic] not that clean: %r" % data['death_clean'])
 		ts._label = data['death']
 		d.timespan = ts
 		d._label = "Death of %s" % who._label

@@ -51,10 +51,10 @@ def make_la_book(data: dict):
 	book.identified_by = ident
 	try:
 		booknum = int(data['identifier'])
-		d = Dimension()
+		d = model.Dimension()
 		d.value = booknum
-		d.unit = Type(ident="http://vocab.getty.edu/aat/300055665", label="Numbers")
-		d.classified_as = Type(ident="http://vocab.getty.edu/aat/300010269", label="Position")
+		d.unit = model.Type(ident="http://vocab.getty.edu/aat/300055665", label="Numbers")
+		d.classified_as = model.Type(ident="http://vocab.getty.edu/aat/300010269", label="Position")
 		book.dimension = d		
 	except:
 		pass
@@ -69,10 +69,10 @@ def make_la_page(data: dict):
 	page.identified_by = ident
 	try:
 		pagenum = int(data['identifier'])
-		d = Dimension()
+		d = model.Dimension()
 		d.value = pagenum
-		d.unit = Type(ident="http://vocab.getty.edu/aat/300055665", label="Numbers")
-		d.classified_as = Type(ident="http://vocab.getty.edu/aat/300010269", label="Position")
+		d.unit = model.Type(ident="http://vocab.getty.edu/aat/300055665", label="Numbers")
+		d.classified_as = model.Type(ident="http://vocab.getty.edu/aat/300010269", label="Position")
 		page.dimension = d		
 	except:
 		pass
@@ -111,10 +111,10 @@ def make_la_row(data: dict):
 
 	try:
 		rownum = int(data['identifier'])
-		d = Dimension()
+		d = model.Dimension()
 		d.value = rownum
-		d.unit = Type(ident="http://vocab.getty.edu/aat/300055665", label="Numbers")
-		d.classified_as = Type(ident="http://vocab.getty.edu/aat/300010269", label="Position")
+		d.unit = model.Type(ident="http://vocab.getty.edu/aat/300055665", label="Numbers")
+		d.classified_as = model.Type(ident="http://vocab.getty.edu/aat/300010269", label="Position")
 		row.dimension = d		
 	except:
 		pass	

@@ -464,7 +464,7 @@ def find_raw(*row, raw=None):
 	res = raw.execute(s, id=recno)
 	fo = res.fetchone()
 	if fo:
-		t = list(res.fetchone())
+		t = list(fo)
 		t.extend([obj_id, inv_id, sale_id, purch_id])
 		return tuple(t)
 	else:

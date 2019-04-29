@@ -2,6 +2,7 @@
 
 # AATA Extracters
 
+import sys
 import pprint
 from bonobo.constants import NOT_MODIFIED
 from bonobo.config import use
@@ -137,8 +138,9 @@ def _xml_extract_authors(e, aata_id):
 				})
 				yield author
 			else:
-				print('*** No author_id found for record %s:' % (aata_id,))
-# 				print(lxml.etree.tostring(a).decode('utf-8'))
+				sys.stderr.write('*** No author_id found for record %s\n' % (aata_id,))
+# 				sys.stderr.write(lxml.etree.tostring(a).decode('utf-8'))
+# 				sys.stderr.write('\n')
 
 def add_aata_object_type(data):
 	doc_types = { # should this be in settings (or elsewhere)?
@@ -239,16 +241,13 @@ def make_aata_authors(data):
 	object = data['_LOD_OBJECT']
 	event = model.Creation()
 	object.created_by = event
-	
-	authors = data.get('_authors', [])
-	if not len(authors):
-		if len(data.get('_abstracts', [])) > 0:
-			print('*** Found record without any authors; This is a problem as the record has at least one abstract: %r' % (data['_aata_record_id'],))
-# 			pprint.pprint(data)
+	event.created = object
 
+	authors = data.get('_authors', [])
 	for a in authors:
 		subevent = model.Creation()
 		event.part = subevent
+		subevent.part_of = event
 		role = a.get('creation_role')
 		if role is not None:
 			subevent._label = 'Creation sub-event for %s' % (role,)
@@ -262,19 +261,10 @@ def make_aata_authors(data):
 
 # article abstract chain
 
-def make_aata_abstract(author_data):
-	data = author_data['parent_data']
+def make_aata_abstract(data):
 	object = data['_LOD_OBJECT']
 	for a in data.get('_abstracts', []):
 		abstract = model.LinguisticObject()
-		if 'author_abstract_flag' in a:
-			event = model.Creation()
-			abstract.created_by = event
-			event.carried_out_by = author_data['_LOD_OBJECT']
-		else:
-			# TODO: what about the creation event when author_abstract_flag != 'yes'?
-			pass
-
 		abstract_dict = {k: v for k, v in a.items()}
 
 		abstract.content = a.get('content')
@@ -288,11 +278,19 @@ def make_aata_abstract(author_data):
 				abstract_dict['language'] = l
 
 		abstract_dict = {k: v for k, v in a.items()}
+		if '_authors' in data:
+			abstract_dict['_authors'] = data['_authors']
+
 		# create a uid based on the AATA record id, the sequence number of the abstract in that record, and which author we're handling right now
-		uid = 'AATA-Abstract-%s-%d-%d' % (data['_aata_record_id'], a['_aata_record_abstract_seq'], author_data['_aata_record_author_seq'])
+		uid = 'AATA-Abstract-%s-%d' % (data['_aata_record_id'], a['_aata_record_abstract_seq'])
 		abstract_dict.update({
 			'_LOD_OBJECT': abstract,
 			'parent': object,
+			'parent_data': data,
 			'uid': uid
 		})
 		yield abstract_dict
+
+def filter_abstract_authors(data: dict):
+	if 'author_abstract_flag' in data and data['author_abstract_flag']:
+		yield data

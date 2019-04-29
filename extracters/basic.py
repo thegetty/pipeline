@@ -97,7 +97,7 @@ def get_aat_label(term, aat=None):
 class Trace(Configurable):
 	name = Option()
 	diff = Option(default=False)
-	ordinals = Option(default=(1,))
+	ordinals = Option(default=(0,))
 	trace_counter = Service('trace_counter')
 
 	def __call__(self, thing: dict, trace_counter):

@@ -25,6 +25,7 @@ from extracters.basic import \
 			Trace
 from extracters.aata_data import \
 			add_aata_object_type, \
+			filter_abstract_authors, \
 			make_aata_abstract, \
 			make_aata_article_dict, \
 			make_aata_authors, \
@@ -48,7 +49,10 @@ class AddDataDependentArchesModel(Configurable):
 		return data
 
 class AATAPipeline:
-	def __init__(self, input_path, files, limit=None, debug=False):
+	def __init__(self, input_path, files, models=None, limit=None, debug=False):
+		if models is None:
+			models = {}
+		self.models = models
 		self.files = files
 		self.limit = limit
 		self.debug = debug
@@ -84,7 +88,7 @@ class AATAPipeline:
 		else:
 			sys.stderr.write('*** No serialization chain defined\n')
 
-	def add_articles_chain(self, graph, records):
+	def add_articles_chain(self, graph, records, serialize=True):
 		if self.limit is not None:
 			records = graph.add_chain(
 				Limit(self.limit),
@@ -95,51 +99,59 @@ class AATAPipeline:
 			add_uuid,
 			add_aata_object_type,
 			MakeLinkedArtLinguisticObject(),
-			AddDataDependentArchesModel(models=arches_models),
+			AddDataDependentArchesModel(models=self.models),
 			_input=records.output
 		)
-		if True:
+		if serialize:
 			# write ARTICLES data
 			self.add_serialization_chain(graph, articles.output)
 		return articles
 
-	def add_people_chain(self, graph, articles):
+	def add_people_chain(self, graph, articles, serialize=True):
+		model = self.models.get('Person', 'XXX-Person-Model')
 		people = graph.add_chain(
 			make_aata_authors,
-			AddArchesModel(model=arches_models['Person']),
+			AddArchesModel(model=model),
 			add_uuid,
 			make_la_person,
 			_input=articles.output
 		)
-		if True:
+		if serialize:
 			# write PEOPLE data
 			self.add_serialization_chain(graph, people.output)
 		return people
 
-	def add_abstracts_chain(self, graph, people):
+	def add_abstracts_chain(self, graph, articles, serialize=True):
+		model = self.models.get('LinguisticObject', 'XXX-LinguisticObject-Model')
 		abstracts = graph.add_chain(
 			make_aata_abstract,
-			AddArchesModel(model=arches_models['LinguisticObject']),
+			AddArchesModel(model=model),
 			add_uuid,
 			MakeLinkedArtAbstract(),
-			_input=people.output
+			_input=articles.output
 		)
-		if True:
+		
+		# for each author of an abstract...
+		author_abstracts = graph.add_chain(filter_abstract_authors, _input=abstracts.output)
+		self.add_people_chain(graph, author_abstracts)
+		
+		if serialize:
 			# write ABSTRACTS data
 			self.add_serialization_chain(graph, abstracts.output)
 		return abstracts
 
-	def add_organizations_chain(self, graph, articles):
+	def add_organizations_chain(self, graph, articles, serialize=True):
+		model = self.models.get('Organization', 'XXX-Organization-Model')
 		organizations = graph.add_chain(
 			extract_imprint_orgs,
 			CleanDateToSpan(key='publication_date'),
 			make_aata_imprint_orgs,
-			AddArchesModel(model='XXX-Organization-Model'), # TODO: model for organizations?
+			AddArchesModel(model=model), # TODO: model for organizations?
 			add_uuid,
 			MakeLinkedArtOrganization(),
 			_input=articles.output
 		)
-		if True:
+		if serialize:
 			# write ORGANIZATIONS data
 			self.add_serialization_chain(graph, organizations.output)
 		return organizations
@@ -154,7 +166,7 @@ class AATAPipeline:
 			records = graph.add_chain(XMLReader(f, xpath='/AATA_XML/record', fs='fs.data.aata'))
 			articles = self.add_articles_chain(graph, records)
 			people = self.add_people_chain(graph, articles)
-			abstracts = self.add_abstracts_chain(graph, people)
+			abstracts = self.add_abstracts_chain(graph, articles)
 			organizations = self.add_organizations_chain(graph, articles)
 
 		return graph
@@ -172,8 +184,14 @@ class AATAPipeline:
 
 
 class AATAFilePipeline(AATAPipeline):
-	def __init__(self, input_path, files, output_path=None, limit=None, debug=False):
-		super().__init__(input_path, files, limit=limit, debug=debug)
+	'''
+	AATA pipeline with serialization to files based on Arches model and resource UUID.
+	
+	If in `debug` mode, JSON serialization will use pretty-printing. Otherwise,
+	serialization will be compact.
+	'''
+	def __init__(self, input_path, files, output_path=None, models=None, limit=None, debug=False):
+		super().__init__(input_path, files, models=models, limit=limit, debug=debug)
 		if debug:
 			self.serializer	= Serializer(compact=False)
 			self.writer		= FileWriter(directory=output_path)
@@ -193,7 +211,14 @@ if __name__ == '__main__':
 	parser = bonobo.get_argument_parser()
 	with bonobo.parse_args(parser) as options:
 		try:
-			pipeline = AATAFilePipeline(aata_data_path, files, output_file_path, limit=LIMIT, debug=DEBUG)
+			pipeline = AATAFilePipeline(
+				aata_data_path,
+				files,
+				output_file_path,
+				models=arches_models,
+				limit=LIMIT,
+				debug=DEBUG
+			)
 			pipeline.run(**options)
 		except RuntimeError:
 			raise ValueError()

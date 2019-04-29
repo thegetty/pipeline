@@ -54,23 +54,17 @@ def merge(l, r):
 class TestWriter(Configurable):
 	def __init__(self):
 		self.output = {}
-		self.parts = {}
 
 	def __call__(self, data: dict):
 		d = data['_OUTPUT']
 		dr = data['_ARCHES_MODEL']
 		if dr not in self.output:
 			self.output[dr] = {}
-			self.parts[dr] = {}
 		fn = '%s.json' % data['uuid']
 		data = json.loads(d)
 		if fn in self.output[dr]:
-			existing = self.parts[dr][fn]
-			self.output[dr][fn] = merge(*existing, data)
-			self.parts[dr][fn].append(data)
-# 			raise Exception('Output already exists for %r' % (fn,))
+			self.output[dr][fn] = merge(self.output[dr][fn], data)
 		else:
-			self.parts[dr][fn] = [data]
 			self.output[dr][fn] = data
 
 

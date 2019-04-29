@@ -28,9 +28,9 @@ class AATATestPipeline(aata.AATAPipeline):
 		self.writer = writer
 
 	
-class TestPipelineOutput(unittest.TestCase):
+class TestAATAPipelineOutput(unittest.TestCase):
 	def setUp(self):
-		self.files = ['tests/data/sample1.xml']
+		self.files = ['tests/data/aata-sample1.xml']
 		pass
 
 	def tearDown(self):

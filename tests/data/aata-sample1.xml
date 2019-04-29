@@ -1,0 +1,200 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<AATA_XML p1:noNamespaceSchemaLocation="http://aata2-stage.getty.edu:8080/AATA XML Schema.xsd" xmlns:p1="http://www.w3.org/2001/XMLSchema-instance">
+  <record>
+    <record_desc_group>
+      <doc_type>AV</doc_type>
+      <doc_pub_dates>
+        <date_string>2017</date_string>
+        <sort_year>2017</sort_year>
+      </doc_pub_dates>
+      <record_state>Published</record_state>
+      <record_online_date>7/1/2018</record_online_date>
+    </record_desc_group>
+    <record_id_group>
+      <record_id>AATA140375</record_id>
+    </record_id_group>
+    <authorship_group>
+      <author>
+        <author_id>
+          <gaia_auth_id>190519</gaia_auth_id>
+          <gaia_auth_type>CB</gaia_auth_type>
+          <display_term>Bremner, Ian</display_term>
+        </author_id>
+      </author>
+      <author_role>Producer</author_role>
+      <author_role>Director</author_role>
+      <author_corp_flag>C</author_corp_flag>
+      <author_order>1</author_order>
+    </authorship_group>
+    <authorship_group>
+      <author>
+        <author_id>
+          <gaia_auth_id>190520</gaia_auth_id>
+          <gaia_auth_type>CB</gaia_auth_type>
+          <display_term>Meyers, Eric</display_term>
+        </author_id>
+      </author>
+      <author_role>Narrator</author_role>
+      <author_corp_flag>C</author_corp_flag>
+      <author_order>2</author_order>
+    </authorship_group>
+    <title_group>
+      <title_type>Analytic</title_type>
+      <title>Secrets of the Forbidden City</title>
+    </title_group>
+    <imprint_group>
+      <related_organization>
+        <organization_type>Distributor</organization_type>
+        <organization>
+          <organization_id>
+            <gaia_auth_id>13838</gaia_auth_id>
+            <gaia_auth_type>CB</gaia_auth_type>
+            <display_term>Public Broadcasting Associates, Inc. //Boston (Massachusetts, United States)</display_term>
+          </organization_id>
+        </organization>
+        <additional_org_info>
+          <label>YearOfRelease</label>
+          <value>2017</value>
+        </additional_org_info>
+      </related_organization>
+      <related_organization>
+        <organization_type>Publisher</organization_type>
+        <organization>
+          <organization_id>
+            <gaia_auth_id>190521</gaia_auth_id>
+            <gaia_auth_type>CB</gaia_auth_type>
+            <display_term>Lion Television USA //New York (New York, United States)</display_term>
+          </organization_id>
+        </organization>
+      </related_organization>
+      <related_organization>
+        <organization_type>Publisher</organization_type>
+        <organization>
+          <organization_id>
+            <gaia_auth_id>13839</gaia_auth_id>
+            <gaia_auth_type>CB</gaia_auth_type>
+            <display_term>WGBH Educational Foundation //Boston (Massachusetts, United States)</display_term>
+          </organization_id>
+        </organization>
+      </related_organization>
+    </imprint_group>
+    <physical_desc_group>
+      <collation>Videodisc : 4 3/4 in., 54 min.</collation>
+    </physical_desc_group>
+    <notes_group>
+      <lang_doc>eng</lang_doc>
+      <isbn_10>1531703461</isbn_10>
+      <isbn_13 qualifier="">9781531703462</isbn_13>
+    </notes_group>
+    <abstract_group>
+      <abstract lang="eng">The Forbidden City in Beijing is the world's largest and most extravagant palace complex ever built. For five centuries, it was the power center of imperial China and survived wars, revolution, fires, and earthquakes. How did Ming Emperor Yongle's workforce construct its sprawling array of nearly 1,000 buildings and dozens of temples in a little over a decade? How were stupendous 250-ton marble blocks moved across many miles to reach the site? And how did fantastically intricate woodwork, all fastened without nails or glue, enable the palaces to survive hundreds of earthquakes, including recent ones that obliterated nearby modern structures? To find answers, NOVA joins a team of master craftsmen who build a scale model of a typical palace in a seismic lab, then subject it to simulated earthquakes to shake out the secrets of how the Forbidden City has withstood centuries of violent tremors. </abstract>
+      <author_abstract_flag>yes</author_abstract_flag>
+    </abstract_group>
+    <classification_group>
+      <class_order>1</class_order>
+      <db_code>AATA</db_code>
+      <class_code>D6</class_code>
+      <class_name>Structural studies and consolidation of buildings</class_name>
+    </classification_group>
+    <index_group>
+      <index>
+        <index_id>
+          <gaia_auth_id>138097</gaia_auth_id>
+          <gaia_auth_type>CB</gaia_auth_type>
+          <display_term>Palace Museum //Beijing (China)</display_term>
+        </index_id>
+      </index>
+      <index_order>1</index_order>
+    </index_group>
+    <index_group>
+      <index>
+        <index_id>
+          <gaia_auth_id>123074</gaia_auth_id>
+          <gaia_auth_type>SH</gaia_auth_type>
+          <display_term>earthquakes</display_term>
+        </index_id>
+      </index>
+      <index_order>2</index_order>
+    </index_group>
+    <index_group>
+      <index>
+        <index_id>
+          <gaia_auth_id>129321</gaia_auth_id>
+          <gaia_auth_type>SH</gaia_auth_type>
+          <display_term>structural analysis</display_term>
+        </index_id>
+      </index>
+      <index_order>3</index_order>
+    </index_group>
+    <index_group>
+      <index>
+        <index_id>
+          <gaia_auth_id>128634</gaia_auth_id>
+          <gaia_auth_type>SH</gaia_auth_type>
+          <display_term>seismic design</display_term>
+        </index_id>
+      </index>
+      <index_order>4</index_order>
+    </index_group>
+    <index_group>
+      <index>
+        <index_id>
+          <gaia_auth_id>129334</gaia_auth_id>
+          <gaia_auth_type>SH</gaia_auth_type>
+          <display_term>historic structures (single built works)</display_term>
+        </index_id>
+      </index>
+      <index_order>5</index_order>
+    </index_group>
+    <index_group>
+      <index>
+        <index_id>
+          <gaia_auth_id>126256</gaia_auth_id>
+          <gaia_auth_type>SH</gaia_auth_type>
+          <display_term>Ming</display_term>
+        </index_id>
+      </index>
+      <index_order>6</index_order>
+    </index_group>
+    <index_group>
+      <index>
+        <index_id>
+          <gaia_auth_id>121306</gaia_auth_id>
+          <gaia_auth_type>SH</gaia_auth_type>
+          <display_term>building materials</display_term>
+        </index_id>
+      </index>
+      <index_order>7</index_order>
+    </index_group>
+    <index_group>
+      <index>
+        <index_id>
+          <gaia_auth_id>147678</gaia_auth_id>
+          <gaia_auth_type>SH</gaia_auth_type>
+          <display_term>brackets (structural elements)</display_term>
+        </index_id>
+      </index>
+      <index_order>8</index_order>
+    </index_group>
+    <index_group>
+      <index>
+        <index_id>
+          <gaia_auth_id>122240</gaia_auth_id>
+          <gaia_auth_type>SH</gaia_auth_type>
+          <display_term>construction techniques</display_term>
+        </index_id>
+      </index>
+      <index_order>9</index_order>
+    </index_group>
+    <index_group>
+      <index>
+        <index_id>
+          <gaia_auth_id>123491</gaia_auth_id>
+          <gaia_auth_type>SH</gaia_auth_type>
+          <display_term>experimentation</display_term>
+        </index_id>
+      </index>
+      <index_order>10</index_order>
+    </index_group>
+  </record>
+</AATA_XML>

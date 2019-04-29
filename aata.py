@@ -49,7 +49,10 @@ class AddDataDependentArchesModel(Configurable):
 		return data
 
 class AATAPipeline:
-	def __init__(self, input_path, files, limit=None, debug=False):
+	def __init__(self, input_path, files, models=None, limit=None, debug=False):
+		if models is None:
+			models = {}
+		self.models = models
 		self.files = files
 		self.limit = limit
 		self.debug = debug
@@ -96,7 +99,7 @@ class AATAPipeline:
 			add_uuid,
 			add_aata_object_type,
 			MakeLinkedArtLinguisticObject(),
-			AddDataDependentArchesModel(models=arches_models),
+			AddDataDependentArchesModel(models=self.models),
 			_input=records.output
 		)
 		if serialize:
@@ -105,9 +108,10 @@ class AATAPipeline:
 		return articles
 
 	def add_people_chain(self, graph, articles, serialize=True):
+		model = self.models.get('Person', 'XXX-Person-Model')
 		people = graph.add_chain(
 			make_aata_authors,
-			AddArchesModel(model=arches_models['Person']),
+			AddArchesModel(model=model),
 			add_uuid,
 			make_la_person,
 			_input=articles.output
@@ -118,9 +122,10 @@ class AATAPipeline:
 		return people
 
 	def add_abstracts_chain(self, graph, articles, serialize=True):
+		model = self.models.get('LinguisticObject', 'XXX-LinguisticObject-Model')
 		abstracts = graph.add_chain(
 			make_aata_abstract,
-			AddArchesModel(model=arches_models['LinguisticObject']),
+			AddArchesModel(model=model),
 			add_uuid,
 			MakeLinkedArtAbstract(),
 			_input=articles.output
@@ -136,11 +141,12 @@ class AATAPipeline:
 		return abstracts
 
 	def add_organizations_chain(self, graph, articles, serialize=True):
+		model = self.models.get('Organization', 'XXX-Organization-Model')
 		organizations = graph.add_chain(
 			extract_imprint_orgs,
 			CleanDateToSpan(key='publication_date'),
 			make_aata_imprint_orgs,
-			AddArchesModel(model='XXX-Organization-Model'), # TODO: model for organizations?
+			AddArchesModel(model=model), # TODO: model for organizations?
 			add_uuid,
 			MakeLinkedArtOrganization(),
 			_input=articles.output
@@ -178,8 +184,8 @@ class AATAPipeline:
 
 
 class AATAFilePipeline(AATAPipeline):
-	def __init__(self, input_path, files, output_path=None, limit=None, debug=False):
-		super().__init__(input_path, files, limit=limit, debug=debug)
+	def __init__(self, input_path, files, output_path=None, models=None, limit=None, debug=False):
+		super().__init__(input_path, files, models=models, limit=limit, debug=debug)
 		if debug:
 			self.serializer	= Serializer(compact=False)
 			self.writer		= FileWriter(directory=output_path)
@@ -199,7 +205,14 @@ if __name__ == '__main__':
 	parser = bonobo.get_argument_parser()
 	with bonobo.parse_args(parser) as options:
 		try:
-			pipeline = AATAFilePipeline(aata_data_path, files, output_file_path, limit=LIMIT, debug=DEBUG)
+			pipeline = AATAFilePipeline(
+				aata_data_path,
+				files,
+				output_file_path,
+				models=arches_models,
+				limit=LIMIT,
+				debug=DEBUG
+			)
 			pipeline.run(**options)
 		except RuntimeError:
 			raise ValueError()

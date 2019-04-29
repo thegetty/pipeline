@@ -8,6 +8,13 @@ from bonobo.config import Configurable, Option
 import aata
 
 def merge_lists(l, r):
+	'''
+	Given two lists `l` and `r`, return a generator of the combined items from both lists.
+	
+	If any two items l' in l and r' in r are both `dict`s and have the same value for the
+	`id` key, they will be `merge`d and the resulting `dict` included in the results in
+	place of l' or r'.
+	'''
 	identified = {}
 	all = l + r
 	other = []
@@ -27,6 +34,19 @@ def merge_lists(l, r):
 	yield from other
 
 def merge(l, r):
+	'''
+	Given two items `l` and `r` of the same type, merge their contents and return the
+	result. Raise an exception if `l` and `r` are of differing types.
+	
+	If the items are of type `dict`, recursively merge any values with shared keys, and
+	also include data from any non-shared keys. If `l` and `r` both have values for the
+	`id` key and they differ in value, raise an exception.
+	
+	If the items are of type `list`, merge them with `merge_lists`.
+	
+	If the items are of type `str` or `bytes`, return the value if `l` and `r` are equal.
+	Otherwise raise and exception.
+	'''
 	if l is None:
 		return r
 	if r is None:
@@ -39,19 +59,29 @@ def merge(l, r):
 	
 	if type(l) == dict:
 		keys = set(list(l.keys()) + list(r.keys()))
+		intersection = set([k for k in keys if k in l and k in r])
+		if 'id' in intersection:
+			lid = l['id']
+			rid = r['id']
+			if lid != rid:
+				raise Exception('attempt to merge two dicts with different ids: (%r, %r)' % (lid, rid))
 		return {k: merge(l.get(k), r.get(k)) for k in keys}
 	elif type(l) == list:
 		return list(merge_lists(l, r))
-	elif type(l) == str:
+	elif type(l) in (str, bytes):
 		if l == r:
 			return l
 		else:
 			raise Exception('data conflict: %r <=> %r' % (l, r))
 	else:
-		raise Exception('unhandled type: %r' % (type(l)))
+		raise NotImplemented('unhandled type: %r' % (type(l)))
 	return l
 
 class TestWriter(Configurable):
+	'''
+	Deserialize the output of each resource and store in memory.
+	Merge data for multiple serializations of the same `uuid`.
+	'''
 	def __init__(self):
 		self.output = {}
 
@@ -69,12 +99,19 @@ class TestWriter(Configurable):
 
 
 class AATATestPipeline(aata.AATAPipeline):
-	def __init__(self, writer, input_path, files, output_path=None, limit=None, debug=False):
-		super().__init__(input_path, files, limit=limit, debug=debug)
+	'''
+	Test AATA pipeline subclass that allows using a custom Writer.
+	'''
+	def __init__(self, writer, input_path, files, output_path=None, models=None, limit=None, debug=False):
+		super().__init__(input_path, files, models=models, limit=limit, debug=debug)
 		self.writer = writer
 
 	
 class TestAATAPipelineOutput(unittest.TestCase):
+	'''
+	Parse test XML data and run the AATA pipeline with the in-memory TestWriter.
+	Then verify that the serializations in the TestWriter object are what was expected.
+	'''
 	def setUp(self):
 		self.files = ['tests/data/aata-sample1.xml']
 		pass
@@ -85,14 +122,19 @@ class TestAATAPipelineOutput(unittest.TestCase):
 	def test_pipeline_1(self):
 		input_path = ''
 		writer = TestWriter()
-		pipeline = AATATestPipeline(writer, input_path, self.files, limit=1, debug=True)
+		models = {
+			'Person': '0b47366e-2e42-11e9-9018-a4d18cec433a',
+			'LinguisticObject': 'model-lo',
+			'Organization': 'model-org'
+		}
+		pipeline = AATATestPipeline(writer, input_path, self.files, models=models, limit=1, debug=True)
 		pipeline.run()
 		output = writer.output
 		self.assertEqual(len(output), 3)
 
-		lo_model = '41a41e47-2e42-11e9-b5ee-a4d18cec433a'
-		people_model = '0b47366e-2e42-11e9-9018-a4d18cec433a'
-		orgs_model = 'XXX-Organization-Model'
+		lo_model = models['LinguisticObject']
+		people_model = models['Person']
+		orgs_model = models['Organization']
 
 		expected_models = {
 			people_model,
@@ -100,7 +142,6 @@ class TestAATAPipelineOutput(unittest.TestCase):
 			orgs_model
 		}
 
-# 		pprint.pprint(output[people_model])
 		self.assertEqual(set(output.keys()), expected_models)
 		self.assertEqual(len(output[people_model]), 2)
 		self.assertEqual(len(output[lo_model]), 2)

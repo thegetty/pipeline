@@ -25,6 +25,7 @@ from extracters.basic import \
 			Trace
 from extracters.aata_data import \
 			add_aata_object_type, \
+			filter_abstract_authors, \
 			make_aata_abstract, \
 			make_aata_article_dict, \
 			make_aata_authors, \
@@ -84,7 +85,7 @@ class AATAPipeline:
 		else:
 			sys.stderr.write('*** No serialization chain defined\n')
 
-	def add_articles_chain(self, graph, records):
+	def add_articles_chain(self, graph, records, serialize=True):
 		if self.limit is not None:
 			records = graph.add_chain(
 				Limit(self.limit),
@@ -98,12 +99,12 @@ class AATAPipeline:
 			AddDataDependentArchesModel(models=arches_models),
 			_input=records.output
 		)
-		if True:
+		if serialize:
 			# write ARTICLES data
 			self.add_serialization_chain(graph, articles.output)
 		return articles
 
-	def add_people_chain(self, graph, articles):
+	def add_people_chain(self, graph, articles, serialize=True):
 		people = graph.add_chain(
 			make_aata_authors,
 			AddArchesModel(model=arches_models['Person']),
@@ -111,25 +112,30 @@ class AATAPipeline:
 			make_la_person,
 			_input=articles.output
 		)
-		if True:
+		if serialize:
 			# write PEOPLE data
 			self.add_serialization_chain(graph, people.output)
 		return people
 
-	def add_abstracts_chain(self, graph, people):
+	def add_abstracts_chain(self, graph, articles, serialize=True):
 		abstracts = graph.add_chain(
 			make_aata_abstract,
 			AddArchesModel(model=arches_models['LinguisticObject']),
 			add_uuid,
 			MakeLinkedArtAbstract(),
-			_input=people.output
+			_input=articles.output
 		)
-		if True:
+		
+		# for each author of an abstract...
+		author_abstracts = graph.add_chain(filter_abstract_authors, _input=abstracts.output)
+		self.add_people_chain(graph, author_abstracts)
+		
+		if serialize:
 			# write ABSTRACTS data
 			self.add_serialization_chain(graph, abstracts.output)
 		return abstracts
 
-	def add_organizations_chain(self, graph, articles):
+	def add_organizations_chain(self, graph, articles, serialize=True):
 		organizations = graph.add_chain(
 			extract_imprint_orgs,
 			CleanDateToSpan(key='publication_date'),
@@ -139,7 +145,7 @@ class AATAPipeline:
 			MakeLinkedArtOrganization(),
 			_input=articles.output
 		)
-		if True:
+		if serialize:
 			# write ORGANIZATIONS data
 			self.add_serialization_chain(graph, organizations.output)
 		return organizations
@@ -154,7 +160,7 @@ class AATAPipeline:
 			records = graph.add_chain(XMLReader(f, xpath='/AATA_XML/record', fs='fs.data.aata'))
 			articles = self.add_articles_chain(graph, records)
 			people = self.add_people_chain(graph, articles)
-			abstracts = self.add_abstracts_chain(graph, people)
+			abstracts = self.add_abstracts_chain(graph, articles)
 			organizations = self.add_organizations_chain(graph, articles)
 
 		return graph

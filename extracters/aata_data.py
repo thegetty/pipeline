@@ -3,6 +3,7 @@
 # AATA Extracters
 
 import pprint
+from bonobo.constants import NOT_MODIFIED
 from bonobo.config import use
 from bonobo.config import Configurable, Option
 import copy

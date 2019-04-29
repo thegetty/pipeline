@@ -81,7 +81,6 @@ class TestAATAPipelineOutput(unittest.TestCase):
 		articles = [json.loads(s) for s in output[articles_model].values()]
 		article_types = {}
 		for a in articles:
-			pprint.pprint(a)
 			try:
 				i = a['id']
 				cl = a.get('classified_as')
@@ -91,6 +90,5 @@ class TestAATAPipelineOutput(unittest.TestCase):
 			except Exception as e:
 				print('*** %s' % (e,))
 				article_types[i] = None
-		pprint.pprint(article_types)
 		types = sorted(article_types.values())
 		self.assertEqual(types, ['A/V Content', 'Abstract'])

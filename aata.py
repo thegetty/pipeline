@@ -184,6 +184,12 @@ class AATAPipeline:
 
 
 class AATAFilePipeline(AATAPipeline):
+	'''
+	AATA pipeline with serialization to files based on Arches model and resource UUID.
+	
+	If in `debug` mode, JSON serialization will use pretty-printing. Otherwise,
+	serialization will be compact.
+	'''
 	def __init__(self, input_path, files, output_path=None, models=None, limit=None, debug=False):
 		super().__init__(input_path, files, models=models, limit=limit, debug=debug)
 		if debug:

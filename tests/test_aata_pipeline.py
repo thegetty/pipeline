@@ -147,7 +147,7 @@ class TestAATAPipelineOutput(unittest.TestCase):
 		self.assertEqual(len(output[lo_model]), 2)
 		self.assertEqual(len(output[orgs_model]), 3)
 		
-		people = [s for s in output[people_model].values()]
+		people = output[people_model].values()
 		people_creation_events = set()
 		for p in people:
 			for e in p.get('carried_out', []):
@@ -156,7 +156,7 @@ class TestAATAPipelineOutput(unittest.TestCase):
 		people_names = sorted(p.get('_label') for p in people)
 		self.assertEqual(people_names, ['Bremner, Ian', 'Meyers, Eric'])
 
-		organizations = [s for s in output[orgs_model].values()]
+		organizations = output[orgs_model].values()
 		org_names = {}
 		for o in organizations:
 			try:
@@ -172,7 +172,7 @@ class TestAATAPipelineOutput(unittest.TestCase):
 			'WGBH Educational Foundation //Boston (Massachusetts, United States)'
 		])
 		
-		lo = [s for s in output[lo_model].values()]
+		lo = output[lo_model].values()
 		article_types = {}
 		source_creation_events = set()
 		abstract_creation_events = set()

@@ -72,6 +72,13 @@ class AddDataDependentArchesModel(Configurable):
 		data['_ARCHES_MODEL'] = self.models['LinguisticObject']
 		return data
 
+def add_serialization(graph, input):
+	graph.add_chain(
+		SRLZ,
+		WRITER,
+		_input=input
+	)
+
 def add_articles_chain(graph, records):
 	articles = graph.add_chain(
 		Limit(LIMIT),
@@ -84,11 +91,7 @@ def add_articles_chain(graph, records):
 	)
 	if True:
 		# write ARTICLES data
-		graph.add_chain(
-			SRLZ,
-			WRITER,
-			_input=articles.output
-		)
+		add_serialization(graph, articles.output)
 	return articles
 
 def add_people_chain(graph, articles):
@@ -101,11 +104,7 @@ def add_people_chain(graph, articles):
 	)
 	if True:
 		# write PEOPLE data
-		graph.add_chain(
-			SRLZ,
-			WRITER,
-			_input=people.output
-		)
+		add_serialization(graph, people.output)
 	return people
 
 def add_abstracts_chain(graph, people):
@@ -118,11 +117,7 @@ def add_abstracts_chain(graph, people):
 	)
 	if True:
 		# write ABSTRACTS data
-		graph.add_chain(
-			SRLZ,
-			WRITER,
-			_input=abstracts.output
-		)
+		add_serialization(graph, abstracts.output)
 	return abstracts
 
 def add_organizations_chain(graph, articles):
@@ -137,11 +132,7 @@ def add_organizations_chain(graph, articles):
 	)
 	if True:
 		# write ORGANIZATIONS data
-		graph.add_chain(
-			SRLZ,
-			WRITER,
-			_input=organizations.output
-		)
+		add_serialization(graph, organizations.output)
 	return organizations
 
 def get_graph(files, **kwargs):
@@ -165,9 +156,11 @@ if __name__ == '__main__':
 	parser = bonobo.get_argument_parser()
 	with bonobo.parse_args(parser) as options:
 		try:
+			graph = get_graph(files=files, **options)
+			services = get_services(**options)
 			bonobo.run(
-				get_graph(files=files, **options),
-				services=get_services(**options)
+				graph,
+				services=services
 			)
 		except RuntimeError:
 			raise ValueError()

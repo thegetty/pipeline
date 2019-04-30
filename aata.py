@@ -39,7 +39,7 @@ if __name__ == '__main__':
 	if DEBUG:
 		LIMIT		= int(os.environ.get('GETTY_PIPELINE_LIMIT', 10))
 	else:
-		LIMIT		= 10000000
+		LIMIT		= int(os.environ.get('GETTY_PIPELINE_LIMIT', 10000000))
 	xml_files = [f for f in os.listdir(aata_data_path) if f.endswith('.xml')]
 	parser = bonobo.get_argument_parser()
 	with bonobo.parse_args(parser) as options:

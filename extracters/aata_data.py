@@ -10,10 +10,31 @@ from bonobo.config import Configurable, Option
 import copy
 import uuid
 import lxml.etree
+import itertools
+from sqlalchemy import create_engine
 
+import settings
 from cromulent import model, vocab
-from extracters.cleaners import date_cleaner, share_parse
-from .basic import fetch_uuid, get_actor_type, get_aat_label
+from .cleaners import date_cleaner, share_parse
+from .linkedart import \
+			MakeLinkedArtAbstract, \
+			MakeLinkedArtLinguisticObject, \
+			MakeLinkedArtOrganization
+import bonobo
+from .knoedler_linkedart import *
+from bonobo.nodes import Limit
+from .xml import XMLReader
+from .basic import \
+			add_uuid, \
+			AddArchesModel, \
+			AddFieldNames, \
+			deep_copy, \
+			fetch_uuid, \
+			get_aat_label, \
+			get_actor_type, \
+			Offset, \
+			Serializer, \
+			Trace
 
 localIdentifier = None # TODO: aat:LocalIdentifier?
 legacyIdentifier = None # TODO: aat:LegacyIdentifier?
@@ -294,3 +315,147 @@ def make_aata_abstract(data):
 def filter_abstract_authors(data: dict):
 	if 'author_abstract_flag' in data and data['author_abstract_flag']:
 		yield data
+
+class AddDataDependentArchesModel(Configurable):
+	models = Option()
+	def __call__(self, data):
+		data['_ARCHES_MODEL'] = self.models['LinguisticObject']
+		return data
+
+# AATA Pipeline class
+
+class AATAPipeline:
+	def __init__(self, input_path, files, models=None, limit=None, debug=False):
+		if models is None:
+			models = {}
+		self.models = models
+		self.files = files
+		self.limit = limit
+		self.debug = debug
+		self.input_path = input_path
+		if self.debug:
+			self.files = [self.files[0]]
+			self.serializer	= Serializer(compact=False)
+			self.writer		= None
+			# self.writer	= ArchesWriter()
+			sys.stderr.write("In DEBUGGING mode\n")
+		else:
+			self.serializer	= Serializer(compact=True)
+			self.writer		= None
+			# self.writer	= ArchesWriter()
+
+	# Set up environment
+	def get_services(self, **kwargs):
+		return {
+			'trace_counter': itertools.count(),
+			'gpi': create_engine(settings.gpi_engine),
+			'aat': create_engine(settings.aat_engine),
+			'uuid_cache': create_engine(settings.uuid_cache_engine),
+			'fs.data.aata': bonobo.open_fs(self.input_path)
+		}
+
+	def add_serialization_chain(self, graph, input):
+		if self.writer is not None:
+			graph.add_chain(
+				self.serializer,
+				self.writer,
+				_input=input
+			)
+		else:
+			sys.stderr.write('*** No serialization chain defined\n')
+
+	def add_articles_chain(self, graph, records, serialize=True):
+		if self.limit is not None:
+			records = graph.add_chain(
+				Limit(self.limit),
+				_input=records.output
+			)
+		articles = graph.add_chain(
+			make_aata_article_dict,
+			add_uuid,
+			add_aata_object_type,
+			MakeLinkedArtLinguisticObject(),
+			AddDataDependentArchesModel(models=self.models),
+			_input=records.output
+		)
+		if serialize:
+			# write ARTICLES data
+			self.add_serialization_chain(graph, articles.output)
+		return articles
+
+	def add_people_chain(self, graph, articles, serialize=True):
+		model = self.models.get('Person', 'XXX-Person-Model')
+		people = graph.add_chain(
+			make_aata_authors,
+			AddArchesModel(model=model),
+			add_uuid,
+			make_la_person,
+			_input=articles.output
+		)
+		if serialize:
+			# write PEOPLE data
+			self.add_serialization_chain(graph, people.output)
+		return people
+
+	def add_abstracts_chain(self, graph, articles, serialize=True):
+		model = self.models.get('LinguisticObject', 'XXX-LinguisticObject-Model')
+		abstracts = graph.add_chain(
+			make_aata_abstract,
+			AddArchesModel(model=model),
+			add_uuid,
+			MakeLinkedArtAbstract(),
+			_input=articles.output
+		)
+		
+		# for each author of an abstract...
+		author_abstracts = graph.add_chain(filter_abstract_authors, _input=abstracts.output)
+		self.add_people_chain(graph, author_abstracts)
+		
+		if serialize:
+			# write ABSTRACTS data
+			self.add_serialization_chain(graph, abstracts.output)
+		return abstracts
+
+	def add_organizations_chain(self, graph, articles, serialize=True):
+		model = self.models.get('Organization', 'XXX-Organization-Model')
+		organizations = graph.add_chain(
+			extract_imprint_orgs,
+			CleanDateToSpan(key='publication_date'),
+			make_aata_imprint_orgs,
+			AddArchesModel(model=model), # TODO: model for organizations?
+			add_uuid,
+			MakeLinkedArtOrganization(),
+			_input=articles.output
+		)
+		if serialize:
+			# write ORGANIZATIONS data
+			self.add_serialization_chain(graph, organizations.output)
+		return organizations
+
+	def get_graph(self, **kwargs):
+		graph = bonobo.Graph()
+		files = self.files[:]
+		if self.debug:
+			sys.stderr.write("Processing %s\n" % (files[0],))
+
+		for f in files:
+			records = graph.add_chain(XMLReader(f, xpath='/AATA_XML/record', fs='fs.data.aata'))
+			articles = self.add_articles_chain(graph, records)
+			people = self.add_people_chain(graph, articles)
+			abstracts = self.add_abstracts_chain(graph, articles)
+			organizations = self.add_organizations_chain(graph, articles)
+
+		return graph
+
+	def run(self, **options):
+		sys.stderr.write("- Limiting to %d records per file\n" % (self.limit,))
+		sys.stderr.write("- Using serializer: %r\n" % (self.serializer,))
+		sys.stderr.write("- Using writer: %r\n" % (self.writer,))
+		graph = self.get_graph(**options)
+		services = self.get_services(**options)
+		bonobo.run(
+			graph,
+			services=services
+		)
+
+

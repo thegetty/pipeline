@@ -1,4 +1,7 @@
-# TODO: move cromulent model code out of this module
+'''
+Classes and utiltiy functions for instantiating, configuring, and
+running a bonobo pipeline for converting AATA XML data into JSON-LD.
+'''
 
 # AATA Extracters
 
@@ -33,6 +36,13 @@ legacyIdentifier = None # TODO: aat:LegacyIdentifier?
 # utility functions
 
 def language_object_from_code(code):
+	'''
+	Given a three-letter language code, return a model.Language object for the
+	corresponding language.
+
+	For example, `language_object_from_code('eng')` returns an object representing
+	the English language.
+	'''
 	languages = {
 		'eng': {'ident': 'http://vocab.getty.edu/aat/300388277', 'label': 'English'}
 	}
@@ -45,6 +55,18 @@ def language_object_from_code(code):
 # main article chain
 
 def make_aata_article_dict(e):
+	'''
+	Given an XML element representing an AATA record, extract information about the
+	"article" (this might be a book, chapter, journal article, etc.) including:
+
+	* document type
+	* titles and title translations
+	* organizations and their role (e.g. publisher)
+	* creators and thier role (e.g. author, editor)
+	* abstracts
+
+	This information is returned in a single `dict`.
+	'''
 	doc_type = e.findtext('./record_desc_group/doc_type')
 	title = e.findtext('./title_group[title_type = "Analytic"]/title')
 	translations = list([t.text for t in
@@ -68,6 +90,7 @@ def make_aata_article_dict(e):
 	}
 
 def _xml_extract_abstracts(e, aata_id):
+	'''Extract information about abstracts from an "article" record XML element'''
 	rids = [e.text for e in e.findall('./record_id_group/record_id')]
 	lids = [e.text for e in e.findall('./record_id_group/legacy_id')]
 	for i, ag in enumerate(e.xpath('./abstract_group')):
@@ -89,6 +112,7 @@ def _xml_extract_abstracts(e, aata_id):
 			}
 
 def _xml_extract_organizations(e, aata_id):
+	'''Extract information about organizations from an "article" record XML element'''
 	i = -1
 	for ig in e.xpath('./imprint_group/related_organization'):
 		role = ig.findtext('organization_type')
@@ -119,6 +143,7 @@ def _xml_extract_organizations(e, aata_id):
 				print(lxml.etree.tostring(o).decode('utf-8'))
 
 def _xml_extract_authors(e, aata_id):
+	'''Extract information about authors from an "article" record XML element'''
 	i = -1
 	for ag in e.xpath('./authorship_group'):
 		role = ag.findtext('author_role')
@@ -143,6 +168,7 @@ def _xml_extract_authors(e, aata_id):
 					print(lxml.etree.tostring(ag).decode('utf-8'))
 
 				author.update({
+					'_aata_record_id': aata_id,
 					'_aata_record_author_seq': i,
 					'label': name,
 					'names': [(name,)],
@@ -156,6 +182,15 @@ def _xml_extract_authors(e, aata_id):
 # 				sys.stderr.write('\n')
 
 def add_aata_object_type(data):
+	'''
+	Given an "article" `dict` containing a `_document_type` key which has a two-letter
+	document type string (e.g. 'JA' for journal article, 'BC' for book), add a new key
+	`object_type` containing the corresponding `vocab` class. This class can be used to
+	construct a model object for this "article".
+
+	For example, `add_aata_object_type({'_document_type': 'AV', ...})` returns the `dict`:
+	`{'_document_type': 'AV', 'document_type': vocab.AudioVisualContent, ...}`.
+	'''
 	doc_types = { # should this be in settings (or elsewhere)?
 		'AV': vocab.AudioVisualContent,
 		'BA': vocab.Chapter,
@@ -174,6 +209,32 @@ def add_aata_object_type(data):
 # imprint organizations chain (publishers, distributors)
 
 def extract_imprint_orgs(data):
+	'''
+	Given a `dict` representing an "article," extract the "imprint organization" records
+	and their role (e.g. publisher, distributor). yield a new `dict`s for each such
+	organization.
+
+	The resulting organization `dict` will contain these keys:
+
+	* `_aata_record_id`: The identifier of the corresponding article
+	* `_aata_record_organization_seq`: A integer identifying this organization
+	                                   (unique within the scope of the article)
+	* `label`: The name of the organization
+	* `role`: The role the organization played in the article's creation (e.g. `'Publishing'`)
+	* `properties`: A `dict` of additional properties associated with this organization's
+	                role in the article creation (e.g. `DatesOfPublication`)
+	* `names`: A `list` of names this organization may be identified by
+	* `identifiers`: A `list` of (identifier, identifier type) pairs
+	* `uid`: A unique ID for this organization
+	* `parent`: The model object representing the corresponding article
+	* `parent_data`: The `dict` representing the corresponding article
+
+	In addition, these keys may be present (if applicable):
+
+	* `event_label`: A description of the activity the organization performed as part of
+	                 the article's creation
+	* `publication_date`: A string describing the date (range) of publication
+	'''
 	lod_object = data['_LOD_OBJECT']
 	organizations = data['_organizations']
 	for o in organizations:
@@ -216,6 +277,7 @@ class CleanDateToSpan(Configurable):
 
 	@staticmethod
 	def string_to_span(value):
+		'''Parse a string value and attempt to create a corresponding `model.TimeSpan` object.'''
 		try:
 			date_from, date_to = date_cleaner(value)
 			ts = model.TimeSpan()
@@ -228,7 +290,7 @@ class CleanDateToSpan(Configurable):
 			print('*** Unknown date format: %r' % (value,))
 			return None
 
-	def __call__(self, data):
+	def __call__(self, data, *args, **kwargs):
 		if self.key in data:
 			value = data[self.key]
 			ts = self.string_to_span(value)
@@ -241,7 +303,38 @@ class CleanDateToSpan(Configurable):
 				pprint.pprint(data)
 		return NOT_MODIFIED
 
-def make_aata_imprint_orgs(o: dict):
+def make_aata_org_event(o: dict):
+	'''
+	Given a `dict` representing an organization, create an `model.Activity` object to
+	represent the organization's part in the "article" creation (associating any
+	applicable publication timespan to the activity), associate the activity with the
+	organization and the corresponding "article", and return a new `dict` that combines
+	the input data with an `'events'` key having a `list` value containing the new
+	activity object.
+
+	For example,
+
+	```
+	make_aata_org_event({
+		'event_label': 'Publishing',
+		'publication_date_span': model.TimeSpan(...),
+		...
+	})
+	```
+
+	will return:
+
+	```
+	{
+		'event_label': 'Publishing',
+		'publication_date_span': model.TimeSpan(...),
+		'events': [model.Activity(_label: 'Publishing', 'timespan': ts.TimeSpan(...))],
+		...
+	}
+	```
+
+	and also set the article object's `used_for` property to the new activity.
+	'''
 	event = model.Activity()
 	lod_object = o['parent']
 	lod_object.used_for = event
@@ -258,6 +351,27 @@ def make_aata_imprint_orgs(o: dict):
 # article authors chain
 
 def make_aata_authors(data):
+	'''
+	Given a `dict` representing an "article," extract the authorship records
+	and their role (e.g. author, editor). yield a new `dict`s for each such
+	creator (subsequently referred to as simply "author").
+
+	The resulting author `dict` will contain these keys:
+
+	* `_aata_record_id`: The identifier of the corresponding article
+	* `_aata_record_author_seq`: A integer identifying this author
+	                             (unique within the scope of the article)
+	* `label`: The name of the author
+	* `creation_role`: The role the author played in the creation of the "article"
+	                   (e.g. `'Author'`)
+	* `names`: A `list` of names this organization may be identified by
+	* `identifiers`: A `list` of (identifier, identifier type) pairs
+	* `uid`: A unique ID for this organization
+	* `parent`: The model object representing the corresponding article
+	* `parent_data`: The `dict` representing the corresponding article
+	* `events`: A `list` of `model.Creation` objects representing the part played by
+	            the author in the article's creation event.
+	'''
 	lod_object = data['_LOD_OBJECT']
 	event = model.Creation()
 	lod_object.created_by = event
@@ -282,10 +396,30 @@ def make_aata_authors(data):
 # article abstract chain
 
 def make_aata_abstract(data):
+	'''
+	Given a `dict` representing an "article," extract the abstract records.
+	yield a new `dict`s for each such record.
+
+	The resulting asbtract `dict` will contain these keys:
+
+	* `_LOD_OBJECT`: A `model.LinguisticObject` object representing the abstract
+	* `_aata_record_id`: The identifier of the corresponding article
+	* `_aata_record_author_seq`: A integer identifying this abstract
+	                             (unique within the scope of the article)
+	* `content`: The text content of the abstract
+	* `language`: A model object representing the declared langauge of the abstract (if any)
+	* `author_abstract_flag`: A boolean value indicating whether the article's authors also
+	                          authored the abstract
+	* `identifiers`: A `list` of (identifier, identifier type) pairs
+	* `_authors`: The authorship information from the input article `dict`
+	* `uid`: A unique ID for this abstract
+	* `parent`: The model object representing the corresponding article
+	* `parent_data`: The `dict` representing the corresponding article
+	'''
 	lod_object = data['_LOD_OBJECT']
 	for a in data.get('_abstracts', []):
 		abstract = model.LinguisticObject()
-		abstract_dict = {k: v for k, v in a.items()}
+		abstract_dict = {k: v for k, v in a.items() if k not in ('language',)}
 
 		abstract.content = a.get('content')
 		abstract.classified_as = model.Type(
@@ -300,7 +434,6 @@ def make_aata_abstract(data):
 				abstract.language = l
 				abstract_dict['language'] = l
 
-		abstract_dict = {k: v for k, v in a.items()}
 		if '_authors' in data:
 			abstract_dict['_authors'] = data['_authors']
 
@@ -316,18 +449,24 @@ def make_aata_abstract(data):
 		yield abstract_dict
 
 def filter_abstract_authors(data: dict):
+	'''Yield only those passed `dict` values for which the `'author_abstract_flag'` key is True.'''
 	if 'author_abstract_flag' in data and data['author_abstract_flag']:
 		yield data
 
 class AddDataDependentArchesModel(Configurable):
+	'''
+	Set the `_ARCHES_MODEL` key in the supplied `dict` to the appropriate arches model UUID
+	and return it.
+	'''
 	models = Option()
-	def __call__(self, data):
+	def __call__(self, data, *args, **kwargs):
 		data['_ARCHES_MODEL'] = self.models['LinguisticObject']
 		return data
 
 # AATA Pipeline class
 
 class AATAPipeline:
+	'''Bonobo-based pipeline for transforming AATA data from XML into JSON-LD.'''
 	def __init__(self, input_path, files, **kwargs):
 		self.models = kwargs.get('models', {})
 		self.files = files
@@ -347,6 +486,7 @@ class AATAPipeline:
 
 	# Set up environment
 	def get_services(self):
+		'''Return a `dict` of named services available to the bonobo pipeline.'''
 		return {
 			'trace_counter': itertools.count(),
 			'gpi': create_engine(settings.gpi_engine),
@@ -356,6 +496,7 @@ class AATAPipeline:
 		}
 
 	def add_serialization_chain(self, graph, input_node):
+		'''Add serialization of the passed transformer node to the bonobo graph.'''
 		if self.writer is not None:
 			graph.add_chain(
 				self.serializer,
@@ -366,6 +507,7 @@ class AATAPipeline:
 			sys.stderr.write('*** No serialization chain defined\n')
 
 	def add_articles_chain(self, graph, records, serialize=True):
+		'''Add transformation of article records to the bonobo pipeline.'''
 		if self.limit is not None:
 			records = graph.add_chain(
 				Limit(self.limit),
@@ -385,6 +527,7 @@ class AATAPipeline:
 		return articles
 
 	def add_people_chain(self, graph, articles, serialize=True):
+		'''Add transformation of author records to the bonobo pipeline.'''
 		model_id = self.models.get('Person', 'XXX-Person-Model')
 		people = graph.add_chain(
 			make_aata_authors,
@@ -399,6 +542,7 @@ class AATAPipeline:
 		return people
 
 	def add_abstracts_chain(self, graph, articles, serialize=True):
+		'''Add transformation of abstract records to the bonobo pipeline.'''
 		model_id = self.models.get('LinguisticObject', 'XXX-LinguisticObject-Model')
 		abstracts = graph.add_chain(
 			make_aata_abstract,
@@ -421,11 +565,12 @@ class AATAPipeline:
 		return abstracts
 
 	def add_organizations_chain(self, graph, articles, serialize=True):
+		'''Add transformation of organization records to the bonobo pipeline.'''
 		model_id = self.models.get('Organization', 'XXX-Organization-Model')
 		organizations = graph.add_chain(
 			extract_imprint_orgs,
 			CleanDateToSpan(key='publication_date'),
-			make_aata_imprint_orgs,
+			make_aata_org_event,
 			AddArchesModel(model=model_id), # TODO: model for organizations?
 			add_uuid,
 			MakeLinkedArtOrganization(),
@@ -437,6 +582,7 @@ class AATAPipeline:
 		return organizations
 
 	def get_graph(self):
+		'''Construct the bonobo pipeline to fully transform AATA data from XML to JSON-LD.'''
 		graph = bonobo.Graph()
 		files = self.files[:]
 		if self.debug:
@@ -454,6 +600,7 @@ class AATAPipeline:
 		return graph
 
 	def run(self, **options):
+		'''Run the AATA bonobo pipeline.'''
 		sys.stderr.write("- Limiting to %d records per file\n" % (self.limit,))
 		sys.stderr.write("- Using serializer: %r\n" % (self.serializer,))
 		sys.stderr.write("- Using writer: %r\n" % (self.writer,))

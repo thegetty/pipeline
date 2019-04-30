@@ -86,17 +86,28 @@ def make_aata_article_dict(e):
 	title = e.findtext('./title_group[title_type = "Analytic"]/title')
 	translations = list([t.text for t in
 		e.xpath('./title_group[title_type = "Analytic"]/title_translated')])
-	languages = set([t.text for t in e.xpath('./notes_group/lang_doc|./notes_group/lang_summary')])
+	doc_langs = set([t.text for t in e.xpath('./notes_group/lang_doc')])
+	sum_langs = set([t.text for t in e.xpath('./notes_group/lang_summary')])
+	languages = doc_langs | sum_langs
 	aata_id = e.findtext('./record_id_group/record_id')
 	organizations = list(_xml_extract_organizations(e, aata_id))
 	authors = list(_xml_extract_authors(e, aata_id))
 	abstracts = list(_xml_extract_abstracts(e, aata_id))
 	uid = 'AATA-%s-%s-%s' % (doc_type, aata_id, title)
 
+	if len(doc_langs) == 1:
+		code = doc_langs.pop()
+		try:
+			language = language_object_from_code(code)
+			title = (title, language)
+		except:
+			pass
+
 	return {
 		'_source_element': e,
 		'label': title,
-		'languages': languages,
+		'document_languages': doc_langs,
+		'summary_languages': sum_langs,
 		'_document_type': e.findtext('./record_desc_group/doc_type'),
 		'_organizations': list(organizations),
 		'_authors': list(authors),
@@ -417,9 +428,13 @@ def detect_title_language(data: dict):
 	Given a `dict` representing a Linguistic Object, attempt to detect the language of
 	the value for the `label` key.  If 
 	'''
-	languages = data.get('languages', set())
+	dlangs = data.get('document_languages', set())
+	slangs = data.get('summary_languages', set())
+	languages = dlangs | slangs
+	title = data.get('label')
+	if type(title) == tuple:
+		title = title[0]
 	try:
-		title = data['label']
 		if title is None:
 			return NOT_MODIFIED
 		translations = data.get('translations', [])

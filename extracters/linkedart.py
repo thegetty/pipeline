@@ -49,10 +49,12 @@ class MakeLinkedArtLinguisticObject(MakeLinkedArtRecord):
 		title_type = model.Type(ident='http://vocab.getty.edu/aat/300055726', label='Title') # TODO: is this the right aat URI?
 		name = None
 		if 'label' in data:
-			set_la_name(object, data['label'], title_type, set_label=True)
+			name = set_la_name(object, data['label'], title_type, set_label=True)
 
 		for t in data.get('translations', []):
-			set_la_name(object, t, title_type)
+			n = set_la_name(object, t, title_type)
+			if name is not None:
+				n.translation_of = name
 
 class MakeLinkedArtAbstract(MakeLinkedArtLinguisticObject):
 	# TODO: document the expected format of data['identifiers']

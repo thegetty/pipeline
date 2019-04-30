@@ -42,17 +42,16 @@ def init_actor_type():
 			if t:
 				t = t.replace('http://schema.org/', '')
 				res = cur.execute('INSERT INTO actor_type (ulan, type) VALUES ("%s", "%s")' % (ulan,t))
-			c2.commit()	
+			c2.commit()
 
 
 if __name__ == "__main__":
 
 	# Build the actor type table
-	c = sqlite3.connect('/Users/rsanderson/Development/getty/provenance/matt/gpi.sqlite')	
+	c = sqlite3.connect('/Users/rsanderson/Development/getty/provenance/matt/gpi.sqlite')
 	c2 = sqlite3.connect('/Users/rsanderson/Development/getty/pipeline/data/raw_gpi.sqlite')
 
 	s = 'SELECT pi_record_no FROM knoedler WHERE sale_event_id IS NULL AND inventory_event_id NOT NULL'
 	for row in c.execute(s):
 		orig = c2.execute('SELECT * from raw_knoedler WHERE pi_record_no = "%s"' % row[0])
 		print(orig.fetchone())
-

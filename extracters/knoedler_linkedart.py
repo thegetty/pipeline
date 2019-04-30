@@ -54,7 +54,7 @@ def make_la_book(data: dict):
 	d = vocab.SequencePosition()
 	d.value = booknum
 	d.unit = vocab.instances['numbers']
-	book.dimension = d		
+	book.dimension = d
 
 	return add_crom_data(data=data, what=book)
 
@@ -69,7 +69,7 @@ def make_la_page(data: dict):
 	d = vocab.SequencePosition()
 	d.value = pagenum
 	d.unit = vocab.instances['numbers']
-	page.dimension = d		
+	page.dimension = d
 
 	# XXX This is a shortcut to avoid minting physical objects with depictions
 	# We should consider how terrible that is
@@ -78,7 +78,7 @@ def make_la_page(data: dict):
 		imgid = model.Identifier()
 		imgid.content = data['image']
 		img.identified_by = imgid
-		page.representation = img	
+		page.representation = img
 	if data['heading']:
 		# This is a transcription of the heading of the page
 		# Meaning it is part of the page linguistic object
@@ -94,7 +94,7 @@ def make_la_page(data: dict):
 
 	book = model.LinguisticObject(ident="urn:uuid:%s" % data['parent']['uuid'])
 	# book._label = "Book"
-	page.part_of = book 
+	page.part_of = book
 
 	return add_crom_data(data=data, what=page)
 
@@ -107,7 +107,7 @@ def make_la_row(data: dict):
 	d = vocab.SequencePosition()
 	d.value = rownum
 	d.unit = vocab.instances['numbers']
-	row.dimension = d		
+	row.dimension = d
 
 	ident = vocab.LocalNumber()
 	ident.content = data['star_id']
@@ -126,7 +126,7 @@ def make_la_row(data: dict):
 	if data['verbatim']:
 		note3 = vocab.Note()
 		note3.content = data['verbatim']
-		row.referred_to_by = note3		
+		row.referred_to_by = note3
 
 	page = model.LinguisticObject(ident="urn:uuid:%s" % data['parent']['uuid'])
 	# page._label = "Page"
@@ -178,7 +178,7 @@ def make_la_person(data: dict):
 			if data['birth_clean'][0]:
 				ts.begin_of_the_begin = data['birth_clean'][0].strftime("%Y-%m-%dT%H:%M:%SZ")
 			if data['birth_clean'][1]:
-				ts.end_of_the_end = data['birth_clean'][1].strftime("%Y-%m-%dT%H:%M:%SZ")			
+				ts.end_of_the_end = data['birth_clean'][1].strftime("%Y-%m-%dT%H:%M:%SZ")
 		ts._label = data['birth']
 		b.timespan = ts
 		b._label = "Birth of %s" % who._label
@@ -222,18 +222,18 @@ def make_la_person(data: dict):
 			#pl._label = p['label']
 			#nm = model.Name()
 			#nm.content = p['label']
-			#pl.identified_by = nm 
+			#pl.identified_by = nm
 			#for s in p['sources']:
 			#		l = model.LinguisticObject(ident="urn:uuid:%s" % s[1])
 				# l._label = _row_label(s[2], s[3], s[4])
-			#	pl.referred_to_by = l			
+			#	pl.referred_to_by = l
 			who.residence = pl
 
 	return add_crom_data(data=data, what=who)
 
 ###
 ### Labels are commented out as resource-instance won't accept them
-### and adding label to the model won't export, plus doesn't work 
+### and adding label to the model won't export, plus doesn't work
 ### with resource-instance-list, as there's one label per list and
 ### the -list UI is much much nicer for editors
 ###
@@ -250,7 +250,7 @@ def make_la_object(data: dict):
 		# add source as part_of, as this is transcription
 		for s in dv['sources']:
 			l = model.LinguisticObject(ident="urn:uuid:%s" % s[1])
-			#l._label = _row_label(s[2], s[3], s[4])			
+			#l._label = _row_label(s[2], s[3], s[4])
 			ds.referred_to_by = l
 		what.referred_to_by = ds
 
@@ -260,7 +260,7 @@ def make_la_object(data: dict):
 		# add source as part_of, as this is transcription
 		for s in dm['sources']:
 			l = model.LinguisticObject(ident="urn:uuid:%s" % s[1])
-			#l._label = _row_label(s[2], s[3], s[4])			
+			#l._label = _row_label(s[2], s[3], s[4])
 			ds.referred_to_by = l
 		what.referred_to_by = ds
 
@@ -314,7 +314,7 @@ def make_la_object(data: dict):
 		#who = model.Person(ident="urn:uuid:%s" % a['uuid'])
 		who = model.Actor(ident="urn:uuid:%s" % a['uuid'])
 		# who._label = a['label']
-		prod.carried_out_by = who		
+		prod.carried_out_by = who
 
 		for s in a['sources']:
 			# Can't associate with the relationship directly (as it's a source for carried_out_by)
@@ -326,7 +326,7 @@ def make_la_object(data: dict):
 	for a in former:
 		fprod = model.Production()
 		who = model.Person(ident="urn:uuid:%s" % a['uuid'])
-		who._label = a['label']		
+		who._label = a['label']
 		fprod.carried_out_by = who
 		aa = model.AttributeAssignment()
 		what.attributed_by = aa
@@ -373,7 +373,7 @@ def make_la_object(data: dict):
 
 	if add_vi:
 		# This will be built in a different fork
-		vi = model.VisualItem(ident="urn:uuid:%s" % data['vizitem_uuid'])		
+		vi = model.VisualItem(ident="urn:uuid:%s" % data['vizitem_uuid'])
 		what.shows = vi
 
 	return add_crom_data(data=data, what=what)
@@ -422,7 +422,7 @@ def make_la_purchase(data: dict):
 			what.initiated = model.Phase(ident="urn:uuid:%s" % o['phase_info']['uuid'])
 	for b in data['buyers']:
 		# XXX Could [indeed very very likely to] be Group
-		if b['type'] in ["Person", "Actor"]:				
+		if b['type'] in ["Person", "Actor"]:
 			try:
 				what.transferred_title_to = model.Person(ident="urn:uuid:%s" % b['uuid'], label=b['label'])
 			except:
@@ -441,7 +441,7 @@ def make_la_purchase(data: dict):
 		else:
 			what.transferred_title_from = model.Group(ident="urn:uuid:%s" % s['uuid'], label=s['label'])
 		if s['mod']:
-			print("NOT HANDLED MOD: %s" % s['mod'])			
+			print("NOT HANDLED MOD: %s" % s['mod'])
 
 	if data['dec_amount']:
 		p = model.Payment()
@@ -458,7 +458,7 @@ def make_la_purchase(data: dict):
 		what.part = p
 
 	if data['year']:
-		t = model.TimeSpan()	
+		t = model.TimeSpan()
 		nm = model.Name()
 		nm.content = "%s %s %s" % (data['year'], data['month'], data['day'])
 		t.identified_by = nm
@@ -497,20 +497,20 @@ def make_la_phase(data: dict):
 		ts.begin_of_the_begin = ymd_to_datetime(data['p_year'], data['p_month'], data['p_day'])
 		phase.timespan = ts
 		# End comes from sale
-		if 's_type' in data:	
+		if 's_type' in data:
 			stype = data['s_type']
-			if stype != "Sold": 
+			if stype != "Sold":
 				# XXX Not sure what to do with these, see below!
 				print("Non 'sold' transaction (%s) is end of ownership phase for %s" % (stype, data['object_uuid'])  )
-			else:				
+			else:
 				ts.end_of_the_end = ymd_to_datetime(data['s_year'], data['s_month'], data['s_day'], which="end")
 		nm = model.Name()
-		nm.content = "%s %s %s to %s %s %s" % (data.get('p_year', '????'), data.get('p_month', '??'), 
+		nm.content = "%s %s %s to %s %s %s" % (data.get('p_year', '????'), data.get('p_month', '??'),
 			data.get('p_day', '??'), data.get('s_year', '????'), data.get('s_month', '??'), data.get('s_day', '??'))
 		ts.identified_by = nm
 
 	for b in data['buyers']:
-		if b['type'] in ["Person", "Actor"]:				
+		if b['type'] in ["Person", "Actor"]:
 			who = model.Person(ident="urn:uuid:%s" % b['uuid'], label=b['label'])
 		else:
 			who = model.Group(ident="urn:uuid:%s" % b['uuid'], label=b['label'])
@@ -542,7 +542,7 @@ def make_la_sale(data: dict):
 			what.terminates = model.Phase(ident="urn:uuid:%s" % o['phase'])
 
 	for b in data['sellers']:
-		if b['type'] in ["Person", "Actor"]:				
+		if b['type'] in ["Person", "Actor"]:
 			what.transferred_title_to = model.Person(ident="urn:uuid:%s" % b['uuid'], label=b['label'])
 		else:
 			what.transferred_title_to = model.Group(ident="urn:uuid:%s" % b['uuid'], label=b['label'])
@@ -555,9 +555,9 @@ def make_la_sale(data: dict):
 		else:
 			what.transferred_title_from = model.Group(ident="urn:uuid:%s" % s['uuid'], label=s['label'])
 		if s['mod']:
-			print("NOT HANDLED MOD: %s" % s['mod'])			
+			print("NOT HANDLED MOD: %s" % s['mod'])
 		if s['auth_mod']:
-			print("NOT HANDLED AUTH_MOD: %s" % s['auth_mod'])				
+			print("NOT HANDLED AUTH_MOD: %s" % s['auth_mod'])
 
 	if data['dec_amount']:
 		p = model.Payment()
@@ -614,7 +614,7 @@ def make_la_inventory(data: dict):
 		t = model.TimeSpan()
 		nm = model.Name()
 		nm.content = "%s %s %s" % (data['year'], data['month'], data['day'])
-		t.identified_by = nm		
+		t.identified_by = nm
 		t.begin_of_the_begin = ymd_to_datetime(data['year'], data['month'], data['day'])
 		t.end_of_the_end = ymd_to_datetime(data['year'], data['month'], data['day'], which="end")
 		what.timespan = t
@@ -634,7 +634,7 @@ def make_la_prev_post(data: dict):
 	what = model.Acquisition(ident="urn:uuid:%s" % data['uuid'])
 	what._label = "%s of object by %s" % (data['acq_type'], data['owner_label'])
 
-	if data['owner_type'] in ["Person", "Actor"]:				
+	if data['owner_type'] in ["Person", "Actor"]:
 		who = model.Person(ident="urn:uuid:%s" % data['owner_uuid'], label=data['owner_label'])
 	else:
 		who = model.Group(ident="urn:uuid:%s" % data['owner_uuid'], label=data['owner_label'])

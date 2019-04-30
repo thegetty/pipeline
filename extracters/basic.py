@@ -20,11 +20,11 @@ class AddArchesModel(Configurable):
 class AddFieldNames(Configurable):
 	key = Option()
 	field_names = Option()
-	def __call__(self, *data):	
+	def __call__(self, *data):
 		if len(data) == 1 and type(data[0]) == tuple:
 			data = data[0]
 		names = self.field_names.get(self.key, [])
-		return dict(zip(names, data))		
+		return dict(zip(names, data))
 
 class Offset(Configurable):
 	offset = Option()
@@ -133,9 +133,9 @@ class Trace(Configurable):
 
 class Serializer(Configurable):
 	compact = Option(default=True)
-	def __call__(self, data: dict):	
+	def __call__(self, data: dict):
 		factory = data['_CROM_FACTORY']
-		js = factory.toString(data['_LOD_OBJECT'], self.compact)		
+		js = factory.toString(data['_LOD_OBJECT'], self.compact)
 		data['_OUTPUT'] = js
 		return data
 

@@ -8,29 +8,29 @@ import copy
 # Here we extract the data from the sources and collect it together
 
 all_names = {
-	'gpi_people': ['uid', 'label', 'ulan', 'birth', 'death', 'active_early', 'active_late', 
+	'gpi_people': ['uid', 'label', 'ulan', 'birth', 'death', 'active_early', 'active_late',
 		'nationality', 'aat_nationality_1', 'aat_nationality_2', 'aat_nationality_3'],
-	'knoedler': ['star_id', 'pi_record_no', 'stock_book_no', 'page_number', 'row_number', 
-		'description', 'subject', 'genre', 'object_type', 'materials', 'dimensions', 'folio', 
-		'working_note', 'verbatim_notes', 'link', 'main_heading', 'subheading', 'auction_sale', 
+	'knoedler': ['star_id', 'pi_record_no', 'stock_book_no', 'page_number', 'row_number',
+		'description', 'subject', 'genre', 'object_type', 'materials', 'dimensions', 'folio',
+		'working_note', 'verbatim_notes', 'link', 'main_heading', 'subheading', 'auction_sale',
 		'auction_purchase','object_id', 'share_note', 'sale_event', 'purchase_event', 'inventory_event'],
-	'purchase_info': ['uid', 'amount', 'currency', 'k_amount', 'k_curr', 'note', 'k_note', 
+	'purchase_info': ['uid', 'amount', 'currency', 'k_amount', 'k_curr', 'note', 'k_note',
 		'year', 'month', 'day', 'dec_amount', 'currency_aat', 'dec_k_amount', 'k_curr_aat'],
-	'sale_info': ['uid', 'type', 'year', 'month', 'day', 'share_amount', 'share_currency', 
-		'share_note', 'amount', 'currency', 'note', 'dec_amount', 'currency_aat', 
+	'sale_info': ['uid', 'type', 'year', 'month', 'day', 'share_amount', 'share_currency',
+		'share_note', 'amount', 'currency', 'note', 'dec_amount', 'currency_aat',
 		'dec_share_amount', 'share_currency_aat'],
-	'raw': ['orig_file', 'star_id', 'pi_id', 'stock_book_id', 'knoedler_id', 'page_num', 
-		'row_num', 'consign_num', 'consign_name', 'consign_loc', 'consign_ulan_id', 
-		'artist_name_1', 'artist_name_auth_1', 'nationality_1', 'attrib_mod_1', 'attrib_mod_auth_1', 'star_rec_no_1', 'artist_ulan_1', 
-		'artist_name_2', 'artist_name_auth_2', 'nationality_2', 'attrib_mod_2', 'attrib_mod_auth_2', 'star_rec_no_2', 'artist_ulan_2', 
-		'title', 'description', 'subject', 'genre', 'object_type', 'materials', 'dimensions', 
-		'entry_date_year', 'entry_date_month', 'entry_date_day', 'sale_date_year', 
-		'sale_date_month', 'sale_date_day', 'purchase_amount', 'purchase_currency', 
+	'raw': ['orig_file', 'star_id', 'pi_id', 'stock_book_id', 'knoedler_id', 'page_num',
+		'row_num', 'consign_num', 'consign_name', 'consign_loc', 'consign_ulan_id',
+		'artist_name_1', 'artist_name_auth_1', 'nationality_1', 'attrib_mod_1', 'attrib_mod_auth_1', 'star_rec_no_1', 'artist_ulan_1',
+		'artist_name_2', 'artist_name_auth_2', 'nationality_2', 'attrib_mod_2', 'attrib_mod_auth_2', 'star_rec_no_2', 'artist_ulan_2',
+		'title', 'description', 'subject', 'genre', 'object_type', 'materials', 'dimensions',
+		'entry_date_year', 'entry_date_month', 'entry_date_day', 'sale_date_year',
+		'sale_date_month', 'sale_date_day', 'purchase_amount', 'purchase_currency',
 		'purchase_note', 'knoedler_purchase_amount', 'knoedler_purchase_currency', 'knoedler_purchase_note',
 		'price_amount', 'price_currency', 'price_note', 'share_amount', 'share_currency', 'share_note',
 		'seller_name_1', 'seller_loc_1', 'seller_mod_1', 'seller_name_auth_1', 'seller_auth_loc_1', 'seller_auth_mod_1', 'seller_ulan_1',
 		'seller_name_2', 'seller_loc_2', 'seller_mod_2', 'seller_name_auth_2', 'seller_auth_loc_2', 'seller_auth_mod_2', 'seller_ulan_2',
-		'joint_owner_1', 'joint_owner_sh_1', 'joint_owner_ulan_1', 
+		'joint_owner_1', 'joint_owner_sh_1', 'joint_owner_ulan_1',
 		'joint_owner_2', 'joint_owner_sh_2', 'joint_owner_ulan_2',
 		'joint_owner_3', 'joint_owner_sh_3', 'joint_owner_ulan_3', 'transaction',
 		'buyer_name_1', 'buyer_loc_1', 'buyer_mod_1', 'buyer_name_auth_1', 'buyer_addr_auth_1', 'buyer_auth_mod_1', 'buyer_ulan_1',
@@ -39,7 +39,7 @@ all_names = {
 		'prev_owner_1', 'prev_owner_loc_1', 'prev_owner_ulan_1',
 		'prev_owner_2', 'prev_owner_loc_2', 'prev_owner_ulan_2',
 		'prev_owner_3', 'prev_owner_loc_3', 'prev_owner_ulan_3',
-		'prev_owner_4', 'prev_owner_loc_4', 'prev_owner_ulan_4',				
+		'prev_owner_4', 'prev_owner_loc_4', 'prev_owner_ulan_4',
 		'prev_owner_5', 'prev_owner_loc_5', 'prev_owner_ulan_5',
 		'prev_owner_6', 'prev_owner_loc_6', 'prev_owner_ulan_6',
 		'prev_owner_7', 'prev_owner_loc_7', 'prev_owner_ulan_7',
@@ -123,7 +123,7 @@ def make_objects_artists(data, gpi=None, uuid_cache=None):
 
 		if attr['artist'] in artistById:
 			# Add source
-			artistById[attr['artist']]['sources'].append([ attr['star_id'], uu, attr['book'], attr['page'], attr['row']])				
+			artistById[attr['artist']]['sources'].append([ attr['star_id'], uu, attr['book'], attr['page'], attr['row']])
 			# Check mod is recorded
 			if attr['mod']:
 				artistById[attr['artist']]['mod'] = attr['mod']
@@ -167,7 +167,7 @@ def make_objects_dims(data, gpi=None, uuid_cache=None):
 		# see if we have the same value, if so don't create a new Dimension
 		newdim = None
 		if not 'type' in dimdata or not dimdata['type']:
-			dimdata['type'] = 300055642			
+			dimdata['type'] = 300055642
 		for d in dimByType[dimdata['type']]:
 			if d['value'] == dimdata['value']:
 				newdim = d
@@ -215,7 +215,7 @@ def make_objects_names(data, gpi=None, uuid_cache=None):
 			title['value'] = value
 		compValue = value.lower()
 
-		uu = fetch_uuid("K-ROW-%s-%s-%s" % (title['book'], title['page'], title['row']), uuid_cache)	
+		uu = fetch_uuid("K-ROW-%s-%s-%s" % (title['book'], title['page'], title['row']), uuid_cache)
 		if compValue in nameByVal:
 			nameByVal[compValue]['sources'].append([title['star_no'], uu, title['book'], title['page'], title['row']])
 			if title['preferred']:
@@ -244,7 +244,7 @@ def make_objects_tags_ids(data, gpi=None, uuid_cache=None, aat=None):
 
 	tagMap = {"knoedler_depicts_aat": "depicts", "knoedler_materials_classified_as_aat": "classified_as",
 			"knoedler_materials_object_aat": "object_material", "knoedler_materials_support_aat": "support_material",
-			"knoedler_materials_technique_aat": "technique", "knoedler_style_aat": "style", 
+			"knoedler_materials_technique_aat": "technique", "knoedler_style_aat": "style",
 			"knoedler_subject_classified_as_aat": "subject"}
 
 	s = 'SELECT tag_type, aat_term FROM knoedler_object_tags WHERE object_id = :id'
@@ -276,7 +276,7 @@ def make_objects_tags_ids(data, gpi=None, uuid_cache=None, aat=None):
 
 @use('gpi')
 @use('uuid_cache')
-def add_purchase_people(thing: dict, gpi=None, uuid_cache=None):	
+def add_purchase_people(thing: dict, gpi=None, uuid_cache=None):
 	s = '''
 		SELECT
 			b.purchase_buyer_uid, b.purchase_buyer_share, p.person_label, p.person_ulan
@@ -336,8 +336,8 @@ def add_purchase_thing(thing: dict, gpi=None, uuid_cache=None):
 	for row in res:
 		uu = fetch_uuid("K-ROW-%s-%s-%s" % (row[1], row[2], row[3]), uuid_cache)
 		thing['sources'].append([str(row[0]), uu, row[1], row[2], row[3]])
-		ouu = fetch_uuid(str(row[4]), uuid_cache)	
-		phase_uu = fetch_uuid(row[0] + '-ownership-phase', uuid_cache)		
+		ouu = fetch_uuid(str(row[4]), uuid_cache)
+		phase_uu = fetch_uuid(row[0] + '-ownership-phase', uuid_cache)
 		pi = {'uuid': phase_uu, 'star_id': row[0]}
 		thing['objects'].append({'uid': str(row[4]), 'uuid': ouu, 'label': row[5], 'phase_info': pi})
 	return thing
@@ -372,9 +372,9 @@ def add_ownership_phase_purchase(data: dict, gpi=None, uuid_cache=None):
 			oid = row[2]
 			if oid in duids:
 				phase_uu = duids[oid]['phase_info']['uuid']
-				pi = {'uuid': phase_uu, 'star_id': row[0], 'sale_id': row[1], 's_type': row[3], 
+				pi = {'uuid': phase_uu, 'star_id': row[0], 'sale_id': row[1], 's_type': row[3],
 					's_year': row[4], 's_month': row[5], 's_day': row[6]}
-				duids[oid]['phase_info'] = pi		
+				duids[oid]['phase_info'] = pi
 	# This might not get called, if no sale recorded
 	# Downstream code needs to check that the transaction type is Sold to end?
 	return data
@@ -396,7 +396,7 @@ def fan_object_phases(data: dict):
 
 @use('gpi')
 @use('uuid_cache')
-def add_sale_people(thing: dict, gpi=None, uuid_cache=None):	
+def add_sale_people(thing: dict, gpi=None, uuid_cache=None):
 	s = '''
 		SELECT
 			s.sale_buyer_uid, p.person_label, p.person_ulan, s.sale_buyer_mod, s.sale_buyer_auth_mod
@@ -501,9 +501,9 @@ def make_missing_purchase_data(data: dict, uuid_cache=None):
 	}
 
 
-	seller1 = {'name': data['seller_name_1'], 'loc': data['seller_loc_1'], 'loc_auth': data['seller_auth_loc_1'], 
+	seller1 = {'name': data['seller_name_1'], 'loc': data['seller_loc_1'], 'loc_auth': data['seller_auth_loc_1'],
 		'mod': data['seller_mod_1'], 'mod_auth': data['seller_auth_mod_1'], 'ulan': data['seller_ulan_1']}
-	seller2 = {'name': data['seller_name_2'], 'loc': data['seller_loc_2'], 'loc_auth': data['seller_auth_loc_2'], 
+	seller2 = {'name': data['seller_name_2'], 'loc': data['seller_loc_2'], 'loc_auth': data['seller_auth_loc_2'],
 		'mod': data['seller_mod_2'], 'mod_auth': data['seller_auth_mod_2'], 'ulan': data['seller_ulan_2']}
 
 	knoedler = {'label': "Knoedler", 'type': 'Group', 'share': None, 'uuid': 'c19d4bfc-0375-4994-98f3-0659cffc40d8'}
@@ -520,10 +520,10 @@ def make_missing_purchase_data(data: dict, uuid_cache=None):
 		buyers.append(joint_1)
 	if joint_2['share'] is not None:
 		k_share -= joint_2['share']
-		buyers.append(joint_2)		
+		buyers.append(joint_2)
 	if joint_3['share'] is not None:
 		k_share -= joint_3['share']
-		buyers.append(joint_3)	
+		buyers.append(joint_3)
 	knoedler['share'] = k_share
 
 	return {
@@ -575,7 +575,7 @@ def make_missing_shared(data: dict, gpi=None, uuid_cache=None):
 	if not data['month']:
 		data['month'] = 1
 	else:
-		data['month'] = int(data['month'])			
+		data['month'] = int(data['month'])
 	if data['year']:
 		data['year'] = int(data['year'])
 
@@ -601,7 +601,7 @@ def make_missing_shared(data: dict, gpi=None, uuid_cache=None):
 def make_missing_purchase(data: dict, gpi=None, uuid_cache=None):
 	if data['transaction_type'] == "Unsold" and not data['amount'] and not data['note'] and not data['sellers'][0]['name']:
 		# Inventory
-		return None	
+		return None
 	else:
 
 		# Clean up Sellers
@@ -609,7 +609,7 @@ def make_missing_purchase(data: dict, gpi=None, uuid_cache=None):
 		for sell in data['sellers']:
 			if sell['name'] is None and sell['ulan'] is None:
 				continue
-			
+
 			if sell['ulan'] is not None:
 				s = "SELECT person_uid, person_label FROM gpi_people WHERE person_ulan = :ulan"
 				res = gpi.execute(s, ulan=sell['ulan'])
@@ -644,7 +644,7 @@ def make_missing_purchase(data: dict, gpi=None, uuid_cache=None):
 		# Aaaaand ... clean up buyers
 		for buy in data['buyers']:
 			if not 'uuid' in buy:
-				# find type based on ULAN, otherwise default to Group			
+				# find type based on ULAN, otherwise default to Group
 				if buy['ulan'] is not None:
 					ptyp = get_actor_type(buy['ulan'], uuid_cache, default="Group")
 					s = "SELECT person_uid FROM gpi_people WHERE person_ulan = :ulan"
@@ -671,7 +671,7 @@ def make_missing_purchase(data: dict, gpi=None, uuid_cache=None):
 					print("Data: %r" % data)
 					print("buyer: %r" % buy)
 					# print("Sent: %s %s Got: %s" % (buy.get('name', '')], buy['ulan'], len(rows)))
-					continue				
+					continue
 				buy['type'] = ptyp
 				buy['uuid'] = puu
 				buy['uid'] = puid
@@ -682,7 +682,7 @@ def make_missing_purchase(data: dict, gpi=None, uuid_cache=None):
 def make_inventory(data: dict):
 	if data['transaction_type'] != "Unsold" or data['amount'] or data['note'] or data['sellers'][0]['name']:
 		# purchase
-		return None	
+		return None
 	else:
 		# pass through to make_la_inventory
 		return data
@@ -740,7 +740,7 @@ def add_person_names(thing: dict, gpi=None, uuid_cache=None):
 	for r in gpi.execute(s, id=thing['uid']):
 		name = [r[0]]
 		nid = r[2]
-		# s2 = 'SELECT source_record_id from gpi_people_names_references WHERE 
+		# s2 = 'SELECT source_record_id from gpi_people_names_references WHERE
 		#    person_name_id=%r' % (nid,)
 		s2 = '''
 			SELECT
@@ -755,7 +755,7 @@ def add_person_names(thing: dict, gpi=None, uuid_cache=None):
 			# uid, book, page, row
 			val = [r2[0]]
 
-			uu = fetch_uuid("K-ROW-%s-%s-%s" % (r2[1], r2[2], r2[3]), uuid_cache)		
+			uu = fetch_uuid("K-ROW-%s-%s-%s" % (r2[1], r2[2], r2[3]), uuid_cache)
 			val.append(uu)
 			val.append([r2[1], r2[2], r2[3]])
 			name.append(val)
@@ -850,7 +850,7 @@ def fan_pages(thing: dict, gpi=None):
 	# For each incoming book, find all the pages
 	s = 'SELECT DISTINCT page_number, link, main_heading, subheading FROM knoedler WHERE stock_book_no = :id ORDER BY page_number'
 	for r in gpi.execute(s, id=thing['identifier']):
-		page = {'parent': thing, 'identifier': r[0], 'image': r[1], 'heading': r[2], 'subheading': r[3], 
+		page = {'parent': thing, 'identifier': r[0], 'image': r[1], 'heading': r[2], 'subheading': r[3],
 			'uid': 'K-PAGE-%s-%s' % (thing['identifier'], r[0])}
 		yield page
 

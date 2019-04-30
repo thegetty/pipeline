@@ -49,7 +49,7 @@ def ymd_to_datetime(year, month, day, which="begin"):
 		else:
 			month = 12
 
-	maxday = calendar.monthrange(year, month)[1]		
+	maxday = calendar.monthrange(year, month)[1]
 	if not day or day > maxday or day < 1:
 		if which == "begin":
 			day = 1
@@ -64,7 +64,7 @@ def ymd_to_datetime(year, month, day, which="begin"):
 	if which == "begin":
 		return "%s-%02d-%02dT00:00:00" % (ystr, month, day)
 	else:
-		return "%s-%02d-%02dT23:59:59" % (ystr, month, day)		
+		return "%s-%02d-%02dT23:59:59" % (ystr, month, day)
 
 
 
@@ -80,7 +80,7 @@ def date_parse(value, delim):
 			b2 = "%s%s" % (b1[:len(b2)], b2)
 		elif len(b2) > 4:
 			print("Bad range: %s" % value)
-			return None 
+			return None
 		try:
 			return [datetime(int(b1),1,1), datetime(int(b2)+1,1,1)]
 		except:
@@ -172,13 +172,13 @@ def date_cleaner(value):
 				val = date_parse(value, '/')
 			elif value.find('-') > -1:
 				val = date_parse(value, '-')
-			else: 
+			else:
 				print("bad circa: %s" % value)
 				return None
 
 			val[0] -= CIRCA_D
 			val[1] += CIRCA_D
-			return val				
+			return val
 	elif value.startswith('aft'):
 		# after x
 		value = value.replace('aft.', '')
@@ -198,13 +198,13 @@ def date_cleaner(value):
 		return [None, datetime(y,1,1)]
 	elif value.find('/') > -1:
 		# year/year or year/month/date
-		# 1885/90 
+		# 1885/90
 		# 07/02/1897
 		return date_parse(value, '/')
 	elif value.find('.') > -1:
 		return date_parse(value, '.')
 	elif value.find('-') > -1:
-		return date_parse(value, '-')	
+		return date_parse(value, '-')
 	elif value.find(';') > -1:
 		return date_parse(value, ';')
 

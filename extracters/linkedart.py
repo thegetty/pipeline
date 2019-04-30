@@ -19,7 +19,7 @@ class MakeLinkedArtRecord:
 			otype = data['object_type']
 			object = otype(ident="urn:uuid:%s" % data['uuid'])
 		self.set_properties(data, object)
-		
+
 		return add_crom_data(data=data, what=object)
 
 class MakeLinkedArtLinguisticObject(MakeLinkedArtRecord):
@@ -33,7 +33,7 @@ class MakeLinkedArtLinguisticObject(MakeLinkedArtRecord):
 			name.classified_as = title_type
 			name.content = data['label']
 			object.identified_by = name
-		
+
 		for t in data.get('translations', []):
 			title = model.Name()
 			title.classified_as = title_type
@@ -76,7 +76,7 @@ class MakeLinkedArtOrganization(MakeLinkedArtRecord):
 			if type is not None:
 				ident.classified_as = type
 			object.identified_by = ident
-	
+
 	def __call__(self, data: dict):
 		data['object_type'] = model.Group
 		return super().__call__(data)

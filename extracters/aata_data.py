@@ -9,12 +9,14 @@ import sys
 import pprint
 import itertools
 
+import iso639
 import bonobo
 from bonobo.config import Configurable, Option
 from bonobo.constants import NOT_MODIFIED
 from bonobo.nodes import Limit
 import lxml.etree
 from sqlalchemy import create_engine
+from langdetect import detect
 
 import settings
 from cromulent import model, vocab
@@ -37,20 +39,32 @@ legacyIdentifier = None # TODO: aat:LegacyIdentifier?
 
 def language_object_from_code(code):
 	'''
-	Given a three-letter language code, return a model.Language object for the
+	Given a three-letter language (ISO639-2) code, return a model.Language object for the
 	corresponding language.
 
 	For example, `language_object_from_code('eng')` returns an object representing
 	the English language.
 	'''
 	languages = {
-		'eng': {'ident': 'http://vocab.getty.edu/aat/300388277', 'label': 'English'}
+		# TODO: there must be a better way to do this than keep a static mapping of languages
+		'eng': {'ident': 'http://vocab.getty.edu/aat/300388277', 'label': 'English'},
+		'fra': {'ident': 'http://vocab.getty.edu/aat/300388306', 'label': 'French'},
+		'fre': {'ident': 'http://vocab.getty.edu/aat/300388306', 'label': 'French'},
+		'ger': {'ident': 'http://vocab.getty.edu/aat/300388344', 'label': 'German'},
+		'deu': {'ident': 'http://vocab.getty.edu/aat/300388344', 'label': 'German'},
+		'pol': {'ident': 'http://vocab.getty.edu/aat/300389109', 'label': 'Polish'},
+		'ita': {'ident': 'http://vocab.getty.edu/aat/300388474', 'label': 'Italian'},
+		'nld': {'ident': 'http://vocab.getty.edu/aat/300388256', 'label': 'Dutch'},
+		'swe': {'ident': 'http://vocab.getty.edu/aat/300389336', 'label': 'Swedish'}
 	}
 	try:
 		kwargs = languages[code]
 		return model.Language(**kwargs)
 	except KeyError:
 		print('*** No AAT link for language %r' % (code,))
+	except Exception as e:
+		print('*** language_object_from_code: %s' % (e,))
+		raise e
 
 # main article chain
 
@@ -64,6 +78,7 @@ def make_aata_article_dict(e):
 	* organizations and their role (e.g. publisher)
 	* creators and thier role (e.g. author, editor)
 	* abstracts
+	* languages
 
 	This information is returned in a single `dict`.
 	'''
@@ -71,6 +86,7 @@ def make_aata_article_dict(e):
 	title = e.findtext('./title_group[title_type = "Analytic"]/title')
 	translations = list([t.text for t in
 		e.xpath('./title_group[title_type = "Analytic"]/title_translated')])
+	languages = set([t.text for t in e.xpath('./notes_group/lang_doc|./notes_group/lang_summary')])
 	aata_id = e.findtext('./record_id_group/record_id')
 	organizations = list(_xml_extract_organizations(e, aata_id))
 	authors = list(_xml_extract_authors(e, aata_id))
@@ -80,6 +96,7 @@ def make_aata_article_dict(e):
 	return {
 		'_source_element': e,
 		'label': title,
+		'languages': languages,
 		'_document_type': e.findtext('./record_desc_group/doc_type'),
 		'_organizations': list(organizations),
 		'_authors': list(authors),
@@ -191,7 +208,7 @@ def add_aata_object_type(data):
 	For example, `add_aata_object_type({'_document_type': 'AV', ...})` returns the `dict`:
 	`{'_document_type': 'AV', 'document_type': vocab.AudioVisualContent, ...}`.
 	'''
-	doc_types = { # should this be in settings (or elsewhere)?
+	doc_types = { # TODO: should this be in settings (or elsewhere)?
 		'AV': vocab.AudioVisualContent,
 		'BA': vocab.Chapter,
 		'BC': vocab.Monograph, # TODO: is this right for a "Book - Collective"?
@@ -395,6 +412,42 @@ def make_aata_authors(data):
 
 # article abstract chain
 
+def detect_title_language(data: dict):
+	'''
+	Given a `dict` representing a Linguistic Object, attempt to detect the language of
+	the value for the `label` key.  If 
+	'''
+	languages = data.get('languages', set())
+	try:
+		title = data['label']
+		if title is None:
+			return NOT_MODIFIED
+		translations = data.get('translations', [])
+		if len(translations) and len(languages):
+			detected = detect(title)
+			threealpha = iso639.to_iso639_2(detected)
+			if threealpha in languages:
+				lang = language_object_from_code(threealpha)
+				if lang is not None:
+					# we have confidence that we've matched the language of the title
+					# because it is one of the declared languages for the record
+					# document/summary
+					data['label'] = (title, lang)
+			else:
+				# the detected language of the title was not declared in the record data,
+				# so we lack confidence to proceed
+				pass
+	except iso639.NonExistentLanguageError as e:
+		sys.stderr.write('*** Unrecognized language code detected: %r\n' % (detected,))
+	except KeyError as e:
+		sys.stderr.write(
+			'*** LANGUAGE: detected but unrecognized title language %r '
+			'(cf. declared in metadata: %r): %s\n' % (e.args[0], languages, title)
+		)
+	except Exception as e:
+		print('*** detect_title_language error: %r' % (e,))
+	return NOT_MODIFIED
+
 def make_aata_abstract(data):
 	'''
 	Given a `dict` representing an "article," extract the abstract records.
@@ -517,6 +570,7 @@ class AATAPipeline:
 			make_aata_article_dict,
 			add_uuid,
 			add_aata_object_type,
+			detect_title_language,
 			MakeLinkedArtLinguisticObject(),
 			AddDataDependentArchesModel(models=self.models),
 			_input=records.output

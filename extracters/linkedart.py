@@ -1,3 +1,5 @@
+import pprint
+
 from cromulent import model, vocab
 from cromulent.model import factory
 factory.auto_id_type = 'uuid'
@@ -22,24 +24,35 @@ class MakeLinkedArtRecord:
 
 		return add_crom_data(data=data, what=object)
 
+def set_la_name(object, value, title_type=None, set_label=False):
+	if value is None:
+		return
+	if type(value) == tuple:
+		label, language = value
+	else:
+		label = value
+		language = None
+	if set_label:
+		object._label = label
+	name = model.Name()
+	if title_type is not None:
+		name.classified_as = title_type
+	name.content = label
+	object.identified_by = name
+	if language is not None:
+		name.language = language
+	return name
+
 class MakeLinkedArtLinguisticObject(MakeLinkedArtRecord):
 	# TODO: document the expected format of data['translations']
 	def set_properties(self, data, object):
 		title_type = model.Type(ident='http://vocab.getty.edu/aat/300055726', label='Title') # TODO: is this the right aat URI?
 		name = None
 		if 'label' in data:
-			object._label = data['label']
-			name = model.Name()
-			name.classified_as = title_type
-			name.content = data['label']
-			object.identified_by = name
+			set_la_name(object, data['label'], title_type, set_label=True)
 
 		for t in data.get('translations', []):
-			title = model.Name()
-			title.classified_as = title_type
-			if name is not None:
-				title.translation_of = name
-			object.identified_by = title
+			set_la_name(object, t, title_type)
 
 class MakeLinkedArtAbstract(MakeLinkedArtLinguisticObject):
 	# TODO: document the expected format of data['identifiers']
@@ -62,13 +75,14 @@ class MakeLinkedArtOrganization(MakeLinkedArtRecord):
 				object.carried_out = event
 
 		for name in data.get('names', []):
-			n = model.Name()
-			n.content = name[0]
+			n = set_la_name(object, name[0])
+# 			n = model.Name()
+# 			n.content = name[0]
 			for ref in name[1:]:
 				l = model.LinguisticObject(ident="urn:uuid:%s" % ref[1])
 				# l._label = _row_label(ref[2][0], ref[2][1], ref[2][2])
 				n.referred_to_by = l
-			object.identified_by = n
+# 			object.identified_by = n
 
 		for id, type in data.get('identifiers', []):
 			ident = model.Identifier()

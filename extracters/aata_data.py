@@ -4,37 +4,28 @@
 
 import sys
 import pprint
-from bonobo.constants import NOT_MODIFIED
-from bonobo.config import use
-from bonobo.config import Configurable, Option
-import copy
-import uuid
-import lxml.etree
 import itertools
+
+import bonobo
+from bonobo.config import Configurable, Option
+from bonobo.constants import NOT_MODIFIED
+from bonobo.nodes import Limit
+import lxml.etree
 from sqlalchemy import create_engine
 
 import settings
 from cromulent import model, vocab
-from .cleaners import date_cleaner, share_parse
+from .cleaners import date_cleaner
 from .linkedart import \
 			MakeLinkedArtAbstract, \
 			MakeLinkedArtLinguisticObject, \
 			MakeLinkedArtOrganization
-import bonobo
-from .knoedler_linkedart import *
-from bonobo.nodes import Limit
+from .knoedler_linkedart import make_la_person
 from .xml import XMLReader
 from .basic import \
 			add_uuid, \
 			AddArchesModel, \
-			AddFieldNames, \
-			deep_copy, \
-			fetch_uuid, \
-			get_aat_label, \
-			get_actor_type, \
-			Offset, \
-			Serializer, \
-			Trace
+			Serializer
 
 localIdentifier = None # TODO: aat:LocalIdentifier?
 legacyIdentifier = None # TODO: aat:LegacyIdentifier?
@@ -49,20 +40,21 @@ def language_object_from_code(code):
 		kwargs = languages[code]
 		return model.Language(**kwargs)
 	except KeyError:
-		print('*** No AAT link for language %r' % (language,))
+		print('*** No AAT link for language %r' % (code,))
 
 # main article chain
 
 def make_aata_article_dict(e):
 	doc_type = e.findtext('./record_desc_group/doc_type')
 	title = e.findtext('./title_group[title_type = "Analytic"]/title')
-	translations = list([t.text for t in e.xpath('./title_group[title_type = "Analytic"]/title_translated')])
+	translations = list([t.text for t in
+		e.xpath('./title_group[title_type = "Analytic"]/title_translated')])
 	aata_id = e.findtext('./record_id_group/record_id')
 	organizations = list(_xml_extract_organizations(e, aata_id))
 	authors = list(_xml_extract_authors(e, aata_id))
 	abstracts = list(_xml_extract_abstracts(e, aata_id))
 	uid = 'AATA-%s-%s-%s' % (doc_type, aata_id, title)
-	
+
 	return {
 		'_source_element': e,
 		'label': title,
@@ -84,7 +76,7 @@ def _xml_extract_abstracts(e, aata_id):
 		if a is not None:
 			content = a.text
 			language = a.attrib.get('lang')
-			
+
 			localIds = [(i, localIdentifier) for i in rids]
 			legacyIds = [(i, legacyIdentifier) for i in lids]
 			yield {
@@ -147,7 +139,7 @@ def _xml_extract_authors(e, aata_id):
 				if role is not None:
 					author['creation_role'] = role
 				else:
-					print('*** No author role found for authorship group in %s:' % (object,))
+					print('*** No author role found for authorship group')
 					print(lxml.etree.tostring(ag).decode('utf-8'))
 
 				author.update({
@@ -182,11 +174,11 @@ def add_aata_object_type(data):
 # imprint organizations chain (publishers, distributors)
 
 def extract_imprint_orgs(data):
-	object = data['_LOD_OBJECT']
+	lod_object = data['_LOD_OBJECT']
 	organizations = data['_organizations']
 	for o in organizations:
 		org = {k: v for k, v in o.items()}
-		
+
 		properties = o.get('properties')
 		role = o.get('role')
 		if role is not None:
@@ -198,7 +190,8 @@ def extract_imprint_orgs(data):
 			if role in activity_names:
 				org['event_label'] = activity_names[role]
 			else:
-				print('*** No/unknown organization role (%r) found for imprint_group in %s:' % (role, object,))
+				print('*** No/unknown organization role (%r) found for imprint_group in %s:' % (
+					role, lod_object,))
 				pprint.pprint(o)
 
 			if role == 'Publisher' and 'DatesOfPublication' in properties:
@@ -206,7 +199,7 @@ def extract_imprint_orgs(data):
 				org['publication_date'] = pubdate
 
 		org.update({
-			'parent': object,
+			'parent': lod_object,
 			'parent_data': data,
 		})
 		yield org
@@ -217,35 +210,41 @@ class CleanDateToSpan(Configurable):
 	date range, and create a new `TimeSpan` object for the parsed date(s). Store the
 	resulting timespan in `input[key + '_span']`.
 	'''
-	
+
 	key = Option(str, required=True)
 	optional = Option(bool, default=True)
-	
+
+	@staticmethod
+	def string_to_span(value):
+		try:
+			date_from, date_to = date_cleaner(value)
+			ts = model.TimeSpan()
+			if date_from is not None:
+				ts.begin_of_the_begin = date_from.strftime("%Y-%m-%dT%H:%M:%SZ")
+			if date_to is not None:
+				ts.end_of_the_end = date_to.strftime("%Y-%m-%dT%H:%M:%SZ")
+			return ts
+		except:
+			print('*** Unknown date format: %r' % (value,))
+			return None
+
 	def __call__(self, data):
 		if self.key in data:
 			value = data[self.key]
-			try:
-				date_from, date_to = date_cleaner(value)
-				ts = model.TimeSpan()
-				if date_from is not None:
-					ts.begin_of_the_begin = date_from.strftime("%Y-%m-%dT%H:%M:%SZ")
-				if date_to is not None:
-					ts.end_of_the_end = date_to.strftime("%Y-%m-%dT%H:%M:%SZ")
+			ts = self.string_to_span(value)
+			if ts is not None:
 				data['%s_span' % self.key] = ts
-			except:
-				print('*** Unknown date format: %r' % (value,))
-				return NOT_MODIFIED
-			return data
+				return data
 		else:
 			if not self.optional:
 				print('*** key %r is not in the data object:' % (self.key,))
 				pprint.pprint(data)
-			return NOT_MODIFIED
+		return NOT_MODIFIED
 
 def make_aata_imprint_orgs(o: dict):
 	event = model.Activity()
-	object = o['parent']
-	object.used_for = event
+	lod_object = o['parent']
+	lod_object.used_for = event
 	event._label = o.get('event_label')
 	if 'publication_date_span' in o:
 		ts = o['publication_date_span']
@@ -259,10 +258,10 @@ def make_aata_imprint_orgs(o: dict):
 # article authors chain
 
 def make_aata_authors(data):
-	object = data['_LOD_OBJECT']
+	lod_object = data['_LOD_OBJECT']
 	event = model.Creation()
-	object.created_by = event
-	event.created = object
+	lod_object.created_by = event
+	event.created = lod_object
 
 	authors = data.get('_authors', [])
 	for a in authors:
@@ -274,7 +273,7 @@ def make_aata_authors(data):
 			subevent._label = 'Creation sub-event for %s' % (role,)
 		author = {k: v for k, v in a.items()}
 		author.update({
-			'parent': object,
+			'parent': lod_object,
 			'parent_data': data,
 			'events': [subevent],
 		})
@@ -283,14 +282,17 @@ def make_aata_authors(data):
 # article abstract chain
 
 def make_aata_abstract(data):
-	object = data['_LOD_OBJECT']
+	lod_object = data['_LOD_OBJECT']
 	for a in data.get('_abstracts', []):
 		abstract = model.LinguisticObject()
 		abstract_dict = {k: v for k, v in a.items()}
 
 		abstract.content = a.get('content')
-		abstract.classified_as = model.Type(ident='http://vocab.getty.edu/aat/300026032', label='Abstract') # TODO: is this the right aat URI?
-		abstract.refers_to = object
+		abstract.classified_as = model.Type(
+			ident='http://vocab.getty.edu/aat/300026032',
+			label='Abstract' # TODO: is this the right aat URI?
+		)
+		abstract.refers_to = lod_object
 		langcode = a.get('language')
 		if langcode is not None:
 			l = language_object_from_code(langcode)
@@ -302,11 +304,12 @@ def make_aata_abstract(data):
 		if '_authors' in data:
 			abstract_dict['_authors'] = data['_authors']
 
-		# create a uid based on the AATA record id, the sequence number of the abstract in that record, and which author we're handling right now
+		# create a uid based on the AATA record id, the sequence number of the abstract
+		# in that record, and which author we're handling right now
 		uid = 'AATA-Abstract-%s-%d' % (data['_aata_record_id'], a['_aata_record_abstract_seq'])
 		abstract_dict.update({
 			'_LOD_OBJECT': abstract,
-			'parent': object,
+			'parent': lod_object,
 			'parent_data': data,
 			'uid': uid
 		})
@@ -325,13 +328,11 @@ class AddDataDependentArchesModel(Configurable):
 # AATA Pipeline class
 
 class AATAPipeline:
-	def __init__(self, input_path, files, models=None, limit=None, debug=False):
-		if models is None:
-			models = {}
-		self.models = models
+	def __init__(self, input_path, files, **kwargs):
+		self.models = kwargs.get('models', {})
 		self.files = files
-		self.limit = limit
-		self.debug = debug
+		self.limit = kwargs.get('limit')
+		self.debug = kwargs.get('debug')
 		self.input_path = input_path
 		if self.debug:
 			self.files = [self.files[0]]
@@ -345,7 +346,7 @@ class AATAPipeline:
 			# self.writer	= ArchesWriter()
 
 	# Set up environment
-	def get_services(self, **kwargs):
+	def get_services(self):
 		return {
 			'trace_counter': itertools.count(),
 			'gpi': create_engine(settings.gpi_engine),
@@ -354,12 +355,12 @@ class AATAPipeline:
 			'fs.data.aata': bonobo.open_fs(self.input_path)
 		}
 
-	def add_serialization_chain(self, graph, input):
+	def add_serialization_chain(self, graph, input_node):
 		if self.writer is not None:
 			graph.add_chain(
 				self.serializer,
 				self.writer,
-				_input=input
+				_input=input_node
 			)
 		else:
 			sys.stderr.write('*** No serialization chain defined\n')
@@ -384,10 +385,10 @@ class AATAPipeline:
 		return articles
 
 	def add_people_chain(self, graph, articles, serialize=True):
-		model = self.models.get('Person', 'XXX-Person-Model')
+		model_id = self.models.get('Person', 'XXX-Person-Model')
 		people = graph.add_chain(
 			make_aata_authors,
-			AddArchesModel(model=model),
+			AddArchesModel(model=model_id),
 			add_uuid,
 			make_la_person,
 			_input=articles.output
@@ -398,31 +399,34 @@ class AATAPipeline:
 		return people
 
 	def add_abstracts_chain(self, graph, articles, serialize=True):
-		model = self.models.get('LinguisticObject', 'XXX-LinguisticObject-Model')
+		model_id = self.models.get('LinguisticObject', 'XXX-LinguisticObject-Model')
 		abstracts = graph.add_chain(
 			make_aata_abstract,
-			AddArchesModel(model=model),
+			AddArchesModel(model=model_id),
 			add_uuid,
 			MakeLinkedArtAbstract(),
 			_input=articles.output
 		)
-		
+
 		# for each author of an abstract...
-		author_abstracts = graph.add_chain(filter_abstract_authors, _input=abstracts.output)
+		author_abstracts = graph.add_chain(
+			filter_abstract_authors,
+			_input=abstracts.output
+		)
 		self.add_people_chain(graph, author_abstracts)
-		
+
 		if serialize:
 			# write ABSTRACTS data
 			self.add_serialization_chain(graph, abstracts.output)
 		return abstracts
 
 	def add_organizations_chain(self, graph, articles, serialize=True):
-		model = self.models.get('Organization', 'XXX-Organization-Model')
+		model_id = self.models.get('Organization', 'XXX-Organization-Model')
 		organizations = graph.add_chain(
 			extract_imprint_orgs,
 			CleanDateToSpan(key='publication_date'),
 			make_aata_imprint_orgs,
-			AddArchesModel(model=model), # TODO: model for organizations?
+			AddArchesModel(model=model_id), # TODO: model for organizations?
 			add_uuid,
 			MakeLinkedArtOrganization(),
 			_input=articles.output
@@ -432,18 +436,20 @@ class AATAPipeline:
 			self.add_serialization_chain(graph, organizations.output)
 		return organizations
 
-	def get_graph(self, **kwargs):
+	def get_graph(self):
 		graph = bonobo.Graph()
 		files = self.files[:]
 		if self.debug:
 			sys.stderr.write("Processing %s\n" % (files[0],))
 
 		for f in files:
-			records = graph.add_chain(XMLReader(f, xpath='/AATA_XML/record', fs='fs.data.aata'))
+			records = graph.add_chain(
+				XMLReader(f, xpath='/AATA_XML/record', fs='fs.data.aata')
+			)
 			articles = self.add_articles_chain(graph, records)
-			people = self.add_people_chain(graph, articles)
-			abstracts = self.add_abstracts_chain(graph, articles)
-			organizations = self.add_organizations_chain(graph, articles)
+			self.add_people_chain(graph, articles)
+			self.add_abstracts_chain(graph, articles)
+			self.add_organizations_chain(graph, articles)
 
 		return graph
 
@@ -457,5 +463,3 @@ class AATAPipeline:
 			graph,
 			services=services
 		)
-
-

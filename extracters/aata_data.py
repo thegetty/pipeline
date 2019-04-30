@@ -9,6 +9,7 @@ import sys
 import pprint
 import itertools
 
+import iso639
 import bonobo
 from bonobo.config import Configurable, Option
 from bonobo.constants import NOT_MODIFIED
@@ -38,7 +39,7 @@ legacyIdentifier = None # TODO: aat:LegacyIdentifier?
 
 def language_object_from_code(code):
 	'''
-	Given a three-letter language code, return a model.Language object for the
+	Given a three-letter language (ISO639-2) code, return a model.Language object for the
 	corresponding language.
 
 	For example, `language_object_from_code('eng')` returns an object representing
@@ -422,19 +423,9 @@ def detect_title_language(data: dict):
 		if title is None:
 			return NOT_MODIFIED
 		translations = data.get('translations', [])
-		mapping = {
-			# TODO: there must be a better way to do this than keep a static mapping of language codes
-			'en': 'eng',
-			'nl': 'nld',
-			'fr': 'fre',
-			'de': 'ger',
-			'it': 'ita',
-			'pl': 'pol',
-			'sv': 'swe',
-		}
 		if len(translations) and len(languages):
 			detected = detect(title)
-			threealpha = mapping[detected]
+			threealpha = iso639.to_iso639_2(detected)
 			if threealpha in languages:
 				lang = language_object_from_code(threealpha)
 				if lang is not None:
@@ -446,6 +437,8 @@ def detect_title_language(data: dict):
 				# the detected language of the title was not declared in the record data,
 				# so we lack confidence to proceed
 				pass
+	except iso639.NonExistentLanguageError as e:
+		sys.stderr.write('*** Unrecognized language code detected: %r\n' % (detected,))
 	except KeyError as e:
 		sys.stderr.write(
 			'*** LANGUAGE: detected but unrecognized title language %r '

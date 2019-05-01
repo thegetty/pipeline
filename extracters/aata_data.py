@@ -120,7 +120,6 @@ def _xml_extract_article(e):
 	uid = 'AATA-%s-%s-%s' % (doc_type, aata_id, title)
 
 	classifications = []
-	title_type = model.Type(ident='http://vocab.getty.edu/aat/300055726', label='Title') # TODO: is this the right aat URI?
 	code_type = None # TODO: is there a model.Type value for this sort of code?
 	for cg in e.xpath('./classification_group'):
 		# TODO: there are only 61 unique classifications in AATA data; map these to UIDs
@@ -148,8 +147,7 @@ def _xml_extract_article(e):
 			itype = model.Group
 		else: # TODO: are there other auth_types that should result in a different model class?
 			itype = model.Type
-		name = model.Name()
-		name.classified_as = title_type
+		name = vocab.Title()
 		name.content = label
 
 		index = itype(label=label)

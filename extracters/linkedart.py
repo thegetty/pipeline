@@ -45,6 +45,7 @@ def set_la_name(object, value, title_type=None, set_label=False):
 
 class MakeLinkedArtLinguisticObject(MakeLinkedArtRecord):
 	# TODO: document the expected format of data['translations']
+	# TODO: document the expected format of data['identifiers']
 	def set_properties(self, data, object):
 		title_type = model.Type(ident='http://vocab.getty.edu/aat/300055726', label='Title') # TODO: is this the right aat URI?
 		name = None
@@ -56,16 +57,15 @@ class MakeLinkedArtLinguisticObject(MakeLinkedArtRecord):
 			if name is not None:
 				n.translation_of = name
 
-class MakeLinkedArtAbstract(MakeLinkedArtLinguisticObject):
-	# TODO: document the expected format of data['identifiers']
-	def set_properties(self, data, object):
-		super().set_properties(data, object)
 		for id, type in data.get('identifiers', []):
 			ident = model.Identifier()
 			ident.content = id
 			if type is not None:
 				ident.classified_as = type
 			object.identified_by = ident
+
+class MakeLinkedArtAbstract(MakeLinkedArtLinguisticObject):
+	pass
 
 class MakeLinkedArtOrganization(MakeLinkedArtRecord):
 	# TODO: document the expected format of data['names']
@@ -85,13 +85,13 @@ class MakeLinkedArtOrganization(MakeLinkedArtRecord):
 				# l._label = _row_label(ref[2][0], ref[2][1], ref[2][2])
 				n.referred_to_by = l
 # 			object.identified_by = n
-
-		for id, type in data.get('identifiers', []):
-			ident = model.Identifier()
-			ident.content = id
-			if type is not None:
-				ident.classified_as = type
-			object.identified_by = ident
+# 
+# 		for id, type in data.get('identifiers', []):
+# 			ident = model.Identifier()
+# 			ident.content = id
+# 			if type is not None:
+# 				ident.classified_as = type
+# 			object.identified_by = ident
 
 	def __call__(self, data: dict):
 		data['object_type'] = model.Group

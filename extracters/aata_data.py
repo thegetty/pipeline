@@ -34,6 +34,9 @@ from .basic import \
 
 localIdentifier = None # TODO: aat:LocalIdentifier?
 legacyIdentifier = None # TODO: aat:LegacyIdentifier?
+isbn10Identifier = None # TODO: aat for isbn10?
+isbn13Identifier = None # TODO: aat for isbn13?
+issnIdentifier = None # TODO: aat for issn?
 
 # utility functions
 
@@ -86,16 +89,22 @@ def make_aata_article_dict(e):
 	title = e.findtext('./title_group[title_type = "Analytic"]/title')
 	translations = list([t.text for t in
 		e.xpath('./title_group[title_type = "Analytic"]/title_translated')])
+
 	doc_langs = set([t.text for t in e.xpath('./notes_group/lang_doc')])
 	sum_langs = set([t.text for t in e.xpath('./notes_group/lang_summary')])
 	languages = doc_langs | sum_langs
+
+	isbn10 = [(t.text, isbn10Identifier) for t in e.xpath('./notes_group/isbn_10')]
+	isbn13 = [(t.text, isbn13Identifier) for t in e.xpath('./notes_group/isbn_13')]
+	issn = [(t.text, issnIdentifier) for t in e.xpath('./notes_group/issn')]
+
 	aata_id = e.findtext('./record_id_group/record_id')
 	organizations = list(_xml_extract_organizations(e, aata_id))
 	authors = list(_xml_extract_authors(e, aata_id))
 	abstracts = list(_xml_extract_abstracts(e, aata_id))
 	uid = 'AATA-%s-%s-%s' % (doc_type, aata_id, title)
 
-	if len(doc_langs) == 1:
+	if title is not None and len(doc_langs) == 1:
 		code = doc_langs.pop()
 		try:
 			language = language_object_from_code(code)
@@ -114,6 +123,7 @@ def make_aata_article_dict(e):
 		'_abstracts': list(abstracts),
 		'_aata_record_id': aata_id,
 		'translations': list(translations),
+		'identifiers': isbn10 + isbn13 + issn,
 		'uid': uid
 	}
 

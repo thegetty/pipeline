@@ -32,12 +32,13 @@ from .basic import \
 			AddArchesModel, \
 			Serializer
 
-localIdentifier = None # TODO: aat:LocalIdentifier?
+localIdentifier = vocab.LocalNumber
 legacyIdentifier = None # TODO: aat:LegacyIdentifier?
-isbn10Identifier = None # TODO: aat for isbn10?
-isbn13Identifier = None # TODO: aat for isbn13?
-issnIdentifier = None # TODO: aat for issn?
-variantTitleIdentifier = None # TODO: aat for variant titles?
+isbn10Identifier = vocab.IsbnIdentifier
+isbn13Identifier = vocab.IsbnIdentifier
+issnIdentifier = vocab.IssnIdentifier
+doiIdentifier = vocab.DoiIdentifier
+variantTitleIdentifier = vocab.Identifier # TODO: aat for variant titles?
 
 # utility functions
 
@@ -126,10 +127,8 @@ def _xml_extract_article(e):
 		cid = cg.findtext('./class_code')
 		label = cg.findtext('./class_name')
 
-		name = model.Name()
-		name.classified_as = title_type
-		name.content = label
-
+		name = vocab.PrimaryName(content=label)
+		name.content = label # TODO: This shouldn't be needed, but the crom instantiation above ignores it
 		classification = model.Type(label=label)
 		classification.identified_by = name
 

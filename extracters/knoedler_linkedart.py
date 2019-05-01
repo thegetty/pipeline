@@ -207,11 +207,15 @@ def make_la_person(data: dict):
 			n.referred_to_by = l
 		who.identified_by = n
 
-	for id, type in data.get('identifiers', []):
-		ident = model.Identifier()
-		ident.content = id
-		if type is not None:
-			ident.classified_as = type
+	for id, itype in data.get('identifiers', []):
+		if itype is not None:
+			if type(itype) == type:
+				ident = itype(content=id)
+				ident.content = id # TODO: This shouldn't be needed, but the crom instantiation above ignores it
+			else:
+				ident = model.Identifier()
+				ident.content = id
+				ident.classified_as = itype
 		who.identified_by = ident
 
 	# Locations are names of residence places (P74 -> E53)

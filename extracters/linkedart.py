@@ -58,11 +58,14 @@ class MakeLinkedArtLinguisticObject(MakeLinkedArtRecord):
 			if name is not None:
 				n.translation_of = name
 
-		for id, idtype in data.get('identifiers', []):
-			ident = model.Identifier()
-			ident.content = id
-			if idtype is not None:
-				ident.classified_as = idtype
+		for id, itype in data.get('identifiers', []):
+			if itype is not None:
+				if type(itype) == type:
+					ident = itype(content=id)
+				else:
+					ident = model.Identifier()
+					ident.content = id
+					ident.classified_as = itype
 			object.identified_by = ident
 
 		for name in data.get('names', []):
@@ -86,7 +89,6 @@ class MakeLinkedArtLinguisticObject(MakeLinkedArtRecord):
 				classification.identified_by = name
 
 				code = model.Identifier()
-			
 				code.classified_as = code_type
 				code.content = cid
 				classification.identified_by = code
@@ -105,7 +107,6 @@ class MakeLinkedArtLinguisticObject(MakeLinkedArtRecord):
 				indexing.identified_by = name
 
 				code = model.Identifier()
-			
 				code.classified_as = code_type
 				code.content = cid
 				indexing.identified_by = code

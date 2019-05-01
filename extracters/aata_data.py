@@ -37,6 +37,7 @@ legacyIdentifier = None # TODO: aat:LegacyIdentifier?
 isbn10Identifier = None # TODO: aat for isbn10?
 isbn13Identifier = None # TODO: aat for isbn13?
 issnIdentifier = None # TODO: aat for issn?
+variantTitleIdentifier = None # TODO: aat for variant titles?
 
 # utility functions
 
@@ -85,24 +86,82 @@ def make_aata_article_dict(e):
 
 	This information is returned in a single `dict`.
 	'''
+
+	data = _xml_extract_article(e)
+	aata_id = data['_aata_record_id']
+	organizations = list(_xml_extract_organizations(e, aata_id))
+	authors = list(_xml_extract_authors(e, aata_id))
+	abstracts = list(_xml_extract_abstracts(e, aata_id))
+
+	data.update({
+		'_organizations': list(organizations),
+		'_authors': list(authors),
+		'_abstracts': list(abstracts),
+	})
+	return data
+
+def _xml_extract_article(e):
+	'''Extract information about an "article" record XML element'''
 	doc_type = e.findtext('./record_desc_group/doc_type')
 	title = e.findtext('./title_group[title_type = "Analytic"]/title')
+	var_title = e.findtext('./title_group[title_type = "Analytic"]/title_variant')
 	translations = list([t.text for t in
 		e.xpath('./title_group[title_type = "Analytic"]/title_translated')])
 
-	doc_langs = set([t.text for t in e.xpath('./notes_group/lang_doc')])
-	sum_langs = set([t.text for t in e.xpath('./notes_group/lang_summary')])
-	languages = doc_langs | sum_langs
+	doc_langs = {t.text for t in e.xpath('./notes_group/lang_doc')}
+	sum_langs = {t.text for t in e.xpath('./notes_group/lang_summary')}
 
 	isbn10 = [(t.text, isbn10Identifier) for t in e.xpath('./notes_group/isbn_10')]
 	isbn13 = [(t.text, isbn13Identifier) for t in e.xpath('./notes_group/isbn_13')]
 	issn = [(t.text, issnIdentifier) for t in e.xpath('./notes_group/issn')]
 
 	aata_id = e.findtext('./record_id_group/record_id')
-	organizations = list(_xml_extract_organizations(e, aata_id))
-	authors = list(_xml_extract_authors(e, aata_id))
-	abstracts = list(_xml_extract_abstracts(e, aata_id))
 	uid = 'AATA-%s-%s-%s' % (doc_type, aata_id, title)
+
+	classifications = []
+	title_type = model.Type(ident='http://vocab.getty.edu/aat/300055726', label='Title') # TODO: is this the right aat URI?
+	code_type = None # TODO: is there a model.Type value for this sort of code?
+	for cg in e.xpath('./classification_group'):
+		# TODO: there are only 61 unique classifications in AATA data; map these to UIDs
+		cid = cg.findtext('./class_code')
+		label = cg.findtext('./class_name')
+
+		name = model.Name()
+		name.classified_as = title_type
+		name.content = label
+
+		classification = model.Type(label=label)
+		classification.identified_by = name
+
+		code = model.Identifier()
+
+		code.classified_as = code_type
+		code.content = cid
+		classification.identified_by = code
+		classifications.append(classification)
+
+	indexings = []
+	for ig in e.xpath('./index_group/index/index_id'):
+		aid = ig.findtext('./gaia_auth_id')
+		atype = ig.findtext('./gaia_auth_type')
+		label = ig.findtext('./display_term')
+		if atype == 'CB':
+			itype = model.Group
+		else: # TODO: are there other auth_types that should result in a different model class?
+			itype = model.Type
+		name = model.Name()
+		name.classified_as = title_type
+		name.content = label
+
+		index = itype(label=label)
+		index.identified_by = name
+
+		code = model.Identifier()
+
+		code.classified_as = code_type
+		code.content = aid
+		index.identified_by = code
+		indexings.append(index)
 
 	if title is not None and len(doc_langs) == 1:
 		code = doc_langs.pop()
@@ -112,18 +171,19 @@ def make_aata_article_dict(e):
 		except:
 			pass
 
+	var_titles = [(var_title, variantTitleIdentifier)] if var_title is not None else []
+
 	return {
 		'_source_element': e,
 		'label': title,
 		'document_languages': doc_langs,
 		'summary_languages': sum_langs,
 		'_document_type': e.findtext('./record_desc_group/doc_type'),
-		'_organizations': list(organizations),
-		'_authors': list(authors),
-		'_abstracts': list(abstracts),
 		'_aata_record_id': aata_id,
 		'translations': list(translations),
-		'identifiers': isbn10 + isbn13 + issn,
+		'identifiers': isbn10 + isbn13 + issn + var_titles,
+		'classifications': classifications,
+		'indexing': indexings,
 		'uid': uid
 	}
 
@@ -413,12 +473,16 @@ def make_aata_authors(data):
 	lod_object = data['_LOD_OBJECT']
 	event = model.Creation()
 	lod_object.created_by = event
-	event.created = lod_object
 
 	authors = data.get('_authors', [])
 	for a in authors:
 		subevent = model.Creation()
-		event.part = subevent
+		# TODO: The should really be asserted as object -created_by-> CreationEvent -part-> SubEvent
+		# however, right now that assertion would get lost as it's data that belongs to the object,
+		# and we're on the author's chain in the bonobo graph; object serialization has already happened.
+		# we need to serialize the object's relationship to the creation event, and let it get merged
+		# with the rest of the object's data.
+# 		event.part = subevent
 		subevent.part_of = event
 		role = a.get('creation_role')
 		if role is not None:
@@ -436,7 +500,9 @@ def make_aata_authors(data):
 def detect_title_language(data: dict):
 	'''
 	Given a `dict` representing a Linguistic Object, attempt to detect the language of
-	the value for the `label` key.  If 
+	the value for the `label` key.  If the detected langauge is also one of the languages
+	asserted for the record's summaries or underlying document, then update the `label`
+	to be a tuple consisting of the original label and a Language model object.
 	'''
 	dlangs = data.get('document_languages', set())
 	slangs = data.get('summary_languages', set())
@@ -448,7 +514,7 @@ def detect_title_language(data: dict):
 		if title is None:
 			return NOT_MODIFIED
 		translations = data.get('translations', [])
-		if len(translations) and len(languages):
+		if translations and languages:
 			detected = detect(title)
 			threealpha = iso639.to_iso639_2(detected)
 			if threealpha in languages:

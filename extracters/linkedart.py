@@ -46,6 +46,7 @@ def set_la_name(object, value, title_type=None, set_label=False):
 class MakeLinkedArtLinguisticObject(MakeLinkedArtRecord):
 	# TODO: document the expected format of data['translations']
 	# TODO: document the expected format of data['identifiers']
+	# TODO: document the expected format of data['names']
 	def set_properties(self, data, object):
 		title_type = model.Type(ident='http://vocab.getty.edu/aat/300055726', label='Title') # TODO: is this the right aat URI?
 		name = None
@@ -57,12 +58,59 @@ class MakeLinkedArtLinguisticObject(MakeLinkedArtRecord):
 			if name is not None:
 				n.translation_of = name
 
-		for id, type in data.get('identifiers', []):
+		for id, idtype in data.get('identifiers', []):
 			ident = model.Identifier()
 			ident.content = id
-			if type is not None:
-				ident.classified_as = type
+			if idtype is not None:
+				ident.classified_as = idtype
 			object.identified_by = ident
+
+		for name in data.get('names', []):
+			n = set_la_name(object, name[0])
+			for ref in name[1:]:
+				l = model.LinguisticObject(ident="urn:uuid:%s" % ref[1])
+				# l._label = _row_label(ref[2][0], ref[2][1], ref[2][2])
+				n.referred_to_by = l
+
+		code_type = None # TODO: is there a model.Type value for this sort of code?
+		for c in data.get('classifications', []):
+			if isinstance(c, model.Type):
+				classification = c
+			else:
+				cid, label = c
+				name = model.Name()
+				name.classified_as = title_type
+				name.content = label
+
+				classification = model.Type(label=label)
+				classification.identified_by = name
+
+				code = model.Identifier()
+			
+				code.classified_as = code_type
+				code.content = cid
+				classification.identified_by = code
+			object.about = classification
+
+		for c in data.get('indexing', []):
+			if isinstance(c, model.Type) or isinstance(c, model.Group):
+				indexing = c
+			else:
+				cid, label = c
+				name = model.Name()
+				name.classified_as = title_type
+				name.content = label
+
+				indexing = model.Type(label=label)
+				indexing.identified_by = name
+
+				code = model.Identifier()
+			
+				code.classified_as = code_type
+				code.content = cid
+				indexing.identified_by = code
+			object.about = indexing
+
 
 class MakeLinkedArtAbstract(MakeLinkedArtLinguisticObject):
 	pass
@@ -78,20 +126,11 @@ class MakeLinkedArtOrganization(MakeLinkedArtRecord):
 
 		for name in data.get('names', []):
 			n = set_la_name(object, name[0])
-# 			n = model.Name()
-# 			n.content = name[0]
 			for ref in name[1:]:
 				l = model.LinguisticObject(ident="urn:uuid:%s" % ref[1])
 				# l._label = _row_label(ref[2][0], ref[2][1], ref[2][2])
 				n.referred_to_by = l
 # 			object.identified_by = n
-# 
-# 		for id, type in data.get('identifiers', []):
-# 			ident = model.Identifier()
-# 			ident.content = id
-# 			if type is not None:
-# 				ident.classified_as = type
-# 			object.identified_by = ident
 
 	def __call__(self, data: dict):
 		data['object_type'] = model.Group

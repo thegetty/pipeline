@@ -5,6 +5,7 @@
 #       as carrying out the creation event.
 
 import os
+import sys
 import bonobo
 
 from extracters.basic import Serializer
@@ -21,8 +22,8 @@ class AATAFilePipeline(AATAPipeline):
 	If in `debug` mode, JSON serialization will use pretty-printing. Otherwise,
 	serialization will be compact.
 	'''
-	def __init__(self, input_path, files, **kwargs):
-		super().__init__(input_path, files, **kwargs)
+	def __init__(self, input_path, files_pattern, **kwargs):
+		super().__init__(input_path, files_pattern, **kwargs)
 		debug = kwargs.get('debug')
 		output_path = kwargs.get('output_path')
 		if debug:
@@ -40,13 +41,13 @@ if __name__ == '__main__':
 		LIMIT		= int(os.environ.get('GETTY_PIPELINE_LIMIT', 10))
 	else:
 		LIMIT		= int(os.environ.get('GETTY_PIPELINE_LIMIT', 10000000))
-	xml_files = [f for f in os.listdir(aata_data_path) if f.endswith('.xml')]
+	xml_files_pattern = '*.xml'
 	parser = bonobo.get_argument_parser()
 	with bonobo.parse_args(parser) as options:
 		try:
 			pipeline = AATAFilePipeline(
 				aata_data_path,
-				xml_files,
+				xml_files_pattern,
 				output_path=output_file_path,
 				models=arches_models,
 				limit=LIMIT,

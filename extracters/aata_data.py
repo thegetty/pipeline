@@ -26,7 +26,7 @@ from .linkedart import \
 			MakeLinkedArtLinguisticObject, \
 			MakeLinkedArtOrganization
 from .knoedler_linkedart import make_la_person
-from .xml import XMLReader
+from .xml import MatchingFiles, CurriedXMLReader
 from .basic import \
 			add_uuid, \
 			AddArchesModel, \
@@ -60,6 +60,7 @@ def language_object_from_code(code):
 		'pol': {'ident': 'http://vocab.getty.edu/aat/300389109', 'label': 'Polish'},
 		'ita': {'ident': 'http://vocab.getty.edu/aat/300388474', 'label': 'Italian'},
 		'nld': {'ident': 'http://vocab.getty.edu/aat/300388256', 'label': 'Dutch'},
+		'spa': {'ident': 'http://vocab.getty.edu/aat/300389311', 'label': 'Spanish'},
 		'swe': {'ident': 'http://vocab.getty.edu/aat/300389336', 'label': 'Swedish'}
 	}
 	try:
@@ -608,14 +609,13 @@ class AddDataDependentArchesModel(Configurable):
 
 class AATAPipeline:
 	'''Bonobo-based pipeline for transforming AATA data from XML into JSON-LD.'''
-	def __init__(self, input_path, files, **kwargs):
+	def __init__(self, input_path, files_pattern, **kwargs):
 		self.models = kwargs.get('models', {})
-		self.files = files
+		self.files_pattern = files_pattern
 		self.limit = kwargs.get('limit')
 		self.debug = kwargs.get('debug')
 		self.input_path = input_path
 		if self.debug:
-			self.files = [self.files[0]]
 			self.serializer	= Serializer(compact=False)
 			self.writer		= None
 			# self.writer	= ArchesWriter()
@@ -726,18 +726,14 @@ class AATAPipeline:
 	def get_graph(self):
 		'''Construct the bonobo pipeline to fully transform AATA data from XML to JSON-LD.'''
 		graph = bonobo.Graph()
-		files = self.files[:]
-		if self.debug:
-			sys.stderr.write("Processing %s\n" % (files[0],))
-
-		for f in files:
-			records = graph.add_chain(
-				XMLReader(f, xpath='/AATA_XML/record', fs='fs.data.aata')
-			)
-			articles = self.add_articles_chain(graph, records)
-			self.add_people_chain(graph, articles)
-			self.add_abstracts_chain(graph, articles)
-			self.add_organizations_chain(graph, articles)
+		records = graph.add_chain(
+			MatchingFiles(path='/', pattern=self.files_pattern, fs='fs.data.aata'),
+			CurriedXMLReader(xpath='/AATA_XML/record', fs='fs.data.aata')
+		)
+		articles = self.add_articles_chain(graph, records)
+		self.add_people_chain(graph, articles)
+		self.add_abstracts_chain(graph, articles)
+		self.add_organizations_chain(graph, articles)
 
 		return graph
 

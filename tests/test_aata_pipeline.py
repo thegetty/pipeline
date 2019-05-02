@@ -102,8 +102,8 @@ class AATATestPipeline(aata.AATAPipeline):
 	'''
 	Test AATA pipeline subclass that allows using a custom Writer.
 	'''
-	def __init__(self, writer, input_path, files, output_path=None, models=None, limit=None, debug=False):
-		super().__init__(input_path, files, models=models, limit=limit, debug=debug)
+	def __init__(self, writer, input_path, files_pattern, output_path=None, models=None, limit=None, debug=False):
+		super().__init__(input_path, files_pattern, models=models, limit=limit, debug=debug)
 		self.writer = writer
 
 	
@@ -113,21 +113,22 @@ class TestAATAPipelineOutput(unittest.TestCase):
 	Then verify that the serializations in the TestWriter object are what was expected.
 	'''
 	def setUp(self):
-		self.files = ['tests/data/aata-sample1.xml']
+		self.files_pattern = 'tests/data/aata-sample1.xml'
 		pass
 
 	def tearDown(self):
 		pass
 
 	def test_pipeline_1(self):
-		input_path = ''
+		input_path = os.getcwd()
+		print(f'*** {input_path}')
 		writer = TestWriter()
 		models = {
 			'Person': '0b47366e-2e42-11e9-9018-a4d18cec433a',
 			'LinguisticObject': 'model-lo',
 			'Organization': 'model-org'
 		}
-		pipeline = AATATestPipeline(writer, input_path, self.files, models=models, limit=1, debug=True)
+		pipeline = AATATestPipeline(writer, input_path, self.files_pattern, models=models, limit=1, debug=True)
 		pipeline.run()
 		output = writer.output
 		self.assertEqual(len(output), 3)

@@ -102,6 +102,18 @@ def make_aata_article_dict(e):
 	})
 	return data
 
+def _gaia_authority_type(code):
+	# TODO: handle authorities: SH, CX, TAL
+	if code == 'CB':
+		return model.Group
+	elif code == 'PN':
+		return model.Person
+	elif code == 'GP':
+		return model.Type
+	else:
+		# TODO: are there other auth_type values besides CB that should result in a different model class?
+		return model.Type
+
 def _xml_extract_article(e):
 	'''Extract information about an "article" record XML element'''
 	doc_type = e.findtext('./record_desc_group/doc_type')
@@ -144,10 +156,7 @@ def _xml_extract_article(e):
 		aid = ig.findtext('./gaia_auth_id')
 		atype = ig.findtext('./gaia_auth_type')
 		label = ig.findtext('./display_term')
-		if atype == 'CB':
-			itype = model.Group
-		else: # TODO: are there other auth_types that should result in a different model class?
-			itype = model.Type
+		itype = _gaia_authority_type(atype)
 		name = vocab.Title()
 		name.content = label
 
@@ -231,6 +240,7 @@ def _xml_extract_organizations(e, aata_id):
 					'role': role,
 					'properties': properties,
 					'names': [(name,)],
+					'object_type': _gaia_authority_type(auth_type),
 					'identifiers': [(auth_id, localIdentifier)],
 					'uid': 'AATA-Org-%s-%s-%s' % (auth_type, auth_id, name)
 				}
@@ -242,40 +252,44 @@ def _xml_extract_authors(e, aata_id):
 	'''Extract information about authors from an "article" record XML element'''
 	i = -1
 	for ag in e.xpath('./authorship_group'):
-		role = ag.findtext('author_role')
-		for a in ag.xpath('./author'):
-			i += 1
-			aid = a.find('./author_id')
-			if aid is not None:
-				name = aid.findtext('display_term')
-				auth_id = aid.findtext('gaia_auth_id')
-				auth_type = aid.findtext('gaia_auth_type')
-				author = {}
-				if auth_id is None:
-					print('*** no gaia auth id for author in record %r' % (aata_id,))
-					uid = 'AATA-P-Internal-%s-%d' % (aata_id, i)
-				else:
-					uid = 'AATA-P-%s-%s-%s' % (auth_type, auth_id, name)
+		# TODO: verify that just looping on multiple author_role values produces the expected output
+		for role in (t.text for t in ag.xpath('./author_role')):
+			for a in ag.xpath('./author'):
+				i += 1
+				aid = a.find('./author_id')
+				if aid is not None:
+					name = aid.findtext('display_term')
+					auth_id = aid.findtext('gaia_auth_id')
+					auth_type = aid.findtext('gaia_auth_type')
+# 					if auth_type != 'PN':
+# 						print(f'*** Unexpected gaia_auth_type {auth_type} used for author when PN was expected')
+					if auth_id is None:
+						print('*** no gaia auth id for author in record %r' % (aata_id,))
+						uid = 'AATA-P-Internal-%s-%d' % (aata_id, i)
+					else:
+						uid = 'AATA-P-%s-%s-%s' % (auth_type, auth_id, name)
 
-				if role is not None:
-					author['creation_role'] = role
-				else:
-					print('*** No author role found for authorship group')
-					print(lxml.etree.tostring(ag).decode('utf-8'))
+					author = {
+						'_aata_record_id': aata_id,
+						'_aata_record_author_seq': i,
+						'label': name,
+						'names': [(name,)],
+						'object_type': _gaia_authority_type(auth_type),
+						'identifiers': [(auth_id, localIdentifier)],
+						'uid': uid
+					}
 
-				author.update({
-					'_aata_record_id': aata_id,
-					'_aata_record_author_seq': i,
-					'label': name,
-					'names': [(name,)],
-					'identifiers': [(auth_id, localIdentifier)],
-					'uid': uid
-				})
-				yield author
-			else:
-				sys.stderr.write('*** No author_id found for record %s\n' % (aata_id,))
-# 				sys.stderr.write(lxml.etree.tostring(a).decode('utf-8'))
-# 				sys.stderr.write('\n')
+					if role is not None:
+						author['creation_role'] = role
+					else:
+						print('*** No author role found for authorship group')
+						print(lxml.etree.tostring(ag).decode('utf-8'))
+
+					yield author
+				else:
+					sys.stderr.write('*** No author_id found for record %s\n' % (aata_id,))
+# 					sys.stderr.write(lxml.etree.tostring(a).decode('utf-8'))
+# 					sys.stderr.write('\n')
 
 def add_aata_object_type(data):
 	'''

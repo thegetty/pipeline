@@ -60,6 +60,7 @@ def language_object_from_code(code):
 		'pol': {'ident': 'http://vocab.getty.edu/aat/300389109', 'label': 'Polish'},
 		'ita': {'ident': 'http://vocab.getty.edu/aat/300388474', 'label': 'Italian'},
 		'nld': {'ident': 'http://vocab.getty.edu/aat/300388256', 'label': 'Dutch'},
+		'spa': {'ident': 'http://vocab.getty.edu/aat/300389311', 'label': 'Spanish'},
 		'swe': {'ident': 'http://vocab.getty.edu/aat/300389336', 'label': 'Swedish'}
 	}
 	try:

@@ -1,3 +1,4 @@
+import os
 import sys
 import lxml.etree
 import fnmatch
@@ -17,9 +18,15 @@ class MatchingFiles(Configurable):
 		__doc__='''The filesystem instance to use.''',
 	)  # type: str
 	def __call__(self, *, fs, **kwargs):
-		for f in fs.listdir(self.path):
-			if fnmatch.fnmatch(f, self.pattern):
-				yield f
+		count = 0
+		subpath, pattern = os.path.split(self.pattern)
+		fullpath = os.path.join(self.path, subpath)
+		for f in fs.listdir(fullpath):
+			if fnmatch.fnmatch(f, pattern):
+				yield os.path.join(subpath, f)
+				count += 1
+		if not count:
+			sys.stderr.write(f'*** No files matching {pattern} found in {fullpath}\n')
 
 class XMLReader(FileReader):
 	'''

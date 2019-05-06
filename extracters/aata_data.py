@@ -100,7 +100,6 @@ def make_aata_article_dict(e):
 	return data
 
 def _gaia_authority_type(code):
-	# TODO: handle authorities: SH, CX, TAL
 	if code == 'CB':
 		return model.Group
 	elif code == 'PN':
@@ -108,7 +107,7 @@ def _gaia_authority_type(code):
 	elif code == 'GP':
 		return model.Type
 	else:
-		# TODO: are there other auth_type values besides CB that should result in a different model class?
+		# TODO: handle authorities: SH, CX, TAL
 		return model.Type
 
 def _xml_extract_article(e):

@@ -58,6 +58,13 @@ class MakeLinkedArtLinguisticObject(MakeLinkedArtRecord):
 			if name is not None:
 				n.translation_of = name
 
+		for id, itype, notes in data.get('qualified_identifiers', []):
+			ident = itype(content=id)
+			ident.content = id # TODO: This shouldn't be needed, but the crom instantiation above ignores it
+			object.identified_by = ident
+			for n in notes:
+				ident.referred_to_by = n
+
 		for id, itype in data.get('identifiers', []):
 			if itype is None:
 				itype = vocab.Identifier

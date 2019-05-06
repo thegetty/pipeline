@@ -32,11 +32,7 @@ from .basic import \
 			AddArchesModel, \
 			Serializer
 
-localIdentifier = vocab.LocalNumber
 legacyIdentifier = None # TODO: aat:LegacyIdentifier?
-isbn10Identifier = vocab.IsbnIdentifier
-isbn13Identifier = vocab.IsbnIdentifier
-issnIdentifier = vocab.IssnIdentifier
 doiIdentifier = vocab.DoiIdentifier
 variantTitleIdentifier = vocab.Identifier # TODO: aat for variant titles?
 
@@ -67,9 +63,10 @@ def language_object_from_code(code):
 		kwargs = languages[code]
 		return model.Language(**kwargs)
 	except KeyError:
-		print('*** No AAT link for language %r' % (code,))
+		if settings.DEBUG:
+			sys.stderr.write(f'*** No AAT link for language {code}\n')
 	except Exception as e:
-		print('*** language_object_from_code: %s' % (e,))
+		sys.stderr.write(f'*** language_object_from_code: {e}\n')
 		raise e
 
 # main article chain
@@ -125,9 +122,22 @@ def _xml_extract_article(e):
 	doc_langs = {t.text for t in e.xpath('./notes_group/lang_doc')}
 	sum_langs = {t.text for t in e.xpath('./notes_group/lang_summary')}
 
-	isbn10 = [(t.text, isbn10Identifier) for t in e.xpath('./notes_group/isbn_10')]
-	isbn13 = [(t.text, isbn13Identifier) for t in e.xpath('./notes_group/isbn_13')]
-	issn = [(t.text, issnIdentifier) for t in e.xpath('./notes_group/issn')]
+	isbn10e = e.xpath('./notes_group/isbn_10')
+	isbn13e = e.xpath('./notes_group/isbn_13')
+	issn = [(t.text, vocab.IssnIdentifier) for t in e.xpath('./notes_group/issn')]
+
+	isbn = []
+	qualified_identifiers = []
+	for elements in (isbn10e, isbn13e):
+		for t in elements:
+			pair = (t.text, vocab.IsbnIdentifier)
+			q = t.attrib.get('qualifier')
+			if q is None or not q:
+				isbn.append(pair)
+			else:
+				notes = (vocab.Note(content=q),)
+# 				print(f'ISBN: {t.text} [{q}]')
+				qualified_identifiers.append((t.text, vocab.IsbnIdentifier, notes))
 
 	aata_id = e.findtext('./record_id_group/record_id')
 	uid = 'AATA-%s-%s-%s' % (doc_type, aata_id, title)
@@ -188,7 +198,8 @@ def _xml_extract_article(e):
 		'_document_type': e.findtext('./record_desc_group/doc_type'),
 		'_aata_record_id': aata_id,
 		'translations': list(translations),
-		'identifiers': isbn10 + isbn13 + issn + var_titles,
+		'identifiers': isbn + issn + var_titles,
+		'qualified_identifiers': qualified_identifiers,
 		'classifications': classifications,
 		'indexing': indexings,
 		'uid': uid
@@ -205,7 +216,7 @@ def _xml_extract_abstracts(e, aata_id):
 			content = a.text
 			language = a.attrib.get('lang')
 
-			localIds = [(i, localIdentifier) for i in rids]
+			localIds = [(i, vocab.LocalNumber) for i in rids]
 			legacyIds = [(i, legacyIdentifier) for i in lids]
 			yield {
 				'_aata_record_id': aata_id,
@@ -241,7 +252,7 @@ def _xml_extract_organizations(e, aata_id):
 					'properties': properties,
 					'names': [(name,)],
 					'object_type': _gaia_authority_type(auth_type),
-					'identifiers': [(auth_id, localIdentifier)],
+					'identifiers': [(auth_id, vocab.LocalNumber)],
 					'uid': 'AATA-Org-%s-%s-%s' % (auth_type, auth_id, name)
 				}
 			else:
@@ -275,7 +286,7 @@ def _xml_extract_authors(e, aata_id):
 						'label': name,
 						'names': [(name,)],
 						'object_type': _gaia_authority_type(auth_type),
-						'identifiers': [(auth_id, localIdentifier)],
+						'identifiers': [(auth_id, vocab.LocalNumber)],
 						'uid': uid
 					}
 

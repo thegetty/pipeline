@@ -58,6 +58,13 @@ class MakeLinkedArtLinguisticObject(MakeLinkedArtRecord):
 			if name is not None:
 				n.translation_of = name
 
+		for id, itype, notes in data.get('qualified_identifiers', []):
+			ident = itype(content=id)
+			ident.content = id # TODO: This shouldn't be needed, but the crom instantiation above ignores it
+			object.identified_by = ident
+			for n in notes:
+				ident.referred_to_by = n
+
 		for id, itype in data.get('identifiers', []):
 			if itype is None:
 				itype = vocab.Identifier
@@ -97,9 +104,7 @@ class MakeLinkedArtLinguisticObject(MakeLinkedArtRecord):
 			object.about = classification
 
 		for c in data.get('indexing', []):
-			if isinstance(c, model.Type) or isinstance(c, model.Group):
-				indexing = c
-			else:
+			if type(c) == tuple:
 				cid, label = c
 				name = model.Name()
 				name.classified_as = title_type
@@ -112,6 +117,8 @@ class MakeLinkedArtLinguisticObject(MakeLinkedArtRecord):
 				code.classified_as = code_type
 				code.content = cid
 				indexing.identified_by = code
+			else:
+				indexing = c
 			object.about = indexing
 
 
@@ -136,5 +143,6 @@ class MakeLinkedArtOrganization(MakeLinkedArtRecord):
 # 			object.identified_by = n
 
 	def __call__(self, data: dict):
-		data['object_type'] = model.Group
+		if 'object_type' not in data:
+			data['object_type'] = model.Group
 		return super().__call__(data)

@@ -211,7 +211,6 @@ def make_la_person(data: dict):
 		if itype is not None:
 			if type(itype) == type:
 				ident = itype(content=id)
-				ident.content = id # TODO: This shouldn't be needed, but the crom instantiation above ignores it
 			else:
 				ident = model.Identifier()
 				ident.content = id

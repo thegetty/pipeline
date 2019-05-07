@@ -48,18 +48,35 @@ def language_object_from_code(code):
 	'''
 	languages = {
 		# TODO: there must be a better way to do this than keep a static mapping of languages
+		'cze': {'ident': 'http://vocab.getty.edu/aat/300388191', 'label': 'Czech'},
+		'dan': {'ident': 'http://vocab.getty.edu/aat/300388204', 'label': 'Danish'},
+		'nld': {'ident': 'http://vocab.getty.edu/aat/300388256', 'label': 'Dutch'},
+		'dut': {'ident': 'http://vocab.getty.edu/aat/300388256', 'label': 'Dutch'},
 		'eng': {'ident': 'http://vocab.getty.edu/aat/300388277', 'label': 'English'},
+		'gre': {'ident': 'http://vocab.getty.edu/aat/300388361', 'label': 'Greek'}, # TODO: the 'gre' ISO code is for modern Greek; confirm that that's what is being represented here
 		'fra': {'ident': 'http://vocab.getty.edu/aat/300388306', 'label': 'French'},
 		'fre': {'ident': 'http://vocab.getty.edu/aat/300388306', 'label': 'French'},
+		'geo': {'ident': 'http://vocab.getty.edu/aat/300388343', 'label': 'Georgian'},
 		'ger': {'ident': 'http://vocab.getty.edu/aat/300388344', 'label': 'German'},
 		'deu': {'ident': 'http://vocab.getty.edu/aat/300388344', 'label': 'German'},
-		'pol': {'ident': 'http://vocab.getty.edu/aat/300389109', 'label': 'Polish'},
+		'heb': {'ident': 'http://vocab.getty.edu/aat/300388401', 'label': 'Hebrew'},
+		'hun': {'ident': 'http://vocab.getty.edu/aat/300388770', 'label': 'Magyar (Hungarian) '},
 		'ita': {'ident': 'http://vocab.getty.edu/aat/300388474', 'label': 'Italian'},
-		'nld': {'ident': 'http://vocab.getty.edu/aat/300388256', 'label': 'Dutch'},
+		'jpn': {'ident': 'http://vocab.getty.edu/aat/300388486', 'label': 'Japanese'},
+		'lat': {'ident': 'http://vocab.getty.edu/aat/300388693', 'label': 'Latin'},
+		'nor': {'ident': 'http://vocab.getty.edu/aat/300388992', 'label': 'Norwegian'},
+		'pol': {'ident': 'http://vocab.getty.edu/aat/300389109', 'label': 'Polish'},
+		'por': {'ident': 'http://vocab.getty.edu/aat/300389115', 'label': 'Portuguese'},
+		'rus': {'ident': 'http://vocab.getty.edu/aat/300389168', 'label': 'Russian'},
+		'slo': {'ident': 'http://vocab.getty.edu/aat/300389290', 'label': 'Slovak'},
 		'spa': {'ident': 'http://vocab.getty.edu/aat/300389311', 'label': 'Spanish'},
-		'swe': {'ident': 'http://vocab.getty.edu/aat/300389336', 'label': 'Swedish'}
+		'swe': {'ident': 'http://vocab.getty.edu/aat/300389336', 'label': 'Swedish'},
+		'tur': {'ident': 'http://vocab.getty.edu/aat/300389470', 'label': 'Turkish'},
+		# TODO: rom; is this Romany or maybe (likely) Romanian?
 	}
 	try:
+		if code == 'unk': # TODO: verify that 'unk' is 'unknown' and can be skipped
+			return
 		kwargs = languages[code]
 		return model.Language(**kwargs)
 	except KeyError:
@@ -105,10 +122,17 @@ def _gaia_authority_type(code):
 	elif code == 'PN':
 		return model.Person
 	elif code == 'GP':
+		return model.Place
+	elif code == 'SH':
+		return model.Type
+	elif code == 'CX':
+		# TODO: handle authority
+		return model.Type
+	elif code == 'TAL':
+		# TODO: handle authority
 		return model.Type
 	else:
-		# TODO: handle authorities: SH, CX, TAL
-		return model.Type
+		raise LookupError
 
 def _xml_extract_article(e):
 	'''Extract information about an "article" record XML element'''
@@ -149,7 +173,6 @@ def _xml_extract_article(e):
 		label = cg.findtext('./class_name')
 
 		name = vocab.PrimaryName(content=label)
-		name.content = label # TODO: This shouldn't be needed, but the crom instantiation above ignores it
 		classification = model.Type(label=label)
 		classification.identified_by = name
 
@@ -183,7 +206,8 @@ def _xml_extract_article(e):
 		code = doc_langs.pop()
 		try:
 			language = language_object_from_code(code)
-			title = (title, language)
+			if language is not None:
+				title = (title, language)
 		except:
 			pass
 
@@ -406,8 +430,8 @@ class CleanDateToSpan(Configurable):
 			if date_to is not None:
 				ts.end_of_the_end = date_to.strftime("%Y-%m-%dT%H:%M:%SZ")
 			return ts
-		except:
-			print('*** Unknown date format: %r' % (value,))
+		except Exception as e:
+			print('*** Unknown date format %r: %s' % (value, e))
 			return None
 
 	def __call__(self, data, *args, **kwargs):
@@ -540,12 +564,12 @@ def detect_title_language(data: dict):
 			detected = detect(title)
 			threealpha = iso639.to_iso639_2(detected)
 			if threealpha in languages:
-				lang = language_object_from_code(threealpha)
-				if lang is not None:
+				language = language_object_from_code(threealpha)
+				if language is not None:
 					# we have confidence that we've matched the language of the title
 					# because it is one of the declared languages for the record
 					# document/summary
-					data['label'] = (title, lang)
+					data['label'] = (title, language)
 			else:
 				# the detected language of the title was not declared in the record data,
 				# so we lack confidence to proceed
@@ -595,10 +619,10 @@ def make_aata_abstract(data):
 		abstract.refers_to = lod_object
 		langcode = a.get('language')
 		if langcode is not None:
-			l = language_object_from_code(langcode)
-			if l is not None:
-				abstract.language = l
-				abstract_dict['language'] = l
+			language = language_object_from_code(langcode)
+			if language is not None:
+				abstract.language = language
+				abstract_dict['language'] = language
 
 		if '_authors' in data:
 			abstract_dict['_authors'] = data['_authors']
@@ -737,7 +761,7 @@ class AATAPipeline:
 			extract_imprint_orgs,
 			CleanDateToSpan(key='publication_date'),
 			make_aata_org_event,
-			AddArchesModel(model=model_id), # TODO: model for organizations?
+			AddArchesModel(model=model_id),
 			add_uuid,
 			MakeLinkedArtOrganization(),
 			_input=articles.output

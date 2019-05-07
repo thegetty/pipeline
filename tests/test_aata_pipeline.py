@@ -113,6 +113,7 @@ class TestAATAPipelineOutput(unittest.TestCase):
 	Then verify that the serializations in the TestWriter object are what was expected.
 	'''
 	def setUp(self):
+		os.environ['QUIET'] = '1'
 		self.files_pattern = 'tests/data/aata-sample1.xml'
 		pass
 

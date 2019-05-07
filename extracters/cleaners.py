@@ -230,7 +230,7 @@ def date_cleaner(value):
 		with c_locale(), suppress(ValueError):
 			yearmonthday = datetime.strptime(value, '%Y %B %d')
 			if yearmonthday:
-				return [yearmonthday, yearmonthday]
+				return [yearmonthday, yearmonthday+timedelta(days=1)]
 		
 		with c_locale(), suppress(ValueError):
 			yearmonth = datetime.strptime(value, '%Y %b')
@@ -238,7 +238,8 @@ def date_cleaner(value):
 				year = yearmonth.year
 				month = yearmonth.month
 				maxday = calendar.monthrange(year, month)[1]
-				r = [datetime(year, month, 1), datetime(year, month, maxday)]
+				d = datetime(year, month, 1)
+				r = [d, d+timedelta(days=maxday)]
 				return r
 
 		print("fell through to: %s" % value)

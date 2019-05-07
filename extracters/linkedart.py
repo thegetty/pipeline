@@ -60,7 +60,6 @@ class MakeLinkedArtLinguisticObject(MakeLinkedArtRecord):
 
 		for id, itype, notes in data.get('qualified_identifiers', []):
 			ident = itype(content=id)
-			ident.content = id # TODO: This shouldn't be needed, but the crom instantiation above ignores it
 			object.identified_by = ident
 			for n in notes:
 				ident.referred_to_by = n
@@ -70,7 +69,6 @@ class MakeLinkedArtLinguisticObject(MakeLinkedArtRecord):
 				itype = vocab.Identifier
 			if type(itype) == type:
 				ident = itype(content=id)
-				ident.content = id # TODO: This shouldn't be needed, but the crom instantiation above ignores it
 			else:
 				ident = model.Identifier()
 				ident.content = id

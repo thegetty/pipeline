@@ -173,7 +173,6 @@ def _xml_extract_article(e):
 		label = cg.findtext('./class_name')
 
 		name = vocab.PrimaryName(content=label)
-		name.content = label # TODO: This shouldn't be needed, but the crom instantiation above ignores it
 		classification = model.Type(label=label)
 		classification.identified_by = name
 
@@ -762,7 +761,7 @@ class AATAPipeline:
 			extract_imprint_orgs,
 			CleanDateToSpan(key='publication_date'),
 			make_aata_org_event,
-			AddArchesModel(model=model_id), # TODO: model for organizations?
+			AddArchesModel(model=model_id),
 			add_uuid,
 			MakeLinkedArtOrganization(),
 			_input=articles.output

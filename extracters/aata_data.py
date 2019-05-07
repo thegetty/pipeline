@@ -122,10 +122,17 @@ def _gaia_authority_type(code):
 	elif code == 'PN':
 		return model.Person
 	elif code == 'GP':
+		return model.Place
+	elif code == 'SH':
+		return model.Type
+	elif code == 'CX':
+		# TODO: handle authority
+		return model.Type
+	elif code == 'TAL':
+		# TODO: handle authority
 		return model.Type
 	else:
-		# TODO: handle authorities: SH, CX, TAL
-		return model.Type
+		raise LookupError
 
 def _xml_extract_article(e):
 	'''Extract information about an "article" record XML element'''
@@ -424,8 +431,8 @@ class CleanDateToSpan(Configurable):
 			if date_to is not None:
 				ts.end_of_the_end = date_to.strftime("%Y-%m-%dT%H:%M:%SZ")
 			return ts
-		except:
-			print('*** Unknown date format: %r' % (value,))
+		except Exception as e:
+			print('*** Unknown date format %r: %s' % (value, e))
 			return None
 
 	def __call__(self, data, *args, **kwargs):

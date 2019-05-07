@@ -1,7 +1,9 @@
-
+import locale
 import re
 from datetime import datetime, timedelta
+from dateutil.parser import parse
 import calendar
+from contextlib import contextmanager, suppress
 
 CIRCA = 5 # years
 CIRCA_D = timedelta(days=365*CIRCA)
@@ -128,6 +130,9 @@ def date_cleaner(value):
 	# YYYY/(Y|YY|YYYY)
 	# YYYY-YY
 	# YYY0s
+	# YYYY-
+	# YYYY Mon
+	# YYYY Month DD
 
 	if value:
 		value = value.replace("?",'')
@@ -142,9 +147,11 @@ def date_cleaner(value):
 
 	if not value:
 		return value
+
 	elif value.startswith("|"):
 		# Broken? null it out
 		return None
+
 	elif len(value) == 4 and value.isdigit():
 		# year only
 		return [datetime(int(value),1,1), datetime(int(value)+1,1,1)]
@@ -160,6 +167,11 @@ def date_cleaner(value):
 			return [datetime(y,1,1), datetime(y+10,1,1)]
 		else:
 			print("Bad YYYYs date: %s" % value)
+
+	elif len(value) == 5 and value[:4].isdigit() and value.endswith('-'):
+		y = int(value[:4])
+		return [datetime(y,1,1), None]
+
 	elif value.startswith("ca"):
 		# circa x
 		value = value[3:].strip()
@@ -179,6 +191,7 @@ def date_cleaner(value):
 			val[0] -= CIRCA_D
 			val[1] += CIRCA_D
 			return val
+
 	elif value.startswith('aft'):
 		# after x
 		value = value.replace('aft.', '')
@@ -190,30 +203,57 @@ def date_cleaner(value):
 			print("Bad aft value: %s" % value)
 			return None
 		return [datetime(y,1,1), None]
+
 	elif value.startswith('bef'):
 		value = value.replace('bef.', '')
 		value = value.replace('before ', '')
 		value = value.strip()
 		y = int(value)
 		return [None, datetime(y,1,1)]
+
 	elif value.find('/') > -1:
 		# year/year or year/month/date
 		# 1885/90
 		# 07/02/1897
 		return date_parse(value, '/')
+
 	elif value.find('.') > -1:
 		return date_parse(value, '.')
+
 	elif value.find('-') > -1:
 		return date_parse(value, '-')
+
 	elif value.find(';') > -1:
 		return date_parse(value, ';')
 
 	else:
+		with c_locale(), suppress(ValueError):
+			yearmonthday = datetime.strptime(value, '%Y %B %d')
+			if yearmonthday:
+				return [yearmonthday, yearmonthday]
+		
+		with c_locale(), suppress(ValueError):
+			yearmonth = datetime.strptime(value, '%Y %b')
+			if yearmonth:
+				year = yearmonth.year
+				month = yearmonth.month
+				maxday = calendar.monthrange(year, month)[1]
+				r = [datetime(year, month, 1), datetime(year, month, maxday)]
+				return r
+
 		print("fell through to: %s" % value)
 		return value
 
 
-
+@contextmanager
+def c_locale():
+	l = locale.getlocale()
+	locale.setlocale(locale.LC_ALL, 'C')
+	try:
+		yield
+	finally:
+		locale.setlocale(locale.LC_ALL, l)
+	
 def test_date_cleaner():
 	import sqlite3
 	c = sqlite3.connect('/Users/rsanderson/Development/getty/provenance/matt/gpi.sqlite')

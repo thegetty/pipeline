@@ -79,7 +79,7 @@ def date_parse(value, delim):
 		b1 = bits[0].strip()
 		b2 = bits[1].strip()
 		if len(b2) < 3 :
-			b2 = "%s%s" % (b1[:len(b2)], b2)
+			b2 = "%s%s" % (b1[:len(b1)-len(b2)], b2)
 		elif len(b2) > 4:
 			print("Bad range: %s" % value)
 			return None

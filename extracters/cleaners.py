@@ -23,21 +23,21 @@ def share_parse(value):
 def ymd_to_datetime(year, month, day, which="begin"):
 
 
-	if type(year) is not int:
+	if not isinstance(year, int):
 		try:
 			year = int(year)
 		except:
 			print("DATE CLEAN: year is %r; returning None" % year)
 			return None
 
-	if type(month) is not int:
+	if not isinstance(month, int):
 		try:
 			month = int(month)
 		except:
 			print("DATE CLEAN: month is %r; continuing with %s" % (month, "earliest" if which=="begin" else "latest"))
 			month = None
 
-	if type(day) is not int:
+	if not isinstance(day, int):
 		try:
 			day = int(day)
 		except:
@@ -101,15 +101,14 @@ def date_parse(value, delim):
 			d = 1
 		if m > 12:
 			# swap them
-			tmp = d
-			d = m
-			m = tmp
+			d, m = m, d
 		try:
 			return [datetime(y,m,d), datetime(y,m,d)]
 		except:
 			print("Bad // value: %s" % value)
 	else:
 		print("broken / date: %s" % value)
+	return None
 
 
 
@@ -160,6 +159,7 @@ def date_cleaner(value):
 			return [datetime(y,1,1), datetime(y+10,1,1)]
 		else:
 			print("Bad YYYYs date: %s" % value)
+			return None
 	elif value.startswith("ca"):
 		# circa x
 		value = value[3:].strip()
@@ -246,4 +246,3 @@ def test_share_parser():
 if __name__ == "__main__":
 	# test_date_cleaner()
 	test_share_parser()
-

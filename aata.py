@@ -24,7 +24,7 @@ class AATAFilePipeline(AATAPipeline):
 	'''
 	def __init__(self, input_path, files_pattern, **kwargs):
 		super().__init__(input_path, files_pattern, **kwargs)
-		debug = kwargs.get('debug')
+		debug = kwargs.get('debug', False)
 		output_path = kwargs.get('output_path')
 		if debug:
 			self.serializer	= Serializer(compact=False)

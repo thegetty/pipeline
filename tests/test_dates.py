@@ -1,8 +1,4 @@
-import unittest 
-import sys
-import os
-import json
-import pprint
+import unittest
 from datetime import datetime
 import extracters.cleaners
 
@@ -17,6 +13,10 @@ class TestDateCleaners(unittest.TestCase):
 		pass
 
 	def test_date_cleaner(self):
+		'''
+		Test the documented formats that `extracters.cleaners.date_cleaner` can parse
+		and ensure that it returns the expected data.
+		'''
 		tests = {
 			'1801': [datetime(1801,1,1), datetime(1802,1,1)],				# YYYY[?]
 			'1802?': [datetime(1802,1,1), datetime(1803,1,1)],				# YYYY[?]

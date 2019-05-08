@@ -5,6 +5,7 @@ running a bonobo pipeline for converting AATA XML data into JSON-LD.
 
 # AATA Extracters
 
+import os
 import sys
 import pprint
 import itertools
@@ -214,7 +215,6 @@ def _xml_extract_article(e):
 	var_titles = [(var_title, variantTitleIdentifier)] if var_title is not None else []
 
 	return {
-		'_source_element': e,
 		'label': title,
 		'document_languages': doc_langs,
 		'summary_languages': sum_langs,
@@ -494,7 +494,21 @@ def make_aata_org_event(o: dict):
 
 # article authors chain
 
-def make_aata_authors(data):
+def extract_aata_authors(data):
+# 	yield from data.get('_authors', [])
+	for a in data.get('_authors', []):
+		uid = data.get('uuid', '?')
+# 		print(f'got author for article {uid}:')
+# 		pprint.pprint(a)
+		author = {k: v for k, v in a.items()}
+		lod_object = data['_LOD_OBJECT']
+		author.update({
+			'parent': lod_object,
+			'parent_data': data,
+		})
+		yield author
+
+def add_aata_authors(data):
 	'''
 	Given a `dict` representing an "article," extract the authorship records
 	and their role (e.g. author, editor). yield a new `dict`s for each such
@@ -528,18 +542,14 @@ def make_aata_authors(data):
 		# and we're on the author's chain in the bonobo graph; object serialization has already happened.
 		# we need to serialize the object's relationship to the creation event, and let it get merged
 		# with the rest of the object's data.
-# 		event.part = subevent
-		subevent.part_of = event
+		event.part = subevent
 		role = a.get('creation_role')
 		if role is not None:
 			subevent._label = 'Creation sub-event for %s' % (role,)
-		author = {k: v for k, v in a.items()}
-		author.update({
-			'parent': lod_object,
-			'parent_data': data,
+		a.update({
 			'events': [subevent],
 		})
-		yield author
+	yield data
 
 # article abstract chain
 
@@ -719,12 +729,21 @@ class AATAPipeline:
 	def add_people_chain(self, graph, articles, serialize=True):
 		'''Add transformation of author records to the bonobo pipeline.'''
 		model_id = self.models.get('Person', 'XXX-Person-Model')
+		articles_with_authors = graph.add_chain(
+			add_aata_authors,
+			_input=articles.output
+		)
+		
+		if serialize:
+			# write ARTICLES with their authorship/creation events data
+			self.add_serialization_chain(graph, articles_with_authors.output)
+		
 		people = graph.add_chain(
-			make_aata_authors,
+			extract_aata_authors,
 			AddArchesModel(model=model_id),
 			add_uuid,
 			make_la_person,
-			_input=articles.output
+			_input=articles_with_authors.output
 		)
 		if serialize:
 			# write PEOPLE data

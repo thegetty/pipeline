@@ -210,6 +210,15 @@ class TestAATAPipelineOutput(unittest.TestCase):
 			'Organization': 'model-org'
 		}
 		output = self.run_pipeline(models, input_path)
+# 		print('=========================================================================')
+# 		for dr in output:
+# 			print(f'# /{dr}')
+# 			for fn in output[dr]:
+# 				print('-------------------------------------------------------------------------')
+# 				print(f'### {fn}')
+# 				pprint.pprint(output[dr][fn])
+# 		print('=========================================================================')
+
 		self.assertEqual(len(output), 3)
 
 		lo_model = models['LinguisticObject']

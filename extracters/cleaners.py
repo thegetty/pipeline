@@ -107,7 +107,8 @@ def date_parse(value, delim):
 			d = m
 			m = tmp
 		try:
-			return [datetime(y,m,d), datetime(y,m,d)]
+			yearmonthday = datetime(y,m,d)
+			return [yearmonthday, yearmonthday+timedelta(days=1)]
 		except:
 			print("Bad // value: %s" % value)
 	else:

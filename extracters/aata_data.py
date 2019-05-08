@@ -76,7 +76,7 @@ def language_object_from_code(code):
 	}
 	try:
 		if code == 'unk': # TODO: verify that 'unk' is 'unknown' and can be skipped
-			return
+			return None
 		kwargs = languages[code]
 		return model.Language(**kwargs)
 	except KeyError:
@@ -554,7 +554,7 @@ def detect_title_language(data: dict):
 	slangs = data.get('summary_languages', set())
 	languages = dlangs | slangs
 	title = data.get('label')
-	if type(title) == tuple:
+	if isinstance(title, tuple):
 		title = title[0]
 	try:
 		if title is None:
@@ -661,7 +661,7 @@ class AATAPipeline:
 		self.models = kwargs.get('models', {})
 		self.files_pattern = files_pattern
 		self.limit = kwargs.get('limit')
-		self.debug = kwargs.get('debug')
+		self.debug = kwargs.get('debug', False)
 		self.input_path = input_path
 		if self.debug:
 			self.serializer	= Serializer(compact=False)

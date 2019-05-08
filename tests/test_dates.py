@@ -22,7 +22,7 @@ class TestDateCleaners(unittest.TestCase):
 			'1802?': [datetime(1802,1,1), datetime(1803,1,1)],				# YYYY[?]
 			'1803/02/03': [datetime(1803,2,3), datetime(1803,2,4)],			# YYYY/MM/DD # TODO: currently failing, but the upper range should be the next day
 			'04/02/1804': [datetime(1804,2,4), datetime(1804,2,5)],			# DD/MM/YYYY # TODO: currently failing, but the upper range should be the next day
-			'ca. 1805': [datetime(1800,1,1), datetime(1810,1,1)],			# ca. YYYY
+			'ca. 1806': [datetime(1801,1,1), datetime(1811,1,1)],			# ca. YYYY
 			'aft. 1807': [datetime(1807,1,1), None],						# aft[er|.] YYYY
 			'after 1808': [datetime(1808,1,1), None],						# aft[er|.] YYYY
 			'bef. 1810': [None, datetime(1810,1,1)],						# bef[ore|.] YYYY

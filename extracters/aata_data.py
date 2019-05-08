@@ -661,7 +661,7 @@ class AATAPipeline:
 		self.models = kwargs.get('models', {})
 		self.files_pattern = files_pattern
 		self.limit = kwargs.get('limit')
-		self.debug = kwargs.get('debug')
+		self.debug = kwargs.get('debug', False)
 		self.input_path = input_path
 		if self.debug:
 			self.serializer	= Serializer(compact=False)

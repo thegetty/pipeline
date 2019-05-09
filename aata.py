@@ -8,7 +8,7 @@ import os
 import sys
 import bonobo
 
-from extracters.basic import Serializer
+from pipeline.nodes.basic import Serializer
 from pipeline.projects.aata import AATAPipeline
 from pipeline.io.arches import ArchesWriter, FileWriter
 from settings import aata_data_path, output_file_path, arches_models, DEBUG

@@ -6,7 +6,7 @@ import bonobo
 import itertools
 import bonobo_sqlalchemy
 
-from extracters.basic import AddArchesModel, AddFieldNames, Serializer, deep_copy, Offset, add_uuid, Trace
+from pipeline.nodes.basic import AddArchesModel, AddFieldNames, Serializer, deep_copy, Offset, add_uuid, Trace
 from pipeline.projects.knoedler.data import *
 from pipeline.projects.knoedler.linkedart import *
 from pipeline.io.arches import ArchesWriter, FileWriter

@@ -2,6 +2,7 @@ import unittest
 import os
 import json
 import pprint
+from collections import defaultdict
 
 import aata
 
@@ -18,7 +19,7 @@ def merge_lists(l, r):
 	other = []
 	for item in all_items:
 		try:
-			item_id = i.get('id')
+			item_id = item.get('id')
 			if item_id in identified:
 				identified[item_id] += [item]
 			else:
@@ -26,8 +27,14 @@ def merge_lists(l, r):
 		except:
 			other.append(item)
 
-	for items in identified:
-		yield merge(*items)
+	for items in identified.values():
+		r = items[:]
+		while len(r) > 1:
+			a = r.pop(0)
+			b = r.pop(0)
+			m = merge(a, b)
+			r.insert(0, m)
+		yield from r
 
 	yield from other
 
@@ -132,7 +139,7 @@ class TestAATAPipelineOutput(unittest.TestCase):
 		output = writer.output
 		return output
 
-	def verify_people(self, output, people_model):
+	def verify_people_for_AATA140375(self, output, people_model):
 		people = output[people_model].values()
 		people_creation_events = set()
 		for p in people:
@@ -143,7 +150,57 @@ class TestAATAPipelineOutput(unittest.TestCase):
 		self.assertEqual(people_names, ['Bremner, Ian', 'Meyers, Eric'])
 		return people_creation_events
 
-	def verify_output(self, output, lo_model, people_model, orgs_model):
+	def verify_properties_AATA140375(self, data):
+		abstract, article = data.values()
+		article_classification = {l['_label'] for l in article['classified_as']}
+		if 'Abstract' in article_classification:
+			abstract, article = article, abstract
+		
+		self.assertIn('The Forbidden City in Beijing', abstract['content'])
+		self.assertEqual('http://vocab.getty.edu/aat/300026032', abstract['classified_as'][0]['id']) # abstract
+		self.assertEqual('AATA140375', abstract['identified_by'][0]['content'])
+		self.assertEqual('Local Number', abstract['identified_by'][0]['classified_as'][0]['_label'])
+		self.assertEqual('English', abstract['language'][0]['_label'])
+		self.assertEqual('LinguisticObject', abstract['type'])
+		
+		abstracted_thing = abstract['refers_to'][0]
+		abstracted_thing_id = abstracted_thing.get('id')
+		article_id = article.get('id')
+		self.assertEqual(article_id, abstracted_thing_id, 'Article and the abstracgted thing have the same ID')
+
+		merged_thing = merge(article, abstracted_thing)
+		self.assertIn('Secrets of the Forbidden City', merged_thing['_label'])
+		self.assertEqual('http://vocab.getty.edu/aat/300028045', merged_thing['classified_as'][0]['id']) # AV
+		self.assertEqual('LinguisticObject', merged_thing['type'])
+		self.assertEqual('Creation', merged_thing['created_by']['type'])
+		identifiers = defaultdict(set)
+		for x in merged_thing['identified_by']:
+			identifiers[x['classified_as'][0]['_label']].add(x['content'])
+		self.assertEqual(dict(identifiers), {
+			'Title': {'Secrets of the Forbidden City'},
+			'ISBN Identifier': {'1531703461', '9781531703462'},
+		})
+
+		about = defaultdict(set)
+		for x in merged_thing['about']:
+			about[x['type']].add(x['_label'])
+		self.assertEqual(about, {
+			'Group': {'Palace Museum //Beijing (China)'},
+			'Type': {
+				'Ming',
+				'Structural studies and consolidation of buildings',
+				'brackets (structural elements)',
+				'building materials',
+				'construction techniques',
+				'earthquakes',
+				'experimentation',
+				'historic structures (single built works)',
+				'seismic design',
+				'structural analysis'
+			}
+		})
+
+	def verify_model_counts_for_AATA140375(self, output, lo_model, people_model, orgs_model):
 		expected_models = {
 			people_model,
 			lo_model,
@@ -154,7 +211,7 @@ class TestAATAPipelineOutput(unittest.TestCase):
 		self.assertEqual(len(output[lo_model]), 2)
 		self.assertEqual(len(output[orgs_model]), 3)
 
-	def verify_organizations(self, output, orgs_model):
+	def verify_organizations_for_AATA140375(self, output, orgs_model):
 		organizations = output[orgs_model].values()
 		org_names = {}
 		for o in organizations:
@@ -171,7 +228,7 @@ class TestAATAPipelineOutput(unittest.TestCase):
 			'WGBH Educational Foundation //Boston (Massachusetts, United States)'
 		])
 
-	def verify_linguistic_objects(self, output, lo_model):
+	def verify_data_for_AATA140375(self, output, lo_model):
 		lo = output[lo_model].values()
 		article_types = {}
 		source_creation_events = set()
@@ -200,9 +257,10 @@ class TestAATAPipelineOutput(unittest.TestCase):
 				source_creation_events.remove(i)
 		types = sorted(article_types.values())
 		self.assertEqual(types, ['A/V Content', 'Abstract'])
+		self.verify_properties_AATA140375(output[lo_model])
 		return source_creation_events, abstract_creation_events
 
-	def test_pipeline_1(self):
+	def test_pipeline_with_AATA140375(self):
 		input_path = os.getcwd()
 		models = {
 			'Person': '0b47366e-2e42-11e9-9018-a4d18cec433a',
@@ -216,10 +274,10 @@ class TestAATAPipelineOutput(unittest.TestCase):
 		people_model = models['Person']
 		orgs_model = models['Organization']
 
-		self.verify_output(output, lo_model, people_model, orgs_model)
-		people_creation_events = self.verify_people(output, people_model)
-		self.verify_organizations(output, orgs_model)
-		source_creation_events, abstract_creation_events = self.verify_linguistic_objects(output, lo_model)
+		self.verify_model_counts_for_AATA140375(output, lo_model, people_model, orgs_model)
+		people_creation_events = self.verify_people_for_AATA140375(output, people_model)
+		self.verify_organizations_for_AATA140375(output, orgs_model)
+		source_creation_events, abstract_creation_events = self.verify_data_for_AATA140375(output, lo_model)
 
 		# the creation sub-events from both the abstract and the
 		# thing-being-abstracted are carried out by the people

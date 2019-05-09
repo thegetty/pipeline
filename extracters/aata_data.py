@@ -40,20 +40,22 @@ variantTitleIdentifier = vocab.Identifier # TODO: aat for variant titles?
 
 def language_object_from_code(code):
 	'''
-	Given a three-letter language (ISO639-2) code, return a model.Language object for the
-	corresponding language.
+	Given a three-letter language code (which are mostly drawn from ISO639-2, with some
+	exceptions), return a model.Language object for the corresponding language.
 
 	For example, `language_object_from_code('eng')` returns an object representing
 	the English language.
 	'''
 	languages = {
 		# TODO: there must be a better way to do this than keep a static mapping of languages
+		'chi': {'ident': 'http://vocab.getty.edu/aat/300388113', 'label': 'Chinese'},
+		'cro': {'ident': 'http://vocab.getty.edu/aat/300388185', 'label': 'Croatian'},
 		'cze': {'ident': 'http://vocab.getty.edu/aat/300388191', 'label': 'Czech'},
 		'dan': {'ident': 'http://vocab.getty.edu/aat/300388204', 'label': 'Danish'},
 		'nld': {'ident': 'http://vocab.getty.edu/aat/300388256', 'label': 'Dutch'},
 		'dut': {'ident': 'http://vocab.getty.edu/aat/300388256', 'label': 'Dutch'},
 		'eng': {'ident': 'http://vocab.getty.edu/aat/300388277', 'label': 'English'},
-		'gre': {'ident': 'http://vocab.getty.edu/aat/300388361', 'label': 'Greek'}, # TODO: the 'gre' ISO code is for modern Greek; confirm that that's what is being represented here
+		'gre': {'ident': 'http://vocab.getty.edu/aat/300388361', 'label': 'Greek'},
 		'fra': {'ident': 'http://vocab.getty.edu/aat/300388306', 'label': 'French'},
 		'fre': {'ident': 'http://vocab.getty.edu/aat/300388306', 'label': 'French'},
 		'geo': {'ident': 'http://vocab.getty.edu/aat/300388343', 'label': 'Georgian'},
@@ -67,12 +69,14 @@ def language_object_from_code(code):
 		'nor': {'ident': 'http://vocab.getty.edu/aat/300388992', 'label': 'Norwegian'},
 		'pol': {'ident': 'http://vocab.getty.edu/aat/300389109', 'label': 'Polish'},
 		'por': {'ident': 'http://vocab.getty.edu/aat/300389115', 'label': 'Portuguese'},
+		'rom': {'ident': 'http://vocab.getty.edu/aat/300389157', 'label': 'Romanian'},
 		'rus': {'ident': 'http://vocab.getty.edu/aat/300389168', 'label': 'Russian'},
+		'scr': {'ident': 'http://vocab.getty.edu/aat/300389248', 'label': 'Serbo-Croatian'},
 		'slo': {'ident': 'http://vocab.getty.edu/aat/300389290', 'label': 'Slovak'},
+		'slv': {'ident': 'http://vocab.getty.edu/aat/300389291', 'label': 'Slovenian'},
 		'spa': {'ident': 'http://vocab.getty.edu/aat/300389311', 'label': 'Spanish'},
 		'swe': {'ident': 'http://vocab.getty.edu/aat/300389336', 'label': 'Swedish'},
 		'tur': {'ident': 'http://vocab.getty.edu/aat/300389470', 'label': 'Turkish'},
-		# TODO: rom; is this Romany or maybe (likely) Romanian?
 	}
 	try:
 		if code == 'unk': # TODO: verify that 'unk' is 'unknown' and can be skipped

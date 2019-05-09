@@ -1,5 +1,5 @@
 from bonobo.config import use
-from pipeline.nodes.cleaners import ymd_to_datetime
+from pipeline.util.cleaners import ymd_to_datetime
 
 from cromulent import model, vocab
 from cromulent.model import factory

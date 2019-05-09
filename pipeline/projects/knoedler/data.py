@@ -1,7 +1,7 @@
 # Knoedler Extracters
 
 from bonobo.config import use
-from pipeline.nodes.cleaners import date_cleaner, share_parse
+from pipeline.util.cleaners import date_cleaner, share_parse
 from pipeline.nodes.basic import fetch_uuid, get_actor_type, get_aat_label
 import copy
 

@@ -20,7 +20,7 @@ from langdetect import detect
 
 import settings
 from cromulent import model, vocab
-from pipeline.nodes.cleaners import date_cleaner
+from pipeline.util.cleaners import date_cleaner
 from pipeline.linkedart import \
 			MakeLinkedArtAbstract, \
 			MakeLinkedArtLinguisticObject, \

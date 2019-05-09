@@ -1,4 +1,4 @@
-#!/usr/bin/env python3
+#!/usr/bin/env python3 -B
 
 # TODO: ensure that multiple serializations to the same uuid are merged.
 #       e.g. a journal article with two authors, that each get asserted
@@ -9,8 +9,8 @@ import sys
 import bonobo
 
 from extracters.basic import Serializer
-from extracters.aata_data import AATAPipeline
-from extracters.arches import ArchesWriter, FileWriter
+from pipeline.projects.aata import AATAPipeline
+from pipeline.io.arches import ArchesWriter, FileWriter
 from settings import aata_data_path, output_file_path, arches_models, DEBUG
 
 ### Pipeline

@@ -1,4 +1,4 @@
-#!/usr/bin/env python3
+#!/usr/bin/env python3 -B
 
 import sys, os
 from sqlalchemy import create_engine
@@ -7,9 +7,9 @@ import itertools
 import bonobo_sqlalchemy
 
 from extracters.basic import AddArchesModel, AddFieldNames, Serializer, deep_copy, Offset, add_uuid, Trace
-from extracters.knoedler_data import *
-from extracters.knoedler_linkedart import *
-from extracters.arches import ArchesWriter, FileWriter
+from pipeline.projects.knoedler.data import *
+from pipeline.projects.knoedler.linkedart import *
+from pipeline.io.arches import ArchesWriter, FileWriter
 from settings import *
 
 # Set up environment

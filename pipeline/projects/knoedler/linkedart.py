@@ -1,9 +1,9 @@
 from bonobo.config import use
-from .cleaners import ymd_to_datetime
+from extracters.cleaners import ymd_to_datetime
 
 from cromulent import model, vocab
 from cromulent.model import factory
-from extracters.linkedart import add_crom_data
+from pipeline.linkedart import add_crom_data
 factory.auto_id_type = 'uuid'
 vocab.add_art_setter()
 

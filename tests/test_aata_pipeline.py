@@ -4,7 +4,6 @@ import json
 import pprint
 from collections import defaultdict
 
-from jq import jq
 import aata
 
 def merge_lists(l, r):
@@ -153,35 +152,29 @@ class TestAATAPipelineOutput(unittest.TestCase):
 
 	def verify_properties_AATA140375(self, data):
 		abstract, article = data.values()
-		article_classification = set(jq(".classified_as[]._label").transform(article, multiple_output=True))
+		article_classification = {l['_label'] for l in article['classified_as']}
 		if 'Abstract' in article_classification:
 			abstract, article = article, abstract
 		
-		def abs_extract(expr, **kwargs):
-			return jq(expr).transform(abstract, **kwargs)
-
-		self.assertIn('The Forbidden City in Beijing', abs_extract('.content'))
-		self.assertEqual('http://vocab.getty.edu/aat/300026032', abs_extract('.classified_as[].id')) # abstract
-		self.assertEqual('AATA140375', abs_extract('.identified_by[].content'))
-		self.assertEqual('Local Number', abs_extract('.identified_by[].classified_as[]._label'))
-		self.assertEqual('English', abs_extract('.language[]._label'))
-		self.assertEqual('LinguisticObject', abs_extract('.type'))
+		self.assertIn('The Forbidden City in Beijing', abstract['content'])
+		self.assertEqual('http://vocab.getty.edu/aat/300026032', abstract['classified_as'][0]['id']) # abstract
+		self.assertEqual('AATA140375', abstract['identified_by'][0]['content'])
+		self.assertEqual('Local Number', abstract['identified_by'][0]['classified_as'][0]['_label'])
+		self.assertEqual('English', abstract['language'][0]['_label'])
+		self.assertEqual('LinguisticObject', abstract['type'])
 		
-		abstracted_thing = abs_extract('.refers_to[]')
+		abstracted_thing = abstract['refers_to'][0]
 		abstracted_thing_id = abstracted_thing.get('id')
 		article_id = article.get('id')
 		self.assertEqual(article_id, abstracted_thing_id, 'Article and the abstracgted thing have the same ID')
 
-		m = merge(article, abstracted_thing)		
-		def art_extract(expr, **kwargs):
-			return jq(expr).transform(m, **kwargs)
-
-		self.assertIn('Secrets of the Forbidden City', art_extract('._label'))
-		self.assertEqual('http://vocab.getty.edu/aat/300028045', art_extract('.classified_as[].id')) # AV
-		self.assertEqual('LinguisticObject', art_extract('.type'))
-		self.assertEqual('Creation', art_extract('.created_by.type'))
+		merged_thing = merge(article, abstracted_thing)
+		self.assertIn('Secrets of the Forbidden City', merged_thing['_label'])
+		self.assertEqual('http://vocab.getty.edu/aat/300028045', merged_thing['classified_as'][0]['id']) # AV
+		self.assertEqual('LinguisticObject', merged_thing['type'])
+		self.assertEqual('Creation', merged_thing['created_by']['type'])
 		identifiers = defaultdict(set)
-		for x in art_extract('.identified_by[]', multiple_output=True):
+		for x in merged_thing['identified_by']:
 			identifiers[x['classified_as'][0]['_label']].add(x['content'])
 		self.assertEqual(dict(identifiers), {
 			'Title': {'Secrets of the Forbidden City'},
@@ -189,7 +182,7 @@ class TestAATAPipelineOutput(unittest.TestCase):
 		})
 
 		about = defaultdict(set)
-		for x in art_extract('.about[]', multiple_output=True):
+		for x in merged_thing['about']:
 			about[x['type']].add(x['_label'])
 		self.assertEqual(about, {
 			'Group': {'Palace Museum //Beijing (China)'},

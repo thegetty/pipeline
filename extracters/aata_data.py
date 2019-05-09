@@ -5,7 +5,6 @@ running a bonobo pipeline for converting AATA XML data into JSON-LD.
 
 # AATA Extracters
 
-import os
 import sys
 import pprint
 import itertools

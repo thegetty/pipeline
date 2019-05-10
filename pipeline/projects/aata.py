@@ -20,14 +20,14 @@ from langdetect import detect
 
 import settings
 from cromulent import model, vocab
-from .cleaners import date_cleaner
-from .linkedart import \
+from pipeline.util.cleaners import date_cleaner
+from pipeline.linkedart import \
 			MakeLinkedArtAbstract, \
 			MakeLinkedArtLinguisticObject, \
 			MakeLinkedArtOrganization
-from .knoedler_linkedart import make_la_person
-from .xml import MatchingFiles, CurriedXMLReader
-from .basic import \
+from pipeline.projects.knoedler.linkedart import make_la_person
+from pipeline.io.xml import MatchingFiles, CurriedXMLReader
+from pipeline.nodes.basic import \
 			add_uuid, \
 			AddArchesModel, \
 			Serializer

@@ -1,6 +1,6 @@
 import unittest
 from datetime import datetime
-import extracters.cleaners
+import pipeline.util.cleaners
 
 class TestDateCleaners(unittest.TestCase):
 	'''
@@ -14,7 +14,7 @@ class TestDateCleaners(unittest.TestCase):
 
 	def test_date_cleaner(self):
 		'''
-		Test the documented formats that `extracters.cleaners.date_cleaner` can parse
+		Test the documented formats that `pipeline.util.cleaners.date_cleaner` can parse
 		and ensure that it returns the expected data.
 		'''
 		tests = {
@@ -39,7 +39,7 @@ class TestDateCleaners(unittest.TestCase):
 		}
 
 		for value, expected in tests.items():
-			date_range = extracters.cleaners.date_cleaner(value)
+			date_range = pipeline.util.cleaners.date_cleaner(value)
 			self.assertIsInstance(date_range, list)
 			if expected is not None:
 				self.assertEqual(date_range, expected, msg=f'date string: {value!r}')

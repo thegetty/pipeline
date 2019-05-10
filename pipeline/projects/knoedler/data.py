@@ -1,8 +1,8 @@
 # Knoedler Extracters
 
 from bonobo.config import use
-from extracters.cleaners import date_cleaner, share_parse
-from .basic import fetch_uuid, get_actor_type, get_aat_label
+from pipeline.util.cleaners import date_cleaner, share_parse
+from pipeline.nodes.basic import fetch_uuid, get_actor_type, get_aat_label
 import copy
 
 # Here we extract the data from the sources and collect it together

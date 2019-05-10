@@ -10,6 +10,7 @@ from pipeline.nodes.basic import AddArchesModel, AddFieldNames, Serializer, deep
 from pipeline.projects.knoedler.data import *
 from pipeline.projects.knoedler.linkedart import *
 from pipeline.io.arches import ArchesWriter, FileWriter
+from pipeline.linkedart import make_la_person
 from settings import *
 
 # Set up environment

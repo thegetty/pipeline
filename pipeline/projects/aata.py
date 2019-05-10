@@ -21,11 +21,12 @@ from langdetect import detect
 import settings
 from cromulent import model, vocab
 from pipeline.util.cleaners import date_cleaner
+from pipeline.io.arches import FileWriter, ArchesWriter
 from pipeline.linkedart import \
 			MakeLinkedArtAbstract, \
 			MakeLinkedArtLinguisticObject, \
-			MakeLinkedArtOrganization
-from pipeline.projects.knoedler.linkedart import make_la_person
+			MakeLinkedArtOrganization, \
+			make_la_person
 from pipeline.io.xml import MatchingFiles, CurriedXMLReader
 from pipeline.nodes.basic import \
 			add_uuid, \
@@ -818,3 +819,23 @@ class AATAPipeline:
 			graph,
 			services=services
 		)
+
+class AATAFilePipeline(AATAPipeline):
+	'''
+	AATA pipeline with serialization to files based on Arches model and resource UUID.
+
+	If in `debug` mode, JSON serialization will use pretty-printing. Otherwise,
+	serialization will be compact.
+	'''
+	def __init__(self, input_path, files_pattern, **kwargs):
+		super().__init__(input_path, files_pattern, **kwargs)
+		debug = kwargs.get('debug', False)
+		output_path = kwargs.get('output_path')
+		if debug:
+			self.serializer	= Serializer(compact=False)
+			self.writer		= FileWriter(directory=output_path)
+			# self.writer	= ArchesWriter()
+		else:
+			self.serializer	= Serializer(compact=True)
+			self.writer		= FileWriter(directory=output_path)
+			# self.writer	= ArchesWriter()

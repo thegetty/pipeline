@@ -8,7 +8,8 @@ arches_models = {
 	"ManMadeObject": "2486c17d-2e42-11e9-bd33-a4d18cec433a",
 	"VisualItem": "504dcf0a-2e42-11e9-b4e2-a4d18cec433a",
 	"Person": "0b47366e-2e42-11e9-9018-a4d18cec433a",
-	"LinguisticObject": "41a41e47-2e42-11e9-b5ee-a4d18cec433a"
+	"LinguisticObject": "41a41e47-2e42-11e9-b5ee-a4d18cec433a",
+	"Organization": "edbee5e8-2e41-11e9-bc39-a4d18cec433a"
 }
 
 aata_data_path = os.environ.get('GETTY_PIPELINE_AATA_INPUT', '/data/input/aata')

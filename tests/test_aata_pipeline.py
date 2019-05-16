@@ -4,7 +4,7 @@ import json
 import pprint
 from collections import defaultdict
 
-import aata
+from pipeline.projects.aata import AATAPipeline
 
 def merge_lists(l, r):
 	'''
@@ -104,7 +104,7 @@ class TestWriter():
 			self.output[dr][fn] = data
 
 
-class AATATestPipeline(aata.AATAPipeline):
+class AATATestPipeline(AATAPipeline):
 	'''
 	Test AATA pipeline subclass that allows using a custom Writer.
 	'''

@@ -20,12 +20,14 @@ from langdetect import detect
 
 import settings
 from cromulent import model, vocab
+from pipeline.util import identity
 from pipeline.util.cleaners import date_cleaner
+from pipeline.io.arches import FileWriter, ArchesWriter
 from pipeline.linkedart import \
 			MakeLinkedArtAbstract, \
 			MakeLinkedArtLinguisticObject, \
-			MakeLinkedArtOrganization
-from pipeline.projects.knoedler.linkedart import make_la_person
+			MakeLinkedArtOrganization, \
+			make_la_person
 from pipeline.io.xml import MatchingFiles, CurriedXMLReader
 from pipeline.nodes.basic import \
 			add_uuid, \
@@ -151,13 +153,13 @@ def _xml_extract_article(e):
 
 	isbn10e = e.xpath('./notes_group/isbn_10')
 	isbn13e = e.xpath('./notes_group/isbn_13')
-	issn = [(t.text, vocab.IssnIdentifier) for t in e.xpath('./notes_group/issn')]
+	issn = [(t.text, vocab.IssnIdentifier(ident='')) for t in e.xpath('./notes_group/issn')]
 
 	isbn = []
 	qualified_identifiers = []
 	for elements in (isbn10e, isbn13e):
 		for t in elements:
-			pair = (t.text, vocab.IsbnIdentifier)
+			pair = (t.text, vocab.IsbnIdentifier(ident=''))
 			q = t.attrib.get('qualifier')
 			if q is None or not q:
 				isbn.append(pair)
@@ -215,7 +217,7 @@ def _xml_extract_article(e):
 		except:
 			pass
 
-	var_titles = [(var_title, variantTitleIdentifier)] if var_title is not None else []
+	var_titles = [(var_title, variantTitleIdentifier(ident=''))] if var_title is not None else []
 
 	return {
 		'label': title,
@@ -242,7 +244,7 @@ def _xml_extract_abstracts(e, aata_id):
 			content = a.text
 			language = a.attrib.get('lang')
 
-			localIds = [(i, vocab.LocalNumber) for i in rids]
+			localIds = [vocab.LocalNumber(content=i) for i in rids]
 			legacyIds = [(i, legacyIdentifier) for i in lids]
 			yield {
 				'_aata_record_id': aata_id,
@@ -278,7 +280,7 @@ def _xml_extract_organizations(e, aata_id):
 					'properties': properties,
 					'names': [(name,)],
 					'object_type': _gaia_authority_type(auth_type),
-					'identifiers': [(auth_id, vocab.LocalNumber)],
+					'identifiers': [vocab.LocalNumber(ident='', content=auth_id)],
 					'uid': 'AATA-Org-%s-%s-%s' % (auth_type, auth_id, name)
 				}
 			else:
@@ -312,7 +314,7 @@ def _xml_extract_authors(e, aata_id):
 						'label': name,
 						'names': [(name,)],
 						'object_type': _gaia_authority_type(auth_type),
-						'identifiers': [(auth_id, vocab.LocalNumber)],
+						'identifiers': [vocab.LocalNumber(ident='', content=auth_id)],
 						'uid': uid
 					}
 
@@ -500,10 +502,10 @@ def make_aata_org_event(o: dict):
 def extract_aata_authors(data):
 # 	yield from data.get('_authors', [])
 	for a in data.get('_authors', []):
-		uid = data.get('uuid', '?')
+		author = {k: v for k, v in a.items()}
+# 		uid = data.get('uuid', '?')
 # 		print(f'got author for article {uid}:')
 # 		pprint.pprint(a)
-		author = {k: v for k, v in a.items()}
 		lod_object = data['_LOD_OBJECT']
 		author.update({
 			'parent': lod_object,
@@ -671,6 +673,7 @@ class AddDataDependentArchesModel(Configurable):
 class AATAPipeline:
 	'''Bonobo-based pipeline for transforming AATA data from XML into JSON-LD.'''
 	def __init__(self, input_path, files_pattern, **kwargs):
+		self.graph = None
 		self.models = kwargs.get('models', {})
 		self.files_pattern = files_pattern
 		self.limit = kwargs.get('limit')
@@ -736,11 +739,11 @@ class AATAPipeline:
 			add_aata_authors,
 			_input=articles.output
 		)
-		
+
 		if serialize:
 			# write ARTICLES with their authorship/creation events data
 			self.add_serialization_chain(graph, articles_with_authors.output)
-		
+
 		people = graph.add_chain(
 			extract_aata_authors,
 			AddArchesModel(model=model_id),
@@ -793,8 +796,7 @@ class AATAPipeline:
 			self.add_serialization_chain(graph, organizations.output)
 		return organizations
 
-	def get_graph(self):
-		'''Construct the bonobo pipeline to fully transform AATA data from XML to JSON-LD.'''
+	def _construct_graph(self):
 		graph = bonobo.Graph()
 		records = graph.add_chain(
 			MatchingFiles(path='/', pattern=self.files_pattern, fs='fs.data.aata'),
@@ -805,7 +807,14 @@ class AATAPipeline:
 		self.add_abstracts_chain(graph, articles)
 		self.add_organizations_chain(graph, articles)
 
+		self.graph = graph
 		return graph
+
+	def get_graph(self):
+		'''Construct the bonobo pipeline to fully transform AATA data from XML to JSON-LD.'''
+		if not self.graph:
+			self._construct_graph()
+		return self.graph
 
 	def run(self, **options):
 		'''Run the AATA bonobo pipeline.'''
@@ -818,3 +827,36 @@ class AATAPipeline:
 			graph,
 			services=services
 		)
+
+class AATAFilePipeline(AATAPipeline):
+	'''
+	AATA pipeline with serialization to files based on Arches model and resource UUID.
+
+	If in `debug` mode, JSON serialization will use pretty-printing. Otherwise,
+	serialization will be compact.
+	'''
+	def __init__(self, input_path, files_pattern, **kwargs):
+		super().__init__(input_path, files_pattern, **kwargs)
+		self.use_single_serializer = True
+		self.output_chain = None
+		debug = kwargs.get('debug', False)
+		output_path = kwargs.get('output_path')
+		if debug:
+			self.serializer	= Serializer(compact=False)
+			self.writer		= FileWriter(directory=output_path)
+			# self.writer	= ArchesWriter()
+		else:
+			self.serializer	= Serializer(compact=True)
+			self.writer		= FileWriter(directory=output_path)
+			# self.writer	= ArchesWriter()
+
+
+	def add_serialization_chain(self, graph, input_node):
+		'''Add serialization of the passed transformer node to the bonobo graph.'''
+		if self.use_single_serializer:
+			if self.output_chain is None:
+				self.output_chain = graph.add_chain(self.serializer, self.writer, _input=None)
+
+			graph.add_chain(identity, _input=input_node, _output=self.output_chain.input)
+		else:
+			super().add_serialization_chain(graph, input_node)

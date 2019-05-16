@@ -70,6 +70,7 @@ class CurriedXMLReader(Configurable):
 		root = lxml.etree.parse(file)
 		for e in root.xpath(self.xpath):
 			yield e
+		file.close()
 
 	__call__ = read
 

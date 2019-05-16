@@ -62,15 +62,21 @@ class MakeLinkedArtLinguisticObject(MakeLinkedArtRecord):
 			for n in notes:
 				ident.referred_to_by = n
 
-		for content, itype in data.get('identifiers', []):
-			if itype is None:
-				itype = vocab.Identifier
-			if isinstance(itype, type):
-				ident = itype(content=content)
+		for identifier in data.get('identifiers', []):
+			if type(identifier) == tuple:
+				content, itype = identifier
+				if itype is not None:
+					if type(itype) == type:
+						ident = itype(content=content)
+					elif isinstance(itype, object):
+						ident = itype
+						ident.content = content
+					else:
+						ident = model.Identifier()
+						ident.content = content
+						ident.classified_as = itype
 			else:
-				ident = model.Identifier()
-				ident.content = content
-				ident.classified_as = itype
+				ident = identifier
 			thing.identified_by = ident
 
 		for name in data.get('names', []):
@@ -215,14 +221,21 @@ def make_la_person(data: dict):
 			n.referred_to_by = l
 		who.identified_by = n
 
-	for id, itype in data.get('identifiers', []):
-		if itype is not None:
-			if type(itype) == type:
-				ident = itype(content=id)
-			else:
-				ident = model.Identifier()
-				ident.content = id
-				ident.classified_as = itype
+	for identifier in data.get('identifiers', []):
+		if type(identifier) == tuple:
+			content, itype = identifier
+			if itype is not None:
+				if type(itype) == type:
+					ident = itype(content=content)
+				elif isinstance(itype, object):
+					ident = itype
+					ident.content = content
+				else:
+					ident = model.Identifier()
+					ident.content = content
+					ident.classified_as = itype
+		else:
+			ident = identifier
 		who.identified_by = ident
 
 	# Locations are names of residence places (P74 -> E53)

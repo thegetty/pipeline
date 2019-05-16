@@ -22,7 +22,8 @@ import settings
 from cromulent import model, vocab
 from pipeline.util import identity
 from pipeline.util.cleaners import date_cleaner
-from pipeline.io.arches import FileWriter, ArchesWriter
+from pipeline.io.file import FileWriter
+from pipeline.io.arches import ArchesWriter
 from pipeline.linkedart import \
 			MakeLinkedArtAbstract, \
 			MakeLinkedArtLinguisticObject, \

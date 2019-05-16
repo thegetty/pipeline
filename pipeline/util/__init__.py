@@ -1,5 +1,7 @@
 from threading import Lock
 from contextlib import ContextDecorator
+import settings
+import pipeline.io.arches
 
 def identity(d):
 	'''
@@ -37,3 +39,12 @@ class ExclusiveValue(ContextDecorator):
 
 	def __exit__(self, *exc):
 		self.get_lock().release()
+
+def configured_arches_writer():
+	return pipeline.io.arches.ArchesWriter(
+		endpoint=settings.arches_endpoint,
+		auth_endpoint=settings.arches_auth_endpoint,
+		username=settings.arches_endpoint_username,
+		password=settings.arches_endpoint_password,
+		client_id=settings.arches_client_id
+	)

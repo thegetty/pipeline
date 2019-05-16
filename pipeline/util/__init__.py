@@ -26,12 +26,9 @@ class ExclusiveValue(ContextDecorator):
 
 	def get_lock(self):
 		_id = self._wrapped
-		ExclusiveValue.lock.acquire()
-		try:
+		with ExclusiveValue.lock:
 			if not _id in ExclusiveValue._locks:
 				ExclusiveValue._locks[_id] = Lock()
-		finally:
-			ExclusiveValue.lock.release()
 		return ExclusiveValue._locks[_id]
 
 	def __enter__(self):

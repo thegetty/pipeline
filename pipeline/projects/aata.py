@@ -152,13 +152,13 @@ def _xml_extract_article(e):
 
 	isbn10e = e.xpath('./notes_group/isbn_10')
 	isbn13e = e.xpath('./notes_group/isbn_13')
-	issn = [(t.text, vocab.IssnIdentifier) for t in e.xpath('./notes_group/issn')]
+	issn = [(t.text, vocab.IssnIdentifier(ident='')) for t in e.xpath('./notes_group/issn')]
 
 	isbn = []
 	qualified_identifiers = []
 	for elements in (isbn10e, isbn13e):
 		for t in elements:
-			pair = (t.text, vocab.IsbnIdentifier)
+			pair = (t.text, vocab.IsbnIdentifier(ident=''))
 			q = t.attrib.get('qualifier')
 			if q is None or not q:
 				isbn.append(pair)
@@ -216,7 +216,7 @@ def _xml_extract_article(e):
 		except:
 			pass
 
-	var_titles = [(var_title, variantTitleIdentifier)] if var_title is not None else []
+	var_titles = [(var_title, variantTitleIdentifier(ident=''))] if var_title is not None else []
 
 	return {
 		'label': title,
@@ -279,7 +279,7 @@ def _xml_extract_organizations(e, aata_id):
 					'properties': properties,
 					'names': [(name,)],
 					'object_type': _gaia_authority_type(auth_type),
-					'identifiers': [vocab.LocalNumber(content=auth_id)],
+					'identifiers': [vocab.LocalNumber(ident='', content=auth_id)],
 					'uid': 'AATA-Org-%s-%s-%s' % (auth_type, auth_id, name)
 				}
 			else:
@@ -313,7 +313,7 @@ def _xml_extract_authors(e, aata_id):
 						'label': name,
 						'names': [(name,)],
 						'object_type': _gaia_authority_type(auth_type),
-						'identifiers': [vocab.LocalNumber(content=auth_id)],
+						'identifiers': [vocab.LocalNumber(ident='', content=auth_id)],
 						'uid': uid
 					}
 

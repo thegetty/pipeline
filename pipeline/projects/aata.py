@@ -243,7 +243,7 @@ def _xml_extract_abstracts(e, aata_id):
 			content = a.text
 			language = a.attrib.get('lang')
 
-			localIds = [(i, vocab.LocalNumber) for i in rids]
+			localIds = [vocab.LocalNumber(content=i) for i in rids]
 			legacyIds = [(i, legacyIdentifier) for i in lids]
 			yield {
 				'_aata_record_id': aata_id,
@@ -279,7 +279,7 @@ def _xml_extract_organizations(e, aata_id):
 					'properties': properties,
 					'names': [(name,)],
 					'object_type': _gaia_authority_type(auth_type),
-					'identifiers': [(auth_id, vocab.LocalNumber)],
+					'identifiers': [vocab.LocalNumber(content=auth_id)],
 					'uid': 'AATA-Org-%s-%s-%s' % (auth_type, auth_id, name)
 				}
 			else:
@@ -313,7 +313,7 @@ def _xml_extract_authors(e, aata_id):
 						'label': name,
 						'names': [(name,)],
 						'object_type': _gaia_authority_type(auth_type),
-						'identifiers': [(auth_id, vocab.LocalNumber)],
+						'identifiers': [vocab.LocalNumber(content=auth_id)],
 						'uid': uid
 					}
 

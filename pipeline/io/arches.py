@@ -4,7 +4,6 @@ import hashlib
 
 import requests
 from bonobo.config import Configurable, Option
-from pipeline.util import ExclusiveValue
 
 class ArchesWriter(Configurable):
 	endpoint = Option(default="http://localhost:8001/resources/")

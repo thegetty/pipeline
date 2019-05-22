@@ -82,10 +82,11 @@ def get_or_set_uuid(uid, uuid_cache):
 # This is so far just internal
 @use('uuid_cache')
 def add_uuid(thing: dict, uuid_cache=None):
-	# Need access to select from the uuid_cache
-	uid = thing['uid']
-	uuid = get_or_set_uuid(uid, uuid_cache)
-	thing['uuid'] = uuid
+	if 'uuid' not in thing:
+		# Need access to select from the uuid_cache
+		uid = thing['uid']
+		uuid = get_or_set_uuid(uid, uuid_cache)
+		thing['uuid'] = uuid
 	return thing
 
 @use('aat')

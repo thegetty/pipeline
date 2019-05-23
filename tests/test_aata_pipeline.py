@@ -231,8 +231,7 @@ class TestAATAPipelineOutput(unittest.TestCase):
 	def verify_data_for_AATA140375(self, output, lo_model):
 		lo = output[lo_model].values()
 		article_types = {}
-		source_creation_events = set()
-		abstract_creation_events = set()
+		creation_labels = set()
 		for a in lo:
 			i = a['id']
 			try:
@@ -245,20 +244,23 @@ class TestAATAPipelineOutput(unittest.TestCase):
 					if a['classified_as'][0]['_label'] == 'Abstract':
 						c = a['created_by']
 						for p in c.get('part', []):
-							abstract_creation_events.add(p.get('id'))
+							creation_labels.add(p['_label'])
 				for thing in a.get('refers_to', []):
 					if 'created_by' in thing:
 						event = thing['created_by']
 						for p in event.get('part', []):
-							source_creation_events.add(p.get('id'))
+							creation_labels.add(p['_label'])
 			except Exception as e:
 				print('*** error while handling creation event: %s' % (e,))
 				pprint.pprint(c)
-				source_creation_events.remove(i)
+		self.assertEqual(creation_labels, {
+			'Creation sub-event for Producer',
+			'Creation sub-event for Narrator',
+			'Creation sub-event for Director'
+		})
 		types = sorted(article_types.values())
 		self.assertEqual(types, ['A/V Content', 'Abstract'])
 		self.verify_properties_AATA140375(output[lo_model])
-		return source_creation_events, abstract_creation_events
 
 	def test_pipeline_with_AATA140375(self):
 		input_path = os.getcwd()
@@ -277,9 +279,4 @@ class TestAATAPipelineOutput(unittest.TestCase):
 		self.verify_model_counts_for_AATA140375(output, lo_model, people_model, orgs_model)
 		people_creation_events = self.verify_people_for_AATA140375(output, people_model)
 		self.verify_organizations_for_AATA140375(output, orgs_model)
-		source_creation_events, abstract_creation_events = self.verify_data_for_AATA140375(output, lo_model)
-
-		# the creation sub-events from both the abstract and the
-		# thing-being-abstracted are carried out by the people
-		self.assertLessEqual(source_creation_events, people_creation_events)
-		self.assertLessEqual(abstract_creation_events, people_creation_events)
+		self.verify_data_for_AATA140375(output, lo_model)

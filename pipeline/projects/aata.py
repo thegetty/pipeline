@@ -22,7 +22,7 @@ import settings
 from cromulent import model, vocab
 from pipeline.util import identity
 from pipeline.util.cleaners import date_cleaner
-from pipeline.io.file import FileWriter
+from pipeline.io.file import MultiFileWriter, MergingFileWriter
 from pipeline.io.arches import ArchesWriter
 from pipeline.linkedart import \
 			MakeLinkedArtAbstract, \
@@ -656,7 +656,7 @@ def make_aata_abstract(data):
 		abstract_dict = {k: v for k, v in a.items() if k not in ('language',)}
 
 		abstract.content = a.get('content')
-		abstract.classified_as = model.Type(
+		abstract.classified_as = model.Type( # TODO: change to vocab.Abstract()
 			ident='http://vocab.getty.edu/aat/300026032',
 			label='Abstract' # TODO: is this the right aat URI?
 		)
@@ -868,11 +868,13 @@ class AATAFilePipeline(AATAPipeline):
 		output_path = kwargs.get('output_path')
 		if debug:
 			self.serializer	= Serializer(compact=False)
-			self.writer		= FileWriter(directory=output_path)
+			self.writer		= MergingFileWriter(directory=output_path)
+			# self.writer	= MultiFileWriter(directory=output_path)
 			# self.writer	= ArchesWriter()
 		else:
 			self.serializer	= Serializer(compact=True)
-			self.writer		= FileWriter(directory=output_path)
+			self.writer		= MergingFileWriter(directory=output_path)
+			# self.writer	= MultiFileWriter(directory=output_path)
 			# self.writer	= ArchesWriter()
 
 

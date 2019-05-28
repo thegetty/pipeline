@@ -1,13 +1,11 @@
 import os
 import os.path
 import hashlib
-import json
-import pprint
 from pipeline.util import CromObjectMerger
 
 from bonobo.config import Configurable, Option
 from pipeline.util import ExclusiveValue
-from cromulent import model, vocab, reader
+from cromulent import model, reader
 
 class FileWriter(Configurable):
 	directory = Option(default="output")

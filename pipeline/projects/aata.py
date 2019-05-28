@@ -10,20 +10,21 @@ import pprint
 import itertools
 
 import iso639
+import lxml.etree
+from sqlalchemy import create_engine
+from langdetect import detect
+
 import bonobo
 from bonobo.config import Configurable, Option, use
 from bonobo.constants import NOT_MODIFIED
 from bonobo.nodes import Limit
-import lxml.etree
-from sqlalchemy import create_engine
-from langdetect import detect
 
 import settings
 from cromulent import model, vocab
 from pipeline.util import identity
 from pipeline.util.cleaners import date_cleaner
 from pipeline.io.file import MultiFileWriter, MergingFileWriter
-from pipeline.io.arches import ArchesWriter
+# from pipeline.io.arches import ArchesWriter
 from pipeline.linkedart import \
 			MakeLinkedArtAbstract, \
 			MakeLinkedArtLinguisticObject, \
@@ -427,7 +428,7 @@ class ExtractKeyedValues(Configurable):
 	'''
 	key = Option(str, required=True)
 	include_parent = Option(bool, default=True)
-	
+
 	def __init__(self, *v, **kw):
 		'''
 		Sets the __name__ property to include the relevant options so that when the

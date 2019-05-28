@@ -1,11 +1,11 @@
 import os
 import sys
-import lxml.etree
 import fnmatch
+import lxml.etree
 
 from bonobo.constants import NOT_MODIFIED
 from bonobo.nodes.io.file import FileReader
-from bonobo.config import Configurable, Method, Option, Service
+from bonobo.config import Configurable, Option, Service
 
 class MatchingFiles(Configurable):
 	'''
@@ -35,7 +35,7 @@ class XMLReader(FileReader):
 	'''
 	xpath = Option(str, required=True)
 
-	def read(self, file, *, fs):
+	def read(self, file):
 		root = lxml.etree.parse(file)
 		for e in root.xpath(self.xpath):
 			yield e
@@ -89,6 +89,7 @@ class FilterXPathEqual(Configurable):
 		for t in e.xpath(self.xpath):
 			if t.text == self.value:
 				return NOT_MODIFIED
+		return None
 
 def print_xml_element(e):
 	s = lxml.etree.tostring(e).decode('utf-8')

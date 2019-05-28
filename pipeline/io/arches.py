@@ -1,7 +1,3 @@
-import os
-import os.path
-import hashlib
-
 import requests
 from bonobo.config import Configurable, Option
 

@@ -18,6 +18,7 @@ arches_endpoint_password = os.environ.get('GETTY_PIPELINE_ARCHES_PASSWORD', 'adm
 arches_auth_endpoint = os.environ.get('GETTY_PIPELINE_ARCHES_AUTH_ENDPOINT', 'http://localhost:8001/o/token/')
 arches_client_id = os.environ.get('GETTY_PIPELINE_ARCHES_CLIENT_ID', 'OaGs0HfnBNd2VpI4Hnrc8nhOSTbnV1Q3O1CPjlX6')
 
+pir_data_path = os.environ.get('GETTY_PIPELINE_PIR_INPUT', '/data/input/pir')
 aata_data_path = os.environ.get('GETTY_PIPELINE_AATA_INPUT', '/data/input/aata')
 data_path = os.environ.get('GETTY_PIPELINE_INPUT', '/data/input/provenance/knoedler')
 output_file_path = os.environ.get('GETTY_PIPELINE_OUTPUT', '/data2/output/provenance/knoedler')

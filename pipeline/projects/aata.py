@@ -21,7 +21,7 @@ from bonobo.nodes import Limit
 
 import settings
 from cromulent import model, vocab
-from pipeline.util import identity
+from pipeline.util import identity, ExtractKeyedValues
 from pipeline.util.cleaners import date_cleaner
 from pipeline.io.file import MultiFileWriter, MergingFileWriter
 # from pipeline.io.arches import ArchesWriter
@@ -419,32 +419,6 @@ def add_imprint_orgs(data, uuid_cache=None):
 		organizations.append(org)
 	data['organizations'] = organizations
 	return data
-
-class ExtractKeyedValues(Configurable):
-	'''
-	Given a `dict` representing an some object, extract an array of `dict` values from
-	the `key` member. To each of the extracted dictionaries, add a 'parent_data' key with
-	the value of the original dictionary. Yield each extracted dictionary.
-	'''
-	key = Option(str, required=True)
-	include_parent = Option(bool, default=True)
-
-	def __init__(self, *v, **kw):
-		'''
-		Sets the __name__ property to include the relevant options so that when the
-		bonobo graph is serialized as a GraphViz document, different objects can be
-		visually differentiated.
-		'''
-		super().__init__(*v, **kw)
-		self.__name__ = f'{type(self).__name__} ({self.key})'
-
-	def __call__(self, data):
-		for a in data.get(self.key, []):
-			child = {k: v for k, v in a.items()}
-			child.update({
-				'parent_data': data,
-			})
-			yield child
 
 class CleanDateToSpan(Configurable):
 	'''

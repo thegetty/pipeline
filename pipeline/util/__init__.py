@@ -143,6 +143,33 @@ class ExtractKeyedValues(Configurable):
 			})
 			yield child
 
+class ExtractKeyedValue(Configurable):
+	'''
+	Given a `dict` representing an some object, extract the `key` member (a dict).
+	To the extracted dictionaries, add a 'parent_data' key with
+	the value of the original dictionary. Yield the extracted dictionary.
+	'''
+	key = Option(str, required=True)
+	include_parent = Option(bool, default=True)
+
+	def __init__(self, *v, **kw):
+		'''
+		Sets the __name__ property to include the relevant options so that when the
+		bonobo graph is serialized as a GraphViz document, different objects can be
+		visually differentiated.
+		'''
+		super().__init__(*v, **kw)
+		self.__name__ = f'{type(self).__name__} ({self.key})'
+
+	def __call__(self, data):
+		a = data.get(self.key)
+		if a:
+			child = {k: v for k, v in a.items()}
+			child.update({
+				'parent_data': data,
+			})
+			yield child
+
 class MatchingFiles(Configurable):
 	'''
 	Given a path and a pattern, yield the names of all files in the path that match the pattern.

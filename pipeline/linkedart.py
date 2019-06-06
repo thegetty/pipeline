@@ -124,6 +124,46 @@ class MakeLinkedArtLinguisticObject(MakeLinkedArtRecord):
 			thing.about = indexing
 
 
+class MakeLinkedArtManMadeObject(MakeLinkedArtRecord):
+	def set_properties(self, data, thing):
+		title_type = model.Type(ident='http://vocab.getty.edu/aat/300055726', label='Title') # TODO: is this the right aat URI?
+		if 'label' in data:
+			set_la_name(thing, data['label'], title_type, set_label=True)
+
+		if 'title' in data:
+			# TODO: This needs to be a PrimaryName, not a Name classified as a Title
+			set_la_name(thing, data['title'], title_type, set_label=True)
+
+		for identifier in data.get('identifiers', []):
+			if type(identifier) == tuple:
+				content, itype = identifier
+				if itype is not None:
+					if type(itype) == type:
+						ident = itype(content=content)
+					elif isinstance(itype, object):
+						ident = itype
+						ident.content = content
+					else:
+						ident = model.Identifier()
+						ident.content = content
+						ident.classified_as = itype
+			else:
+				ident = identifier
+			thing.identified_by = ident
+
+		for name in data.get('names', []):
+			n = set_la_name(thing, name[0])
+			for ref in name[1:]:
+				l = model.LinguisticObject(ident="urn:uuid:%s" % ref[1])
+				# l._label = _row_label(ref[2][0], ref[2][1], ref[2][2])
+				n.referred_to_by = l
+
+		for annotation in data.get('annotations', []):
+			a = model.Annotation()
+			a.content = content
+			thing.carries = a
+
+
 class MakeLinkedArtAbstract(MakeLinkedArtLinguisticObject):
 	pass
 

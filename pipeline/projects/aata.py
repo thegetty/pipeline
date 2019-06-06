@@ -1,5 +1,5 @@
 '''
-Classes and utiltiy functions for instantiating, configuring, and
+Classes and utility functions for instantiating, configuring, and
 running a bonobo pipeline for converting AATA XML data into JSON-LD.
 '''
 
@@ -21,7 +21,7 @@ from bonobo.nodes import Limit
 
 import settings
 from cromulent import model, vocab
-from pipeline.util import identity, ExtractKeyedValues
+from pipeline.util import identity, ExtractKeyedValues, MatchingFiles
 from pipeline.util.cleaners import date_cleaner
 from pipeline.io.file import MultiFileWriter, MergingFileWriter
 # from pipeline.io.arches import ArchesWriter
@@ -30,7 +30,7 @@ from pipeline.linkedart import \
 			MakeLinkedArtLinguisticObject, \
 			MakeLinkedArtOrganization, \
 			make_la_person
-from pipeline.io.xml import MatchingFiles, CurriedXMLReader
+from pipeline.io.xml import CurriedXMLReader
 from pipeline.nodes.basic import \
 			add_uuid, \
 			AddArchesModel, \

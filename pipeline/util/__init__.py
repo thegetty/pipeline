@@ -75,13 +75,13 @@ class CromObjectMerger:
 					else:
 						self.set_or_merge(obj, p, value)
 # 			obj = self.merge(obj, m)
-		print('Result of merge:')
-		print(factory.toString(obj, False))
+# 		print('Result of merge:')
+# 		print(factory.toString(obj, False))
 		return obj
 
 	def set_or_merge(self, obj, p, *values):
-		print('------------------------')
 		existing = []
+# 		print('------------------------')
 		with suppress(AttributeError):
 			existing = getattr(obj, p)
 			if type(existing) == list:
@@ -89,27 +89,30 @@ class CromObjectMerger:
 			else:
 				existing = [existing]
 
-		print(f'Setting {p}')
+# 		print(f'Setting {p}')
 		identified = defaultdict(list)
 		unidentified = []
 		if existing:
-			print('Existing value(s):')
+			pass
+# 			print('Existing value(s):')
 			for v in existing:
 				if hasattr(v, 'id'):
 					identified[v.id].append(v)
 				else:
 					unidentified.append(v)
-				print(f'- {v}')
+# 				print(f'- {v}')
 
 		for v in values:
-			print(f'Setting {p} value to {v}')
+			pass
+# 			print(f'Setting {p} value to {v}')
 			if hasattr(v, 'id'):
 				identified[v.id].append(v)
 			else:
 				unidentified.append(v)
 
 		if p == 'type':
-			print('*** TODO: calling setattr(_, "type") on crom objects throws an exception; skipping for now')
+			pass
+# 			print('*** TODO: calling setattr(_, "type") on crom objects throws an exception; skipping for now')
 			return
 		for i, v in identified.items():
 			setattr(obj, p, None)

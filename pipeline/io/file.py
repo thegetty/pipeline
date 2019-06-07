@@ -61,10 +61,10 @@ class MergingFileWriter(Configurable):
 					try:
 						m = r.read(content)
 						n = r.read(d)
-						print('========================= MERGING =========================')
-						print('merging objects:')
-						print(f'- {m}')
-						print(f'- {n}')
+# 						print('========================= MERGING =========================')
+# 						print('merging objects:')
+# 						print(f'- {m}')
+# 						print(f'- {n}')
 						merger.merge(m, n)
 					except model.DataError:
 						print('Exception caught while merging data:')

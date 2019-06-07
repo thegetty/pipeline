@@ -57,14 +57,14 @@ def configured_arches_writer():
 
 class CromObjectMerger:
 	def merge(self, obj, *to_merge):
-		print('merging...')
-		propInfo = obj._list_all_props()
+		pass
+# 		print('merging...')
 # 		print(f'base object: {obj}')
 		for m in to_merge:
 			pass
 # 			print('============================================')
 # 			print(f'merge: {m}')
-			for p in propInfo.keys():
+			for p in m.list_my_props():
 				value = None
 				with suppress(AttributeError):
 					value = getattr(m, p)

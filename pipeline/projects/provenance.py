@@ -10,7 +10,6 @@ import uuid
 import csv
 import pprint
 import itertools
-from contextlib import suppress
 
 import iso639
 import lxml.etree
@@ -36,6 +35,9 @@ from pipeline.linkedart import \
 			make_la_person
 from pipeline.io.csv import CurriedCSVReader
 from pipeline.nodes.basic import \
+			AddFieldNames, \
+			GroupRepeatingKeys, \
+			GroupKeys, \
 			add_uuid, \
 			AddDataDependentArchesModel, \
 			AddArchesModel, \
@@ -48,58 +50,6 @@ variantTitleIdentifier = vocab.Identifier # TODO: aat for variant titles?
 
 # utility functions
 
-class MakePIRSalesDict(Configurable):
-	headers = Option(list)
-	def __call__(self, data):
-		pairs = zip(self.headers, data)
-# 		pairs = filter(lambda p: p[1] != '', pairs)
-		yield dict(pairs)
-
-class GroupRepeatingKeys(Configurable):
-	mapping = Option(dict)
-	drop_empty = Option(bool, default=True)
-	def __call__(self, data):
-		d = data.copy()
-		for key, mapping in self.mapping.items():
-			property_prefixes = mapping['prefixes']
-			postprocess = mapping.get('postprocess')
-			d[key] = []
-			with suppress(KeyError):
-				for i in itertools.count(1):
-					ks = ((prefix, f'{prefix}_{i}') for prefix in property_prefixes)
-					subd = {}
-					for p, k in ks:
-						subd[p] = d[k]
-						del d[k]
-					if self.drop_empty:
-						values_unset = list(map(lambda v: not bool(v), subd.values()))
-						if all(values_unset):
-							continue
-					if postprocess:
-						subd = postprocess(subd, data)
-					d[key].append(subd)
-		yield d
-
-class GroupKeys(Configurable):
-	mapping = Option(dict)
-	drop_empty = Option(bool, default=True)
-	def __call__(self, data):
-		d = data.copy()
-		for key, mapping in self.mapping.items():
-			subd = {}
-			properties = mapping['properties']
-			postprocess = mapping.get('postprocess')
-			for k in properties:
-				v = d[k]
-				del d[k]
-				if self.drop_empty and not v:
-					continue
-				subd[k] = v
-			if postprocess:
-				subd = postprocess(subd, data)
-			d[key] = subd
-		yield d
-
 def add_record_ids(data, parent):
 	for p in ('pi_record_no', 'persistent_puid'):
 		data[p] = parent.get(p)
@@ -111,6 +61,57 @@ def add_object_uuid(data, parent):
 	data['uid'] = f'OBJECT-{pi_record_no}'
 	data['uuid'] = str(uuid.uuid4())
 	return data
+
+@use('uuid_cache')
+def add_auction_catalog(data, uuid_cache=None):
+	cno = data['catalog_number']
+	cdata = {'uid': f'CATALOG-{cno}'}
+	add_uuid(cdata, uuid_cache)
+	catalog = vocab.AuctionCatalog()
+	catalog._label = f'Sale Catalog {cno}'
+	add_crom_data(data=cdata, what=catalog)
+	data['_catalog'] = cdata
+	yield data
+
+def populate_auction_catalog(data):
+	d = {k: v for k, v in data.items()}
+	parent = data['parent_data']
+	cno = parent['catalog_number']
+	sno = parent['star_record_no']
+	catalog = d['_LOD_OBJECT']
+	for lno in parent.get('lugt', {}).values():
+		lugt = model.Identifier()
+		lugt._label = f"Lugt Number: {lno}"
+		lugt.content = lno
+		catalog.identified_by = lugt
+	local = model.Identifier()
+	local.content = cno
+	catalog.identified_by = local
+	local2 = vocab.LocalNumber()
+	local2.content = sno
+	catalog.identified_by = local2
+	notes = data.get('notes')
+	if notes:
+		note = vocab.Note()
+		note.content = parent['notes']
+		catalog.referred_to_by = note
+	yield d
+
+def add_physical_catalog_objects(data):
+	cno = data['catalog_number']
+	sno = data['star_record_no']
+	catalog = data['_catalog']['_LOD_OBJECT']
+	data['uuid'] = str(uuid.uuid4()) # this is a single pass, and will not be referenced again
+	catalogObject = model.ManMadeObject()
+	catalogObject._label = data.get('annotation_info')
+	# TODO: link this with the vocab.AuctionCatalog
+	catalogObject.carries = catalog
+	anno = vocab.Annotation()
+	# TODO: Rob's build-sample-auction-data.py script adds this annotation. where does it come from?
+# 	anno._label = "Additional annotations in WSHC copy of BR-A1"
+# 	catalogObject.carries = anno
+	add_crom_data(data=data, what=catalogObject)
+	yield data
 
 def add_crom_price(data, parent):
 	amnt = model.MonetaryAmount()
@@ -192,23 +193,40 @@ def add_pir_artists(data, uuid_cache=None):
 		subevent.carried_out_by = person
 	yield data
 
+
+
+
+#mark -
+
+
+
 # Provenance Pipeline class
 
 class ProvenancePipeline:
 	'''Bonobo-based pipeline for transforming Provenance data from CSV into JSON-LD.'''
-	def __init__(self, input_path, header_file,  files_pattern, **kwargs):
+	def __init__(self, input_path, catalogs, auction_events, contents, **kwargs):
 		self.graph = None
 		self.models = kwargs.get('models', {})
-		self.header_file = header_file
-		self.files_pattern = files_pattern
+		self.catalogs_header_file = catalogs['header_file']
+		self.catalogs_files_pattern = catalogs['files_pattern']
+		self.auction_events_header_file = auction_events['header_file']
+		self.auction_events_files_pattern = auction_events['files_pattern']
+		self.contents_header_file = contents['header_file']
+		self.contents_files_pattern = contents['files_pattern']
 		self.limit = kwargs.get('limit')
 		self.debug = kwargs.get('debug', False)
 		self.input_path = input_path
 
 		fs = bonobo.open_fs(input_path)
-		with fs.open(header_file, newline='') as csvfile:
+		with fs.open(self.catalogs_header_file, newline='') as csvfile:
 			r = csv.reader(csvfile)
-			self.headers = next(r)
+			self.catalogs_headers = next(r)
+		with fs.open(self.auction_events_header_file, newline='') as csvfile:
+			r = csv.reader(csvfile)
+			self.auction_events_headers = next(r)
+		with fs.open(self.contents_header_file, newline='') as csvfile:
+			r = csv.reader(csvfile)
+			self.contents_headers = next(r)
 
 		if self.debug:
 			self.serializer	= Serializer(compact=False)
@@ -242,6 +260,58 @@ class ProvenancePipeline:
 		else:
 			sys.stderr.write('*** No serialization chain defined\n')
 
+	def add_catalogs_chain(self, graph, records, serialize=True):
+		if self.limit is not None:
+			records = graph.add_chain(
+				Limit(self.limit),
+				_input=records.output
+			)
+		catalogs = graph.add_chain(
+			AddFieldNames(field_names=self.catalogs_headers),
+			add_auction_catalog,
+			add_physical_catalog_objects,
+			AddDataDependentArchesModel(models=self.models),
+# 			Trace(name='catalogs'),
+			_input=records.output
+		)
+		if serialize:
+			# write SALES data
+			self.add_serialization_chain(graph, catalogs.output)
+		return catalogs
+
+	def add_auction_events_chain(self, graph, records, serialize=True):
+		if self.limit is not None:
+			records = graph.add_chain(
+				Limit(self.limit),
+				_input=records.output
+			)
+		auction_events = graph.add_chain(
+			AddFieldNames(field_names=self.auction_events_headers),
+			GroupRepeatingKeys(mapping={
+				'seller': {'prefixes': ('sell_auth_name', 'sell_auth_q')},
+				'expert': {'prefixes': ('expert', 'expert_auth', 'expert_ulan')},
+				'commissaire': {'prefixes': ('comm_pr', 'comm_pr_auth', 'comm_pr_ulan')},
+				'auction_house': {'prefixes': ('auc_house_name', 'auc_house_auth', 'auc_house_ulan')},
+			}),
+			GroupKeys(mapping={
+				'lugt': {'properties': ('lugt_number_1', 'lugt_number_2', 'lugt_number_3')},
+				'auc_copy': {'properties': ('auc_copy_seller_1', 'auc_copy_seller_2', 'auc_copy_seller_3', 'auc_copy_seller_4')},
+				'other_seller': {'properties': ('other_seller_1', 'other_seller_2', 'other_seller_3')},
+				'title_pg_sell': {'properties': ('title_pg_sell_1', 'title_pg_sell_2')},
+			}),
+			add_auction_catalog,
+			ExtractKeyedValue(key='_catalog'),
+			populate_auction_catalog,
+			add_uuid,
+			AddDataDependentArchesModel(models=self.models),
+			Trace(name='auction_events'),
+			_input=records.output
+		)
+		if serialize:
+			# write SALES data
+			self.add_serialization_chain(graph, auction_events.output)
+		return auction_events
+
 	def add_sales_chain(self, graph, records, serialize=True):
 		'''Add transformation of sales records to the bonobo pipeline.'''
 		if self.limit is not None:
@@ -250,7 +320,7 @@ class ProvenancePipeline:
 				_input=records.output
 			)
 		sales = graph.add_chain(
-			MakePIRSalesDict(headers=self.headers),
+			AddFieldNames(field_names=self.contents_headers),
 			GroupRepeatingKeys(mapping={
 				'expert': {'prefixes': ('expert_auth', 'expert_ulan')},
 				'commissaire': {'prefixes': ('commissaire_pr', 'comm_ulan')},
@@ -271,6 +341,7 @@ class ProvenancePipeline:
 				'bid': {'properties': ('est_price', 'est_price_curr', 'est_price_desc', 'est_price_so', 'start_price', 'start_price_curr', 'start_price_desc', 'start_price_so', 'ask_price', 'ask_price_curr', 'ask_price_so')},
 			}),
 # 			Trace(name='sale'),
+			# TODO: need to construct an LOD object for a sales record here so that it can be serialized")
 			_input=records.output
 		)
 		if serialize:
@@ -307,14 +378,28 @@ class ProvenancePipeline:
 
 	def _construct_graph(self):
 		graph = bonobo.Graph()
-		records = graph.add_chain(
-			MatchingFiles(path='/', pattern=self.files_pattern, fs='fs.data.pir'),
+		
+		catalogs_records = graph.add_chain(
+			MatchingFiles(path='/', pattern=self.catalogs_files_pattern, fs='fs.data.pir'),
+			CurriedCSVReader(fs='fs.data.pir'),
+		)
+		
+		auction_events_records = graph.add_chain(
+			MatchingFiles(path='/', pattern=self.auction_events_files_pattern, fs='fs.data.pir'),
+			CurriedCSVReader(fs='fs.data.pir'),
+		)
+		
+		contents_records = graph.add_chain(
+			MatchingFiles(path='/', pattern=self.contents_files_pattern, fs='fs.data.pir'),
 			CurriedCSVReader(fs='fs.data.pir')
 		)
 		
-		sales = self.add_sales_chain(graph, records, serialize=False)
-		objects = self.add_object_chain(graph, sales)
-		people = self.add_people_chain(graph, objects)
+		catalogs = self.add_catalogs_chain(graph, catalogs_records, serialize=True)
+		auction_events = self.add_auction_events_chain(graph, auction_events_records, serialize=True)
+
+		sales = self.add_sales_chain(graph, contents_records, serialize=False)
+		objects = self.add_object_chain(graph, sales, serialize=True)
+		people = self.add_people_chain(graph, objects, serialize=True)
 		
 		self.graph = graph
 		return graph
@@ -345,8 +430,8 @@ class ProvenanceFilePipeline(ProvenancePipeline):
 	If in `debug` mode, JSON serialization will use pretty-printing. Otherwise,
 	serialization will be compact.
 	'''
-	def __init__(self, input_path, header_file, files_pattern, **kwargs):
-		super().__init__(input_path, header_file, files_pattern, **kwargs)
+	def __init__(self, input_path, catalogs, auction_events, contents, **kwargs):
+		super().__init__(input_path, catalogs, auction_events, contents, **kwargs)
 		self.use_single_serializer = True
 		self.output_chain = None
 		debug = kwargs.get('debug', False)

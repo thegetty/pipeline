@@ -15,8 +15,20 @@ if __name__ == '__main__':
 		LIMIT		= int(os.environ.get('GETTY_PIPELINE_LIMIT', 10))
 	else:
 		LIMIT		= int(os.environ.get('GETTY_PIPELINE_LIMIT', 10000000))
-	content_files_pattern = 'sales_contents_[!0].csv'
-	header_file = 'sales_contents_0.csv'
+
+	catalogs = {
+		'header_file': 'sales_catalogs_info_0.csv',
+		'files_pattern': 'sales_catalogs_info.csv',
+	}
+	contents = {
+		'header_file': 'sales_contents_0.csv',
+		'files_pattern': 'sales_contents_[!0].csv',
+	}
+	auction_events = {
+		'header_file': 'sales_descriptions_0.csv',
+		'files_pattern': 'sales_descriptions.csv',
+	}
+
 	print_dot = False
 	if 'dot' in sys.argv[1:]:
 		print_dot = True
@@ -26,8 +38,9 @@ if __name__ == '__main__':
 		try:
 			pipeline = ProvenanceFilePipeline( # ProvenancePipeline
 				pir_data_path,
-				header_file,
-				files_pattern=content_files_pattern,
+				catalogs=catalogs,
+				auction_events=auction_events,
+				contents=contents,
 				output_path=output_file_path,
 				models=arches_models,
 				limit=LIMIT,

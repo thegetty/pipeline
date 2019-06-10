@@ -183,6 +183,11 @@ class MatchingFiles(Configurable):
 		'fs',
 		__doc__='''The filesystem instance to use.''',
 	)  # type: str
+	
+	def __init__(self, *args, **kwargs):
+		super().__init__(self, *args, **kwargs)
+		self.__name__ = f'{type(self).__name__} ({self.pattern})'
+	
 	def __call__(self, *, fs, **kwargs):
 		count = 0
 		subpath, pattern = os.path.split(self.pattern)

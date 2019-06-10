@@ -7,10 +7,57 @@ import copy
 import pprint
 import difflib
 import functools
+import itertools
+from contextlib import suppress
 
 # ~~~~ Core Functions ~~~~
 
 aat_label_cache = {}
+
+class GroupRepeatingKeys(Configurable):
+	mapping = Option(dict)
+	drop_empty = Option(bool, default=True)
+	def __call__(self, data):
+		d = data.copy()
+		for key, mapping in self.mapping.items():
+			property_prefixes = mapping['prefixes']
+			postprocess = mapping.get('postprocess')
+			d[key] = []
+			with suppress(KeyError):
+				for i in itertools.count(1):
+					ks = ((prefix, f'{prefix}_{i}') for prefix in property_prefixes)
+					subd = {}
+					for p, k in ks:
+						subd[p] = d[k]
+						del d[k]
+					if self.drop_empty:
+						values_unset = list(map(lambda v: not bool(v), subd.values()))
+						if all(values_unset):
+							continue
+					if postprocess:
+						subd = postprocess(subd, data)
+					d[key].append(subd)
+		yield d
+
+class GroupKeys(Configurable):
+	mapping = Option(dict)
+	drop_empty = Option(bool, default=True)
+	def __call__(self, data):
+		d = data.copy()
+		for key, mapping in self.mapping.items():
+			subd = {}
+			properties = mapping['properties']
+			postprocess = mapping.get('postprocess')
+			for k in properties:
+				v = d[k]
+				del d[k]
+				if self.drop_empty and not v:
+					continue
+				subd[k] = v
+			if postprocess:
+				subd = postprocess(subd, data)
+			d[key] = subd
+		yield d
 
 class AddDataDependentArchesModel(Configurable):
 	'''
@@ -19,7 +66,24 @@ class AddDataDependentArchesModel(Configurable):
 	'''
 	models = Option()
 	def __call__(self, data, *args, **kwargs):
-		data['_ARCHES_MODEL'] = self.models['LinguisticObject']
+		if '_LOD_OBJECT' in data:
+			obj = data['_LOD_OBJECT']
+			t = type(obj)
+			tname = t.__name__
+			if tname in self.models:
+				data['_ARCHES_MODEL'] = self.models[tname]
+				return data
+			else:
+				for c in obj._classhier:
+					tname = c.__name__
+					if tname in self.models:
+						data['_ARCHES_MODEL'] = self.models[tname]
+# 						print(f'*** Using {tname} model for {t.__name__}')
+						return data
+				print(f'*** No Arches model available for {t.__name__}')
+				data['_ARCHES_MODEL'] = f'XXX-{tname}'
+		else:
+			data['_ARCHES_MODEL'] = self.models['LinguisticObject']
 		return data
 
 class AddArchesModel(Configurable):
@@ -29,13 +93,14 @@ class AddArchesModel(Configurable):
 		return data
 
 class AddFieldNames(Configurable):
-	key = Option()
+	key = Option(required=False)
 	field_names = Option()
 	def __call__(self, *data):
-		if len(data) == 1 and type(data[0]) == tuple:
+		if len(data) == 1 and type(data[0]) in (tuple, list):
 			data = data[0]
-		names = self.field_names.get(self.key, [])
-		return dict(zip(names, data))
+		names = self.field_names.get(self.key, []) if isinstance(self.field_names, dict) else self.field_names
+		d = dict(zip(names, data))
+		return d
 
 class Offset(Configurable):
 	offset = Option()

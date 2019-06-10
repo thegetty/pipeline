@@ -12,6 +12,16 @@ import functools
 
 aat_label_cache = {}
 
+class AddDataDependentArchesModel(Configurable):
+	'''
+	Set the `_ARCHES_MODEL` key in the supplied `dict` to the appropriate arches model UUID
+	and return it.
+	'''
+	models = Option()
+	def __call__(self, data, *args, **kwargs):
+		data['_ARCHES_MODEL'] = self.models['LinguisticObject']
+		return data
+
 class AddArchesModel(Configurable):
 	model = Option()
 	def __call__(self, data):

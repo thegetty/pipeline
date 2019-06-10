@@ -37,6 +37,7 @@ from pipeline.linkedart import \
 from pipeline.io.csv import CurriedCSVReader
 from pipeline.nodes.basic import \
 			add_uuid, \
+			AddDataDependentArchesModel, \
 			AddArchesModel, \
 			Serializer, \
 			Trace
@@ -53,16 +54,6 @@ class MakePIRSalesDict(Configurable):
 		pairs = zip(self.headers, data)
 # 		pairs = filter(lambda p: p[1] != '', pairs)
 		yield dict(pairs)
-
-class AddDataDependentArchesModel(Configurable):
-	'''
-	Set the `_ARCHES_MODEL` key in the supplied `dict` to the appropriate arches model UUID
-	and return it.
-	'''
-	models = Option()
-	def __call__(self, data, *args, **kwargs):
-		data['_ARCHES_MODEL'] = self.models['LinguisticObject']
-		return data
 
 class GroupRepeatingKeys(Configurable):
 	mapping = Option(dict)

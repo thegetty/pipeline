@@ -33,6 +33,7 @@ from pipeline.linkedart import \
 from pipeline.io.xml import CurriedXMLReader
 from pipeline.nodes.basic import \
 			add_uuid, \
+			AddDataDependentArchesModel, \
 			AddArchesModel, \
 			Serializer
 
@@ -660,16 +661,6 @@ def filter_abstract_authors(data: dict):
 	'''Yield only those passed `dict` values for which the `'author_abstract_flag'` key is True.'''
 	if 'author_abstract_flag' in data and data['author_abstract_flag']:
 		yield data
-
-class AddDataDependentArchesModel(Configurable):
-	'''
-	Set the `_ARCHES_MODEL` key in the supplied `dict` to the appropriate arches model UUID
-	and return it.
-	'''
-	models = Option()
-	def __call__(self, data, *args, **kwargs):
-		data['_ARCHES_MODEL'] = self.models['LinguisticObject']
-		return data
 
 # AATA Pipeline class
 

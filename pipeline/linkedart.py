@@ -134,6 +134,9 @@ class MakeLinkedArtManMadeObject(MakeLinkedArtRecord):
 			# TODO: This needs to be a PrimaryName, not a Name classified as a Title
 			set_la_name(thing, data['title'], title_type, set_label=True)
 
+		for coll in data.get('member_of', []):
+			thing.member_of = coll
+
 		for identifier in data.get('identifiers', []):
 			if type(identifier) == tuple:
 				content, itype = identifier

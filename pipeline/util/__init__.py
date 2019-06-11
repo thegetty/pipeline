@@ -2,12 +2,18 @@ import os
 import fnmatch
 from threading import Lock
 from contextlib import ContextDecorator, suppress
-from collections import defaultdict
+from collections import defaultdict, namedtuple
 
 import settings
 import pipeline.io.arches
 from bonobo.config import Configurable, Option, Service
 from cromulent.model import factory
+
+Dimension = namedtuple("Dimension", [
+	'value',	# numeric value
+	'unit',		# unit
+	'which'		# e.g. width, height, ...
+])
 
 def identity(d):
 	'''

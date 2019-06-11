@@ -74,6 +74,10 @@ def parse_dimensions(value, which=None):
 	return dims
 
 def dimensions_cleaner(value):
+	# 1 cm x 2 in
+	# 1' 2" by 3 cm
+	# 1 ft. 2 in. h by 3 cm w
+
 	if value is None:
 		return None
 	m = simple_dimensions_re.match(value)

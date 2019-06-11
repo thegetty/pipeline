@@ -23,8 +23,8 @@ from bonobo.nodes import Limit
 
 import settings
 from cromulent import model, vocab
-from pipeline.util import identity, ExtractKeyedValue, ExtractKeyedValues, MatchingFiles
-from pipeline.util.cleaners import date_cleaner
+from pipeline.util import identity, ExtractKeyedValue, ExtractKeyedValues, MatchingFiles, Dimension
+from pipeline.util.cleaners import date_cleaner, dimensions_cleaner
 from pipeline.io.file import MultiFileWriter, MergingFileWriter
 # from pipeline.io.arches import ArchesWriter
 from pipeline.linkedart import \
@@ -36,6 +36,7 @@ from pipeline.linkedart import \
 from pipeline.io.csv import CurriedCSVReader
 from pipeline.nodes.basic import \
 			AddFieldNames, \
+			CleanDateToSpan, \
 			GroupRepeatingKeys, \
 			GroupKeys, \
 			add_uuid, \
@@ -62,6 +63,50 @@ def add_object_uuid(data, parent):
 	data['uuid'] = str(uuid.uuid4())
 	return data
 
+def implode_date(data, prefix):
+	year = data.get(f'{prefix}year')
+	month = data.get('{prefix}month')
+	day = data.get('{prefix}day')
+	if year and month and day:
+		return f'{year}-{month}-{day}'
+	elif year and month:
+		return f'{year}-{month}'
+	elif year:
+		return f'{year}'
+	return None
+
+def auction_event_for_catalog_number(cno):
+	uid = f'AUCTION-EVENT-CATALOGNUMBER-{cno}'
+	auction = vocab.AuctionEvent()
+	auction._label = f"Auction Event for {cno}"
+	return auction, uid
+
+def add_auction_event(data):
+	cno = data['catalog_number']
+	auction, uid = auction_event_for_catalog_number(cno)
+	data['uid'] = uid
+
+# 	pprint.pprint(data)
+	add_crom_data(data=data, what=auction)
+	yield data
+
+def populate_auction_event(data):
+	auction = data['_LOD_OBJECT']
+	catalog = data['_catalog']['_LOD_OBJECT']
+	begin = implode_date(data, 'sale_begin_')
+	end = implode_date(data, 'sale_end_')
+
+	if begin or end:
+		ts = model.TimeSpan()
+		if begin is not None:
+			ts.begin_of_the_begin = begin
+		if end is not None:
+			ts.end_of_the_end = end
+		auction.timespan = ts
+
+	auction.subject_of = catalog
+	yield data
+
 @use('uuid_cache')
 def add_auction_catalog(data, uuid_cache=None):
 	cno = data['catalog_number']
@@ -69,8 +114,47 @@ def add_auction_catalog(data, uuid_cache=None):
 	add_uuid(cdata, uuid_cache)
 	catalog = vocab.AuctionCatalog()
 	catalog._label = f'Sale Catalog {cno}'
-	add_crom_data(data=cdata, what=catalog)
 	data['_catalog'] = cdata
+
+	add_crom_data(data=cdata, what=catalog)
+	yield data
+
+def add_auction_of_lot(data):
+	auction_data = data['auction_of_lot']
+	cno = auction_data['catalog_number']
+	auction, _ = auction_event_for_catalog_number(cno)
+	lno = auction_data['lot_number']
+
+	lot = vocab.Auction()
+	lot._label = f'Auction of Lot {cno} {lno}'
+	data['uid'] = 'AUCTION-{cno}-LOT-{lno}'
+
+	date = implode_date(auction_data, 'lot_sale_')
+	if date:
+		ts = model.TimeSpan()
+		# TODO: expand this to day bounds
+		ts.begin_of_the_begin = date
+		name = model.Name()
+		name.content = date
+		ts.identified_by = name
+		lot.timespan = ts
+	notes = auction_data.get('lot_notes')
+	if notes:
+		note = vocab.Note()
+		note.content = notes
+		lot.referred_to_by = note
+	lotid = model.Identifier()
+	lotid.content = lno
+	lot.identified_by = lotid
+	lot.part_of = auction
+
+	coll = vocab.AuctionLotSet()
+	coll._label = f'Auction Lot {lno}'
+	lot.used_specific_object = coll
+	data['_lot_object_set'] = coll
+
+	add_crom_data(data=data, what=lot)
+# 	pprint.pprint(data)
 	yield data
 
 def populate_auction_catalog(data):
@@ -120,17 +204,66 @@ def add_crom_price(data, parent):
 		try:
 			amnt.value = float(v)
 		except ValueError:
-			print(f'*** Not a numeric price amount: {v}')
 			amnt._label = v # TODO: is there a way to associate the value string with the MonetaryAmount in a meaningful way?
+# 			print(f'*** Not a numeric price amount: {v}')
 	if data.get('price_currency'):
-		print(f'*** CURRENCY: {data["price_currency"]}')
 		currency = data["price_currency"]
+		if currency in ('pounds', 'guineas'):
+			currency = f'gb {currency}' # TODO: can this be done safely with the PIR data?
+# 		print(f'*** CURRENCY: {currency}')
 		if currency in vocab.instances:
 			amnt.currency = vocab.instances[currency]
 		else:
 			print(f'*** No currency instance defined for {currency}')
 	add_crom_data(data=data, what=amnt)
 	return data
+
+def normalize_dimension(dimensions):
+	inches = 0
+	cm = 0
+	which = None
+	for d in dimensions:
+		which = d.which
+		if d.unit == 'inches':
+			inches += float(d.value)
+		elif d.unit == 'feet':
+			inches += 12 * float(d.value)
+		elif d.unit == 'centimeters':
+			cm += float(d.value)
+		else:
+			print(f'*** unrecognized unit: {d.unit}')
+			return None
+	if inches and cm:
+		print(f'*** dimension used both metric and imperial!?')
+		return None
+	elif inches:
+		return Dimension(value=str(inches), unit='inches', which=which)
+	else:
+		return Dimension(value=str(cm), unit='centimeters', which=which)
+
+def populate_object(data):
+	object = data['_LOD_OBJECT']
+	m = data.get('materials')
+	if m:
+		matstmt = vocab.MaterialStatement()
+		matstmt.content = m
+		object.referred_to_by = matstmt
+	dimensions = dimensions_cleaner(data.get('dimensions'))
+	if dimensions:
+		for d in dimensions:
+			d = normalize_dimension(d)
+# 			print(f'Dimension {data["dimensions"]}: {d}')
+			if d:
+				if d.which == 'height':
+					dim = vocab.Height()
+				elif d.which == 'width':
+					dim = vocab.Width()
+				else:
+					dim = model.Dimension()
+				dim.value = d.value
+				dim.unit = vocab.instances[d.unit]
+				object.dimension = dim
+	yield data
 
 def add_object_type(data):
 	TYPES = { # TODO: should this be in settings (or elsewhere)?
@@ -150,7 +283,6 @@ def add_object_type(data):
 		'zeichnung': vocab.Drawing,
 		# TODO: these are the most common, but more should be added
 	}
-	
 	type = data['object_type'].lower()
 	if type.lower() in TYPES:
 		otype = TYPES[type]
@@ -158,6 +290,12 @@ def add_object_type(data):
 	else:
 		print(f'*** No object type for {type}')
 		add_crom_data(data=data, what=model.ManMadeObject())
+	
+	parent = data['parent_data']
+	coll = parent.get('_lot_object_set')
+	if coll:
+		data['member_of'] = [coll]
+	
 	return data
 
 @use('uuid_cache')
@@ -260,7 +398,7 @@ class ProvenancePipeline:
 		else:
 			sys.stderr.write('*** No serialization chain defined\n')
 
-	def add_catalogs_chain(self, graph, records, serialize=True):
+	def add_physical_catalogs_chain(self, graph, records, serialize=True):
 		if self.limit is not None:
 			records = graph.add_chain(
 				Limit(self.limit),
@@ -278,6 +416,19 @@ class ProvenancePipeline:
 			# write SALES data
 			self.add_serialization_chain(graph, catalogs.output)
 		return catalogs
+
+	def add_catalog_linguistic_objects(self, graph, events, serialize=True):
+		los = graph.add_chain(
+			ExtractKeyedValue(key='_catalog'),	# TODO: XXXXXXXXXXX split this into a different chain
+			populate_auction_catalog,
+			add_uuid,
+			AddDataDependentArchesModel(models=self.models),
+			_input=events.output
+		)
+		if serialize:
+			# write SALES data
+			self.add_serialization_chain(graph, los.output)
+		return los
 
 	def add_auction_events_chain(self, graph, records, serialize=True):
 		if self.limit is not None:
@@ -300,11 +451,11 @@ class ProvenancePipeline:
 				'title_pg_sell': {'properties': ('title_pg_sell_1', 'title_pg_sell_2')},
 			}),
 			add_auction_catalog,
-			ExtractKeyedValue(key='_catalog'),
-			populate_auction_catalog,
+			add_auction_event,
+			populate_auction_event,
 			add_uuid,
 			AddDataDependentArchesModel(models=self.models),
-			Trace(name='auction_events'),
+# 			Trace(name='auction_events'),
 			_input=records.output
 		)
 		if serialize:
@@ -337,10 +488,13 @@ class ProvenancePipeline:
 			}),
 			GroupKeys(mapping={
 				'auction_of_lot': {'properties': ('catalog_number', 'lot_number', 'lot_sale_year', 'lot_sale_month', 'lot_sale_day', 'lot_sale_mod', 'lot_notes')},
-				'object': {'postprocess': add_object_uuid, 'properties': ('title', 'title_modifier', 'object_type', 'materials', 'dimensions', 'formatted_dimens', 'format', 'genre', 'subject', 'inscription', 'present_loc_geog', 'present_loc_inst', 'present_loc_insq', 'present_loc_insi', 'present_loc_acc', 'present_loc_accq', 'present_loc_note', '_artists')},
+				'_object': {'postprocess': add_object_uuid, 'properties': ('title', 'title_modifier', 'object_type', 'materials', 'dimensions', 'formatted_dimens', 'format', 'genre', 'subject', 'inscription', 'present_loc_geog', 'present_loc_inst', 'present_loc_insq', 'present_loc_insi', 'present_loc_acc', 'present_loc_accq', 'present_loc_note', '_artists')},
 				'bid': {'properties': ('est_price', 'est_price_curr', 'est_price_desc', 'est_price_so', 'start_price', 'start_price_curr', 'start_price_desc', 'start_price_so', 'ask_price', 'ask_price_curr', 'ask_price_so')},
 			}),
 # 			Trace(name='sale'),
+			add_auction_of_lot,
+			add_uuid,
+			AddDataDependentArchesModel(models=self.models),
 			# TODO: need to construct an LOD object for a sales record here so that it can be serialized")
 			_input=records.output
 		)
@@ -351,8 +505,9 @@ class ProvenancePipeline:
 
 	def add_object_chain(self, graph, sales, serialize=True):
 		objects = graph.add_chain(
-			ExtractKeyedValue(key='object'),
+			ExtractKeyedValue(key='_object'),
 			add_object_type,
+			populate_object,
 			MakeLinkedArtManMadeObject(),
 			AddDataDependentArchesModel(models=self.models),
 			add_pir_artists,
@@ -379,7 +534,7 @@ class ProvenancePipeline:
 	def _construct_graph(self):
 		graph = bonobo.Graph()
 		
-		catalogs_records = graph.add_chain(
+		physical_catalog_records = graph.add_chain(
 			MatchingFiles(path='/', pattern=self.catalogs_files_pattern, fs='fs.data.pir'),
 			CurriedCSVReader(fs='fs.data.pir'),
 		)
@@ -394,10 +549,11 @@ class ProvenancePipeline:
 			CurriedCSVReader(fs='fs.data.pir')
 		)
 		
-		catalogs = self.add_catalogs_chain(graph, catalogs_records, serialize=True)
+		physical_catalogs = self.add_physical_catalogs_chain(graph, physical_catalog_records, serialize=True)
 		auction_events = self.add_auction_events_chain(graph, auction_events_records, serialize=True)
+		catalog_los = self.add_catalog_linguistic_objects(graph, auction_events, serialize=True)
 
-		sales = self.add_sales_chain(graph, contents_records, serialize=False)
+		sales = self.add_sales_chain(graph, contents_records, serialize=True)
 		objects = self.add_object_chain(graph, sales, serialize=True)
 		people = self.add_people_chain(graph, objects, serialize=True)
 		

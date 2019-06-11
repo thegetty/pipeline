@@ -22,7 +22,6 @@ from bonobo.nodes import Limit
 import settings
 from cromulent import model, vocab
 from pipeline.util import identity, ExtractKeyedValues, MatchingFiles
-from pipeline.util.cleaners import date_cleaner
 from pipeline.io.file import MultiFileWriter, MergingFileWriter
 # from pipeline.io.arches import ArchesWriter
 from pipeline.linkedart import \
@@ -35,6 +34,7 @@ from pipeline.nodes.basic import \
 			add_uuid, \
 			AddDataDependentArchesModel, \
 			AddArchesModel, \
+			CleanDateToSpan, \
 			Serializer
 
 legacyIdentifier = None # TODO: aat:LegacyIdentifier?
@@ -420,54 +420,6 @@ def add_imprint_orgs(data, uuid_cache=None):
 		organizations.append(org)
 	data['organizations'] = organizations
 	return data
-
-class CleanDateToSpan(Configurable):
-	'''
-	Supplied with a key name, attempt to parse the value in `input[key]`` as a date or
-	date range, and create a new `TimeSpan` object for the parsed date(s). Store the
-	resulting timespan in `input[key + '_span']`.
-	'''
-
-	key = Option(str, required=True)
-	optional = Option(bool, default=True)
-
-	def __init__(self, *v, **kw):
-		'''
-		Sets the __name__ property to include the relevant options so that when the
-		bonobo graph is serialized as a GraphViz document, different objects can be
-		visually differentiated.
-		'''
-		super().__init__(*v, **kw)
-		self.__name__ = f'{type(self).__name__} ({self.key})'
-
-
-	@staticmethod
-	def string_to_span(value):
-		'''Parse a string value and attempt to create a corresponding `model.TimeSpan` object.'''
-		try:
-			date_from, date_to = date_cleaner(value)
-			ts = model.TimeSpan()
-			if date_from is not None:
-				ts.begin_of_the_begin = date_from.strftime("%Y-%m-%dT%H:%M:%SZ")
-			if date_to is not None:
-				ts.end_of_the_end = date_to.strftime("%Y-%m-%dT%H:%M:%SZ")
-			return ts
-		except Exception as e:
-			print('*** Unknown date format %r: %s' % (value, e))
-			return None
-
-	def __call__(self, data, *args, **kwargs):
-		if self.key in data:
-			value = data[self.key]
-			ts = self.string_to_span(value)
-			if ts is not None:
-				data['%s_span' % self.key] = ts
-				return data
-		else:
-			if not self.optional:
-				print('*** key %r is not in the data object:' % (self.key,))
-				pprint.pprint(data)
-		return NOT_MODIFIED
 
 def make_aata_org_event(o: dict):
 	'''

@@ -11,32 +11,25 @@ import csv
 import pprint
 import itertools
 
-import iso639
-import lxml.etree
 from sqlalchemy import create_engine
-from langdetect import detect
 
 import bonobo
-from bonobo.config import Configurable, Option, use
-from bonobo.constants import NOT_MODIFIED
+from bonobo.config import use
 from bonobo.nodes import Limit
 
 import settings
 from cromulent import model, vocab
 from pipeline.util import identity, ExtractKeyedValue, ExtractKeyedValues, MatchingFiles, Dimension
-from pipeline.util.cleaners import date_cleaner, dimensions_cleaner
+from pipeline.util.cleaners import dimensions_cleaner
 from pipeline.io.file import MultiFileWriter, MergingFileWriter
 # from pipeline.io.arches import ArchesWriter
 from pipeline.linkedart import \
 			add_crom_data, \
-			MakeLinkedArtLinguisticObject, \
-			MakeLinkedArtOrganization, \
 			MakeLinkedArtManMadeObject, \
 			make_la_person
 from pipeline.io.csv import CurriedCSVReader
 from pipeline.nodes.basic import \
 			AddFieldNames, \
-			CleanDateToSpan, \
 			GroupRepeatingKeys, \
 			GroupKeys, \
 			add_uuid, \
@@ -182,16 +175,14 @@ def populate_auction_catalog(data):
 	yield d
 
 def add_physical_catalog_objects(data):
-	cno = data['catalog_number']
-	sno = data['star_record_no']
 	catalog = data['_catalog']['_LOD_OBJECT']
 	data['uuid'] = str(uuid.uuid4()) # this is a single pass, and will not be referenced again
 	catalogObject = model.ManMadeObject()
 	catalogObject._label = data.get('annotation_info')
 	# TODO: link this with the vocab.AuctionCatalog
 	catalogObject.carries = catalog
-	anno = vocab.Annotation()
 	# TODO: Rob's build-sample-auction-data.py script adds this annotation. where does it come from?
+# 	anno = vocab.Annotation()
 # 	anno._label = "Additional annotations in WSHC copy of BR-A1"
 # 	catalogObject.carries = anno
 	add_crom_data(data=data, what=catalogObject)
@@ -205,7 +196,7 @@ def add_crom_price(data, parent):
 			amnt.value = float(v)
 		except ValueError:
 			amnt._label = v # TODO: is there a way to associate the value string with the MonetaryAmount in a meaningful way?
-# 			print(f'*** Not a numeric price amount: {v}')
+			print(f'*** Not a numeric price amount: {v}')
 	if data.get('price_currency'):
 		currency = data["price_currency"]
 		if currency in ('pounds', 'guineas'):
@@ -283,19 +274,19 @@ def add_object_type(data):
 		'zeichnung': vocab.Drawing,
 		# TODO: these are the most common, but more should be added
 	}
-	type = data['object_type'].lower()
-	if type.lower() in TYPES:
-		otype = TYPES[type]
+	typestring = data['object_type'].lower()
+	if typestring.lower() in TYPES:
+		otype = TYPES[typestring]
 		add_crom_data(data=data, what=otype())
 	else:
-		print(f'*** No object type for {type}')
+		print(f'*** No object type for {typestring}')
 		add_crom_data(data=data, what=model.ManMadeObject())
-	
+
 	parent = data['parent_data']
 	coll = parent.get('_lot_object_set')
 	if coll:
 		data['member_of'] = [coll]
-	
+
 	return data
 
 @use('uuid_cache')
@@ -305,7 +296,7 @@ def add_pir_artists(data, uuid_cache=None):
 	lod_object.produced_by = event
 
 	artists = data.get('_artists', [])
-	for i, a in enumerate(artists):
+	for a in artists:
 		star_rec_no = a.get('star_rec_no')
 		a['uid'] = f'ARTIST-{star_rec_no}'
 		if a.get('artist_name'):
@@ -314,7 +305,7 @@ def add_pir_artists(data, uuid_cache=None):
 			a['label'] = name
 		else:
 			a['label'] = '(Anonymous artist)'
-			
+
 		add_uuid(a, uuid_cache)
 		make_la_person(a)
 		person = a['_LOD_OBJECT']
@@ -419,7 +410,7 @@ class ProvenancePipeline:
 
 	def add_catalog_linguistic_objects(self, graph, events, serialize=True):
 		los = graph.add_chain(
-			ExtractKeyedValue(key='_catalog'),	# TODO: XXXXXXXXXXX split this into a different chain
+			ExtractKeyedValue(key='_catalog'),
 			populate_auction_catalog,
 			add_uuid,
 			AddDataDependentArchesModel(models=self.models),
@@ -518,13 +509,13 @@ class ProvenancePipeline:
 			self.add_serialization_chain(graph, objects.output)
 		return objects
 
-	def add_people_chain(self, graph, input, serialize=True):
+	def add_people_chain(self, graph, objects, serialize=True):
 		'''Add transformation of author records to the bonobo pipeline.'''
 		model_id = self.models.get('Person', 'XXX-Person-Model')
 		people = graph.add_chain(
 			ExtractKeyedValues(key='_artists'),
 			AddArchesModel(model=model_id),
-			_input=input.output
+			_input=objects.output
 		)
 		if serialize:
 			# write PEOPLE data
@@ -533,22 +524,22 @@ class ProvenancePipeline:
 
 	def _construct_graph(self):
 		graph = bonobo.Graph()
-		
+
 		physical_catalog_records = graph.add_chain(
 			MatchingFiles(path='/', pattern=self.catalogs_files_pattern, fs='fs.data.pir'),
 			CurriedCSVReader(fs='fs.data.pir'),
 		)
-		
+
 		auction_events_records = graph.add_chain(
 			MatchingFiles(path='/', pattern=self.auction_events_files_pattern, fs='fs.data.pir'),
 			CurriedCSVReader(fs='fs.data.pir'),
 		)
-		
+
 		contents_records = graph.add_chain(
 			MatchingFiles(path='/', pattern=self.contents_files_pattern, fs='fs.data.pir'),
 			CurriedCSVReader(fs='fs.data.pir')
 		)
-		
+
 		physical_catalogs = self.add_physical_catalogs_chain(graph, physical_catalog_records, serialize=True)
 		auction_events = self.add_auction_events_chain(graph, auction_events_records, serialize=True)
 		catalog_los = self.add_catalog_linguistic_objects(graph, auction_events, serialize=True)
@@ -556,7 +547,7 @@ class ProvenancePipeline:
 		sales = self.add_sales_chain(graph, contents_records, serialize=True)
 		objects = self.add_object_chain(graph, sales, serialize=True)
 		people = self.add_people_chain(graph, objects, serialize=True)
-		
+
 		self.graph = graph
 		return graph
 
@@ -592,7 +583,7 @@ class ProvenanceFilePipeline(ProvenancePipeline):
 		self.output_chain = None
 		debug = kwargs.get('debug', False)
 		output_path = kwargs.get('output_path')
-		
+
 		if debug:
 			self.serializer	= Serializer(compact=False)
 			self.writer		= MergingFileWriter(directory=output_path)

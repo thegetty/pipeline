@@ -1,14 +1,95 @@
 import locale
 import re
+import pprint
 from datetime import datetime, timedelta
 from dateutil.parser import parse
 import calendar
 from contextlib import contextmanager, suppress
+from pipeline.util import Dimension
 
 CIRCA = 5 # years
 CIRCA_D = timedelta(days=365*CIRCA)
 
 share_re = re.compile("([0-9]+)/([0-9]+)")
+
+number_pattern = '(\d+(?:[.]\d+)?)'
+unit_pattern = '''('|"|inches|inch|in[.]?|feet|foot|ft[.]?|cm)'''
+dimension_pattern = f'({number_pattern}\s*{unit_pattern})'
+dimension_re = re.compile(f'\s*({number_pattern}\s*{unit_pattern})')
+width_height_pattern = '(?:\s*((?<!\w)[wh]|width|height))?'
+simple_dimensions_pattern = ''\
+	f'(?P<d1>(?:{dimension_pattern}\s*)+)'\
+	f'(?P<d1w>{width_height_pattern})'\
+	'(?:,)?\s*(x|by)'\
+	f'(?P<d2>(?:\s*{dimension_pattern})+)'\
+	f'(?P<d2w>{width_height_pattern})'
+simple_dimensions_re = re.compile(simple_dimensions_pattern)
+
+def _canonical_unit(value):
+	value = value.lower()
+	if 'in' in value or value == '"':
+		return 'inches'
+	elif 'ft' in value or value in ('feet', 'foot') or value == "'":
+		return 'feet'
+	elif 'cm' in value:
+		return 'centimeters'
+	return None
+
+def _canonical_which(value):
+	if not value:
+		return None
+	value = value.strip().lower()
+	if value.startswith('w'):
+		return 'width'
+	elif value.startswith('h'):
+		return 'height'
+	print(f'*** Unknown which dimension: {value}')
+	return None
+
+def parse_dimensions(value, which=None):
+	'''
+	Parse the supplied string for dimensions (value + unit), and return a list of
+	`Dimension`s, optionally setting the `which` property to the supplied value.
+	
+	Example 
+	'''
+	if value is None:
+		return None
+	value = value.strip()
+	dims = []
+# 	print(f'DIMENSION: {value}')
+	for m in re.finditer(dimension_re, value):
+		pass
+# 		print(f'--> match {m}')
+		v = m.group(2)
+		u = _canonical_unit(m.group(3))
+		if not u:
+			print(f'*** not a recognized unit: {m.group(3)}')
+			return None
+		which = _canonical_which(which)
+		d = Dimension(value=v, unit=u, which=which)
+		dims.append(d)
+	if not dims:
+		return None
+	return dims
+
+def dimensions_cleaner(value):
+	if value is None:
+		return None
+	m = simple_dimensions_re.match(value)
+	if m:
+		d = m.groupdict()
+		d1 = parse_dimensions(d['d1'], d['d1w'])
+		d2 = parse_dimensions(d['d2'], d['d2w'])
+		if d1 and d2:
+			return (d1, d2)
+		else:
+			print(f'd1: {d1} {d["d1"]} {d["d1w"]}')
+			print(f'd2: {d2} {d["d2"]} {d["d2w"]}')
+			print(f'*** Failed to parse dimensions: {value}')
+	else:
+		print(f'>>>>>> NO MATCH: {value}')
+	return None
 
 def share_parse(value):
 	if value is None:
@@ -112,7 +193,6 @@ def date_parse(value, delim):
 	else:
 		print("broken / date: %s" % value)
 	return None
-
 
 
 

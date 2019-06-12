@@ -370,6 +370,7 @@ def genre_instance(value):
 		return None
 	value = value.lower()
 
+	# TODO: are these OK AAT instances for these genres?
 	ANIMALS = model.Type(ident='http://vocab.getty.edu/aat/300249395', label='Animals')
 	HISTORY = model.Type(ident='http://vocab.getty.edu/aat/300033898', label='History')
 	MAPPING = {

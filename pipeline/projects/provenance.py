@@ -105,7 +105,7 @@ def populate_auction_event(data):
 	end = implode_date(data, 'sale_end_')
 
 	location_data = data['location']
-	
+
 	places = []
 	place_names = []
 	specific = location_data.get('specific_loc')
@@ -135,7 +135,7 @@ def populate_auction_event(data):
 	if places:
 		loc = places[-1]
 		auction.took_place_at = loc
-	
+
 	# TODO: how can we associate this location with the lot auction,
 	# which is produced on an entirely different bonobo graph chain?
 # 	lot.took_place_at = loc
@@ -171,7 +171,7 @@ def add_auction_of_lot(data):
 
 	lot = vocab.Auction()
 	lot._label = f'Auction of Lot {cno} {lno}'
-	data['uid'] = 'AUCTION-{cno}-LOT-{lno}'
+	data['uid'] = f'AUCTION-{cno}-LOT-{lno}'
 
 	date = implode_date(auction_data, 'lot_sale_')
 	if date:
@@ -253,7 +253,8 @@ def add_crom_price(data, parent):
 	price_currency = data.get('price_currency')
 	if price_amount:
 		try:
-			amnt.value = float(price_amount)
+			price_amount = float(price_amount)
+			amnt.value =  price_amount
 		except ValueError:
 			amnt._label = price_amount # TODO: is there a way to associate the value string with the MonetaryAmount in a meaningful way?
 # 			print(f'*** Not a numeric price amount: {v}')
@@ -265,6 +266,10 @@ def add_crom_price(data, parent):
 			amnt.currency = vocab.instances[price_currency]
 		else:
 			print(f'*** No currency instance defined for {price_currency}')
+	if price_amount and price_currency:
+		amnt._label = f'{price_amount} {price_currency}'
+	elif price_amount:
+		amnt._label = f'{price_amount}'
 	add_crom_data(data=data, what=amnt)
 	return data
 
@@ -275,7 +280,7 @@ def add_person(a, uuid_cache):
 		a['identifiers'] = [model.Identifier(content=ulan)]
 	else:
 		a['uuid'] = str(uuid.uuid4()) # not enough information to identify this person uniquely, so they get a UUID
-	
+
 	name = a.get('auth_name', a.get('name'))
 	if name:
 		a['names'] = [(name,)]
@@ -295,17 +300,16 @@ def add_acquisition(data, uuid_cache=None):
 	data = data.copy()
 	object = data['_LOD_OBJECT']
 	lot = parent['_LOD_OBJECT']
+	prices = parent['price']
+	amnts = [p['_LOD_OBJECT'] for p in prices]
+	buyers = [add_person(p, uuid_cache) for p in filter_empty_people(*parent['buyer'])]
+	sellers = [add_person(p, uuid_cache) for p in filter_empty_people(*parent['seller'])]
 	if transaction in ('Sold', 'Vendu', 'Verkauft', 'Bought In'): # TODO: is this the right set of transaction types to represent acquisition?
-		buyers = [add_person(p, uuid_cache) for p in filter_empty_people(*parent['buyer'])]
-		sellers = [add_person(p, uuid_cache) for p in filter_empty_people(*parent['seller'])]
 		data['buyer'] = buyers
 		data['seller'] = sellers
-		prices = parent['price']
 		if not prices:
 			print(f'*** No price data found for {transaction} transaction')
-		amnts = [p['_LOD_OBJECT'] for p in prices]
-		
-		prices = parent['price']
+
 		acq = model.Acquisition()
 		acq.transferred_title_of = object
 		paym = model.Payment()
@@ -322,11 +326,42 @@ def add_acquisition(data, uuid_cache=None):
 # 		paym.referred_to_by = annotation
 # 		acq.part_of = lot
 		add_crom_data(data=data, what=acq)
-	
+
 		yield data
-	elif transaction in ('Unknown', 'Inconnue', 'Withdrawn', 'Non Vendu'):
-		pass
-# 		print(f'Create bidding data for transaction type: {transaction}')
+	elif transaction in ('Unknown', 'Unbekannt', 'Inconnue', 'Withdrawn', 'Non Vendu'):
+		bids = parent.get('bid', )
+		if amnts:
+			pass
+		else:
+			# TODO: there may be an `est_price` value. should it be recorded as a bid?
+			print(f'*** No price data found for {transaction} transaction')
+
+		lot = parent['_LOD_OBJECT']
+		auction_data = parent['auction_of_lot']
+		cno = auction_data['catalog_number']
+		lno = auction_data['lot_number']
+		all_bids = model.Activity()
+		all_bids._label = f'Bidding on {cno} {lno}'
+		all_bids.part_of = lot
+
+		for amnt in amnts:
+			bid = vocab.Bidding()
+			amnt_label = amnt._label
+			bid._label = f'Bid of {amnt_label} on {lno}'
+			# TODO: there are often no buyers listed for non-sold records.
+			#       should we construct an anonymous person to carry out the bid?
+			for buyer in [b['_LOD_OBJECT'] for b in buyers]:
+				bid.carried_out_by = buyer
+
+			prop = model.PropositionalObject()
+			prop._label = f'Promise to pay {amnt_label}'
+			bid.created = prop
+
+			all_bids.part = bid
+
+		add_crom_data(data=data, what=all_bids)
+
+		yield data
 	else:
 		print(f'Cannot create acquisition data for unknown transaction type: {transaction}')
 
@@ -334,7 +369,7 @@ def genre_instance(value):
 	if value is None:
 		return None
 	value = value.lower()
-	
+
 	ANIMALS = model.Type(ident='http://vocab.getty.edu/aat/300249395', label='Animals')
 	HISTORY = model.Type(ident='http://vocab.getty.edu/aat/300033898', label='History')
 	MAPPING = {

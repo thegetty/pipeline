@@ -67,7 +67,7 @@ class MergingFileWriter(Configurable):
 # 						print(f'- {n}')
 						merger.merge(m, n)
 					except model.DataError:
-						print('Exception caught while merging data:')
+						print(f'Exception caught while merging data from {fn}:')
 						print(d)
 						print(content)
 						raise

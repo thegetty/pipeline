@@ -13,7 +13,7 @@ CIRCA_D = timedelta(days=365*CIRCA)
 share_re = re.compile("([0-9]+)/([0-9]+)")
 
 number_pattern = '(\d+(?:[.]\d+)?)'
-unit_pattern = '''('|"|inches|inch|in[.]?|feet|foot|ft[.]?|cm)'''
+unit_pattern = '''('|"|pouces?|inches|inch|in[.]?|pieds?|feet|foot|ft[.]?|cm)'''
 dimension_pattern = f'({number_pattern}\s*{unit_pattern})'
 dimension_re = re.compile(f'\s*({number_pattern}\s*{unit_pattern})')
 width_height_pattern = '(?:\s*((?<!\w)[wh]|width|height))?'
@@ -27,12 +27,12 @@ simple_dimensions_re = re.compile(simple_dimensions_pattern)
 
 def _canonical_unit(value):
 	value = value.lower()
-	if 'in' in value or value == '"':
+	if 'in' in value or value in ('pouces', 'pouce') or value == '"':
 		return 'inches'
-	elif 'ft' in value or value in ('feet', 'foot') or value == "'":
+	elif 'ft' in value or value in ('pieds', 'pied', 'feet', 'foot') or value == "'":
 		return 'feet'
 	elif 'cm' in value:
-		return 'centimeters'
+		return 'cm'
 	return None
 
 def _canonical_which(value):
@@ -73,6 +73,29 @@ def parse_dimensions(value, which=None):
 		return None
 	return dims
 
+def normalize_dimension(dimensions):
+	inches = 0
+	cm = 0
+	which = None
+	for d in dimensions:
+		which = d.which
+		if d.unit == 'inches':
+			inches += float(d.value)
+		elif d.unit == 'feet':
+			inches += 12 * float(d.value)
+		elif d.unit == 'cm':
+			cm += float(d.value)
+		else:
+			print(f'*** unrecognized unit: {d.unit}')
+			return None
+	if inches and cm:
+		print(f'*** dimension used both metric and imperial!?')
+		return None
+	elif inches:
+		return Dimension(value=str(inches), unit='inches', which=which)
+	else:
+		return Dimension(value=str(cm), unit='cm', which=which)
+
 def dimensions_cleaner(value):
 	# 1 cm x 2 in
 	# 1' 2" by 3 cm
@@ -92,7 +115,8 @@ def dimensions_cleaner(value):
 			print(f'd2: {d2} {d["d2"]} {d["d2w"]}')
 			print(f'*** Failed to parse dimensions: {value}')
 	else:
-		print(f'>>>>>> NO MATCH: {value}')
+		pass
+# 		print(f'>>>>>> NO MATCH: {value}')
 	return None
 
 def share_parse(value):

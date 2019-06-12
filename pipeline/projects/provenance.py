@@ -20,7 +20,7 @@ from bonobo.nodes import Limit
 import settings
 from cromulent import model, vocab
 from pipeline.util import identity, ExtractKeyedValue, ExtractKeyedValues, MatchingFiles, Dimension
-from pipeline.util.cleaners import dimensions_cleaner
+from pipeline.util.cleaners import dimensions_cleaner, normalize_dimension
 from pipeline.io.file import MultiFileWriter, MergingFileWriter
 # from pipeline.io.arches import ArchesWriter
 from pipeline.linkedart import \
@@ -43,6 +43,23 @@ doiIdentifier = vocab.DoiIdentifier
 variantTitleIdentifier = vocab.Identifier # TODO: aat for variant titles?
 
 # utility functions
+
+def filter_empty_people(*people):
+	for p in people:
+		keys = set(p.keys())
+		data_keys = keys - {'_CROM_FACTORY', '_LOD_OBJECT', 'pi_record_no', 'star_rec_no', 'persistent_puid', 'parent_data'}
+		d = {k: p[k] for k in data_keys if p[k] and p[k] != '0'}
+		if d:
+			yield p
+
+def strip_key_prefix(prefix, value):
+	d = {}
+	for k, v in value.items():
+		if k.startswith(prefix):
+			d[k.replace(prefix, '', 1)] = v
+		else:
+			d[k] = v
+	return d
 
 def add_record_ids(data, parent):
 	for p in ('pi_record_no', 'persistent_puid'):
@@ -78,8 +95,6 @@ def add_auction_event(data):
 	cno = data['catalog_number']
 	auction, uid = auction_event_for_catalog_number(cno)
 	data['uid'] = uid
-
-# 	pprint.pprint(data)
 	add_crom_data(data=data, what=auction)
 	yield data
 
@@ -88,6 +103,42 @@ def populate_auction_event(data):
 	catalog = data['_catalog']['_LOD_OBJECT']
 	begin = implode_date(data, 'sale_begin_')
 	end = implode_date(data, 'sale_end_')
+
+	location_data = data['location']
+	
+	places = []
+	place_names = []
+	specific = location_data.get('specific_loc')
+	city = location_data.get('city_of_sale')
+	country = location_data.get('country_auth_1')
+	if country:
+		place_names.insert(0, country)
+		p = model.Place(label=', '.join(place_names))
+		p.classified_as = vocab.instances['nation']
+		places.append(p)
+		p.identified_by = model.Name(content=country)
+	if city:
+		place_names.insert(0, city)
+		p = model.Place(label=', '.join(place_names))
+		p.classified_as = vocab.instances['city']
+		if places:
+			p.part_of = places[-1]
+		places.append(p)
+		p.identified_by = model.Name(content=city)
+	if specific:
+		place_names.insert(0, specific)
+		p = model.Place(label=', '.join(place_names))
+		if places:
+			p.part_of = places[-1]
+		places.append(p)
+		p.identified_by = model.Name(content=specific)
+	if places:
+		loc = places[-1]
+		auction.took_place_at = loc
+	
+	# TODO: how can we associate this location with the lot auction,
+	# which is produced on an entirely different bonobo graph chain?
+# 	lot.took_place_at = loc
 
 	if begin or end:
 		ts = model.TimeSpan()
@@ -189,48 +240,116 @@ def add_physical_catalog_objects(data):
 	yield data
 
 def add_crom_price(data, parent):
+	MAPPING = {
+		'fl': 'de florins',
+		'fl.': 'de florins',
+		'pounds': 'gb pounds',
+		'livres': 'fr livres',
+		'guineas': 'gb guineas',
+		'Reichsmark': 'de reichsmarks'
+	}
 	amnt = model.MonetaryAmount()
-	if data.get('price_amount'):
-		v = data['price_amount']
+	price_amount = data.get('price_amount')
+	price_currency = data.get('price_currency')
+	if price_amount:
 		try:
-			amnt.value = float(v)
+			amnt.value = float(price_amount)
 		except ValueError:
-			amnt._label = v # TODO: is there a way to associate the value string with the MonetaryAmount in a meaningful way?
-			print(f'*** Not a numeric price amount: {v}')
-	if data.get('price_currency'):
-		currency = data["price_currency"]
-		if currency in ('pounds', 'guineas'):
-			currency = f'gb {currency}' # TODO: can this be done safely with the PIR data?
+			amnt._label = price_amount # TODO: is there a way to associate the value string with the MonetaryAmount in a meaningful way?
+# 			print(f'*** Not a numeric price amount: {v}')
+	if price_currency:
+		if price_currency in MAPPING:
+			price_currency = MAPPING[price_currency] # TODO: can this be done safely with the PIR data?
 # 		print(f'*** CURRENCY: {currency}')
-		if currency in vocab.instances:
-			amnt.currency = vocab.instances[currency]
+		if price_currency in vocab.instances:
+			amnt.currency = vocab.instances[price_currency]
 		else:
-			print(f'*** No currency instance defined for {currency}')
+			print(f'*** No currency instance defined for {price_currency}')
 	add_crom_data(data=data, what=amnt)
 	return data
 
-def normalize_dimension(dimensions):
-	inches = 0
-	cm = 0
-	which = None
-	for d in dimensions:
-		which = d.which
-		if d.unit == 'inches':
-			inches += float(d.value)
-		elif d.unit == 'feet':
-			inches += 12 * float(d.value)
-		elif d.unit == 'centimeters':
-			cm += float(d.value)
-		else:
-			print(f'*** unrecognized unit: {d.unit}')
-			return None
-	if inches and cm:
-		print(f'*** dimension used both metric and imperial!?')
-		return None
-	elif inches:
-		return Dimension(value=str(inches), unit='inches', which=which)
+def add_person(a, uuid_cache):
+	ulan = a.get('ulan')
+	if ulan:
+		a['uid'] = f'PERSON-ULAN-{ulan}'
+		a['identifiers'] = [model.Identifier(content=ulan)]
 	else:
-		return Dimension(value=str(cm), unit='centimeters', which=which)
+		a['uuid'] = str(uuid.uuid4()) # not enough information to identify this person uniquely, so they get a UUID
+	
+	name = a.get('auth_name', a.get('name'))
+	if name:
+		a['names'] = [(name,)]
+		a['label'] = name
+	else:
+		a['label'] = '(Anonymous person)'
+
+	add_uuid(a, uuid_cache)
+	make_la_person(a)
+	person = a['_LOD_OBJECT']
+	return a
+
+@use('uuid_cache')
+def add_acquisition(data, uuid_cache=None):
+	parent = data['parent_data']
+	transaction = parent['transaction']
+	data = data.copy()
+	object = data['_LOD_OBJECT']
+	lot = parent['_LOD_OBJECT']
+	if transaction in ('Sold', 'Vendu', 'Verkauft', 'Bought In'): # TODO: is this the right set of transaction types to represent acquisition?
+		buyers = [add_person(p, uuid_cache) for p in filter_empty_people(*parent['buyer'])]
+		sellers = [add_person(p, uuid_cache) for p in filter_empty_people(*parent['seller'])]
+		data['buyer'] = buyers
+		data['seller'] = sellers
+		prices = parent['price']
+		if not prices:
+			print(f'*** No price data found for {transaction} transaction')
+		amnts = [p['_LOD_OBJECT'] for p in prices]
+		
+		prices = parent['price']
+		acq = model.Acquisition()
+		acq.transferred_title_of = object
+		paym = model.Payment()
+		for seller in [s['_LOD_OBJECT'] for s in sellers]:
+			paym.paid_to = seller
+			acq.transferred_title_from = seller
+		for buyer in [b['_LOD_OBJECT'] for b in buyers]:
+			paym.paid_from = buyer
+			acq.transferred_title_to = buyer
+		for amnt in amnts:
+			paym.paid_amount = amnt
+
+ 		# TODO: `annotation` here is from add_physical_catalog_objects
+# 		paym.referred_to_by = annotation
+# 		acq.part_of = lot
+		add_crom_data(data=data, what=acq)
+	
+		yield data
+	elif transaction in ('Unknown', 'Inconnue', 'Withdrawn', 'Non Vendu'):
+		pass
+# 		print(f'Create bidding data for transaction type: {transaction}')
+	else:
+		print(f'Cannot create acquisition data for unknown transaction type: {transaction}')
+
+def genre_instance(value):
+	if value is None:
+		return None
+	value = value.lower()
+	
+	ANIMALS = model.Type(ident='http://vocab.getty.edu/aat/300249395', label='Animals')
+	HISTORY = model.Type(ident='http://vocab.getty.edu/aat/300033898', label='History')
+	MAPPING = {
+		'animals': ANIMALS,
+		'tiere': ANIMALS,
+		'stilleben': vocab.instances['style still life'],
+		'still life': vocab.instances['style still life'],
+		'portraits': vocab.instances['style portrait'],
+		'porträt': vocab.instances['style portrait'],
+		'historie': HISTORY,
+		'history': HISTORY,
+		'landscape': vocab.instances['style landscape'],
+		'landschaft': vocab.instances['style landscape'],
+	}
+	return MAPPING.get(value)
 
 def populate_object(data):
 	object = data['_LOD_OBJECT']
@@ -239,21 +358,36 @@ def populate_object(data):
 		matstmt = vocab.MaterialStatement()
 		matstmt.content = m
 		object.referred_to_by = matstmt
-	dimensions = dimensions_cleaner(data.get('dimensions'))
-	if dimensions:
-		for d in dimensions:
-			d = normalize_dimension(d)
-# 			print(f'Dimension {data["dimensions"]}: {d}')
-			if d:
-				if d.which == 'height':
-					dim = vocab.Height()
-				elif d.which == 'width':
-					dim = vocab.Width()
-				else:
-					dim = model.Dimension()
-				dim.value = d.value
-				dim.unit = vocab.instances[d.unit]
-				object.dimension = dim
+
+	title = data.get('title')
+	vi = model.VisualItem()
+	if title:
+		vi._label = f'Visual work of {title}'
+	genre = genre_instance(data.get('genre'))
+	if genre:
+		vi.classified_as = genre
+	object.shows = vi
+
+	dimstr = data.get('dimensions')
+	if dimstr:
+		dimstmt = vocab.DimensionStatement()
+		dimstmt.content = dimstr
+		object.referred_to_by = dimstmt
+		dimensions = dimensions_cleaner(dimstr)
+		if dimensions:
+			for d in dimensions:
+				d = normalize_dimension(d)
+# 				print(f'Dimension {data["dimensions"]}: {d}')
+				if d:
+					if d.which == 'height':
+						dim = vocab.Height()
+					elif d.which == 'width':
+						dim = vocab.Width()
+					else:
+						dim = model.Dimension()
+					dim.value = d.value
+					dim.unit = vocab.instances[d.unit]
+					object.dimension = dim
 	yield data
 
 def add_object_type(data):
@@ -274,12 +408,12 @@ def add_object_type(data):
 		'zeichnung': vocab.Drawing,
 		# TODO: these are the most common, but more should be added
 	}
-	typestring = data['object_type'].lower()
-	if typestring.lower() in TYPES:
+	typestring = data.get('object_type', '').lower()
+	if typestring in TYPES:
 		otype = TYPES[typestring]
 		add_crom_data(data=data, what=otype())
 	else:
-		print(f'*** No object type for {typestring}')
+		print(f'*** No object type for {typestring!r}')
 		add_crom_data(data=data, what=model.ManMadeObject())
 
 	parent = data['parent_data']
@@ -296,9 +430,11 @@ def add_pir_artists(data, uuid_cache=None):
 	lod_object.produced_by = event
 
 	artists = data.get('_artists', [])
+	artists = list(filter_empty_people(*artists))
+	data['_artists'] = artists
 	for a in artists:
 		star_rec_no = a.get('star_rec_no')
-		a['uid'] = f'ARTIST-{star_rec_no}'
+		a['uid'] = f'PERSON-star-{star_rec_no}'
 		if a.get('artist_name'):
 			name = a.get('artist_name')
 			a['names'] = [(name,)]
@@ -440,6 +576,7 @@ class ProvenancePipeline:
 				'auc_copy': {'properties': ('auc_copy_seller_1', 'auc_copy_seller_2', 'auc_copy_seller_3', 'auc_copy_seller_4')},
 				'other_seller': {'properties': ('other_seller_1', 'other_seller_2', 'other_seller_3')},
 				'title_pg_sell': {'properties': ('title_pg_sell_1', 'title_pg_sell_2')},
+				'location': {'properties': ('city_of_sale', 'sale_location', 'country_auth_1', 'country_auth_2', 'specific_loc')},
 			}),
 			add_auction_catalog,
 			add_auction_event,
@@ -453,6 +590,29 @@ class ProvenancePipeline:
 			# write SALES data
 			self.add_serialization_chain(graph, auction_events.output)
 		return auction_events
+
+	def add_buyers_sellers_chain(self, graph, acquisitions, serialize=True):
+		for role in ('buyer', 'seller'):
+			p = graph.add_chain(
+				ExtractKeyedValues(key=role),
+				AddDataDependentArchesModel(models=self.models),
+				_input=acquisitions.output
+			)
+			if serialize:
+				# write SALES data
+				self.add_serialization_chain(graph, p.output)
+
+	def add_acquisitions_chain(self, graph, sales, serialize=True):
+		acqs = graph.add_chain(
+			add_acquisition,
+			AddDataDependentArchesModel(models=self.models),
+			_input=sales.output
+		)
+		# TODO: add serialization of people for acq buyers and sellers
+		if serialize:
+			# write SALES data
+			self.add_serialization_chain(graph, acqs.output)
+		return acqs
 
 	def add_sales_chain(self, graph, records, serialize=True):
 		'''Add transformation of sales records to the bonobo pipeline.'''
@@ -469,9 +629,9 @@ class ProvenancePipeline:
 				'auction_house': {'prefixes': ('auction_house', 'house_ulan')},
 				'_artists': {'postprocess': add_record_ids, 'prefixes': ('artist_name', 'artist_info', 'art_authority', 'nationality', 'attrib_mod', 'attrib_mod_auth', 'star_rec_no', 'artist_ulan')},
 				'hand_note': {'prefixes': ('hand_note', 'hand_note_so')},
-				'seller': {'prefixes': ('sell_name', 'sell_name_so', 'sell_name_ques', 'sell_mod', 'sell_auth_name', 'sell_auth_nameq', 'sell_auth_mod', 'sell_auth_mod_a', 'sell_ulan')},
+				'seller': {'postprocess': lambda x, _: strip_key_prefix('sell_', x), 'prefixes': ('sell_name', 'sell_name_so', 'sell_name_ques', 'sell_mod', 'sell_auth_name', 'sell_auth_nameq', 'sell_auth_mod', 'sell_auth_mod_a', 'sell_ulan')},
 				'price': {'postprocess': add_crom_price, 'prefixes': ('price_amount', 'price_currency', 'price_note', 'price_source', 'price_citation')},
-				'buyer': {'prefixes': ('buy_name', 'buy_name_so', 'buy_name_ques', 'buy_name_cite', 'buy_mod', 'buy_auth_name', 'buy_auth_nameQ', 'buy_auth_mod', 'buy_auth_mod_a', 'buy_ulan')},
+				'buyer': {'postprocess': lambda x, _: strip_key_prefix('buy_', x), 'prefixes': ('buy_name', 'buy_name_so', 'buy_name_ques', 'buy_name_cite', 'buy_mod', 'buy_auth_name', 'buy_auth_nameQ', 'buy_auth_mod', 'buy_auth_mod_a', 'buy_ulan')},
 				'prev_owner': {'prefixes': ('prev_owner', 'prev_own_ques', 'prev_own_so', 'prev_own_auth', 'prev_own_auth_D', 'prev_own_auth_L', 'prev_own_auth_Q', 'prev_own_ulan')},
 				'prev': {'prefixes': ('prev_sale_year', 'prev_sale_mo', 'prev_sale_day', 'prev_sale_loc', 'prev_sale_lot', 'prev_sale_ques', 'prev_sale_artx', 'prev_sale_ttlx', 'prev_sale_note', 'prev_sale_coll', 'prev_sale_cat')},
 				'post_sale': {'prefixes': ('post_sale_year', 'post_sale_mo', 'post_sale_day', 'post_sale_loc', 'post_sale_lot', 'post_sale_q', 'post_sale_art', 'post_sale_ttl', 'post_sale_nte', 'post_sale_col', 'post_sale_cat')},
@@ -510,7 +670,7 @@ class ProvenancePipeline:
 		return objects
 
 	def add_people_chain(self, graph, objects, serialize=True):
-		'''Add transformation of author records to the bonobo pipeline.'''
+		'''Add transformation of artists records to the bonobo pipeline.'''
 		model_id = self.models.get('Person', 'XXX-Person-Model')
 		people = graph.add_chain(
 			ExtractKeyedValues(key='_artists'),
@@ -546,6 +706,8 @@ class ProvenancePipeline:
 
 		sales = self.add_sales_chain(graph, contents_records, serialize=True)
 		objects = self.add_object_chain(graph, sales, serialize=True)
+		acquisitions = self.add_acquisitions_chain(graph, objects, serialize=True)
+		self.add_buyers_sellers_chain(graph, acquisitions, serialize=True)
 		people = self.add_people_chain(graph, objects, serialize=True)
 
 		self.graph = graph

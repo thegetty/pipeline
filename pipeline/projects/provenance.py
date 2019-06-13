@@ -428,7 +428,7 @@ def populate_object(data):
 					dim.value = d.value
 					dim.unit = vocab.instances[d.unit]
 					object.dimension = dim
-# 					print(f'DIMENSION: {dim}')
+# 					print(f'DIMENSION {dim} from {dimstr!r}')
 				else:
 					pass
 # 					print(f'Failed to normalize dimensions: {orig_d}')
@@ -468,6 +468,59 @@ def add_object_type(data):
 		data['member_of'] = [coll]
 
 	return data
+
+
+def add_auction_house(a, uuid_cache):
+	catalog = a.get('_catalog')
+
+	ulan = a.get('ulan')
+	if ulan:
+		a['uid'] = f'AUCTION-HOUSE-ULAN-{ulan}'
+		a['identifiers'] = [model.Identifier(content=ulan)]
+	else:
+		a['uuid'] = str(uuid.uuid4()) # not enough information to identify this person uniquely, so they get a UUID
+	add_uuid(a, uuid_cache)
+	house = vocab.AuctionHouseOrg()
+
+	name = a.get('auc_house_name', a.get('name'))
+	if name:
+		a['names'] = [name]
+		a['label'] = name
+	else:
+		a['label'] = '(Anonymous)'
+	house._label = a['label']
+
+	for name in a.get('names', []):
+		n = model.Name()
+		n.content = name
+		if catalog:
+			n.referred_to_by = catalog
+		house.identified_by = n
+
+	auth = a.get('auc_house_name_1')
+	if auth:
+		n = vocab.PrimaryName()
+		n.content = auth
+		house.identified_by = n
+
+	add_crom_data(data=a, what=house)
+	return a
+
+@use('uuid_cache')
+def add_auction_houses(data, uuid_cache=None):
+	auction = data['_LOD_OBJECT']
+	catalog = data['_catalog']['_LOD_OBJECT']
+	d = data.copy()
+	houses = data.get('auction_house', [])
+	for h in houses:
+		h['_catalog'] = catalog
+		add_auction_house(h, uuid_cache)
+		house = h['_LOD_OBJECT']
+		auction.carried_out_by = house
+		# TODO: how can we associate this auction house with the lot auction,
+		# which is produced on an entirely different bonobo graph chain?
+# 		lot.carried_out_by = house
+	yield d
 
 @use('uuid_cache')
 def add_pir_artists(data, uuid_cache=None):
@@ -626,6 +679,7 @@ class ProvenancePipeline:
 			}),
 			add_auction_catalog,
 			add_auction_event,
+			add_auction_houses,
 			populate_auction_event,
 			add_uuid,
 			AddDataDependentArchesModel(models=self.models),
@@ -715,6 +769,17 @@ class ProvenancePipeline:
 			self.add_serialization_chain(graph, objects.output)
 		return objects
 
+	def add_auction_houses_chain(self, graph, auction_events, serialize=True):
+		houses = graph.add_chain(
+			ExtractKeyedValues(key='auction_house'),
+			AddDataDependentArchesModel(models=self.models),
+			_input=auction_events.output
+		)
+		if serialize:
+			# write OBJECTS data
+			self.add_serialization_chain(graph, houses.output)
+		return houses
+
 	def add_people_chain(self, graph, objects, serialize=True):
 		'''Add transformation of artists records to the bonobo pipeline.'''
 		model_id = self.models.get('Person', 'XXX-Person-Model')
@@ -750,6 +815,7 @@ class ProvenancePipeline:
 		auction_events = self.add_auction_events_chain(graph, auction_events_records, serialize=True)
 		catalog_los = self.add_catalog_linguistic_objects(graph, auction_events, serialize=True)
 
+		auction_houses = self.add_auction_houses_chain(graph, auction_events, serialize=True)
 		sales = self.add_sales_chain(graph, contents_records, serialize=True)
 		objects = self.add_object_chain(graph, sales, serialize=True)
 		acquisitions = self.add_acquisitions_chain(graph, objects, serialize=True)

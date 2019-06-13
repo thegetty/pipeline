@@ -8,6 +8,9 @@ def add_crom_data(data: dict, what=None):
 	data['_LOD_OBJECT'] = what
 	return data
 
+def get_crom_object(data: dict):
+	return data.get('_LOD_OBJECT')
+
 class MakeLinkedArtRecord:
 	def set_properties(self, data, thing):
 		for identifier in data.get('identifiers', []):

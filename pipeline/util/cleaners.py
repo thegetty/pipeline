@@ -27,11 +27,11 @@ simple_dimensions_pattern = ''\
 simple_dimensions_re = re.compile(simple_dimensions_pattern)
 
 # Haut 14 pouces, large 10 pouces
-french_dimensions_pattern = f'Haut (?P<d1>(?:{dimension_pattern}\s*)+), large (?P<d2>(?:{dimension_pattern}\s*)+)'
+french_dimensions_pattern = f'[Hh]aut(?:eur)? (?P<d1>(?:{dimension_pattern}\s*)+), [Ll]arge(?:ur)? (?P<d2>(?:{dimension_pattern}\s*)+)'
 french_dimensions_re = re.compile(french_dimensions_pattern)
 
 # Hoog. 1 v. 6 d., Breed 2 v. 3 d.
-dutch_dimensions_pattern = f'(?P<d1w>[Hh]oog[.]?|[Bb]reedt?) (?P<d1>(?:{dimension_pattern}\s*)+), (?P<d2w>[Hh]oog[.]?|[Bb]reedt?) (?P<d2>(?:{dimension_pattern}\s*)+)'
+dutch_dimensions_pattern = f'(?P<d1w>[Hh]oogh?[.]?|[Bb]reedt?) (?P<d1>(?:{dimension_pattern}\s*)+), (?P<d2w>[Hh]oogh?[.]?|[Bb]reedt?) (?P<d2>(?:{dimension_pattern}\s*)+)'
 dutch_dimensions_re = re.compile(dutch_dimensions_pattern)
 
 def _canonical_value(value):

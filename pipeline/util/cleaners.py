@@ -12,24 +12,43 @@ CIRCA_D = timedelta(days=365*CIRCA)
 
 share_re = re.compile("([0-9]+)/([0-9]+)")
 
-number_pattern = '(\d+(?:[.]\d+)?)'
-unit_pattern = '''('|"|pouces?|inches|inch|in[.]?|pieds?|feet|foot|ft[.]?|cm)'''
+number_pattern = '((?:\d+(?:[.]\d+)?)|(?:\d+\s+\d+/\d+))'
+unit_pattern = '''('|"|d[.]?|duymen|pouces?|inches|inch|in[.]?|pieds?|v[.]?|voeten|feet|foot|ft[.]?|cm)'''
 dimension_pattern = f'({number_pattern}\s*{unit_pattern})'
 dimension_re = re.compile(f'\s*({number_pattern}\s*{unit_pattern})')
-width_height_pattern = '(?:\s*((?<!\w)[wh]|width|height))?'
+
+simple_width_height_pattern = '(?:\s*((?<!\w)[wh]|width|height))?'
 simple_dimensions_pattern = ''\
 	f'(?P<d1>(?:{dimension_pattern}\s*)+)'\
-	f'(?P<d1w>{width_height_pattern})'\
+	f'(?P<d1w>{simple_width_height_pattern})'\
 	'(?:,)?\s*(x|by)'\
 	f'(?P<d2>(?:\s*{dimension_pattern})+)'\
-	f'(?P<d2w>{width_height_pattern})'
+	f'(?P<d2w>{simple_width_height_pattern})'
 simple_dimensions_re = re.compile(simple_dimensions_pattern)
+
+# Haut 14 pouces, large 10 pouces
+french_dimensions_pattern = f'Haut (?P<d1>(?:{dimension_pattern}\s*)+), large (?P<d2>(?:{dimension_pattern}\s*)+)'
+french_dimensions_re = re.compile(french_dimensions_pattern)
+
+# Hoog. 1 v. 6 d., Breed 2 v. 3 d.
+dutch_dimensions_pattern = f'(?P<d1w>[Hh]oog[.]?|[Bb]reedt?) (?P<d1>(?:{dimension_pattern}\s*)+), (?P<d2w>[Hh]oog[.]?|[Bb]reedt?) (?P<d2>(?:{dimension_pattern}\s*)+)'
+dutch_dimensions_re = re.compile(dutch_dimensions_pattern)
+
+def _canonical_value(value):
+	value = value.replace(' 1/4', '.25')
+	value = value.replace(' 1/2', '.5')
+	value = value.replace(' 3/4', '.75')
+	if '/' in value:
+		return None
+	if value.startswith('.'):
+		value = f'0{value}'
+	return value
 
 def _canonical_unit(value):
 	value = value.lower()
-	if 'in' in value or value in ('pouces', 'pouce') or value == '"':
+	if 'in' in value or value in ('pouces', 'pouce', 'duymen', 'd.', 'd') or value == '"':
 		return 'inches'
-	elif 'ft' in value or value in ('pieds', 'pied', 'feet', 'foot') or value == "'":
+	elif 'ft' in value or value in ('pieds', 'pied', 'feet', 'foot', 'voeten', 'v.', 'v') or value == "'":
 		return 'feet'
 	elif 'cm' in value:
 		return 'cm'
@@ -46,12 +65,16 @@ def _canonical_which(value):
 	print(f'*** Unknown which dimension: {value}')
 	return None
 
-def parse_dimensions(value, which=None):
+def parse_simple_dimensions(value, which=None):
 	'''
 	Parse the supplied string for dimensions (value + unit), and return a list of
 	`Dimension`s, optionally setting the `which` property to the supplied value.
 	
-	Example 
+	Examples:
+	
+	1 cm
+	2ft
+	5 pieds
 	'''
 	if value is None:
 		return None
@@ -61,7 +84,10 @@ def parse_dimensions(value, which=None):
 	for m in re.finditer(dimension_re, value):
 		pass
 # 		print(f'--> match {m}')
-		v = m.group(2)
+		v = _canonical_value(m.group(2))
+		if not v:
+			print(f'*** failed to canonicalize dimension value: {m.group(2)}')
+			return None
 		u = _canonical_unit(m.group(3))
 		if not u:
 			print(f'*** not a recognized unit: {m.group(3)}')
@@ -142,17 +168,75 @@ def normalize_dimension(dimensions):
 		return Dimension(value=str(cm), unit='cm', which=which)
 
 def dimensions_cleaner(value):
+	if value is None:
+		return None
+	cleaners = [
+		simple_dimensions_cleaner,
+		french_dimensions_cleaner,
+		dutch_dimensions_cleaner
+	]
+	for f in cleaners:
+		d = f(value)
+		if d:
+			return d
+	return None
+
+def french_dimensions_cleaner(value):
+	# Haut 14 pouces, large 10 pouces
+
+	m = french_dimensions_re.match(value)
+	if m:
+		d = m.groupdict()
+		d1 = parse_simple_dimensions(d['d1'], 'h')
+		d2 = parse_simple_dimensions(d['d2'], 'w')
+		if d1 and d2:
+			return (d1, d2)
+		else:
+			print(f'd1: {d1} {d["d1"]} h')
+			print(f'd2: {d2} {d["d2"]} w')
+			print(f'*** Failed to parse dimensions: {value}')
+	else:
+		pass
+# 		print(f'>>>>>> NO MATCH: {value}')
+# 		print(f'>>>>>> {french_dimensions_re}')
+	return None
+
+def dutch_dimensions_cleaner(value):
+	# Hoog. 1 v. 6 d., Breed 2 v. 3 d.
+	# Breedt 6 v., hoog 3 v
+
+	m = dutch_dimensions_re.match(value)
+	if m:
+		d = m.groupdict()
+		h = 'h'
+		w = 'w'
+		if 'breed' in d['d1w'].lower():
+			h, w = w, h
+		
+		d1 = parse_simple_dimensions(d['d1'], h)
+		d2 = parse_simple_dimensions(d['d2'], w)
+		if d1 and d2:
+			return (d1, d2)
+		else:
+			print(f'd1: {d1} {d["d1"]} h')
+			print(f'd2: {d2} {d["d2"]} w')
+			print(f'*** Failed to parse dimensions: {value}')
+	else:
+		pass
+# 		print(f'>>>>>> NO MATCH: {value}')
+# 		print(f'>>>>>> {dutch_dimensions_re}')
+	return None
+
+def simple_dimensions_cleaner(value):
 	# 1 cm x 2 in
 	# 1' 2" by 3 cm
 	# 1 ft. 2 in. h by 3 cm w
 
-	if value is None:
-		return None
 	m = simple_dimensions_re.match(value)
 	if m:
 		d = m.groupdict()
-		d1 = parse_dimensions(d['d1'], d['d1w'])
-		d2 = parse_dimensions(d['d2'], d['d2w'])
+		d1 = parse_simple_dimensions(d['d1'], d['d1w'])
+		d2 = parse_simple_dimensions(d['d2'], d['d2w'])
 		if d1 and d2:
 			return (d1, d2)
 		else:

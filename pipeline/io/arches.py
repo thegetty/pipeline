@@ -1,21 +1,5 @@
-from bonobo.config import Configurable, Option
 import requests
-import os
-
-
-class FileWriter(Configurable):
-	directory = Option(default="output")
-
-	def __call__(self, data: dict):
-		d = data['_OUTPUT']
-		dr = os.path.join(self.directory, data['_ARCHES_MODEL'])
-		if not os.path.exists(dr):
-			os.mkdir(dr)
-		fn = os.path.join(dr, "%s.json" % data['uuid'])
-		fh = open(fn, 'w')
-		fh.write(d)
-		fh.close()
-		return data
+from bonobo.config import Configurable, Option
 
 class ArchesWriter(Configurable):
 	endpoint = Option(default="http://localhost:8001/resources/")

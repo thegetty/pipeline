@@ -9,7 +9,8 @@ import bonobo_sqlalchemy
 from pipeline.nodes.basic import AddArchesModel, AddFieldNames, Serializer, deep_copy, Offset, add_uuid, Trace
 from pipeline.projects.knoedler.data import *
 from pipeline.projects.knoedler.linkedart import *
-from pipeline.io.arches import ArchesWriter, FileWriter
+from pipeline.io.file import FileWriter
+from pipeline.io.arches import ArchesWriter
 from pipeline.linkedart import make_la_person
 from settings import *
 

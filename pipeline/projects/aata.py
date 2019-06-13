@@ -10,19 +10,21 @@ import pprint
 import itertools
 
 import iso639
-import bonobo
-from bonobo.config import Configurable, Option
-from bonobo.constants import NOT_MODIFIED
-from bonobo.nodes import Limit
 import lxml.etree
 from sqlalchemy import create_engine
 from langdetect import detect
 
+import bonobo
+from bonobo.config import Configurable, Option, use
+from bonobo.constants import NOT_MODIFIED
+from bonobo.nodes import Limit
+
 import settings
 from cromulent import model, vocab
-from pipeline.util import identity
+from pipeline.util import identity, ExtractKeyedValues
 from pipeline.util.cleaners import date_cleaner
-from pipeline.io.arches import FileWriter, ArchesWriter
+from pipeline.io.file import MultiFileWriter, MergingFileWriter
+# from pipeline.io.arches import ArchesWriter
 from pipeline.linkedart import \
 			MakeLinkedArtAbstract, \
 			MakeLinkedArtLinguisticObject, \
@@ -159,7 +161,7 @@ def _xml_extract_article(e):
 	qualified_identifiers = []
 	for elements in (isbn10e, isbn13e):
 		for t in elements:
-			pair = (t.text, vocab.IsbnIdentifier(ident=''))
+			pair = (t.text, vocab.IsbnIdentifier())
 			q = t.attrib.get('qualifier')
 			if q is None or not q:
 				isbn.append(pair)
@@ -357,11 +359,14 @@ def add_aata_object_type(data):
 
 # imprint organizations chain (publishers, distributors)
 
-def extract_imprint_orgs(data):
+@use('uuid_cache')
+def add_imprint_orgs(data, uuid_cache=None):
 	'''
 	Given a `dict` representing an "article," extract the "imprint organization" records
-	and their role (e.g. publisher, distributor). yield a new `dict`s for each such
-	organization.
+	and their role (e.g. publisher, distributor), and add add a new 'organizations' key
+	to the dictionary containing an array of `dict`s representing the organizations.
+	Also construct an Activity for each organization's role, and associate it with the
+	article and organization (article --role--> organization).
 
 	The resulting organization `dict` will contain these keys:
 
@@ -375,19 +380,20 @@ def extract_imprint_orgs(data):
 	* `names`: A `list` of names this organization may be identified by
 	* `identifiers`: A `list` of (identifier, identifier type) pairs
 	* `uid`: A unique ID for this organization
-	* `parent`: The model object representing the corresponding article
-	* `parent_data`: The `dict` representing the corresponding article
+	* `uuid`: A unique UUID for this organization used in assigning it a URN
 
-	In addition, these keys may be present (if applicable):
-
-	* `event_label`: A description of the activity the organization performed as part of
-	                 the article's creation
-	* `publication_date`: A string describing the date (range) of publication
 	'''
 	lod_object = data['_LOD_OBJECT']
-	organizations = data['_organizations']
-	for o in organizations:
+	organizations = []
+	for o in data.get('_organizations', []):
 		org = {k: v for k, v in o.items()}
+		add_uuid(org, uuid_cache)
+		org_obj = vocab.Group(ident="urn:uuid:%s" % org['uuid'])
+		org['_LOD_OBJECT'] = org_obj
+
+		event = model.Activity()
+		lod_object.used_for = event
+		event.carried_out_by = org_obj
 
 		properties = o.get('properties')
 		role = o.get('role')
@@ -398,7 +404,8 @@ def extract_imprint_orgs(data):
 				# TODO: Need to also handle roles: Organization, Sponsor, University
 			}
 			if role in activity_names:
-				org['event_label'] = activity_names[role]
+				event_label = activity_names[role]
+				event._label = event_label
 			else:
 				print('*** No/unknown organization role (%r) found for imprint_group in %s:' % (
 					role, lod_object,))
@@ -406,13 +413,12 @@ def extract_imprint_orgs(data):
 
 			if role == 'Publisher' and 'DatesOfPublication' in properties:
 				pubdate = properties['DatesOfPublication']
-				org['publication_date'] = pubdate
-
-		org.update({
-			'parent': lod_object,
-			'parent_data': data,
-		})
-		yield org
+				span = CleanDateToSpan.string_to_span(pubdate)
+				if span is not None:
+					event.timespan = span
+		organizations.append(org)
+	data['organizations'] = organizations
+	return data
 
 class CleanDateToSpan(Configurable):
 	'''
@@ -423,6 +429,16 @@ class CleanDateToSpan(Configurable):
 
 	key = Option(str, required=True)
 	optional = Option(bool, default=True)
+
+	def __init__(self, *v, **kw):
+		'''
+		Sets the __name__ property to include the relevant options so that when the
+		bonobo graph is serialized as a GraphViz document, different objects can be
+		visually differentiated.
+		'''
+		super().__init__(*v, **kw)
+		self.__name__ = f'{type(self).__name__} ({self.key})'
+
 
 	@staticmethod
 	def string_to_span(value):
@@ -485,7 +501,7 @@ def make_aata_org_event(o: dict):
 	and also set the article object's `used_for` property to the new activity.
 	'''
 	event = model.Activity()
-	lod_object = o['parent']
+	lod_object = o['parent_data']['_LOD_OBJECT']
 	lod_object.used_for = event
 	event._label = o.get('event_label')
 	if 'publication_date_span' in o:
@@ -499,21 +515,8 @@ def make_aata_org_event(o: dict):
 
 # article authors chain
 
-def extract_aata_authors(data):
-# 	yield from data.get('_authors', [])
-	for a in data.get('_authors', []):
-		author = {k: v for k, v in a.items()}
-# 		uid = data.get('uuid', '?')
-# 		print(f'got author for article {uid}:')
-# 		pprint.pprint(a)
-		lod_object = data['_LOD_OBJECT']
-		author.update({
-			'parent': lod_object,
-			'parent_data': data,
-		})
-		yield author
-
-def add_aata_authors(data):
+@use('uuid_cache')
+def add_aata_authors(data, uuid_cache=None):
 	'''
 	Given a `dict` representing an "article," extract the authorship records
 	and their role (e.g. author, editor). yield a new `dict`s for each such
@@ -541,6 +544,9 @@ def add_aata_authors(data):
 
 	authors = data.get('_authors', [])
 	for a in authors:
+		add_uuid(a, uuid_cache)
+		make_la_person(a)
+		person = a['_LOD_OBJECT']
 		subevent = model.Creation()
 		# TODO: The should really be asserted as object -created_by-> CreationEvent -part-> SubEvent
 		# however, right now that assertion would get lost as it's data that belongs to the object,
@@ -551,9 +557,7 @@ def add_aata_authors(data):
 		role = a.get('creation_role')
 		if role is not None:
 			subevent._label = 'Creation sub-event for %s' % (role,)
-		a.update({
-			'events': [subevent],
-		})
+		subevent.carried_out_by = person
 	yield data
 
 # article abstract chain
@@ -627,7 +631,7 @@ def make_aata_abstract(data):
 		abstract_dict = {k: v for k, v in a.items() if k not in ('language',)}
 
 		abstract.content = a.get('content')
-		abstract.classified_as = model.Type(
+		abstract.classified_as = model.Type( # TODO: change to vocab.Abstract()
 			ident='http://vocab.getty.edu/aat/300026032',
 			label='Abstract' # TODO: is this the right aat URI?
 		)
@@ -647,7 +651,6 @@ def make_aata_abstract(data):
 		uid = 'AATA-Abstract-%s-%d' % (data['_aata_record_id'], a['_aata_record_abstract_seq'])
 		abstract_dict.update({
 			'_LOD_OBJECT': abstract,
-			'parent': lod_object,
 			'parent_data': data,
 			'uid': uid
 		})
@@ -725,6 +728,7 @@ class AATAPipeline:
 			detect_title_language,
 			MakeLinkedArtLinguisticObject(),
 			AddDataDependentArchesModel(models=self.models),
+			add_imprint_orgs,
 			_input=records.output
 		)
 		if serialize:
@@ -745,10 +749,8 @@ class AATAPipeline:
 			self.add_serialization_chain(graph, articles_with_authors.output)
 
 		people = graph.add_chain(
-			extract_aata_authors,
+			ExtractKeyedValues(key='_authors'),
 			AddArchesModel(model=model_id),
-			add_uuid,
-			make_la_person,
 			_input=articles_with_authors.output
 		)
 		if serialize:
@@ -783,9 +785,7 @@ class AATAPipeline:
 		'''Add transformation of organization records to the bonobo pipeline.'''
 		model_id = self.models.get('Organization', 'XXX-Organization-Model')
 		organizations = graph.add_chain(
-			extract_imprint_orgs,
-			CleanDateToSpan(key='publication_date'),
-			make_aata_org_event,
+			ExtractKeyedValues(key='organizations'),
 			AddArchesModel(model=model_id),
 			add_uuid,
 			MakeLinkedArtOrganization(),
@@ -843,11 +843,13 @@ class AATAFilePipeline(AATAPipeline):
 		output_path = kwargs.get('output_path')
 		if debug:
 			self.serializer	= Serializer(compact=False)
-			self.writer		= FileWriter(directory=output_path)
+			self.writer		= MergingFileWriter(directory=output_path)
+			# self.writer	= MultiFileWriter(directory=output_path)
 			# self.writer	= ArchesWriter()
 		else:
 			self.serializer	= Serializer(compact=True)
-			self.writer		= FileWriter(directory=output_path)
+			self.writer		= MergingFileWriter(directory=output_path)
+			# self.writer	= MultiFileWriter(directory=output_path)
 			# self.writer	= ArchesWriter()
 
 

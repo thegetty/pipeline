@@ -25,6 +25,7 @@ from pipeline.io.file import MultiFileWriter, MergingFileWriter
 # from pipeline.io.arches import ArchesWriter
 from pipeline.linkedart import \
 			add_crom_data, \
+			get_crom_object, \
 			MakeLinkedArtManMadeObject, \
 			MakeLinkedArtAuctionHouseOrganization, \
 			make_la_person
@@ -100,7 +101,7 @@ def add_auction_event(data):
 	yield data
 
 def populate_auction_event(data):
-	auction = data['_LOD_OBJECT']
+	auction = get_crom_object(data)
 	catalog = data['_catalog']['_LOD_OBJECT']
 	begin = implode_date(data, 'sale_begin_')
 	end = implode_date(data, 'sale_end_')
@@ -207,7 +208,7 @@ def populate_auction_catalog(data):
 	parent = data['parent_data']
 	cno = parent['catalog_number']
 	sno = parent['star_record_no']
-	catalog = d['_LOD_OBJECT']
+	catalog = get_crom_object(d)
 	for lno in parent.get('lugt', {}).values():
 		lugt = model.Identifier()
 		lugt._label = f"Lugt Number: {lno}"
@@ -296,7 +297,6 @@ def add_person(a, uuid_cache):
 
 	add_uuid(a, uuid_cache)
 	make_la_person(a)
-	person = a['_LOD_OBJECT']
 	return a
 
 @use('uuid_cache')
@@ -304,10 +304,10 @@ def add_acquisition(data, uuid_cache=None):
 	parent = data['parent_data']
 	transaction = parent['transaction']
 	data = data.copy()
-	object = data['_LOD_OBJECT']
-	lot = parent['_LOD_OBJECT']
+	object = get_crom_object(data)
+	lot = get_crom_object(parent)
 	prices = parent['price']
-	amnts = [p['_LOD_OBJECT'] for p in prices]
+	amnts = [get_crom_object(p) for p in prices]
 	
 	# TODO: filtering empty people should be moved much earlier in the pipeline
 	buyers = [add_person(p, uuid_cache) for p in filter_empty_people(*parent['buyer'])]
@@ -321,10 +321,10 @@ def add_acquisition(data, uuid_cache=None):
 		acq = model.Acquisition()
 		acq.transferred_title_of = object
 		paym = model.Payment()
-		for seller in [s['_LOD_OBJECT'] for s in sellers]:
+		for seller in [get_crom_object(s) for s in sellers]:
 			paym.paid_to = seller
 			acq.transferred_title_from = seller
-		for buyer in [b['_LOD_OBJECT'] for b in buyers]:
+		for buyer in [get_crom_object(b) for b in buyers]:
 			paym.paid_from = buyer
 			acq.transferred_title_to = buyer
 		for amnt in amnts:
@@ -344,7 +344,7 @@ def add_acquisition(data, uuid_cache=None):
 			# TODO: there may be an `est_price` value. should it be recorded as a bid?
 			print(f'*** No price data found for {transaction} transaction')
 
-		lot = parent['_LOD_OBJECT']
+		lot = get_crom_object(parent)
 		auction_data = parent['auction_of_lot']
 		cno = auction_data['catalog_number']
 		lno = auction_data['lot_number']
@@ -358,7 +358,7 @@ def add_acquisition(data, uuid_cache=None):
 			bid._label = f'Bid of {amnt_label} on {lno}'
 			# TODO: there are often no buyers listed for non-sold records.
 			#       should we construct an anonymous person to carry out the bid?
-			for buyer in [b['_LOD_OBJECT'] for b in buyers]:
+			for buyer in [get_crom_object(b) for b in buyers]:
 				bid.carried_out_by = buyer
 
 			prop = model.PropositionalObject()
@@ -396,7 +396,7 @@ def genre_instance(value):
 	return MAPPING.get(value)
 
 def populate_object(data):
-	object = data['_LOD_OBJECT']
+	object = get_crom_object(data)
 	m = data.get('materials')
 	if m:
 		matstmt = vocab.MaterialStatement()
@@ -511,14 +511,14 @@ def add_auction_house_data(a, uuid_cache):
 
 @use('uuid_cache')
 def add_auction_houses(data, uuid_cache=None):
-	auction = data['_LOD_OBJECT']
+	auction = get_crom_object(data)
 	catalog = data['_catalog']['_LOD_OBJECT']
 	d = data.copy()
 	houses = data.get('auction_house', [])
 	for h in houses:
 		h['_catalog'] = catalog
 		add_auction_house_data(h, uuid_cache)
-		house = h['_LOD_OBJECT']
+		house = get_crom_object(h)
 		auction.carried_out_by = house
 		# TODO: how can we associate this auction house with the lot auction,
 		# which is produced on an entirely different bonobo graph chain?
@@ -527,7 +527,7 @@ def add_auction_houses(data, uuid_cache=None):
 
 @use('uuid_cache')
 def add_pir_artists(data, uuid_cache=None):
-	lod_object = data['_LOD_OBJECT']
+	lod_object = get_crom_object(data)
 	event = model.Production()
 	lod_object.produced_by = event
 
@@ -546,8 +546,8 @@ def add_pir_artists(data, uuid_cache=None):
 
 		add_uuid(a, uuid_cache)
 		make_la_person(a)
-		person = a['_LOD_OBJECT']
-		subevent = model.Creation()
+		person = get_crom_object(a)
+		subevent = model.Production()
 		# TODO: The should really be asserted as object -created_by-> CreationEvent -part-> SubEvent
 		# however, right now that assertion would get lost as it's data that belongs to the object,
 		# and we're on the author's chain in the bonobo graph; object serialization has already happened.
@@ -556,7 +556,8 @@ def add_pir_artists(data, uuid_cache=None):
 		event.part = subevent
 		names = a.get('names')
 		if names:
-			subevent._label = f'Creation sub-event for {names[0]}'
+			name = names[0][0]
+			subevent._label = f'Production sub-event for {name}'
 		subevent.carried_out_by = person
 	yield data
 

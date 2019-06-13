@@ -73,7 +73,52 @@ def parse_dimensions(value, which=None):
 		return None
 	return dims
 
+def normalized_dimension_object(dimensions):
+	'''
+	Normalizes the given `dimensions`, or returns `None` is normalization fails.
+	
+	Returns a tuple of the normalized data, and a label which preserves the original
+	set of dimensions.
+	
+	For example, the input:
+	
+		[
+			Dimension(value='10', unit='feet', which=None),
+			Dimension(value='3', unit='inches', which=None),
+		]
+	
+	results in the output:
+	
+		(
+			Dimension(value='123.0', unit='inches', which=None),
+			"10 feet, 3 inches"
+		)
+	'''
+	nd = normalize_dimension(dimensions)
+	if not nd:
+		return None
+	labels = []
+	for d in dimensions:
+		which = d.which
+		if d.unit == 'inches':
+			labels.append(f'{d.value} inches')
+		elif d.unit == 'feet':
+			labels.append(f'{d.value} feet')
+		elif d.unit == 'cm':
+			labels.append(f'{d.value} cm')
+		else:
+			print(f'*** unrecognized unit: {d.unit}')
+			return None
+	label = ', '.join(labels)
+	return nd, label
+	
 def normalize_dimension(dimensions):
+	'''
+	Given a list of `Dimension`s, normalize them into a single Dimension (e.g. values in
+	both feet and inches become a single dimension of inches).
+	
+	If the values cannot be sensibly combined (e.g. inches + centimeters), returns `None`.
+	'''
 	inches = 0
 	cm = 0
 	which = None

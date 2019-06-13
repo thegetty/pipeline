@@ -20,7 +20,7 @@ from bonobo.nodes import Limit
 import settings
 from cromulent import model, vocab
 from pipeline.util import identity, ExtractKeyedValue, ExtractKeyedValues, MatchingFiles, Dimension
-from pipeline.util.cleaners import dimensions_cleaner, normalize_dimension
+from pipeline.util.cleaners import dimensions_cleaner, normalized_dimension_object
 from pipeline.io.file import MultiFileWriter, MergingFileWriter
 # from pipeline.io.arches import ArchesWriter
 from pipeline.linkedart import \
@@ -302,6 +302,8 @@ def add_acquisition(data, uuid_cache=None):
 	lot = parent['_LOD_OBJECT']
 	prices = parent['price']
 	amnts = [p['_LOD_OBJECT'] for p in prices]
+	
+	# TODO: filtering empty people should be moved much earlier in the pipeline
 	buyers = [add_person(p, uuid_cache) for p in filter_empty_people(*parent['buyer'])]
 	sellers = [add_person(p, uuid_cache) for p in filter_empty_people(*parent['seller'])]
 	if transaction in ('Sold', 'Vendu', 'Verkauft', 'Bought In'): # TODO: is this the right set of transaction types to represent acquisition?
@@ -411,19 +413,27 @@ def populate_object(data):
 		object.referred_to_by = dimstmt
 		dimensions = dimensions_cleaner(dimstr)
 		if dimensions:
-			for d in dimensions:
-				d = normalize_dimension(d)
-# 				print(f'Dimension {data["dimensions"]}: {d}')
-				if d:
+			for orig_d in dimensions:
+				dimdata = normalized_dimension_object(orig_d)
+				if dimdata:
+					d, label = dimdata
+# 					print(f'Dimension {data["dimensions"]}: {d}')
 					if d.which == 'height':
 						dim = vocab.Height()
 					elif d.which == 'width':
 						dim = vocab.Width()
 					else:
 						dim = model.Dimension()
+					dim.identified_by = model.Name(content=label)
 					dim.value = d.value
 					dim.unit = vocab.instances[d.unit]
 					object.dimension = dim
+# 					print(f'DIMENSION: {dim}')
+				else:
+					pass
+# 					print(f'Failed to normalize dimensions: {orig_d}')
+		else:
+			print(f'No dimension data was parsed from the dimension statement: {dimstr}')
 	yield data
 
 def add_object_type(data):
@@ -466,7 +476,7 @@ def add_pir_artists(data, uuid_cache=None):
 	lod_object.produced_by = event
 
 	artists = data.get('_artists', [])
-	artists = list(filter_empty_people(*artists))
+	artists = list(filter_empty_people(*artists)) # TODO: filtering empty people should be moved much earlier in the pipeline
 	data['_artists'] = artists
 	for a in artists:
 		star_rec_no = a.get('star_rec_no')

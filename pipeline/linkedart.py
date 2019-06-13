@@ -10,7 +10,22 @@ def add_crom_data(data: dict, what=None):
 
 class MakeLinkedArtRecord:
 	def set_properties(self, data, thing):
-		pass
+		for identifier in data.get('identifiers', []):
+			if type(identifier) == tuple:
+				content, itype = identifier
+				if itype is not None:
+					if type(itype) == type:
+						ident = itype(content=content)
+					elif isinstance(itype, object):
+						ident = itype
+						ident.content = content
+					else:
+						ident = model.Identifier()
+						ident.content = content
+						ident.classified_as = itype
+			else:
+				ident = identifier
+			thing.identified_by = ident
 
 	def __call__(self, data: dict):
 		if '_LOD_OBJECT' in data:
@@ -46,6 +61,7 @@ class MakeLinkedArtLinguisticObject(MakeLinkedArtRecord):
 	# TODO: document the expected format of data['identifiers']
 	# TODO: document the expected format of data['names']
 	def set_properties(self, data, thing):
+		super().set_properties(data, thing)
 		title_type = model.Type(ident='http://vocab.getty.edu/aat/300055726', label='Title') # TODO: is this the right aat URI?
 		name = None
 		if 'label' in data:
@@ -61,23 +77,6 @@ class MakeLinkedArtLinguisticObject(MakeLinkedArtRecord):
 			thing.identified_by = ident
 			for n in notes:
 				ident.referred_to_by = n
-
-		for identifier in data.get('identifiers', []):
-			if type(identifier) == tuple:
-				content, itype = identifier
-				if itype is not None:
-					if type(itype) == type:
-						ident = itype(content=content)
-					elif isinstance(itype, object):
-						ident = itype
-						ident.content = content
-					else:
-						ident = model.Identifier()
-						ident.content = content
-						ident.classified_as = itype
-			else:
-				ident = identifier
-			thing.identified_by = ident
 
 		for name in data.get('names', []):
 			n = set_la_name(thing, name[0])
@@ -126,6 +125,7 @@ class MakeLinkedArtLinguisticObject(MakeLinkedArtRecord):
 
 class MakeLinkedArtManMadeObject(MakeLinkedArtRecord):
 	def set_properties(self, data, thing):
+		super().set_properties(data, thing)
 		title_type = model.Type(ident='http://vocab.getty.edu/aat/300055726', label='Title') # TODO: is this the right aat URI?
 		if 'label' in data:
 			set_la_name(thing, data['label'], title_type, set_label=True)
@@ -173,6 +173,7 @@ class MakeLinkedArtAbstract(MakeLinkedArtLinguisticObject):
 class MakeLinkedArtOrganization(MakeLinkedArtRecord):
 	# TODO: document the expected format of data['names']
 	def set_properties(self, data, thing):
+		super().set_properties(data, thing)
 		thing._label = str(data['label'])
 
 		if 'events' in data:
@@ -190,6 +191,12 @@ class MakeLinkedArtOrganization(MakeLinkedArtRecord):
 	def __call__(self, data: dict):
 		if 'object_type' not in data:
 			data['object_type'] = model.Group
+		return super().__call__(data)
+
+class MakeLinkedArtAuctionHouseOrganization(MakeLinkedArtOrganization):
+	def __call__(self, data: dict):
+		if 'object_type' not in data:
+			data['object_type'] = vocab.AuctionHouseOrg
 		return super().__call__(data)
 
 def make_la_person(data: dict):

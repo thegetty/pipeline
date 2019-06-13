@@ -26,6 +26,7 @@ from pipeline.io.file import MultiFileWriter, MergingFileWriter
 from pipeline.linkedart import \
 			add_crom_data, \
 			MakeLinkedArtManMadeObject, \
+			MakeLinkedArtAuctionHouseOrganization, \
 			make_la_person
 from pipeline.io.csv import CurriedCSVReader
 from pipeline.nodes.basic import \
@@ -237,6 +238,11 @@ def add_physical_catalog_objects(data):
 # 	anno._label = "Additional annotations in WSHC copy of BR-A1"
 # 	catalogObject.carries = anno
 	add_crom_data(data=data, what=catalogObject)
+	yield data
+
+def add_physical_catalog_owners(data):
+	pass
+# 	print('TODO: Add information about the current owner of the physical catalog copy')
 	yield data
 
 def add_crom_price(data, parent):
@@ -470,7 +476,7 @@ def add_object_type(data):
 	return data
 
 
-def add_auction_house(a, uuid_cache):
+def add_auction_house_data(a, uuid_cache):
 	catalog = a.get('_catalog')
 
 	ulan = a.get('ulan')
@@ -483,25 +489,22 @@ def add_auction_house(a, uuid_cache):
 	house = vocab.AuctionHouseOrg()
 
 	name = a.get('auc_house_name', a.get('name'))
+	a['identifiers'] = []
 	if name:
-		a['names'] = [name]
+		n = model.Name()
+		n.content = name
+		n.referred_to_by = catalog
+		a['identifiers'].append(n)
 		a['label'] = name
 	else:
 		a['label'] = '(Anonymous)'
-	house._label = a['label']
 
-	for name in a.get('names', []):
-		n = model.Name()
-		n.content = name
-		if catalog:
-			n.referred_to_by = catalog
-		house.identified_by = n
-
-	auth = a.get('auc_house_name_1')
+	auth = a.get('auc_house_auth')
 	if auth:
 		n = vocab.PrimaryName()
+# 		n.referred_to_by = catalog
 		n.content = auth
-		house.identified_by = n
+		a['identifiers'].append(n)
 
 	add_crom_data(data=a, what=house)
 	return a
@@ -514,7 +517,7 @@ def add_auction_houses(data, uuid_cache=None):
 	houses = data.get('auction_house', [])
 	for h in houses:
 		h['_catalog'] = catalog
-		add_auction_house(h, uuid_cache)
+		add_auction_house_data(h, uuid_cache)
 		house = h['_LOD_OBJECT']
 		auction.carried_out_by = house
 		# TODO: how can we associate this auction house with the lot auction,
@@ -630,12 +633,13 @@ class ProvenancePipeline:
 				Limit(self.limit),
 				_input=records.output
 			)
+
 		catalogs = graph.add_chain(
 			AddFieldNames(field_names=self.catalogs_headers),
 			add_auction_catalog,
 			add_physical_catalog_objects,
+			add_physical_catalog_owners,
 			AddDataDependentArchesModel(models=self.models),
-# 			Trace(name='catalogs'),
 			_input=records.output
 		)
 		if serialize:
@@ -772,6 +776,7 @@ class ProvenancePipeline:
 	def add_auction_houses_chain(self, graph, auction_events, serialize=True):
 		houses = graph.add_chain(
 			ExtractKeyedValues(key='auction_house'),
+			MakeLinkedArtAuctionHouseOrganization(),
 			AddDataDependentArchesModel(models=self.models),
 			_input=auction_events.output
 		)

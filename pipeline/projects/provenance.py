@@ -5,6 +5,7 @@ running a bonobo pipeline for converting Provenance Index CSV data into JSON-LD.
 
 # PIR Extracters
 
+import re
 import sys
 import uuid
 import csv
@@ -14,7 +15,7 @@ import itertools
 from sqlalchemy import create_engine
 
 import bonobo
-from bonobo.config import use
+from bonobo.config import Exclusive, use
 from bonobo.nodes import Limit
 
 import settings
@@ -158,50 +159,89 @@ def add_auction_catalog(data, uuid_cache=None):
 	cno = data['catalog_number']
 	cdata = {'uid': f'CATALOG-{cno}'}
 	add_uuid(cdata, uuid_cache)
-	catalog = vocab.AuctionCatalog()
+	catalog = vocab.AuctionCatalog(ident=f'urn:uuid:{cdata["uuid"]}')
 	catalog._label = f'Sale Catalog {cno}'
 	data['_catalog'] = cdata
 
 	add_crom_data(data=cdata, what=catalog)
 	yield data
 
-def add_auction_of_lot(data):
-	auction_data = data['auction_of_lot']
-	cno = auction_data['catalog_number']
-	auction, _ = auction_event_for_catalog_number(cno)
-	lno = auction_data['lot_number']
+class AddAuctionOfLot:
+	def __init__(self, *args, **kwargs):
+		self.lot_cache = {}
+		super().__init__(*args, **kwargs)
 
-	lot = vocab.Auction()
-	lot._label = f'Auction of Lot {cno} {lno}'
-	data['uid'] = f'AUCTION-{cno}-LOT-{lno}'
+	def _shared_id_from_lot_number(self, lno):
+		'''
+		Given a `lot_number` value, strip out the object-specific content, returning an
+		identifier for the entire lot.
+		
+		For example, strip the object identifier suffixes such as '[a]':
+		
+		'0001[a]' -> '0001'
+		
+		'''
+		# TODO: does this handle all the cases of data packed into the lot_number string that need to be stripped?
+		r = re.compile('(\[[a-z]\])')
+		m = r.search(lno)
+		if m:
+			return lno.replace(m.group(1), '')
+		return lno
 
-	date = implode_date(auction_data, 'lot_sale_')
-	if date:
-		ts = model.TimeSpan()
-		# TODO: expand this to day bounds
-		ts.begin_of_the_begin = date
-		name = model.Name()
-		name.content = date
-		ts.identified_by = name
-		lot.timespan = ts
-	notes = auction_data.get('lot_notes')
-	if notes:
-		note = vocab.Note()
-		note.content = notes
-		lot.referred_to_by = note
-	lotid = model.Identifier()
-	lotid.content = lno
-	lot.identified_by = lotid
-	lot.part_of = auction
+	def __call__(self, data: dict):
+		auction_data = data['auction_of_lot']
+		cno = auction_data['catalog_number']
+		auction, _ = auction_event_for_catalog_number(cno)
+		lno = auction_data['lot_number']
 
-	coll = vocab.AuctionLotSet()
-	coll._label = f'Auction Lot {lno}'
-	lot.used_specific_object = coll
-	data['_lot_object_set'] = coll
+		shared_lot_number = self._shared_id_from_lot_number(lno) # TODO: strip the object-specific content out of this
+		lot = vocab.Auction()
+		lot._label = f'Auction of Lot {cno} {shared_lot_number}'
+		data['uid'] = f'AUCTION-{cno}-LOT-{shared_lot_number}'
+		with Exclusive(self.lot_cache):
+			# Each lot UUID is generated only in this class, so we can directly generate
+			# it without using the shared uuid_cache.
+			uid = data['uid']
+			uu = self.lot_cache.get(uid)
+			if not uu:
+				uu = str(uuid.uuid4())
+				self.lot_cache[uid] = uu
+# 				print(f'NEW uuid for lot {cno}-LOT-{shared_lot_number}: {lno}: {uu}')
+			else:
+				pass
+# 				print('===============================================')
+# 				print(f'GOT uuid for lot {cno}-LOT-{shared_lot_number}')
+			data['uuid'] = uu
 
-	add_crom_data(data=data, what=lot)
-# 	pprint.pprint(data)
-	yield data
+		date = implode_date(auction_data, 'lot_sale_')
+		if date:
+			ts = model.TimeSpan()
+			# TODO: expand this to day bounds
+			ts.begin_of_the_begin = date
+			name = model.Name()
+			name.content = date
+			ts.identified_by = name
+			lot.timespan = ts
+		notes = auction_data.get('lot_notes')
+		if notes:
+			note = vocab.Note()
+			note.content = notes
+			lot.referred_to_by = note
+		lotid = model.Identifier()
+		lotid.content = lno
+		lot.identified_by = lotid
+		lot.part_of = auction
+
+		# TODO: this needs to handle multiple sales records that share the same lot, and therefore the same lot AuctionSet. give it a uid/uuid
+# 		print(f'TODO: handle AuctionLotSet for multiple-object lots')
+		coll = vocab.AuctionLotSet(ident=f'urn:uuid:{data["uuid"]}')
+		coll._label = f'Auction Lot {shared_lot_number}'
+		lot.used_specific_object = coll
+		data['_lot_object_set'] = coll
+
+		add_crom_data(data=data, what=lot)
+	# 	pprint.pprint(data)
+		yield data
 
 def populate_auction_catalog(data):
 	d = {k: v for k, v in data.items()}
@@ -397,6 +437,13 @@ def genre_instance(value):
 
 def populate_object(data):
 	object = get_crom_object(data)
+	parent = data['parent_data']
+	auction = parent.get('auction_of_lot')
+	if auction:
+		lno = auction['lot_number']
+		if 'identifiers' not in data:
+			data['identifiers'] = []
+		data['identifiers'].append(model.Identifier(content=lno))
 	m = data.get('materials')
 	if m:
 		matstmt = vocab.MaterialStatement()
@@ -748,8 +795,7 @@ class ProvenancePipeline:
 				'bid': {'properties': ('est_price', 'est_price_curr', 'est_price_desc', 'est_price_so', 'start_price', 'start_price_curr', 'start_price_desc', 'start_price_so', 'ask_price', 'ask_price_curr', 'ask_price_so')},
 			}),
 # 			Trace(name='sale'),
-			add_auction_of_lot,
-			add_uuid,
+			AddAuctionOfLot(),
 			AddDataDependentArchesModel(models=self.models),
 			# TODO: need to construct an LOD object for a sales record here so that it can be serialized")
 			_input=records.output

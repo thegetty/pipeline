@@ -232,8 +232,6 @@ class AddAuctionOfLot:
 		lot.identified_by = lotid
 		lot.part_of = auction
 
-		# TODO: this needs to handle multiple sales records that share the same lot, and therefore the same lot AuctionSet. give it a uid/uuid
-# 		print(f'TODO: handle AuctionLotSet for multiple-object lots')
 		coll = vocab.AuctionLotSet(ident=f'urn:uuid:{data["uuid"]}')
 		coll._label = f'Auction Lot {shared_lot_number}'
 		lot.used_specific_object = coll

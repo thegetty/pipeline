@@ -64,13 +64,13 @@ def strip_key_prefix(prefix, value):
 			d[k] = v
 	return d
 
-def add_record_ids(data, parent):
+def add_pir_record_ids(data, parent):
 	for p in ('pi_record_no', 'persistent_puid'):
 		data[p] = parent.get(p)
 	return data
 
-def add_object_uuid(data, parent):
-	add_record_ids(data, parent)
+def add_pir_object_uuid(data, parent):
+	add_pir_record_ids(data, parent)
 	pi_record_no = data['pi_record_no']
 	data['uid'] = f'OBJECT-{pi_record_no}'
 	data['uuid'] = str(uuid.uuid4())
@@ -268,8 +268,7 @@ def add_physical_catalog_objects(data):
 	yield data
 
 def add_physical_catalog_owners(data):
-	pass
-# 	print('TODO: Add information about the current owner of the physical catalog copy')
+	# TODO: Add information about the current owner of the physical catalog copy; are the values of data['owner_code'] mapped somewhere?
 	yield data
 
 def add_crom_price(data, parent):
@@ -765,7 +764,7 @@ class ProvenancePipeline:
 				'expert': {'prefixes': ('expert_auth', 'expert_ulan')},
 				'commissaire': {'prefixes': ('commissaire_pr', 'comm_ulan')},
 				'auction_house': {'prefixes': ('auction_house', 'house_ulan')},
-				'_artists': {'postprocess': add_record_ids, 'prefixes': ('artist_name', 'artist_info', 'art_authority', 'nationality', 'attrib_mod', 'attrib_mod_auth', 'star_rec_no', 'artist_ulan')},
+				'_artists': {'postprocess': add_pir_record_ids, 'prefixes': ('artist_name', 'artist_info', 'art_authority', 'nationality', 'attrib_mod', 'attrib_mod_auth', 'star_rec_no', 'artist_ulan')},
 				'hand_note': {'prefixes': ('hand_note', 'hand_note_so')},
 				'seller': {'postprocess': lambda x, _: strip_key_prefix('sell_', x), 'prefixes': ('sell_name', 'sell_name_so', 'sell_name_ques', 'sell_mod', 'sell_auth_name', 'sell_auth_nameq', 'sell_auth_mod', 'sell_auth_mod_a', 'sell_ulan')},
 				'price': {'postprocess': add_crom_price, 'prefixes': ('price_amount', 'price_currency', 'price_note', 'price_source', 'price_citation')},
@@ -777,7 +776,7 @@ class ProvenancePipeline:
 			}),
 			GroupKeys(mapping={
 				'auction_of_lot': {'properties': ('catalog_number', 'lot_number', 'lot_sale_year', 'lot_sale_month', 'lot_sale_day', 'lot_sale_mod', 'lot_notes')},
-				'_object': {'postprocess': add_object_uuid, 'properties': ('title', 'title_modifier', 'object_type', 'materials', 'dimensions', 'formatted_dimens', 'format', 'genre', 'subject', 'inscription', 'present_loc_geog', 'present_loc_inst', 'present_loc_insq', 'present_loc_insi', 'present_loc_acc', 'present_loc_accq', 'present_loc_note', '_artists')},
+				'_object': {'postprocess': add_pir_object_uuid, 'properties': ('title', 'title_modifier', 'object_type', 'materials', 'dimensions', 'formatted_dimens', 'format', 'genre', 'subject', 'inscription', 'present_loc_geog', 'present_loc_inst', 'present_loc_insq', 'present_loc_insi', 'present_loc_acc', 'present_loc_accq', 'present_loc_note', '_artists')},
 				'bid': {'properties': ('est_price', 'est_price_curr', 'est_price_desc', 'est_price_so', 'start_price', 'start_price_curr', 'start_price_desc', 'start_price_so', 'ask_price', 'ask_price_curr', 'ask_price_so')},
 			}),
 # 			Trace(name='sale'),

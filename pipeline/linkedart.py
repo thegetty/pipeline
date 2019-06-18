@@ -1,3 +1,4 @@
+import pprint
 from cromulent import model, vocab
 from cromulent.model import factory
 factory.auto_id_type = 'uuid'
@@ -35,7 +36,13 @@ class MakeLinkedArtRecord:
 			thing = data['_LOD_OBJECT']
 		else:
 			otype = data['object_type']
-			thing = otype(ident="urn:uuid:%s" % data['uuid'])
+			if 'uuid' in data:
+				thing = otype(ident="urn:uuid:%s" % data['uuid'])
+			elif 'uri' in data:
+				thing = otype(ident=data['uri'])
+			else:
+				raise Exception('MakeLinkedArtRecord called with a dictionary with neither uuid or uri member')
+
 		self.set_properties(data, thing)
 
 		return add_crom_data(data=data, what=thing)
@@ -203,7 +210,13 @@ class MakeLinkedArtAuctionHouseOrganization(MakeLinkedArtOrganization):
 		return super().__call__(data)
 
 def make_la_person(data: dict):
-	who = model.Person(ident="urn:uuid:%s" % data['uuid'])
+	uri = data.get('uri')
+	if not uri:
+		if 'uuid' not in data:
+			print('No UUID for person:')
+			pprint.pprint(data)
+		uri = "urn:uuid:%s" % data['uuid']
+	who = model.Person(ident=uri)
 	who._label = str(data['label'])
 
 	for ns in ['aat_nationality_1', 'aat_nationality_2','aat_nationality_3']:

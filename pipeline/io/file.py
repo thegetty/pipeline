@@ -1,6 +1,8 @@
 import os
 import os.path
 import hashlib
+import uuid
+
 from pipeline.util import CromObjectMerger
 
 from bonobo.config import Configurable, Option
@@ -15,7 +17,11 @@ class FileWriter(Configurable):
 		dr = os.path.join(self.directory, data['_ARCHES_MODEL'])
 		if not os.path.exists(dr):
 			os.mkdir(dr)
-		fn = os.path.join(dr, "%s.json" % data['uuid'])
+		uu = data.get('uuid')
+		if not uu:
+			uu = str(uuid.uuid4())
+			print(f'*** No UUID in top-level resource. Using an assigned UUID filename for the content: {uu}')
+		fn = os.path.join(dr, "%s.json" % uu)
 		fh = open(fn, 'w')
 		fh.write(d)
 		fh.close()
@@ -26,12 +32,15 @@ class MultiFileWriter(Configurable):
 
 	def __call__(self, data: dict):
 		d = data['_OUTPUT']
-		uuid = data['uuid']
+		uu = data.get('uuid')
+		if not uu:
+			uu = str(uuid.uuid4())
+			print(f'*** No UUID in top-level resource. Using an assigned UUID filename for the content: {uu}')
 		dr = os.path.join(self.directory, data['_ARCHES_MODEL'])
 		with ExclusiveValue(dr):
 			if not os.path.exists(dr):
 				os.mkdir(dr)
-		ddr = os.path.join(dr, uuid)
+		ddr = os.path.join(dr, uu)
 		with ExclusiveValue(ddr):
 			if not os.path.exists(ddr):
 				os.mkdir(ddr)
@@ -53,7 +62,11 @@ class MergingFileWriter(Configurable):
 		with ExclusiveValue(dr):
 			if not os.path.exists(dr):
 				os.mkdir(dr)
-			fn = os.path.join(dr, "%s.json" % data['uuid'])
+			uu = data.get('uuid')
+			if not uu:
+				uu = str(uuid.uuid4())
+				print(f'*** No UUID in top-level resource. Using an assigned UUID filename for the content: {uu}')
+			fn = os.path.join(dr, "%s.json" % uu)
 			if os.path.exists(fn):
 				r = reader.Reader()
 				with open(fn, 'r') as fh:

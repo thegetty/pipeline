@@ -11,7 +11,10 @@ import uuid
 import csv
 import pprint
 import itertools
+import traceback
+from contextlib import suppress
 
+import urllib.parse
 from sqlalchemy import create_engine
 
 import bonobo
@@ -35,7 +38,6 @@ from pipeline.nodes.basic import \
 			AddFieldNames, \
 			GroupRepeatingKeys, \
 			GroupKeys, \
-			add_uuid, \
 			AddDataDependentArchesModel, \
 			AddArchesModel, \
 			Serializer, \
@@ -46,6 +48,15 @@ doiIdentifier = vocab.DoiIdentifier
 variantTitleIdentifier = vocab.Identifier # TODO: aat for variant titles?
 
 # utility functions
+
+def pir_uri(*values):
+	UID_TAG_PREFIX = 'http://example.org/XXX-REPLACE-WITH-UUID/getty.edu,2019:digital#'
+	if len(values):
+		suffix = ','.join([urllib.parse.quote(str(v)) for v in values])
+		return UID_TAG_PREFIX + suffix
+	else:
+		suffix = str(uuid.uuid4())
+		return UID_TAG_PREFIX + suffix
 
 def filter_empty_people(*people):
 	for p in people:
@@ -78,14 +89,16 @@ def add_pir_object_uuid(data, parent):
 
 def auction_event_for_catalog_number(cno):
 	uid = f'AUCTION-EVENT-CATALOGNUMBER-{cno}'
-	auction = vocab.AuctionEvent()
+	uri = pir_uri(uid)
+	auction = vocab.AuctionEvent(ident=uri)
 	auction._label = f"Auction Event for {cno}"
-	return auction, uid
+	return auction, uid, uri
 
 def add_auction_event(data):
 	cno = data['catalog_number']
-	auction, uid = auction_event_for_catalog_number(cno)
+	auction, uid, uri = auction_event_for_catalog_number(cno)
 	data['uid'] = uid
+	data['uri'] = uri
 	add_crom_data(data=data, what=auction)
 	yield data
 
@@ -142,12 +155,11 @@ def populate_auction_event(data):
 	auction.subject_of = catalog
 	yield data
 
-@use('uuid_cache')
-def add_auction_catalog(data, uuid_cache=None):
+def add_auction_catalog(data):
 	cno = data['catalog_number']
-	cdata = {'uid': f'CATALOG-{cno}'}
-	add_uuid(cdata, uuid_cache)
-	catalog = vocab.AuctionCatalog(ident=f'urn:uuid:{cdata["uuid"]}')
+	key = f'CATALOG-{cno}'
+	cdata = {'uid': key, 'uri': pir_uri(key)}
+	catalog = vocab.AuctionCatalog(ident=cdata['uri'])
 	catalog._label = f'Sale Catalog {cno}'
 	data['_catalog'] = cdata
 
@@ -179,7 +191,7 @@ class AddAuctionOfLot:
 	def __call__(self, data: dict):
 		auction_data = data['auction_of_lot']
 		cno = auction_data['catalog_number']
-		auction, _ = auction_event_for_catalog_number(cno)
+		auction, _, _ = auction_event_for_catalog_number(cno)
 		lno = auction_data['lot_number']
 
 		shared_lot_number = self._shared_id_from_lot_number(lno) # TODO: strip the object-specific content out of this
@@ -220,7 +232,8 @@ class AddAuctionOfLot:
 		lot.identified_by = lotid
 		lot.part_of = auction
 
-		coll = vocab.AuctionLotSet(ident=f'urn:uuid:{data["uuid"]}')
+		data['uri'] = pir_uri(data['uid'])
+		coll = vocab.AuctionLotSet(ident=data['uri'])
 		coll._label = f'Auction Lot {shared_lot_number}'
 		lot.used_specific_object = coll
 		data['_lot_object_set'] = coll
@@ -305,10 +318,14 @@ def add_crom_price(data, parent):
 	add_crom_data(data=data, what=amnt)
 	return data
 
-def add_person(a, uuid_cache):
-	ulan = a.get('ulan')
+def add_person(a: dict):
+	ulan = None
+	with suppress(ValueError, TypeError):
+		ulan = int(a.get('ulan'))
 	if ulan:
-		a['uid'] = f'PERSON-ULAN-{ulan}'
+		key = f'PERSON-ULAN-{ulan}'
+		a['uid'] = key
+		a['uri'] = pir_uri(key)
 		a['identifiers'] = [model.Identifier(content=ulan)]
 	else:
 		a['uuid'] = str(uuid.uuid4()) # not enough information to identify this person uniquely, so they get a UUID
@@ -320,12 +337,10 @@ def add_person(a, uuid_cache):
 	else:
 		a['label'] = '(Anonymous person)'
 
-	add_uuid(a, uuid_cache)
 	make_la_person(a)
 	return a
 
-@use('uuid_cache')
-def add_acquisition(data, uuid_cache=None):
+def add_acquisition(data):
 	parent = data['parent_data']
 	transaction = parent['transaction']
 	data = data.copy()
@@ -335,8 +350,8 @@ def add_acquisition(data, uuid_cache=None):
 	amnts = [get_crom_object(p) for p in prices]
 	
 	# TODO: filtering empty people should be moved much earlier in the pipeline
-	buyers = [add_person(p, uuid_cache) for p in filter_empty_people(*parent['buyer'])]
-	sellers = [add_person(p, uuid_cache) for p in filter_empty_people(*parent['seller'])]
+	buyers = [add_person(p) for p in filter_empty_people(*parent['buyer'])]
+	sellers = [add_person(p) for p in filter_empty_people(*parent['seller'])]
 	if transaction in ('Sold', 'Vendu', 'Verkauft', 'Bought In'): # TODO: is this the right set of transaction types to represent acquisition?
 		data['buyer'] = buyers
 		data['seller'] = sellers
@@ -508,17 +523,22 @@ def add_object_type(data):
 	return data
 
 
-def add_auction_house_data(a, uuid_cache):
+def add_auction_house_data(a):
 	catalog = a.get('_catalog')
 
-	ulan = a.get('ulan')
+	ulan = None
+	with suppress(ValueError, TypeError):
+		ulan = int(a.get('ulan'))
 	if ulan:
-		a['uid'] = f'AUCTION-HOUSE-ULAN-{ulan}'
+		key = f'AUCTION-HOUSE-ULAN-{ulan}'
+		a['uid'] = key
+		a['uri'] = pir_uri(key)
 		a['identifiers'] = [model.Identifier(content=ulan)]
+		house = vocab.AuctionHouseOrg(ident=a['uri'])
 	else:
 		a['uuid'] = str(uuid.uuid4()) # not enough information to identify this person uniquely, so they get a UUID
-	add_uuid(a, uuid_cache)
-	house = vocab.AuctionHouseOrg()
+		uri = "urn:uuid:%s" % a['uuid']
+		house = vocab.AuctionHouseOrg(ident=uri)
 
 	name = a.get('auc_house_name', a.get('name'))
 	a['identifiers'] = []
@@ -541,15 +561,14 @@ def add_auction_house_data(a, uuid_cache):
 	add_crom_data(data=a, what=house)
 	return a
 
-@use('uuid_cache')
-def add_auction_houses(data, uuid_cache=None):
+def add_auction_houses(data):
 	auction = get_crom_object(data)
 	catalog = data['_catalog']['_LOD_OBJECT']
 	d = data.copy()
 	houses = data.get('auction_house', [])
 	for h in houses:
 		h['_catalog'] = catalog
-		add_auction_house_data(h, uuid_cache)
+		add_auction_house_data(h)
 		house = get_crom_object(h)
 		auction.carried_out_by = house
 		# TODO: how can we associate this auction house with the lot auction,
@@ -557,8 +576,7 @@ def add_auction_houses(data, uuid_cache=None):
 # 		lot.carried_out_by = house
 	yield d
 
-@use('uuid_cache')
-def add_pir_artists(data, uuid_cache=None):
+def add_pir_artists(data):
 	lod_object = get_crom_object(data)
 	event = model.Production()
 	lod_object.produced_by = event
@@ -568,7 +586,9 @@ def add_pir_artists(data, uuid_cache=None):
 	data['_artists'] = artists
 	for a in artists:
 		star_rec_no = a.get('star_rec_no')
-		a['uid'] = f'PERSON-star-{star_rec_no}'
+		key = f'PERSON-star-{star_rec_no}'
+		a['uid'] = key
+		a['uri'] = pir_uri(key)
 		if a.get('artist_name'):
 			name = a.get('artist_name')
 			a['names'] = [(name,)]
@@ -576,7 +596,6 @@ def add_pir_artists(data, uuid_cache=None):
 		else:
 			a['label'] = '(Anonymous artist)'
 
-		add_uuid(a, uuid_cache)
 		make_la_person(a)
 		person = get_crom_object(a)
 		subevent = model.Production()
@@ -684,7 +703,6 @@ class ProvenancePipeline:
 		los = graph.add_chain(
 			ExtractKeyedValue(key='_catalog'),
 			populate_auction_catalog,
-			add_uuid,
 			AddDataDependentArchesModel(models=self.models),
 			_input=events.output
 		)
@@ -718,7 +736,6 @@ class ProvenancePipeline:
 			add_auction_event,
 			add_auction_houses,
 			populate_auction_event,
-			add_uuid,
 			AddDataDependentArchesModel(models=self.models),
 # 			Trace(name='auction_events'),
 			_input=records.output

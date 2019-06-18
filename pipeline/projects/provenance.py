@@ -20,7 +20,7 @@ from bonobo.nodes import Limit
 
 import settings
 from cromulent import model, vocab
-from pipeline.util import identity, ExtractKeyedValue, ExtractKeyedValues, MatchingFiles, Dimension
+from pipeline.util import identity, ExtractKeyedValue, ExtractKeyedValues, MatchingFiles, Dimension, implode_date
 from pipeline.util.cleaners import dimensions_cleaner, normalized_dimension_object
 from pipeline.io.file import MultiFileWriter, MergingFileWriter
 # from pipeline.io.arches import ArchesWriter
@@ -75,24 +75,6 @@ def add_object_uuid(data, parent):
 	data['uid'] = f'OBJECT-{pi_record_no}'
 	data['uuid'] = str(uuid.uuid4())
 	return data
-
-def implode_date(data: dict, prefix: str):
-	'''
-	Given a dict `data` and a string `prefix`, extract year, month, and day elements
-	from `data` (e.g. '{prefix}year', '{prefix}month', and '{prefix}day'), and return
-	an ISO 8601 date string ('YYYY-MM-DD'). If the day, or day and month elements are
-	missing, may also return a year-month ('YYYY-MM') or year ('YYYY') string.
-	'''
-	year = data.get(f'{prefix}year')
-	month = data.get('{prefix}month')
-	day = data.get('{prefix}day')
-	if year and month and day:
-		return f'{year}-{month}-{day}'
-	elif year and month:
-		return f'{year}-{month}'
-	elif year:
-		return f'{year}'
-	return None
 
 def auction_event_for_catalog_number(cno):
 	uid = f'AUCTION-EVENT-CATALOGNUMBER-{cno}'

@@ -31,6 +31,24 @@ def identity(d):
 	'''
 	yield d
 
+def implode_date(data: dict, prefix: str):
+	'''
+	Given a dict `data` and a string `prefix`, extract year, month, and day elements
+	from `data` (e.g. '{prefix}year', '{prefix}month', and '{prefix}day'), and return
+	an ISO 8601 date string ('YYYY-MM-DD'). If the day, or day and month elements are
+	missing, may also return a year-month ('YYYY-MM') or year ('YYYY') string.
+	'''
+	year = data.get(f'{prefix}year')
+	month = data.get('{prefix}month')
+	day = data.get('{prefix}day')
+	if year and month and day:
+		return f'{year}-{month}-{day}'
+	elif year and month:
+		return f'{year}-{month}'
+	elif year:
+		return f'{year}'
+	return None
+
 class ExclusiveValue(ContextDecorator):
 	_locks = {}
 	lock = Lock()

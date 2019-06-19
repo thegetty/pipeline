@@ -9,6 +9,18 @@ from bonobo.config import Configurable, Option
 from pipeline.util import ExclusiveValue
 from cromulent import model, reader
 
+def filename_for(data: dict):
+	uu = data.get('uuid')
+	if not uu and 'uri' in data:
+		h = hashlib.md5(data['uri'].encode('utf-8')).hexdigest()
+		uu = f'content-{h}'
+		print(f'*** No UUID in top-level resource. Using a hash of top-level URI: {uu}')
+	if not uu:
+		uu = str(uuid.uuid4())
+		print(f'*** No UUID in top-level resource. Using an assigned UUID filename for the content: {uu}')
+	fn = f'{uu}.json'
+	return fn
+
 class FileWriter(Configurable):
 	directory = Option(default="output")
 
@@ -17,11 +29,8 @@ class FileWriter(Configurable):
 		dr = os.path.join(self.directory, data['_ARCHES_MODEL'])
 		if not os.path.exists(dr):
 			os.mkdir(dr)
-		uu = data.get('uuid')
-		if not uu:
-			uu = str(uuid.uuid4())
-			print(f'*** No UUID in top-level resource. Using an assigned UUID filename for the content: {uu}')
-		fn = os.path.join(dr, "%s.json" % uu)
+		filename = filename_for(data)
+		fn = os.path.join(dr, filename)
 		fh = open(fn, 'w')
 		fh.write(d)
 		fh.close()
@@ -32,15 +41,12 @@ class MultiFileWriter(Configurable):
 
 	def __call__(self, data: dict):
 		d = data['_OUTPUT']
-		uu = data.get('uuid')
-		if not uu:
-			uu = str(uuid.uuid4())
-			print(f'*** No UUID in top-level resource. Using an assigned UUID filename for the content: {uu}')
+		filename = filename_for(data)
 		dr = os.path.join(self.directory, data['_ARCHES_MODEL'])
 		with ExclusiveValue(dr):
 			if not os.path.exists(dr):
 				os.mkdir(dr)
-		ddr = os.path.join(dr, uu)
+		ddr = os.path.join(dr, filename)
 		with ExclusiveValue(ddr):
 			if not os.path.exists(ddr):
 				os.mkdir(ddr)
@@ -62,11 +68,8 @@ class MergingFileWriter(Configurable):
 		with ExclusiveValue(dr):
 			if not os.path.exists(dr):
 				os.mkdir(dr)
-			uu = data.get('uuid')
-			if not uu:
-				uu = str(uuid.uuid4())
-				print(f'*** No UUID in top-level resource. Using an assigned UUID filename for the content: {uu}')
-			fn = os.path.join(dr, "%s.json" % uu)
+			filename = filename_for(data)
+			fn = os.path.join(dr, filename)
 			if os.path.exists(fn):
 				r = reader.Reader()
 				with open(fn, 'r') as fh:

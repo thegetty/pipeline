@@ -50,7 +50,7 @@ variantTitleIdentifier = vocab.Identifier # TODO: aat for variant titles?
 # utility functions
 
 def pir_uri(*values):
-	UID_TAG_PREFIX = 'http://example.org/XXX-REPLACE-WITH-UUID/getty.edu,2019:digital#'
+	UID_TAG_PREFIX = 'tag:getty.edu,2019:digital:pipeline:REPLACE-WITH-UUID#'
 	if len(values):
 		suffix = ','.join([urllib.parse.quote(str(v)) for v in values])
 		return UID_TAG_PREFIX + suffix

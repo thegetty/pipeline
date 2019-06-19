@@ -102,7 +102,9 @@ def add_auction_event(data):
 	add_crom_data(data=data, what=auction)
 	yield data
 
-def populate_auction_event(data):
+@use('auction_locations')
+def populate_auction_event(data, auction_locations):
+	cno = data['catalog_number']
 	auction = get_crom_object(data)
 	catalog = data['_catalog']['_LOD_OBJECT']
 	begin = implode_date(data, 'sale_begin_')
@@ -140,9 +142,7 @@ def populate_auction_event(data):
 		loc = places[-1]
 		auction.took_place_at = loc
 
-	# TODO: how can we associate this location with the lot auction,
-	# which is produced on an entirely different bonobo graph chain?
-# 	lot.took_place_at = loc
+	auction_locations.set(cno, loc)
 
 	if begin or end:
 		ts = model.TimeSpan(ident='')
@@ -166,6 +166,8 @@ def add_auction_catalog(data):
 	add_crom_data(data=cdata, what=catalog)
 	yield data
 
+@use('auction_locations')
+@use('auction_houses')
 class AddAuctionOfLot:
 	def __init__(self, *args, **kwargs):
 		self.lot_cache = {}
@@ -188,7 +190,7 @@ class AddAuctionOfLot:
 			return lno.replace(m.group(1), '')
 		return lno
 
-	def __call__(self, data: dict):
+	def __call__(self, data, auction_houses, auction_locations):
 		auction_data = data['auction_of_lot']
 		cno = auction_data['catalog_number']
 		auction, _, _ = auction_event_for_catalog_number(cno)
@@ -200,6 +202,16 @@ class AddAuctionOfLot:
 		data['uri'] = pir_uri(key)
 
 		lot = vocab.Auction(ident=data['uri'])
+
+		houses = auction_houses.get(cno)
+		if houses:
+			for house in houses:
+				lot.carried_out_by = house
+
+		place = auction_locations.get(cno)
+		if place:
+			lot.took_place_at = place
+
 		lot._label = f'Auction of Lot {cno} {shared_lot_number}'
 		date = implode_date(auction_data, 'lot_sale_')
 		if date:
@@ -549,11 +561,16 @@ def add_auction_house_data(a):
 	add_crom_data(data=a, what=house)
 	return a
 
-def add_auction_houses(data):
+@use('auction_houses')
+def add_auction_houses(data, auction_houses):
 	auction = get_crom_object(data)
 	catalog = data['_catalog']['_LOD_OBJECT']
 	d = data.copy()
 	houses = data.get('auction_house', [])
+	cno = data['catalog_number']
+	
+	house_objects = []
+
 	for h in houses:
 		h['_catalog'] = catalog
 		add_auction_house_data(h)
@@ -562,6 +579,9 @@ def add_auction_houses(data):
 		# TODO: how can we associate this auction house with the lot auction,
 		# which is produced on an entirely different bonobo graph chain?
 # 		lot.carried_out_by = house
+		if auction_houses:
+			house_objects.append(house)
+	auction_houses.set(cno, house_objects)
 	yield d
 
 def add_pir_artists(data):
@@ -605,14 +625,25 @@ def add_pir_artists(data):
 
 #mark -
 
+class Dict:
+	# Bonobo services seem not to work with plain dict values. So we wrap a dict here as an object.
+	def __init__(self):
+		self.d = {}
 
+	def set(self, key, value):
+		self.d[key] = value
+
+	def get(self, key):
+		return self.d.get(key)
 
 # Provenance Pipeline class
 
 class ProvenancePipeline:
 	'''Bonobo-based pipeline for transforming Provenance data from CSV into JSON-LD.'''
 	def __init__(self, input_path, catalogs, auction_events, contents, **kwargs):
-		self.graph = None
+		self.graph_0 = None
+		self.graph_1 = None
+		self.graph_2 = None
 		self.models = kwargs.get('models', {})
 		self.catalogs_header_file = catalogs['header_file']
 		self.catalogs_files_pattern = catalogs['files_pattern']
@@ -649,6 +680,8 @@ class ProvenancePipeline:
 	def get_services(self):
 		'''Return a `dict` of named services available to the bonobo pipeline.'''
 		return {
+			'auction_houses': Dict(),
+			'auction_locations': Dict(),
 			'trace_counter': itertools.count(),
 			'gpi': create_engine(settings.gpi_engine),
 			'aat': create_engine(settings.aat_engine),
@@ -835,56 +868,85 @@ class ProvenancePipeline:
 			self.add_serialization_chain(graph, people.output)
 		return people
 
-	def _construct_graph(self):
-		graph = bonobo.Graph()
+	def _construct_graph(self, all=False):
+		# if all=False, generate two Graphs (self.graph_1 and self.graph_2), that will be run sequentially. the first for catalogs and events, the second for sales auctions (which depends on output from the first).
+		# if all=True, then generate a single Graph that has the entire pipeline in it (self.graph_0). this is used to be able to produce graphviz output of the pipeline for visual inspection.
+		graph0 = bonobo.Graph()
+		graph1 = bonobo.Graph()
+		graph2 = bonobo.Graph()
 
-		physical_catalog_records = graph.add_chain(
-			MatchingFiles(path='/', pattern=self.catalogs_files_pattern, fs='fs.data.pir'),
-			CurriedCSVReader(fs='fs.data.pir'),
-		)
+		component1 = [graph0] if all else [graph1]
+		component2 = [graph0] if all else [graph2]
+		for g in component1:
+			physical_catalog_records = g.add_chain(
+				MatchingFiles(path='/', pattern=self.catalogs_files_pattern, fs='fs.data.pir'),
+				CurriedCSVReader(fs='fs.data.pir'),
+			)
 
-		auction_events_records = graph.add_chain(
-			MatchingFiles(path='/', pattern=self.auction_events_files_pattern, fs='fs.data.pir'),
-			CurriedCSVReader(fs='fs.data.pir'),
-		)
+			auction_events_records = g.add_chain(
+				MatchingFiles(path='/', pattern=self.auction_events_files_pattern, fs='fs.data.pir'),
+				CurriedCSVReader(fs='fs.data.pir'),
+			)
 
-		contents_records = graph.add_chain(
-			MatchingFiles(path='/', pattern=self.contents_files_pattern, fs='fs.data.pir'),
-			CurriedCSVReader(fs='fs.data.pir')
-		)
+			physical_catalogs = self.add_physical_catalogs_chain(g, physical_catalog_records, serialize=True)
+			auction_events = self.add_auction_events_chain(g, auction_events_records, serialize=True)
+			catalog_los = self.add_catalog_linguistic_objects(g, auction_events, serialize=True)
+			auction_houses = self.add_auction_houses_chain(g, auction_events, serialize=True)
 
-		physical_catalogs = self.add_physical_catalogs_chain(graph, physical_catalog_records, serialize=True)
-		auction_events = self.add_auction_events_chain(graph, auction_events_records, serialize=True)
-		catalog_los = self.add_catalog_linguistic_objects(graph, auction_events, serialize=True)
+		if not all:
+			self.output_chain = None
 
-		auction_houses = self.add_auction_houses_chain(graph, auction_events, serialize=True)
-		sales = self.add_sales_chain(graph, contents_records, serialize=True)
-		objects = self.add_object_chain(graph, sales, serialize=True)
-		acquisitions = self.add_acquisitions_chain(graph, objects, serialize=True)
-		self.add_buyers_sellers_chain(graph, acquisitions, serialize=True)
-		people = self.add_people_chain(graph, objects, serialize=True)
+		for g in component2:
+			contents_records = g.add_chain(
+				MatchingFiles(path='/', pattern=self.contents_files_pattern, fs='fs.data.pir'),
+				CurriedCSVReader(fs='fs.data.pir')
+			)
+			sales = self.add_sales_chain(g, contents_records, serialize=True)
+			objects = self.add_object_chain(g, sales, serialize=True)
+			acquisitions = self.add_acquisitions_chain(g, objects, serialize=True)
+			self.add_buyers_sellers_chain(g, acquisitions, serialize=True)
+			people = self.add_people_chain(g, objects, serialize=True)
 
-		self.graph = graph
-		return graph
+		if all:
+			self.graph_0 = graph0
+		else:
+			self.graph_1 = graph1
+			self.graph_2 = graph2
 
 	def get_graph(self):
+		if not self.graph_0:
+			self._construct_graph(all=True)
+
+		return self.graph_0
+		
+
+	def get_graph_1(self):
 		'''Construct the bonobo pipeline to fully transform Provenance data from CSV to JSON-LD.'''
-		if not self.graph:
+		if not self.graph_1:
 			self._construct_graph()
-		return self.graph
+		return self.graph_1
+
+	def get_graph_2(self):
+		'''Construct the bonobo pipeline to fully transform Provenance data from CSV to JSON-LD.'''
+		if not self.graph_2:
+			self._construct_graph()
+		return self.graph_2
 
 	def run(self, **options):
 		'''Run the Provenance bonobo pipeline.'''
 		sys.stderr.write("- Limiting to %d records per file\n" % (self.limit,))
 		sys.stderr.write("- Using serializer: %r\n" % (self.serializer,))
 		sys.stderr.write("- Using writer: %r\n" % (self.writer,))
-		graph = self.get_graph(**options)
 		services = self.get_services(**options)
 		fs = services['fs.data.pir']
-		bonobo.run(
-			graph,
-			services=services
-		)
+
+		print('Running graph component 1...')
+		graph1 = self.get_graph_1(**options)
+		bonobo.run(graph1, services=services)
+
+		print('Running graph component 2...')
+		graph2 = self.get_graph_2(**options)
+		bonobo.run(graph2, services=services)
 
 class ProvenanceFilePipeline(ProvenancePipeline):
 	'''

@@ -145,7 +145,7 @@ def populate_auction_event(data):
 # 	lot.took_place_at = loc
 
 	if begin or end:
-		ts = model.TimeSpan()
+		ts = model.TimeSpan(ident='')
 		if begin is not None:
 			ts.begin_of_the_begin = begin
 		if end is not None:
@@ -195,27 +195,15 @@ class AddAuctionOfLot:
 		lno = auction_data['lot_number']
 
 		shared_lot_number = self._shared_id_from_lot_number(lno) # TODO: strip the object-specific content out of this
-		lot = vocab.Auction()
-		lot._label = f'Auction of Lot {cno} {shared_lot_number}'
-		data['uid'] = f'AUCTION-{cno}-LOT-{shared_lot_number}'
-		with Exclusive(self.lot_cache):
-			# Each lot UUID is generated only in this class, so we can directly generate
-			# it without using the shared uuid_cache.
-			uid = data['uid']
-			uu = self.lot_cache.get(uid)
-			if not uu:
-				uu = str(uuid.uuid4())
-				self.lot_cache[uid] = uu
-# 				print(f'NEW uuid for lot {cno}-LOT-{shared_lot_number}: {lno}: {uu}')
-			else:
-				pass
-# 				print('===============================================')
-# 				print(f'GOT uuid for lot {cno}-LOT-{shared_lot_number}')
-			data['uuid'] = uu
+		key = f'AUCTION-{cno}-LOT-{shared_lot_number}'
+		data['uid'] = key
+		data['uri'] = pir_uri(key)
 
+		lot = vocab.Auction(ident=data['uri'])
+		lot._label = f'Auction of Lot {cno} {shared_lot_number}'
 		date = implode_date(auction_data, 'lot_sale_')
 		if date:
-			ts = model.TimeSpan()
+			ts = model.TimeSpan(ident='')
 			# TODO: expand this to day bounds
 			ts.begin_of_the_begin = date
 			name = model.Name()

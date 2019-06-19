@@ -5,7 +5,7 @@ arches_models = {
 	"Acquisition": "b5fdce59-2e41-11e9-b1c2-a4d18cec433a",
 	"Phase": "17871ac7-2e42-11e9-87b2-a4d18cec433a",
 	"Activity": "24c45975-3955-11e9-80f0-a4d18cec433a",
-	"ManMadeObject": "2486c17d-2e42-11e9-bd33-a4d18cec433a",
+	"HumanMadeObject": "2486c17d-2e42-11e9-bd33-a4d18cec433a",
 	"VisualItem": "504dcf0a-2e42-11e9-b4e2-a4d18cec433a",
 	"Person": "0b47366e-2e42-11e9-9018-a4d18cec433a",
 	"LinguisticObject": "41a41e47-2e42-11e9-b5ee-a4d18cec433a",

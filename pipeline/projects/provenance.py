@@ -30,7 +30,7 @@ from pipeline.io.file import MultiFileWriter, MergingFileWriter
 from pipeline.linkedart import \
 			add_crom_data, \
 			get_crom_object, \
-			MakeLinkedArtManMadeObject, \
+			MakeLinkedArtHumanMadeObject, \
 			MakeLinkedArtAuctionHouseOrganization, \
 			make_la_person
 from pipeline.io.csv import CurriedCSVReader
@@ -257,7 +257,7 @@ def populate_auction_catalog(data):
 def add_physical_catalog_objects(data):
 	catalog = data['_catalog']['_LOD_OBJECT']
 	data['uuid'] = str(uuid.uuid4()) # this is a single pass, and will not be referenced again
-	catalogObject = model.ManMadeObject()
+	catalogObject = model.HumanMadeObject()
 	catalogObject._label = data.get('annotation_info')
 	# TODO: link this with the vocab.AuctionCatalog
 	catalogObject.carries = catalog
@@ -501,7 +501,7 @@ def add_object_type(data):
 		add_crom_data(data=data, what=otype())
 	else:
 		print(f'*** No object type for {typestring!r}')
-		add_crom_data(data=data, what=model.ManMadeObject())
+		add_crom_data(data=data, what=model.HumanMadeObject())
 
 	parent = data['parent_data']
 	coll = parent.get('_lot_object_set')
@@ -800,7 +800,7 @@ class ProvenancePipeline:
 			ExtractKeyedValue(key='_object'),
 			add_object_type,
 			populate_object,
-			MakeLinkedArtManMadeObject(),
+			MakeLinkedArtHumanMadeObject(),
 			AddDataDependentArchesModel(models=self.models),
 			add_pir_artists,
 			_input=sales.output

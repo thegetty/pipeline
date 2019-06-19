@@ -7,8 +7,8 @@ from pipeline.linkedart import add_crom_data
 factory.auto_id_type = 'uuid'
 vocab.add_art_setter()
 
-vocab.register_aat_class("Clock", {"parent": model.ManMadeObject, "id": "300041575", "label": "Clock"})
-vocab.register_aat_class("Cards", {"parent": model.ManMadeObject, "id":"300211294", "label": "Playing Cards"})
+vocab.register_aat_class("Clock", {"parent": model.HumanMadeObject, "id": "300041575", "label": "Clock"})
+vocab.register_aat_class("Cards", {"parent": model.HumanMadeObject, "id":"300211294", "label": "Playing Cards"})
 object_type_map = {
 	"Painting": vocab.Painting,
 	"Drawing": vocab.Drawing,
@@ -142,8 +142,8 @@ def make_la_row(data: dict):
 ###
 
 def make_la_object(data: dict):
-	cls = object_type_map.get(data['object_type'], model.ManMadeObject)
-	if cls == model.ManMadeObject:
+	cls = object_type_map.get(data['object_type'], model.HumanMadeObject)
+	if cls == model.HumanMadeObject:
 		print("Could not match object type %s" % data['object_type'])
 	what = cls(ident="urn:uuid:%s" % data['uuid'], art=1)
 
@@ -320,7 +320,7 @@ def make_la_purchase(data: dict):
 			what._label = "Purchase?"
 
 	for o in data['objects']:
-		what.transferred_title_of = model.ManMadeObject(ident="urn:uuid:%s" % o['uuid'], label=o['label'])
+		what.transferred_title_of = model.HumanMadeObject(ident="urn:uuid:%s" % o['uuid'], label=o['label'])
 		if 'phase_info' in o:
 			what.initiated = model.Phase(ident="urn:uuid:%s" % o['phase_info']['uuid'])
 	for b in data['buyers']:
@@ -390,7 +390,7 @@ def make_la_phase(data: dict):
 	except:
 		phase._label = "Ownership Phase of unknown object"
 
-	what = model.ManMadeObject(ident="urn:uuid:%s" % data['object_uuid'], label=data['object_label'])
+	what = model.HumanMadeObject(ident="urn:uuid:%s" % data['object_uuid'], label=data['object_label'])
 	phase.phase_of = what
 	pi = model.PropertyInterest()
 	pi.interest_for = what
@@ -440,7 +440,7 @@ def make_la_sale(data: dict):
 	what = model.Acquisition(ident="urn:uuid:%s" % data['uuid'])
 	what._label = "Sale of %s by %s" % (data['objects'][0]['label'], data['sellers'][0]['label'])
 	for o in data['objects']:
-		what.transferred_title_of = model.ManMadeObject(ident="urn:uuid:%s" % o['uuid'], label=o['label'])
+		what.transferred_title_of = model.HumanMadeObject(ident="urn:uuid:%s" % o['uuid'], label=o['label'])
 		if 'phase' in o:
 			what.terminates = model.Phase(ident="urn:uuid:%s" % o['phase'])
 
@@ -506,7 +506,7 @@ def make_la_inventory(data: dict):
 	what._label = "Inventory taking for %s on %s" % (data['objects'][0]['label'], date)
 
 	o = data['objects'][0]
-	obj = model.ManMadeObject(ident="urn:uuid:%s" % o['uuid'], label=o['label'])
+	obj = model.HumanMadeObject(ident="urn:uuid:%s" % o['uuid'], label=o['label'])
 	what.used_specific_object = obj
 
 	buy = data['buyers'][0]
@@ -548,7 +548,7 @@ def make_la_prev_post(data: dict):
 		what.transferred_title_from = who
 
 	# XXX Should we capture labels
-	obj = model.ManMadeObject(ident="urn:uuid:%s" % data['object_uuid'])
+	obj = model.HumanMadeObject(ident="urn:uuid:%s" % data['object_uuid'])
 	what.transferred_title_of = obj
 
 	if 'prev_uuid' in data and data['prev_uuid']:

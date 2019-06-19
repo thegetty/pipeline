@@ -133,7 +133,7 @@ class MakeLinkedArtLinguisticObject(MakeLinkedArtRecord):
 			thing.about = indexing
 
 
-class MakeLinkedArtManMadeObject(MakeLinkedArtRecord):
+class MakeLinkedArtHumanMadeObject(MakeLinkedArtRecord):
 	def set_properties(self, data, thing):
 		super().set_properties(data, thing)
 		title_type = model.Type(ident='http://vocab.getty.edu/aat/300055726', label='Title') # TODO: is this the right aat URI?

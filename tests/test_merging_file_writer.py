@@ -58,7 +58,6 @@ class MergingFileWriterTests(unittest.TestCase):
 		self.assertTrue(os.path.exists(f), 'merged file exists')
 		with open(f) as f:
 			j = json.load(f)
-			pprint.pprint(j)
 			self.assertEqual(j.get('_label'), 'Greg')
 			self.assertIsInstance(j.get('born'), dict)
 

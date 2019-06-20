@@ -3,6 +3,7 @@ import os
 import os.path
 import hashlib
 import json
+import uuid
 import pprint
 from collections import defaultdict
 
@@ -24,9 +25,12 @@ class TestWriter():
 		if dr not in self.output:
 			self.output[dr] = {}
 		uu = data.get('uuid')
-		if not uu:
+		if not uu and 'uri' in data:
 			uu = hashlib.sha256(data['uri'].encode('utf-8')).hexdigest()
-			print(f'*** No UUID in top-level resource. Using an assigned SHA256 filename for the content: {uu}.json')
+			print(f'*** No UUID in top-level resource. Using a hash of top-level URI: {uu}')
+		if not uu:
+			uu = str(uuid.uuid4())
+			print(f'*** No UUID in top-level resource. Using an assigned UUID filename for the content: {uu}')
 		fn = '%s.json' % uu
 		data = json.loads(d)
 		if fn in self.output[dr]:

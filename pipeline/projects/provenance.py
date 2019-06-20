@@ -32,7 +32,8 @@ from pipeline.linkedart import \
 			get_crom_object, \
 			MakeLinkedArtHumanMadeObject, \
 			MakeLinkedArtAuctionHouseOrganization, \
-			make_la_person
+			make_la_person, \
+			make_la_place
 from pipeline.io.csv import CurriedCSVReader
 from pipeline.nodes.basic import \
 			AddFieldNames, \
@@ -102,55 +103,71 @@ def add_auction_event(data):
 	add_crom_data(data=data, what=auction)
 	yield data
 
-@use('auction_locations')
-def populate_auction_event(data, auction_locations):
-	cno = data['catalog_number']
-	auction = get_crom_object(data)
-	catalog = data['_catalog']['_LOD_OBJECT']
-	begin = implode_date(data, 'sale_begin_')
-	end = implode_date(data, 'sale_end_')
+def auction_event_location(data):
+	specific_name = data.get('specific_loc')
+	city_name = data.get('city_of_sale')
+	country_name = data.get('country_auth_1')
+	
+	current = None
+	if country_name:
+		country = {
+			'type': 'Country',
+			'name': country_name,
+		}
+		current = country
+	if city_name:
+		city = {
+			'type': 'City',
+			'name': city_name,
+		}
+		if current:
+			city['part_of'] = current
+		current = city
+	if specific_name:
+		specific = {
+			'type': 'Specific Place',
+			'name': specific_name,
+		}
+		if current:
+			specific['part_of'] = current
+		current = specific
+	return current
 
-	location_data = data['location']
-
-	places = []
-	place_names = []
-	specific = location_data.get('specific_loc')
-	city = location_data.get('city_of_sale')
-	country = location_data.get('country_auth_1')
-	if country:
-		place_names.insert(0, country)
-		p = model.Place(label=', '.join(place_names))
-		p.classified_as = vocab.instances['nation']
-		places.append(p)
-		p.identified_by = model.Name(content=country)
-	if city:
-		place_names.insert(0, city)
-		p = model.Place(label=', '.join(place_names))
-		p.classified_as = vocab.instances['city']
-		if places:
-			p.part_of = places[-1]
-		places.append(p)
-		p.identified_by = model.Name(content=city)
-	if specific:
-		place_names.insert(0, specific)
-		p = model.Place(label=', '.join(place_names))
-		if places:
-			p.part_of = places[-1]
-		places.append(p)
-		p.identified_by = model.Name(content=specific)
-	if places:
-		loc = places[-1]
-		add_crom_data(data=location_data, what=loc)
-		auction.took_place_at = loc
-
-	auction_locations.set(cno, loc)
-
+def timespan_from_bounds(begin=None, end=None):
 	if begin or end:
 		ts = model.TimeSpan(ident='')
 		if begin is not None:
 			ts.begin_of_the_begin = begin
 		if end is not None:
 			ts.end_of_the_end = end
+		return ts
+	return None
+
+@use('auction_locations')
+def populate_auction_event(data, auction_locations):
+	cno = data['catalog_number']
+	auction = get_crom_object(data)
+	catalog = data['_catalog']['_LOD_OBJECT']
+
+	location_data = data['location']
+	current = auction_event_location(location_data)
+
+	# make_la_place is called here instead of as a separate graph node because the Place object
+	# gets stored in the `auction_locations` object to be used in the second graph component
+	# which uses the data to associate the place with auction lots.
+	place_data = make_la_place(current)
+	place = get_crom_object(place_data)
+	if place:
+		data['_location'] = place_data
+		auction.took_place_at = place
+		auction_locations.set(cno, place)
+
+	ts = timespan_from_bounds(
+		begin=implode_date(data, 'sale_begin_'),
+		end=implode_date(data, 'sale_end_'),
+	)
+	
+	if ts:
 		auction.timespan = ts
 
 	auction.subject_of = catalog
@@ -214,23 +231,19 @@ class AddAuctionOfLot:
 			lot.took_place_at = place
 
 		lot._label = f'Auction of Lot {cno} {shared_lot_number}'
+
 		date = implode_date(auction_data, 'lot_sale_')
 		if date:
-			ts = model.TimeSpan(ident='')
+			ts = timespan_from_bounds(begin=date)
 			# TODO: expand this to day bounds
-			ts.begin_of_the_begin = date
-			name = model.Name()
-			name.content = date
-			ts.identified_by = name
+			ts.identified_by = model.Name(content=date)
 			lot.timespan = ts
 		notes = auction_data.get('lot_notes')
 		if notes:
 			note = vocab.Note()
 			note.content = notes
 			lot.referred_to_by = note
-		lotid = model.Identifier()
-		lotid.content = lno
-		lot.identified_by = lotid
+		lot.identified_by = model.Identifier(content=lno)
 		lot.part_of = auction
 
 		data['uri'] = pir_uri(data['uid'])
@@ -250,16 +263,9 @@ def populate_auction_catalog(data):
 	sno = parent['star_record_no']
 	catalog = get_crom_object(d)
 	for lno in parent.get('lugt', {}).values():
-		lugt = model.Identifier()
-		lugt._label = f"Lugt Number: {lno}"
-		lugt.content = lno
-		catalog.identified_by = lugt
-	local = model.Identifier()
-	local.content = cno
-	catalog.identified_by = local
-	local2 = vocab.LocalNumber()
-	local2.content = sno
-	catalog.identified_by = local2
+		catalog.identified_by = model.Identifier(label=f"Lugt Number: {lno}", content=lno)
+	catalog.identified_by = model.Identifier(content=cno)
+	catalog.identified_by = vocab.LocalNumber(content=sno)
 	notes = data.get('notes')
 	if notes:
 		note = vocab.Note()
@@ -270,8 +276,7 @@ def populate_auction_catalog(data):
 def add_physical_catalog_objects(data):
 	catalog = data['_catalog']['_LOD_OBJECT']
 	data['uuid'] = str(uuid.uuid4()) # this is a single pass, and will not be referenced again
-	catalogObject = model.HumanMadeObject()
-	catalogObject._label = data.get('annotation_info')
+	catalogObject = model.HumanMadeObject(label=data.get('annotation_info'))
 	# TODO: link this with the vocab.AuctionCatalog
 	catalogObject.carries = catalog
 	# TODO: Rob's build-sample-auction-data.py script adds this annotation. where does it come from?
@@ -344,12 +349,17 @@ def add_person(a: dict):
 def add_acquisition(data):
 	parent = data['parent_data']
 	transaction = parent['transaction']
+	prices = parent['price']
+	auction_data = parent['auction_of_lot']
+	cno = auction_data['catalog_number']
+	lno = auction_data['lot_number']
+
 	data = data.copy()
 	object = get_crom_object(data)
 	lot = get_crom_object(parent)
-	prices = parent['price']
 	amnts = [get_crom_object(p) for p in prices]
-	
+	object_label = object._label
+
 	# TODO: filtering empty people should be moved much earlier in the pipeline
 	buyers = [add_person(p) for p in filter_empty_people(*parent['buyer'])]
 	sellers = [add_person(p) for p in filter_empty_people(*parent['seller'])]
@@ -359,9 +369,9 @@ def add_acquisition(data):
 		if not prices:
 			print(f'*** No price data found for {transaction} transaction')
 
-		acq = model.Acquisition()
+		acq = model.Acquisition(label=f'Acquisition of {cno} {lno}: {object_label}')
 		acq.transferred_title_of = object
-		paym = model.Payment()
+		paym = model.Payment(label=f'Payment for {object_label}')
 		for seller in [get_crom_object(s) for s in sellers]:
 			paym.paid_to = seller
 			acq.transferred_title_from = seller
@@ -386,11 +396,7 @@ def add_acquisition(data):
 			print(f'*** No price data found for {transaction} transaction')
 
 		lot = get_crom_object(parent)
-		auction_data = parent['auction_of_lot']
-		cno = auction_data['catalog_number']
-		lno = auction_data['lot_number']
-		all_bids = model.Activity()
-		all_bids._label = f'Bidding on {cno} {lno}'
+		all_bids = model.Activity(label=f'Bidding on {cno} {lno}')
 		all_bids.part_of = lot
 
 		for amnt in amnts:
@@ -402,8 +408,7 @@ def add_acquisition(data):
 			for buyer in [get_crom_object(b) for b in buyers]:
 				bid.carried_out_by = buyer
 
-			prop = model.PropositionalObject()
-			prop._label = f'Promise to pay {amnt_label}'
+			prop = model.PropositionalObject(label=f'Promise to pay {amnt_label}')
 			bid.created = prop
 
 			all_bids.part = bid
@@ -544,8 +549,7 @@ def add_auction_house_data(a):
 	name = a.get('auc_house_name', a.get('name'))
 	a['identifiers'] = []
 	if name:
-		n = model.Name()
-		n.content = name
+		n = model.Name(content=name)
 		n.referred_to_by = catalog
 		a['identifiers'].append(n)
 		a['label'] = name
@@ -846,7 +850,7 @@ class ProvenancePipeline:
 
 	def add_places_chain(self, graph, auction_events, serialize=True):
 		places = graph.add_chain(
-			ExtractKeyedValue(key='location'),
+			ExtractKeyedValue(key='_location'),
 			AddDataDependentArchesModel(models=self.models),
 			_input=auction_events.output
 		)

@@ -140,6 +140,7 @@ def populate_auction_event(data, auction_locations):
 		p.identified_by = model.Name(content=specific)
 	if places:
 		loc = places[-1]
+		add_crom_data(data=location_data, what=loc)
 		auction.took_place_at = loc
 
 	auction_locations.set(cno, loc)
@@ -843,6 +844,17 @@ class ProvenancePipeline:
 			self.add_serialization_chain(graph, objects.output)
 		return objects
 
+	def add_places_chain(self, graph, auction_events, serialize=True):
+		places = graph.add_chain(
+			ExtractKeyedValue(key='location'),
+			AddDataDependentArchesModel(models=self.models),
+			_input=auction_events.output
+		)
+		if serialize:
+			# write OBJECTS data
+			self.add_serialization_chain(graph, places.output)
+		return places
+	
 	def add_auction_houses_chain(self, graph, auction_events, serialize=True):
 		houses = graph.add_chain(
 			ExtractKeyedValues(key='auction_house'),
@@ -892,6 +904,7 @@ class ProvenancePipeline:
 			auction_events = self.add_auction_events_chain(g, auction_events_records, serialize=True)
 			catalog_los = self.add_catalog_linguistic_objects(g, auction_events, serialize=True)
 			auction_houses = self.add_auction_houses_chain(g, auction_events, serialize=True)
+			places = self.add_places_chain(g, auction_events, serialize=True)
 
 		if not all:
 			self.output_chain = None

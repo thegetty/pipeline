@@ -320,3 +320,40 @@ def make_la_person(data: dict):
 			who.residence = pl
 
 	return add_crom_data(data=data, what=who)
+
+def make_la_place(data: dict):
+	'''
+	Given a dictionary representing data about a place, construct a model.Place object,
+	assign it as the crom data in the dictionary, and return the dictionary.
+	
+	The dictionary keys used to construct the place object are:
+	
+	- name
+	- type (one of: 'City' or 'Country')
+	- part_of (a recursive place dictionary)
+	'''
+	TYPES = {
+		'city': vocab.instances['city'],
+		'country': vocab.instances['nation'],
+	}
+
+	if data is None:
+		return None
+	type_name = data['type']
+	name = data['name']
+	label = name
+	parent_data = data.get('part_of')
+	
+	type = TYPES.get(type_name.lower())
+	parent = None
+	if parent_data:
+		parent_data = make_la_place(parent_data)
+		parent = get_crom_object(parent_data)
+		label = f'{label}, {parent._label}'
+	p = model.Place(label=label)
+	if type:
+		p.classified_as = type
+	p.identified_by = model.Name(content=name)
+	if parent:
+		p.part_of = parent
+	return add_crom_data(data=data, what=p)

@@ -14,10 +14,10 @@ def filename_for(data: dict):
 	if not uu and 'uri' in data:
 		h = hashlib.md5(data['uri'].encode('utf-8')).hexdigest()
 		uu = f'content-{h}'
-		print(f'*** No UUID in top-level resource. Using a hash of top-level URI: {uu}')
+# 		print(f'*** No UUID in top-level resource. Using a hash of top-level URI: {uu}')
 	if not uu:
 		uu = str(uuid.uuid4())
-		print(f'*** No UUID in top-level resource. Using an assigned UUID filename for the content: {uu}')
+# 		print(f'*** No UUID in top-level resource. Using an assigned UUID filename for the content: {uu}')
 	fn = f'{uu}.json'
 	return fn
 

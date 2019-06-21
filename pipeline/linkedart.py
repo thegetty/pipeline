@@ -10,6 +10,8 @@ def add_crom_data(data: dict, what=None):
 	return data
 
 def get_crom_object(data: dict):
+	if data is None:
+		return None
 	return data.get('_LOD_OBJECT')
 
 class MakeLinkedArtRecord:
@@ -318,6 +320,9 @@ def make_la_person(data: dict):
 				# l._label = _row_label(s[2], s[3], s[4])
 			#	pl.referred_to_by = l
 			who.residence = pl
+
+	for uri in data.get('exact_match', []):
+		who.exact_match = uri
 
 	return add_crom_data(data=data, what=who)
 

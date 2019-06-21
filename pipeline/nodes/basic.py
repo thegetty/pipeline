@@ -84,7 +84,10 @@ class GroupRepeatingKeys(Configurable):
 						if all(values_unset):
 							continue
 					if postprocess:
-						subd = postprocess(subd, data)
+						if callable(postprocess):
+							postprocess = [postprocess]
+						for p in postprocess:
+							subd = p(subd, data)
 					d[key].append(subd)
 		yield d
 
@@ -104,7 +107,10 @@ class GroupKeys(Configurable):
 					continue
 				subd[k] = v
 			if postprocess:
-				subd = postprocess(subd, data)
+				if callable(postprocess):
+					postprocess = [postprocess]
+				for p in postprocess:
+					subd = p(subd, data)
 			d[key] = subd
 		yield d
 

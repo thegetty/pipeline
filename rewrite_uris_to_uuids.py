@@ -23,6 +23,8 @@ class Rewriter:
 			return [self.rewrite(v) for v in d]
 		elif isinstance(d, int):
 			return d
+		elif isinstance(d, float):
+			return d
 		elif isinstance(d, str):
 			if d.startswith(self.prefix):
 				d = d[len(self.prefix):]

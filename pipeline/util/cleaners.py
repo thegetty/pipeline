@@ -18,13 +18,17 @@ dimension_pattern = f'({number_pattern}\s*{unit_pattern})'
 dimension_re = re.compile(f'\s*({number_pattern}\s*{unit_pattern})')
 
 simple_width_height_pattern = '(?:\s*((?<!\w)[wh]|width|height))?'
-simple_dimensions_pattern = ''\
+simple_dimensions_pattern_x1 = ''\
+	f'(?P<d1>(?:{dimension_pattern}\s*)+)'\
+	f'(?P<d1w>{simple_width_height_pattern})'
+simple_dimensions_re_x1 = re.compile(simple_dimensions_pattern_x1)
+simple_dimensions_pattern_x2 = ''\
 	f'(?P<d1>(?:{dimension_pattern}\s*)+)'\
 	f'(?P<d1w>{simple_width_height_pattern})'\
 	'(?:,)?\s*(x|by)'\
 	f'(?P<d2>(?:\s*{dimension_pattern})+)'\
 	f'(?P<d2w>{simple_width_height_pattern})'
-simple_dimensions_re = re.compile(simple_dimensions_pattern)
+simple_dimensions_re_x2 = re.compile(simple_dimensions_pattern_x2)
 
 # Haut 14 pouces, large 10 pouces
 french_dimensions_pattern = f'[Hh]aut(?:eur)? (?P<d1>(?:{dimension_pattern}\s*)+), [Ll]arge(?:ur)? (?P<d2>(?:{dimension_pattern}\s*)+)'
@@ -172,9 +176,10 @@ def dimensions_cleaner(value):
 	if value is None:
 		return None
 	cleaners = [
-		simple_dimensions_cleaner,
-		french_dimensions_cleaner,
-		dutch_dimensions_cleaner
+		simple_dimensions_cleaner_x2,
+		french_dimensions_cleaner_x2,
+		dutch_dimensions_cleaner_x2,
+		simple_dimensions_cleaner_x1
 	]
 	for f in cleaners:
 		d = f(value)
@@ -182,7 +187,7 @@ def dimensions_cleaner(value):
 			return d
 	return None
 
-def french_dimensions_cleaner(value):
+def french_dimensions_cleaner_x2(value):
 	# Haut 14 pouces, large 10 pouces
 
 	m = french_dimensions_re.match(value)
@@ -202,7 +207,7 @@ def french_dimensions_cleaner(value):
 # 		print(f'>>>>>> {french_dimensions_re}')
 	return None
 
-def dutch_dimensions_cleaner(value):
+def dutch_dimensions_cleaner_x2(value):
 	# Hoog. 1 v. 6 d., Breed 2 v. 3 d.
 	# Breedt 6 v., hoog 3 v
 
@@ -228,12 +233,29 @@ def dutch_dimensions_cleaner(value):
 # 		print(f'>>>>>> {dutch_dimensions_re}')
 	return None
 
-def simple_dimensions_cleaner(value):
+def simple_dimensions_cleaner_x1(value):
+	print(f'Simple dimension? {value!r}')
+	# 1 cm
+	# 1' 2"
+	# 1 ft. 2 in. h
+
+	m = simple_dimensions_re_x1.match(value)
+	print(f'match: {m}')
+	if m:
+		d = m.groupdict()
+		pprint.pprint(d)
+		d1 = parse_simple_dimensions(d['d1'], d['d1w'])
+		if d1:
+			print(f'MATCHED: {d1}')
+			return (d1,)
+	return None
+
+def simple_dimensions_cleaner_x2(value):
 	# 1 cm x 2 in
 	# 1' 2" by 3 cm
 	# 1 ft. 2 in. h by 3 cm w
 
-	m = simple_dimensions_re.match(value)
+	m = simple_dimensions_re_x2.match(value)
 	if m:
 		d = m.groupdict()
 		d1 = parse_simple_dimensions(d['d1'], d['d1w'])

@@ -240,20 +240,21 @@ class AddAuctionOfLot:
 			lot.timespan = ts
 		notes = auction_data.get('lot_notes')
 		if notes:
-			note = vocab.Note()
-			note.content = notes
-			lot.referred_to_by = note
+			lot.referred_to_by = vocab.Note(content=notes)
 		lot.identified_by = model.Identifier(content=lno)
 		lot.part_of = auction
 
 		data['uri'] = pir_uri(data['uid'])
 		coll = vocab.AuctionLotSet(ident=data['uri'])
 		coll._label = f'Auction Lot {shared_lot_number}'
+		est_price = data.get('estimated_price')
+		if est_price:
+			coll.dimension = get_crom_object(est_price)
+
 		lot.used_specific_object = coll
 		data['_lot_object_set'] = coll
 
 		add_crom_data(data=data, what=lot)
-	# 	pprint.pprint(data)
 		yield data
 
 def populate_auction_catalog(data):
@@ -299,15 +300,27 @@ def add_crom_price(data, parent):
 		'guineas': 'gb guineas',
 		'Reichsmark': 'de reichsmarks'
 	}
-	amnt = model.MonetaryAmount()
-	price_amount = data.get('price_amount')
-	price_currency = data.get('price_currency')
+	
+	if 'est_price' in data:
+		amnt = vocab.EstimatedPrice()
+		price_amount = data.get('est_price')
+		price_currency = data.get('est_price_curr')
+	else:
+		amnt = model.MonetaryAmount()
+		price_amount = data.get('price_amount')
+		price_currency = data.get('price_currency')
+
 	if price_amount:
 		try:
-			price_amount = float(price_amount)
+			v = price_amount
+			v = v.replace('[?]', '')
+			v = v.replace('?', '')
+			v = v.strip()
+			price_amount = float(v)
 			amnt.value =  price_amount
 		except ValueError:
 			amnt._label = price_amount # TODO: is there a way to associate the value string with the MonetaryAmount in a meaningful way?
+			amnt.identified_by = model.Name(content=price_amount)
 # 			print(f'*** Not a numeric price amount: {v}')
 	if price_currency:
 		if price_currency in MAPPING:
@@ -333,6 +346,7 @@ def add_person(a: dict):
 		a['uid'] = key
 		a['uri'] = pir_uri(key)
 		a['identifiers'] = [model.Identifier(content=ulan)]
+		a['exact_match'] = [f'http://vocab.getty.edu/ulan/{ulan}']
 	else:
 		a['uuid'] = str(uuid.uuid4()) # not enough information to identify this person uniquely, so they get a UUID
 
@@ -390,34 +404,33 @@ def add_acquisition(data):
 	elif transaction in ('Unknown', 'Unbekannt', 'Inconnue', 'Withdrawn', 'Non Vendu'):
 		bids = parent.get('bid', )
 		if amnts:
-			pass
+			lot = get_crom_object(parent)
+			all_bids = model.Activity(label=f'Bidding on {cno} {lno}')
+			all_bids.part_of = lot
+
+			for amnt in amnts:
+				bid = vocab.Bidding()
+				amnt_label = amnt._label
+				bid._label = f'Bid of {amnt_label} on {lno}'
+				# TODO: there are often no buyers listed for non-sold records.
+				#       should we construct an anonymous person to carry out the bid?
+				for buyer in [get_crom_object(b) for b in buyers]:
+					bid.carried_out_by = buyer
+
+				prop = model.PropositionalObject(label=f'Promise to pay {amnt_label}')
+				bid.created = prop
+
+				all_bids.part = bid
+
+			add_crom_data(data=data, what=all_bids)
+
+			yield data
 		else:
 			# TODO: there may be an `est_price` value. should it be recorded as a bid?
 			print(f'*** No price data found for {transaction} transaction')
-
-		lot = get_crom_object(parent)
-		all_bids = model.Activity(label=f'Bidding on {cno} {lno}')
-		all_bids.part_of = lot
-
-		for amnt in amnts:
-			bid = vocab.Bidding()
-			amnt_label = amnt._label
-			bid._label = f'Bid of {amnt_label} on {lno}'
-			# TODO: there are often no buyers listed for non-sold records.
-			#       should we construct an anonymous person to carry out the bid?
-			for buyer in [get_crom_object(b) for b in buyers]:
-				bid.carried_out_by = buyer
-
-			prop = model.PropositionalObject(label=f'Promise to pay {amnt_label}')
-			bid.created = prop
-
-			all_bids.part = bid
-
-		add_crom_data(data=data, what=all_bids)
-
-		yield data
 	else:
-		print(f'Cannot create acquisition data for unknown transaction type: {transaction}')
+		print(f'Cannot create acquisition data for unknown transaction type: {transaction!r}')
+		pprint.pprint(data)
 
 def genre_instance(value):
 	if value is None:
@@ -483,6 +496,7 @@ def populate_object(data):
 						dim = vocab.Width()
 					else:
 						dim = model.Dimension()
+# 						dim = vocab.PhysicalDimension() # TODO: as soon as this is available from crom
 					dim.identified_by = model.Name(content=label)
 					dim.value = d.value
 					dim.unit = vocab.instances[d.unit]
@@ -540,7 +554,10 @@ def add_auction_house_data(a):
 		a['uid'] = key
 		a['uri'] = pir_uri(key)
 		a['identifiers'] = [model.Identifier(content=ulan)]
+		a['exact_match'] = [f'http://vocab.getty.edu/ulan/{ulan}']
 		house = vocab.AuctionHouseOrg(ident=a['uri'])
+		for uri in a.get('exact_match', []):
+			house.exact_match = uri
 	else:
 		a['uuid'] = str(uuid.uuid4()) # not enough information to identify this person uniquely, so they get a UUID
 		uri = "urn:uuid:%s" % a['uuid']
@@ -820,7 +837,8 @@ class ProvenancePipeline:
 			GroupKeys(mapping={
 				'auction_of_lot': {'properties': ('catalog_number', 'lot_number', 'lot_sale_year', 'lot_sale_month', 'lot_sale_day', 'lot_sale_mod', 'lot_notes')},
 				'_object': {'postprocess': add_pir_object_uuid, 'properties': ('title', 'title_modifier', 'object_type', 'materials', 'dimensions', 'formatted_dimens', 'format', 'genre', 'subject', 'inscription', 'present_loc_geog', 'present_loc_inst', 'present_loc_insq', 'present_loc_insi', 'present_loc_acc', 'present_loc_accq', 'present_loc_note', '_artists')},
-				'bid': {'properties': ('est_price', 'est_price_curr', 'est_price_desc', 'est_price_so', 'start_price', 'start_price_curr', 'start_price_desc', 'start_price_so', 'ask_price', 'ask_price_curr', 'ask_price_so')},
+				'estimated_price': {'postprocess': add_crom_price, 'properties': ('est_price', 'est_price_curr', 'est_price_desc', 'est_price_so')},
+				'bid': {'properties': ('start_price', 'start_price_curr', 'start_price_desc', 'start_price_so', 'ask_price', 'ask_price_curr', 'ask_price_so')},
 			}),
 # 			Trace(name='sale'),
 			AddAuctionOfLot(),

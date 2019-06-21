@@ -51,6 +51,7 @@ class TestDateCleaners(unittest.TestCase):
 			'1 by 4': None,
 			'Hoog. 6 v., breed 3 v': ([Dimension('6', 'feet', 'height')], [Dimension('3', 'feet', 'width')]),
 			'Breedt 6 v., hoog 3 v': ([Dimension('6', 'feet', 'width')], [Dimension('3', 'feet', 'height')]),
+			'20 cm x 24,5 cm': ([Dimension('20', 'cm', None)], [Dimension('24.5', 'cm', None)]),
 		}
 
 		for value, expected in tests.items():

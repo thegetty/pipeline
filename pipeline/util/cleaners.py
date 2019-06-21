@@ -12,7 +12,7 @@ CIRCA_D = timedelta(days=365*CIRCA)
 
 share_re = re.compile("([0-9]+)/([0-9]+)")
 
-number_pattern = '((?:\d+(?:[.]\d+)?)|(?:\d+\s+\d+/\d+))'
+number_pattern = '((?:\d+(?:[.,]\d+)?)|(?:\d+\s+\d+/\d+))'
 unit_pattern = '''('|"|d[.]?|duymen|pouces?|inches|inch|in[.]?|pieds?|v[.]?|voeten|feet|foot|ft[.]?|cm)'''
 dimension_pattern = f'({number_pattern}\s*{unit_pattern})'
 dimension_re = re.compile(f'\s*({number_pattern}\s*{unit_pattern})')
@@ -35,6 +35,7 @@ dutch_dimensions_pattern = f'(?P<d1w>[Hh]oogh?[.]?|[Bb]reedt?) (?P<d1>(?:{dimens
 dutch_dimensions_re = re.compile(dutch_dimensions_pattern)
 
 def _canonical_value(value):
+	value = value.replace(',', '.')
 	value = value.replace(' 1/4', '.25')
 	value = value.replace(' 1/2', '.5')
 	value = value.replace(' 3/4', '.75')

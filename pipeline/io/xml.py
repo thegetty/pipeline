@@ -1,32 +1,9 @@
-import os
 import sys
-import fnmatch
 import lxml.etree
 
 from bonobo.constants import NOT_MODIFIED
 from bonobo.nodes.io.file import FileReader
 from bonobo.config import Configurable, Option, Service
-
-class MatchingFiles(Configurable):
-	'''
-	Given a path and a pattern, yield the names of all files in the path that match the pattern.
-	'''
-	path = Option(str)
-	pattern = Option(str, default='*')
-	fs = Service(
-		'fs',
-		__doc__='''The filesystem instance to use.''',
-	)  # type: str
-	def __call__(self, *, fs, **kwargs):
-		count = 0
-		subpath, pattern = os.path.split(self.pattern)
-		fullpath = os.path.join(self.path, subpath)
-		for f in fs.listdir(fullpath):
-			if fnmatch.fnmatch(f, pattern):
-				yield os.path.join(subpath, f)
-				count += 1
-		if not count:
-			sys.stderr.write(f'*** No files matching {pattern} found in {fullpath}\n')
 
 class XMLReader(FileReader):
 	'''

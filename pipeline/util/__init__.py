@@ -1,11 +1,19 @@
+import os
+import fnmatch
 from threading import Lock
 from contextlib import ContextDecorator, suppress
-from collections import defaultdict
+from collections import defaultdict, namedtuple
 
 import settings
 import pipeline.io.arches
-from bonobo.config import Configurable, Option
+from bonobo.config import Configurable, Option, Service
 from cromulent.model import factory
+
+Dimension = namedtuple("Dimension", [
+	'value',	# numeric value
+	'unit',		# unit
+	'which'		# e.g. width, height, ...
+])
 
 def identity(d):
 	'''
@@ -22,6 +30,24 @@ def identity(d):
 	`graph.add_chain(identity, _input=prefix.output, _output=suffix.input)`
 	'''
 	yield d
+
+def implode_date(data: dict, prefix: str):
+	'''
+	Given a dict `data` and a string `prefix`, extract year, month, and day elements
+	from `data` (e.g. '{prefix}year', '{prefix}month', and '{prefix}day'), and return
+	an ISO 8601 date string ('YYYY-MM-DD'). If the day, or day and month elements are
+	missing, may also return a year-month ('YYYY-MM') or year ('YYYY') string.
+	'''
+	year = data.get(f'{prefix}year')
+	month = data.get('{prefix}month')
+	day = data.get('{prefix}day')
+	if year and month and day:
+		return f'{year}-{month}-{day}'
+	elif year and month:
+		return f'{year}-{month}'
+	elif year:
+		return f'{year}'
+	return None
 
 class ExclusiveValue(ContextDecorator):
 	_locks = {}
@@ -55,14 +81,14 @@ def configured_arches_writer():
 
 class CromObjectMerger:
 	def merge(self, obj, *to_merge):
-		print('merging...')
-		propInfo = obj._list_all_props()
+		pass
+# 		print('merging...')
 # 		print(f'base object: {obj}')
 		for m in to_merge:
 			pass
 # 			print('============================================')
 # 			print(f'merge: {m}')
-			for p in propInfo.keys():
+			for p in m.list_my_props():
 				value = None
 				with suppress(AttributeError):
 					value = getattr(m, p)
@@ -73,13 +99,13 @@ class CromObjectMerger:
 					else:
 						self.set_or_merge(obj, p, value)
 # 			obj = self.merge(obj, m)
-		print('Result of merge:')
-		print(factory.toString(obj, False))
+# 		print('Result of merge:')
+# 		print(factory.toString(obj, False))
 		return obj
 
 	def set_or_merge(self, obj, p, *values):
-		print('------------------------')
 		existing = []
+# 		print('------------------------')
 		with suppress(AttributeError):
 			existing = getattr(obj, p)
 			if type(existing) == list:
@@ -87,27 +113,30 @@ class CromObjectMerger:
 			else:
 				existing = [existing]
 
-		print(f'Setting {p}')
+# 		print(f'Setting {p}')
 		identified = defaultdict(list)
 		unidentified = []
 		if existing:
-			print('Existing value(s):')
+			pass
+# 			print('Existing value(s):')
 			for v in existing:
 				if hasattr(v, 'id'):
 					identified[v.id].append(v)
 				else:
 					unidentified.append(v)
-				print(f'- {v}')
+# 				print(f'- {v}')
 
 		for v in values:
-			print(f'Setting {p} value to {v}')
+			pass
+# 			print(f'Setting {p} value to {v}')
 			if hasattr(v, 'id'):
 				identified[v.id].append(v)
 			else:
 				unidentified.append(v)
 
 		if p == 'type':
-			print('*** TODO: calling setattr(_, "type") on crom objects throws an exception; skipping for now')
+			pass
+# 			print('*** TODO: calling setattr(_, "type") on crom objects throws an exception; skipping for now')
 			return
 		for i, v in identified.items():
 			setattr(obj, p, None)
@@ -140,3 +169,57 @@ class ExtractKeyedValues(Configurable):
 				'parent_data': data,
 			})
 			yield child
+
+class ExtractKeyedValue(Configurable):
+	'''
+	Given a `dict` representing an some object, extract the `key` member (a dict).
+	To the extracted dictionaries, add a 'parent_data' key with
+	the value of the original dictionary. Yield the extracted dictionary.
+	'''
+	key = Option(str, required=True)
+	include_parent = Option(bool, default=True)
+
+	def __init__(self, *v, **kw):
+		'''
+		Sets the __name__ property to include the relevant options so that when the
+		bonobo graph is serialized as a GraphViz document, different objects can be
+		visually differentiated.
+		'''
+		super().__init__(*v, **kw)
+		self.__name__ = f'{type(self).__name__} ({self.key})'
+
+	def __call__(self, data):
+		a = data.get(self.key)
+		if a:
+			child = {k: v for k, v in a.items()}
+			child.update({
+				'parent_data': data,
+			})
+			yield child
+
+class MatchingFiles(Configurable):
+	'''
+	Given a path and a pattern, yield the names of all files in the path that match the pattern.
+	'''
+	path = Option(str)
+	pattern = Option(str, default='*')
+	fs = Service(
+		'fs',
+		__doc__='''The filesystem instance to use.''',
+	)  # type: str
+	
+	def __init__(self, *args, **kwargs):
+		super().__init__(self, *args, **kwargs)
+		self.__name__ = f'{type(self).__name__} ({self.pattern})'
+	
+	def __call__(self, *, fs, **kwargs):
+		count = 0
+		subpath, pattern = os.path.split(self.pattern)
+		fullpath = os.path.join(self.path, subpath)
+		for f in sorted(fs.listdir(fullpath)):
+			if fnmatch.fnmatch(f, pattern):
+				yield os.path.join(subpath, f)
+				count += 1
+		if not count:
+			sys.stderr.write(f'*** No files matching {pattern} found in {fullpath}\n')
+

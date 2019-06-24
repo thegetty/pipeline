@@ -1,3 +1,4 @@
+import pprint
 from cromulent import model, vocab
 from cromulent.model import factory
 factory.auto_id_type = 'uuid'
@@ -8,16 +9,42 @@ def add_crom_data(data: dict, what=None):
 	data['_LOD_OBJECT'] = what
 	return data
 
+def get_crom_object(data: dict):
+	if data is None:
+		return None
+	return data.get('_LOD_OBJECT')
+
 class MakeLinkedArtRecord:
 	def set_properties(self, data, thing):
-		pass
+		for identifier in data.get('identifiers', []):
+			if type(identifier) == tuple:
+				content, itype = identifier
+				if itype is not None:
+					if type(itype) == type:
+						ident = itype(content=content)
+					elif isinstance(itype, object):
+						ident = itype
+						ident.content = content
+					else:
+						ident = model.Identifier()
+						ident.content = content
+						ident.classified_as = itype
+			else:
+				ident = identifier
+			thing.identified_by = ident
 
 	def __call__(self, data: dict):
 		if '_LOD_OBJECT' in data:
 			thing = data['_LOD_OBJECT']
 		else:
 			otype = data['object_type']
-			thing = otype(ident="urn:uuid:%s" % data['uuid'])
+			if 'uuid' in data:
+				thing = otype(ident="urn:uuid:%s" % data['uuid'])
+			elif 'uri' in data:
+				thing = otype(ident=data['uri'])
+			else:
+				raise Exception('MakeLinkedArtRecord called with a dictionary with neither uuid or uri member')
+
 		self.set_properties(data, thing)
 
 		return add_crom_data(data=data, what=thing)
@@ -46,6 +73,7 @@ class MakeLinkedArtLinguisticObject(MakeLinkedArtRecord):
 	# TODO: document the expected format of data['identifiers']
 	# TODO: document the expected format of data['names']
 	def set_properties(self, data, thing):
+		super().set_properties(data, thing)
 		title_type = model.Type(ident='http://vocab.getty.edu/aat/300055726', label='Title') # TODO: is this the right aat URI?
 		name = None
 		if 'label' in data:
@@ -61,23 +89,6 @@ class MakeLinkedArtLinguisticObject(MakeLinkedArtRecord):
 			thing.identified_by = ident
 			for n in notes:
 				ident.referred_to_by = n
-
-		for identifier in data.get('identifiers', []):
-			if type(identifier) == tuple:
-				content, itype = identifier
-				if itype is not None:
-					if type(itype) == type:
-						ident = itype(content=content)
-					elif isinstance(itype, object):
-						ident = itype
-						ident.content = content
-					else:
-						ident = model.Identifier()
-						ident.content = content
-						ident.classified_as = itype
-			else:
-				ident = identifier
-			thing.identified_by = ident
 
 		for name in data.get('names', []):
 			n = set_la_name(thing, name[0])
@@ -124,12 +135,57 @@ class MakeLinkedArtLinguisticObject(MakeLinkedArtRecord):
 			thing.about = indexing
 
 
+class MakeLinkedArtHumanMadeObject(MakeLinkedArtRecord):
+	def set_properties(self, data, thing):
+		super().set_properties(data, thing)
+		title_type = model.Type(ident='http://vocab.getty.edu/aat/300055726', label='Title') # TODO: is this the right aat URI?
+		if 'label' in data:
+			set_la_name(thing, data['label'], title_type, set_label=True)
+
+		if 'title' in data:
+			# TODO: This needs to be a PrimaryName, not a Name classified as a Title
+			set_la_name(thing, data['title'], title_type, set_label=True)
+
+		for coll in data.get('member_of', []):
+			thing.member_of = coll
+
+		for identifier in data.get('identifiers', []):
+			if type(identifier) == tuple:
+				content, itype = identifier
+				if itype is not None:
+					if type(itype) == type:
+						ident = itype(content=content)
+					elif isinstance(itype, object):
+						ident = itype
+						ident.content = content
+					else:
+						ident = model.Identifier()
+						ident.content = content
+						ident.classified_as = itype
+			else:
+				ident = identifier
+			thing.identified_by = ident
+
+		for name in data.get('names', []):
+			n = set_la_name(thing, name[0])
+			for ref in name[1:]:
+				l = model.LinguisticObject(ident="urn:uuid:%s" % ref[1])
+				# l._label = _row_label(ref[2][0], ref[2][1], ref[2][2])
+				n.referred_to_by = l
+
+		for annotation in data.get('annotations', []):
+			a = model.Annotation()
+			a.content = content
+			thing.carries = a
+
+
 class MakeLinkedArtAbstract(MakeLinkedArtLinguisticObject):
 	pass
 
 class MakeLinkedArtOrganization(MakeLinkedArtRecord):
 	# TODO: document the expected format of data['names']
 	def set_properties(self, data, thing):
+		super().set_properties(data, thing)
 		thing._label = str(data['label'])
 
 		if 'events' in data:
@@ -149,8 +205,20 @@ class MakeLinkedArtOrganization(MakeLinkedArtRecord):
 			data['object_type'] = model.Group
 		return super().__call__(data)
 
+class MakeLinkedArtAuctionHouseOrganization(MakeLinkedArtOrganization):
+	def __call__(self, data: dict):
+		if 'object_type' not in data:
+			data['object_type'] = vocab.AuctionHouseOrg
+		return super().__call__(data)
+
 def make_la_person(data: dict):
-	who = model.Person(ident="urn:uuid:%s" % data['uuid'])
+	uri = data.get('uri')
+	if not uri:
+		if 'uuid' not in data:
+			print('No UUID for person:')
+			pprint.pprint(data)
+		uri = "urn:uuid:%s" % data['uuid']
+	who = model.Person(ident=uri)
 	who._label = str(data['label'])
 
 	for ns in ['aat_nationality_1', 'aat_nationality_2','aat_nationality_3']:
@@ -253,4 +321,44 @@ def make_la_person(data: dict):
 			#	pl.referred_to_by = l
 			who.residence = pl
 
+	for uri in data.get('exact_match', []):
+		who.exact_match = uri
+
 	return add_crom_data(data=data, what=who)
+
+def make_la_place(data: dict):
+	'''
+	Given a dictionary representing data about a place, construct a model.Place object,
+	assign it as the crom data in the dictionary, and return the dictionary.
+	
+	The dictionary keys used to construct the place object are:
+	
+	- name
+	- type (one of: 'City' or 'Country')
+	- part_of (a recursive place dictionary)
+	'''
+	TYPES = {
+		'city': vocab.instances['city'],
+		'country': vocab.instances['nation'],
+	}
+
+	if data is None:
+		return None
+	type_name = data['type']
+	name = data['name']
+	label = name
+	parent_data = data.get('part_of')
+	
+	type = TYPES.get(type_name.lower())
+	parent = None
+	if parent_data:
+		parent_data = make_la_place(parent_data)
+		parent = get_crom_object(parent_data)
+		label = f'{label}, {parent._label}'
+	p = model.Place(label=label)
+	if type:
+		p.classified_as = type
+	p.identified_by = model.Name(content=name)
+	if parent:
+		p.part_of = parent
+	return add_crom_data(data=data, what=p)

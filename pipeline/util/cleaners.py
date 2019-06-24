@@ -234,19 +234,15 @@ def dutch_dimensions_cleaner_x2(value):
 	return None
 
 def simple_dimensions_cleaner_x1(value):
-	print(f'Simple dimension? {value!r}')
 	# 1 cm
 	# 1' 2"
 	# 1 ft. 2 in. h
 
 	m = simple_dimensions_re_x1.match(value)
-	print(f'match: {m}')
 	if m:
 		d = m.groupdict()
-		pprint.pprint(d)
 		d1 = parse_simple_dimensions(d['d1'], d['d1w'])
 		if d1:
-			print(f'MATCHED: {d1}')
 			return (d1,)
 	return None
 

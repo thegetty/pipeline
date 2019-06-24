@@ -1,3 +1,4 @@
+#!/usr/bin/env python3 -B
 import unittest
 import os
 import os.path
@@ -99,25 +100,26 @@ class TestProvenancePipelineOutput(unittest.TestCase):
 			'HumanMadeObject': 'model-object',
 			'LinguisticObject': 'model-lo',
 			'Person': 'model-person',
-			'Auction': 'model-auction',
-			'AuctionHouseOrg': 'model-auctionhouse',
+			'Event': 'model-event',
+			'Group': 'model-auctionhouse',
 			'Activity': 'model-activity',
+			'Place': 'model-place'
 		}
 		output = self.run_pipeline(models, input_path)
 
 		objects = output['model-object']
+		events = output['model-event']
 		los = output['model-lo']
 		people = output['model-person']
-		auctions = output['model-auction']
+		auctions = output['model-activity']
 		houses = output['model-auctionhouse']
-		activities = output['model-activity']
 		
 		self.assertEqual(len(people), 3, 'expected count of people')
 		self.assertEqual(len(objects), 6, 'expected count of physical objects')
 		self.assertEqual(len(los), 1, 'expected count of linguistic objects')
 		self.assertEqual(len(auctions), 2, 'expected count of auctions')
 		self.assertEqual(len(houses), 1, 'expected count of auction houses')
-		self.assertEqual(len(activities), 4, 'expected count of activities')
+		self.assertEqual(len(events), 1, 'expected count of auction events')
 
 		object_types = {c['_label'] for o in objects.values() for c in o.get('classified_as', [])}
 		self.assertEqual(object_types, {'Painting'})
@@ -135,12 +137,16 @@ class TestProvenancePipelineOutput(unittest.TestCase):
 		self.verify_auction(auction_B_A139_0120, event='B-A139', idents={'0120'})
 		
 		house_names = {o['_label'] for o in houses.values()}
+		house_ids = {o['id'] for o in houses.values()}
 		house_types = {c['_label'] for o in houses.values() for c in o.get('classified_as', [])}
 		self.assertEqual(house_names, {'Paul de Cock'})
 		self.assertEqual(house_types, {'Auction House (organization)'})
 
-		activity_labels = {o['_label'] for o in activities.values()}
-		self.assertEqual(activity_labels, {'Bidding on B-A139 0119[a]', 'Bidding on B-A139 0119[b]', 'Bidding on B-A139 0120', 'Auction Event for B-A139'})
+		event_labels = {e['_label'] for e in events.values()}
+		carried_out_by = {h['id'] for e in events.values() for h in e.get('carried_out_by', [])}
+		self.assertEqual(event_labels, {'Auction Event for B-A139'})
+		self.assertEqual(carried_out_by, house_ids)
+
 
 if __name__ == '__main__':
 	unittest.main()

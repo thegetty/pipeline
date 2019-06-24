@@ -129,14 +129,13 @@ class AddDataDependentArchesModel(Configurable):
 				data['_ARCHES_MODEL'] = self.models[tname]
 				return data
 			else:
-				for c in obj._classhier:
-					tname = c.__name__
-					if tname in self.models:
-						data['_ARCHES_MODEL'] = self.models[tname]
-# 						print(f'*** Using {tname} model for {t.__name__}')
-						return data
-				print(f'*** No Arches model available for {t.__name__}')
-				data['_ARCHES_MODEL'] = f'XXX-{tname}'
+				typename = type(obj).__name__
+				if tname in self.models:
+					data['_ARCHES_MODEL'] = self.models[typename]
+					return data
+				else:
+					print(f'*** No Arches model available for {typename}')
+				data['_ARCHES_MODEL'] = f'XXX-{typename}'
 		else:
 			data['_ARCHES_MODEL'] = self.models['LinguisticObject']
 		return data

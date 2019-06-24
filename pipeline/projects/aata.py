@@ -32,7 +32,6 @@ from pipeline.linkedart import \
 from pipeline.io.xml import CurriedXMLReader
 from pipeline.nodes.basic import \
 			add_uuid, \
-			AddDataDependentArchesModel, \
 			AddArchesModel, \
 			CleanDateToSpan, \
 			Serializer
@@ -670,7 +669,7 @@ class AATAPipeline:
 			add_aata_object_type,
 			detect_title_language,
 			MakeLinkedArtLinguisticObject(),
-			AddDataDependentArchesModel(models=self.models),
+			AddArchesModel(model=self.models['LinguisticObject']),
 			add_imprint_orgs,
 			_input=records.output
 		)

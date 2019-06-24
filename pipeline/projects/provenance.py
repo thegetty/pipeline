@@ -39,7 +39,7 @@ from pipeline.nodes.basic import \
 			AddFieldNames, \
 			GroupRepeatingKeys, \
 			GroupKeys, \
-			AddDataDependentArchesModel, \
+			AddArchesModel, \
 			AddArchesModel, \
 			Serializer, \
 			Trace
@@ -666,7 +666,7 @@ class ProvenancePipeline:
 		self.graph_0 = None
 		self.graph_1 = None
 		self.graph_2 = None
-		self.models = kwargs.get('models', {})
+		self.models = kwargs.get('models', settings.arches_models)
 		self.catalogs_header_file = catalogs['header_file']
 		self.catalogs_files_pattern = catalogs['files_pattern']
 		self.auction_events_header_file = auction_events['header_file']
@@ -734,7 +734,7 @@ class ProvenancePipeline:
 			add_auction_catalog,
 			add_physical_catalog_objects,
 			add_physical_catalog_owners,
-			AddDataDependentArchesModel(models=self.models),
+			AddArchesModel(model=self.models['HumanMadeObject']),
 			_input=records.output
 		)
 		if serialize:
@@ -746,7 +746,7 @@ class ProvenancePipeline:
 		los = graph.add_chain(
 			ExtractKeyedValue(key='_catalog'),
 			populate_auction_catalog,
-			AddDataDependentArchesModel(models=self.models),
+			AddArchesModel(model=self.models['LinguisticObject']),
 			_input=events.output
 		)
 		if serialize:
@@ -779,7 +779,7 @@ class ProvenancePipeline:
 			add_auction_event,
 			add_auction_houses,
 			populate_auction_event,
-			AddDataDependentArchesModel(models=self.models),
+			AddArchesModel(model=self.models['Event']),
 # 			Trace(name='auction_events'),
 			_input=records.output
 		)
@@ -792,7 +792,7 @@ class ProvenancePipeline:
 		for role in ('buyer', 'seller'):
 			p = graph.add_chain(
 				ExtractKeyedValues(key=role),
-				AddDataDependentArchesModel(models=self.models),
+				AddArchesModel(model=self.models['Person']),
 				_input=acquisitions.output
 			)
 			if serialize:
@@ -802,7 +802,7 @@ class ProvenancePipeline:
 	def add_acquisitions_chain(self, graph, sales, serialize=True):
 		acqs = graph.add_chain(
 			add_acquisition,
-			AddDataDependentArchesModel(models=self.models),
+			AddArchesModel(model=self.models['Activity']),
 			_input=sales.output
 		)
 		# TODO: add serialization of people for acq buyers and sellers
@@ -842,7 +842,7 @@ class ProvenancePipeline:
 			}),
 # 			Trace(name='sale'),
 			AddAuctionOfLot(),
-			AddDataDependentArchesModel(models=self.models),
+			AddArchesModel(model=self.models['Activity']),
 			# TODO: need to construct an LOD object for a sales record here so that it can be serialized")
 			_input=records.output
 		)
@@ -857,7 +857,7 @@ class ProvenancePipeline:
 			add_object_type,
 			populate_object,
 			MakeLinkedArtHumanMadeObject(),
-			AddDataDependentArchesModel(models=self.models),
+			AddArchesModel(model=self.models['HumanMadeObject']),
 			add_pir_artists,
 			_input=sales.output
 		)
@@ -869,7 +869,7 @@ class ProvenancePipeline:
 	def add_places_chain(self, graph, auction_events, serialize=True):
 		places = graph.add_chain(
 			ExtractKeyedValue(key='_location'),
-			AddDataDependentArchesModel(models=self.models),
+			AddArchesModel(model=self.models['Place']),
 			_input=auction_events.output
 		)
 		if serialize:
@@ -881,7 +881,7 @@ class ProvenancePipeline:
 		houses = graph.add_chain(
 			ExtractKeyedValues(key='auction_house'),
 			MakeLinkedArtAuctionHouseOrganization(),
-			AddDataDependentArchesModel(models=self.models),
+			AddArchesModel(model=self.models['Group']),
 			_input=auction_events.output
 		)
 		if serialize:

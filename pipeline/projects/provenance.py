@@ -43,10 +43,6 @@ from pipeline.nodes.basic import \
 			Serializer, \
 			Trace
 
-legacyIdentifier = None # TODO: aat:LegacyIdentifier?
-doiIdentifier = vocab.DoiIdentifier
-variantTitleIdentifier = vocab.Identifier # TODO: aat for variant titles?
-
 #mark - utility functions and classes
 
 class DictWrapper:
@@ -250,19 +246,6 @@ def add_auction_houses(data, auction_houses):
 	auction_houses.set(cno, house_objects)
 	yield d
 
-
-#mark - Auction Catalogs
-
-def add_auction_catalog(data):
-	cno = data['catalog_number']
-	key = f'CATALOG-{cno}'
-	cdata = {'uid': key, 'uri': pir_uri(key)}
-	catalog = vocab.AuctionCatalog(ident=cdata['uri'])
-	catalog._label = f'Sale Catalog {cno}'
-	data['_catalog'] = cdata
-
-	add_crom_data(data=cdata, what=catalog)
-	yield data
 
 #mark - Auction of Lot
 
@@ -522,11 +505,23 @@ def populate_object(data):
 	title = data.get('title')
 	vi = model.VisualItem()
 	if title:
-		vi._label = f'Visual work of {title}'
+		vi._label = f'Visual work of “{title}”'
 	genre = genre_instance(data.get('genre'))
 	if genre:
 		vi.classified_as = genre
 	object.shows = vi
+
+	notes = data.get('hand_note')
+	if notes:
+		for note in notes:
+			c = note['hand_note']
+			catalog_owner = note.get('hand_note_so') # TODO: link this to a physical catalog copy if possible
+			note = vocab.Note(content=c)
+			object.referred_to_by = note
+
+	inscription = data.get('inscription')
+	if inscription:
+		object.carries = vocab.Note(content=inscription)
 
 	dimstr = data.get('dimensions')
 	if dimstr:
@@ -630,12 +625,28 @@ def add_pir_artists(data):
 
 #mark - Physical Catalogs
 
+def add_auction_catalog(data):
+	cno = data['catalog_number']
+	key = f'CATALOG-{cno}'
+	cdata = {'uid': key, 'uri': pir_uri(key)}
+	catalog = vocab.AuctionCatalog(ident=cdata['uri'])
+	catalog._label = f'Sale Catalog {cno}'
+	data['_catalog'] = cdata
+
+	add_crom_data(data=cdata, what=catalog)
+	yield data
+
 def add_physical_catalog_objects(data):
 	catalog = data['_catalog']['_LOD_OBJECT']
-	data['uuid'] = str(uuid.uuid4()) # this is a single pass, and will not be referenced again
-	catalogObject = model.HumanMadeObject(label=data.get('annotation_info'))
-	# TODO: link this with the vocab.AuctionCatalog
+	cno = data['catalog_number']
+	owner = data['owner_code']
+	copy = data['copy_number']
+	key = f'CATALOG-{cno}-{owner}-{copy}'
+	uri = pir_uri(key)
+	data['uri'] = uri
+	catalogObject = model.HumanMadeObject(ident=uri, label=data.get('annotation_info'))
 	catalogObject.carries = catalog
+	
 	# TODO: Rob's build-sample-auction-data.py script adds this annotation. where does it come from?
 # 	anno = vocab.Annotation()
 # 	anno._label = "Additional annotations in WSHC copy of BR-A1"
@@ -646,6 +657,9 @@ def add_physical_catalog_objects(data):
 def add_physical_catalog_owners(data):
 	# TODO: Add information about the current owner of the physical catalog copy; are the values of data['owner_code'] mapped somewhere?
 	yield data
+
+
+#mark - Physical Catalogs - Informational Catalogs
 
 def populate_auction_catalog(data):
 	d = {k: v for k, v in data.items()}
@@ -664,8 +678,7 @@ def populate_auction_catalog(data):
 		catalog.referred_to_by = note
 	yield d
 
-
-# Provenance Pipeline class
+#mark - Provenance Pipeline class
 
 class ProvenancePipeline:
 	'''Bonobo-based pipeline for transforming Provenance data from CSV into JSON-LD.'''
@@ -812,7 +825,6 @@ class ProvenancePipeline:
 			AddArchesModel(model=self.models['Activity']),
 			_input=sales.output
 		)
-		# TODO: add serialization of people for acq buyers and sellers
 		if serialize:
 			# write SALES data
 			self.add_serialization_chain(graph, acqs.output)
@@ -843,14 +855,13 @@ class ProvenancePipeline:
 			}),
 			GroupKeys(mapping={
 				'auction_of_lot': {'properties': ('catalog_number', 'lot_number', 'lot_sale_year', 'lot_sale_month', 'lot_sale_day', 'lot_sale_mod', 'lot_notes')},
-				'_object': {'postprocess': add_pir_object_uuid, 'properties': ('title', 'title_modifier', 'object_type', 'materials', 'dimensions', 'formatted_dimens', 'format', 'genre', 'subject', 'inscription', 'present_loc_geog', 'present_loc_inst', 'present_loc_insq', 'present_loc_insi', 'present_loc_acc', 'present_loc_accq', 'present_loc_note', '_artists')},
+				'_object': {'postprocess': add_pir_object_uuid, 'properties': ('title', 'title_modifier', 'object_type', 'materials', 'dimensions', 'formatted_dimens', 'format', 'genre', 'subject', 'inscription', 'present_loc_geog', 'present_loc_inst', 'present_loc_insq', 'present_loc_insi', 'present_loc_acc', 'present_loc_accq', 'present_loc_note', '_artists', 'hand_note')},
 				'estimated_price': {'postprocess': add_crom_price, 'properties': ('est_price', 'est_price_curr', 'est_price_desc', 'est_price_so')},
 				'bid': {'properties': ('start_price', 'start_price_curr', 'start_price_desc', 'start_price_so', 'ask_price', 'ask_price_curr', 'ask_price_so')},
 			}),
 # 			Trace(name='sale'),
 			AddAuctionOfLot(),
 			AddArchesModel(model=self.models['Activity']),
-			# TODO: need to construct an LOD object for a sales record here so that it can be serialized")
 			_input=records.output
 		)
 		if serialize:

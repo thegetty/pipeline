@@ -40,7 +40,6 @@ from pipeline.nodes.basic import \
 			GroupRepeatingKeys, \
 			GroupKeys, \
 			AddArchesModel, \
-			AddArchesModel, \
 			Serializer, \
 			Trace
 
@@ -48,7 +47,18 @@ legacyIdentifier = None # TODO: aat:LegacyIdentifier?
 doiIdentifier = vocab.DoiIdentifier
 variantTitleIdentifier = vocab.Identifier # TODO: aat for variant titles?
 
-# utility functions
+#mark - utility functions and classes
+
+class DictWrapper:
+	# Bonobo services seem not to work with plain dict values. So we wrap a dict here as an object.
+	def __init__(self):
+		self.d = {}
+
+	def set(self, key, value):
+		self.d[key] = value
+
+	def get(self, key):
+		return self.d.get(key)
 
 def pir_uri(*values):
 	UID_TAG_PREFIX = 'tag:getty.edu,2019:digital:pipeline:REPLACE-WITH-UUID#'
@@ -103,6 +113,18 @@ def add_auction_event(data):
 	add_crom_data(data=data, what=auction)
 	yield data
 
+def timespan_from_bounds(begin=None, end=None):
+	if begin or end:
+		ts = model.TimeSpan(ident='')
+		if begin is not None:
+			ts.begin_of_the_begin = begin
+		if end is not None:
+			ts.end_of_the_end = end
+		return ts
+	return None
+
+#mark - Places
+
 def auction_event_location(data):
 	specific_name = data.get('specific_loc')
 	city_name = data.get('city_of_sale')
@@ -133,15 +155,7 @@ def auction_event_location(data):
 		current = specific
 	return current
 
-def timespan_from_bounds(begin=None, end=None):
-	if begin or end:
-		ts = model.TimeSpan(ident='')
-		if begin is not None:
-			ts.begin_of_the_begin = begin
-		if end is not None:
-			ts.end_of_the_end = end
-		return ts
-	return None
+#mark - Auction Events
 
 @use('auction_locations')
 def populate_auction_event(data, auction_locations):
@@ -173,6 +187,72 @@ def populate_auction_event(data, auction_locations):
 	auction.subject_of = catalog
 	yield data
 
+def add_auction_house_data(a):
+	catalog = a.get('_catalog')
+
+	ulan = None
+	with suppress(ValueError, TypeError):
+		ulan = int(a.get('ulan'))
+	if ulan:
+		key = f'AUCTION-HOUSE-ULAN-{ulan}'
+		a['uid'] = key
+		a['uri'] = pir_uri(key)
+		a['identifiers'] = [model.Identifier(content=ulan)]
+		a['exact_match'] = [model.BaseResource(ident=f'http://vocab.getty.edu/ulan/{ulan}')]
+		house = vocab.AuctionHouseOrg(ident=a['uri'])
+		for uri in a.get('exact_match', []):
+			house.exact_match = uri
+	else:
+		a['uuid'] = str(uuid.uuid4()) # not enough information to identify this person uniquely, so they get a UUID
+		uri = "urn:uuid:%s" % a['uuid']
+		house = vocab.AuctionHouseOrg(ident=uri)
+
+	name = a.get('auc_house_name', a.get('name'))
+	a['identifiers'] = []
+	if name:
+		n = model.Name(content=name)
+		n.referred_to_by = catalog
+		a['identifiers'].append(n)
+		a['label'] = name
+	else:
+		a['label'] = '(Anonymous)'
+
+	auth = a.get('auc_house_auth')
+	if auth:
+		n = vocab.PrimaryName()
+# 		n.referred_to_by = catalog
+		n.content = auth
+		a['identifiers'].append(n)
+
+	add_crom_data(data=a, what=house)
+	return a
+
+@use('auction_houses')
+def add_auction_houses(data, auction_houses):
+	auction = get_crom_object(data)
+	catalog = data['_catalog']['_LOD_OBJECT']
+	d = data.copy()
+	houses = data.get('auction_house', [])
+	cno = data['catalog_number']
+	
+	house_objects = []
+
+	for h in houses:
+		h['_catalog'] = catalog
+		add_auction_house_data(h)
+		house = get_crom_object(h)
+		auction.carried_out_by = house
+		# TODO: how can we associate this auction house with the lot auction,
+		# which is produced on an entirely different bonobo graph chain?
+# 		lot.carried_out_by = house
+		if auction_houses:
+			house_objects.append(house)
+	auction_houses.set(cno, house_objects)
+	yield d
+
+
+#mark - Auction Catalogs
+
 def add_auction_catalog(data):
 	cno = data['catalog_number']
 	key = f'CATALOG-{cno}'
@@ -183,6 +263,8 @@ def add_auction_catalog(data):
 
 	add_crom_data(data=cdata, what=catalog)
 	yield data
+
+#mark - Auction of Lot
 
 @use('auction_locations')
 @use('auction_houses')
@@ -256,40 +338,6 @@ class AddAuctionOfLot:
 
 		add_crom_data(data=data, what=lot)
 		yield data
-
-def populate_auction_catalog(data):
-	d = {k: v for k, v in data.items()}
-	parent = data['parent_data']
-	cno = parent['catalog_number']
-	sno = parent['star_record_no']
-	catalog = get_crom_object(d)
-	for lno in parent.get('lugt', {}).values():
-		catalog.identified_by = model.Identifier(label=f"Lugt Number: {lno}", content=lno)
-	catalog.identified_by = model.Identifier(content=cno)
-	catalog.identified_by = vocab.LocalNumber(content=sno)
-	notes = data.get('notes')
-	if notes:
-		note = vocab.Note()
-		note.content = parent['notes']
-		catalog.referred_to_by = note
-	yield d
-
-def add_physical_catalog_objects(data):
-	catalog = data['_catalog']['_LOD_OBJECT']
-	data['uuid'] = str(uuid.uuid4()) # this is a single pass, and will not be referenced again
-	catalogObject = model.HumanMadeObject(label=data.get('annotation_info'))
-	# TODO: link this with the vocab.AuctionCatalog
-	catalogObject.carries = catalog
-	# TODO: Rob's build-sample-auction-data.py script adds this annotation. where does it come from?
-# 	anno = vocab.Annotation()
-# 	anno._label = "Additional annotations in WSHC copy of BR-A1"
-# 	catalogObject.carries = anno
-	add_crom_data(data=data, what=catalogObject)
-	yield data
-
-def add_physical_catalog_owners(data):
-	# TODO: Add information about the current owner of the physical catalog copy; are the values of data['owner_code'] mapped somewhere?
-	yield data
 
 def add_crom_price(data, parent):
 	MAPPING = {
@@ -432,6 +480,8 @@ def add_acquisition(data):
 		print(f'Cannot create acquisition data for unknown transaction type: {transaction!r}')
 		pprint.pprint(data)
 
+#mark - Auction of Lot - Physical Object
+
 def genre_instance(value):
 	if value is None:
 		return None
@@ -542,70 +592,6 @@ def add_object_type(data):
 
 	return data
 
-
-def add_auction_house_data(a):
-	catalog = a.get('_catalog')
-
-	ulan = None
-	with suppress(ValueError, TypeError):
-		ulan = int(a.get('ulan'))
-	if ulan:
-		key = f'AUCTION-HOUSE-ULAN-{ulan}'
-		a['uid'] = key
-		a['uri'] = pir_uri(key)
-		a['identifiers'] = [model.Identifier(content=ulan)]
-		a['exact_match'] = [model.BaseResource(ident=f'http://vocab.getty.edu/ulan/{ulan}')]
-		house = vocab.AuctionHouseOrg(ident=a['uri'])
-		for uri in a.get('exact_match', []):
-			house.exact_match = uri
-	else:
-		a['uuid'] = str(uuid.uuid4()) # not enough information to identify this person uniquely, so they get a UUID
-		uri = "urn:uuid:%s" % a['uuid']
-		house = vocab.AuctionHouseOrg(ident=uri)
-
-	name = a.get('auc_house_name', a.get('name'))
-	a['identifiers'] = []
-	if name:
-		n = model.Name(content=name)
-		n.referred_to_by = catalog
-		a['identifiers'].append(n)
-		a['label'] = name
-	else:
-		a['label'] = '(Anonymous)'
-
-	auth = a.get('auc_house_auth')
-	if auth:
-		n = vocab.PrimaryName()
-# 		n.referred_to_by = catalog
-		n.content = auth
-		a['identifiers'].append(n)
-
-	add_crom_data(data=a, what=house)
-	return a
-
-@use('auction_houses')
-def add_auction_houses(data, auction_houses):
-	auction = get_crom_object(data)
-	catalog = data['_catalog']['_LOD_OBJECT']
-	d = data.copy()
-	houses = data.get('auction_house', [])
-	cno = data['catalog_number']
-	
-	house_objects = []
-
-	for h in houses:
-		h['_catalog'] = catalog
-		add_auction_house_data(h)
-		house = get_crom_object(h)
-		auction.carried_out_by = house
-		# TODO: how can we associate this auction house with the lot auction,
-		# which is produced on an entirely different bonobo graph chain?
-# 		lot.carried_out_by = house
-		if auction_houses:
-			house_objects.append(house)
-	auction_houses.set(cno, house_objects)
-	yield d
-
 def add_pir_artists(data):
 	lod_object = get_crom_object(data)
 	event = model.Production()
@@ -642,21 +628,42 @@ def add_pir_artists(data):
 		subevent.carried_out_by = person
 	yield data
 
+#mark - Physical Catalogs
 
+def add_physical_catalog_objects(data):
+	catalog = data['_catalog']['_LOD_OBJECT']
+	data['uuid'] = str(uuid.uuid4()) # this is a single pass, and will not be referenced again
+	catalogObject = model.HumanMadeObject(label=data.get('annotation_info'))
+	# TODO: link this with the vocab.AuctionCatalog
+	catalogObject.carries = catalog
+	# TODO: Rob's build-sample-auction-data.py script adds this annotation. where does it come from?
+# 	anno = vocab.Annotation()
+# 	anno._label = "Additional annotations in WSHC copy of BR-A1"
+# 	catalogObject.carries = anno
+	add_crom_data(data=data, what=catalogObject)
+	yield data
 
+def add_physical_catalog_owners(data):
+	# TODO: Add information about the current owner of the physical catalog copy; are the values of data['owner_code'] mapped somewhere?
+	yield data
 
-#mark -
+def populate_auction_catalog(data):
+	d = {k: v for k, v in data.items()}
+	parent = data['parent_data']
+	cno = parent['catalog_number']
+	sno = parent['star_record_no']
+	catalog = get_crom_object(d)
+	for lno in parent.get('lugt', {}).values():
+		catalog.identified_by = model.Identifier(label=f"Lugt Number: {lno}", content=lno)
+	catalog.identified_by = model.Identifier(content=cno)
+	catalog.identified_by = vocab.LocalNumber(content=sno)
+	notes = data.get('notes')
+	if notes:
+		note = vocab.Note()
+		note.content = parent['notes']
+		catalog.referred_to_by = note
+	yield d
 
-class Dict:
-	# Bonobo services seem not to work with plain dict values. So we wrap a dict here as an object.
-	def __init__(self):
-		self.d = {}
-
-	def set(self, key, value):
-		self.d[key] = value
-
-	def get(self, key):
-		return self.d.get(key)
 
 # Provenance Pipeline class
 
@@ -702,8 +709,8 @@ class ProvenancePipeline:
 	def get_services(self):
 		'''Return a `dict` of named services available to the bonobo pipeline.'''
 		return {
-			'auction_houses': Dict(),
-			'auction_locations': Dict(),
+			'auction_houses': DictWrapper(),
+			'auction_locations': DictWrapper(),
 			'trace_counter': itertools.count(),
 			'gpi': create_engine(settings.gpi_engine),
 			'aat': create_engine(settings.aat_engine),

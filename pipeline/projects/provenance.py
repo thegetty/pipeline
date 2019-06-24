@@ -346,7 +346,7 @@ def add_person(a: dict):
 		a['uid'] = key
 		a['uri'] = pir_uri(key)
 		a['identifiers'] = [model.Identifier(content=ulan)]
-		a['exact_match'] = [f'http://vocab.getty.edu/ulan/{ulan}']
+		a['exact_match'] = [model.BaseResource(ident=f'http://vocab.getty.edu/ulan/{ulan}')]
 	else:
 		a['uuid'] = str(uuid.uuid4()) # not enough information to identify this person uniquely, so they get a UUID
 
@@ -401,7 +401,7 @@ def add_acquisition(data):
 		add_crom_data(data=data, what=acq)
 
 		yield data
-	elif transaction in ('Unknown', 'Unbekannt', 'Inconnue', 'Withdrawn', 'Non Vendu'):
+	elif transaction in ('Unknown', 'Unbekannt', 'Inconnue', 'Withdrawn', 'Non Vendu', ''):
 		bids = parent.get('bid', )
 		if amnts:
 			lot = get_crom_object(parent)
@@ -426,8 +426,8 @@ def add_acquisition(data):
 
 			yield data
 		else:
-			# TODO: there may be an `est_price` value. should it be recorded as a bid?
-			print(f'*** No price data found for {transaction} transaction')
+			pass
+# 			print(f'*** No price data found for {transaction!r} transaction')
 	else:
 		print(f'Cannot create acquisition data for unknown transaction type: {transaction!r}')
 		pprint.pprint(data)
@@ -554,7 +554,7 @@ def add_auction_house_data(a):
 		a['uid'] = key
 		a['uri'] = pir_uri(key)
 		a['identifiers'] = [model.Identifier(content=ulan)]
-		a['exact_match'] = [f'http://vocab.getty.edu/ulan/{ulan}']
+		a['exact_match'] = [model.BaseResource(ident=f'http://vocab.getty.edu/ulan/{ulan}')]
 		house = vocab.AuctionHouseOrg(ident=a['uri'])
 		for uri in a.get('exact_match', []):
 			house.exact_match = uri

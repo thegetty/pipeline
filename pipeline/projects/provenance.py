@@ -11,21 +11,20 @@ import uuid
 import csv
 import pprint
 import itertools
-import traceback
 from contextlib import suppress
 
 import urllib.parse
 from sqlalchemy import create_engine
 
 import bonobo
-from bonobo.config import Exclusive, use
+from bonobo.config import use
 from bonobo.nodes import Limit
 
 import settings
 from cromulent import model, vocab
-from pipeline.util import identity, ExtractKeyedValue, ExtractKeyedValues, MatchingFiles, Dimension, implode_date
+from pipeline.util import identity, ExtractKeyedValue, ExtractKeyedValues, MatchingFiles, implode_date
 from pipeline.util.cleaners import dimensions_cleaner, normalized_dimension_object
-from pipeline.io.file import MultiFileWriter, MergingFileWriter
+from pipeline.io.file import MergingFileWriter
 # from pipeline.io.arches import ArchesWriter
 from pipeline.linkedart import \
 			add_crom_data, \
@@ -321,7 +320,7 @@ class AddAuctionOfLot:
 		add_crom_data(data=data, what=lot)
 		yield data
 
-def add_crom_price(data, parent):
+def add_crom_price(data, _):
 	MAPPING = {
 		'fl': 'de florins',
 		'fl.': 'de florins',
@@ -390,74 +389,87 @@ def add_person(a: dict):
 	make_la_person(a)
 	return a
 
-def add_acquisition(data):
+def add_acquisition(data, object, buyers, sellers):
 	parent = data['parent_data']
 	transaction = parent['transaction']
 	prices = parent['price']
 	auction_data = parent['auction_of_lot']
 	cno = auction_data['catalog_number']
 	lno = auction_data['lot_number']
+	data['buyer'] = buyers
+	data['seller'] = sellers
+	object_label = object._label
+	amnts = [get_crom_object(p) for p in prices]
+
+	if not prices:
+		print(f'*** No price data found for {transaction} transaction')
+
+	acq = model.Acquisition(label=f'Acquisition of {cno} {lno}: {object_label}')
+	acq.transferred_title_of = object
+	paym = model.Payment(label=f'Payment for {object_label}')
+	for seller in [get_crom_object(s) for s in sellers]:
+		paym.paid_to = seller
+		acq.transferred_title_from = seller
+	for buyer in [get_crom_object(b) for b in buyers]:
+		paym.paid_from = buyer
+		acq.transferred_title_to = buyer
+	for amnt in amnts:
+		paym.paid_amount = amnt
+
+ 	# TODO: `annotation` here is from add_physical_catalog_objects
+# 	paym.referred_to_by = annotation
+# 	acq.part_of = lot
+	add_crom_data(data=data, what=acq)
+
+	yield data
+
+def add_bidding(data, buyers):
+	parent = data['parent_data']
+	prices = parent['price']
+	auction_data = parent['auction_of_lot']
+	cno = auction_data['catalog_number']
+	lno = auction_data['lot_number']
+	amnts = [get_crom_object(p) for p in prices]
+
+	if amnts:
+		lot = get_crom_object(parent)
+		all_bids = model.Activity(label=f'Bidding on {cno} {lno}')
+		all_bids.part_of = lot
+
+		for amnt in amnts:
+			bid = vocab.Bidding()
+			amnt_label = amnt._label
+			bid._label = f'Bid of {amnt_label} on {lno}'
+			# TODO: there are often no buyers listed for non-sold records.
+			#       should we construct an anonymous person to carry out the bid?
+			for buyer in [get_crom_object(b) for b in buyers]:
+				bid.carried_out_by = buyer
+
+			prop = model.PropositionalObject(label=f'Promise to pay {amnt_label}')
+			bid.created = prop
+
+			all_bids.part = bid
+
+		add_crom_data(data=data, what=all_bids)
+		yield data
+	else:
+		pass
+# 			print(f'*** No price data found for {parent['transaction']!r} transaction')
+
+def add_acquisition_or_bidding(data):
+	parent = data['parent_data']
+	transaction = parent['transaction']
 
 	data = data.copy()
 	object = get_crom_object(data)
-	lot = get_crom_object(parent)
-	amnts = [get_crom_object(p) for p in prices]
-	object_label = object._label
 
 	# TODO: filtering empty people should be moved much earlier in the pipeline
 	buyers = [add_person(p) for p in filter_empty_people(*parent['buyer'])]
 	sellers = [add_person(p) for p in filter_empty_people(*parent['seller'])]
 	if transaction in ('Sold', 'Vendu', 'Verkauft', 'Bought In'): # TODO: is this the right set of transaction types to represent acquisition?
-		data['buyer'] = buyers
-		data['seller'] = sellers
-		if not prices:
-			print(f'*** No price data found for {transaction} transaction')
-
-		acq = model.Acquisition(label=f'Acquisition of {cno} {lno}: {object_label}')
-		acq.transferred_title_of = object
-		paym = model.Payment(label=f'Payment for {object_label}')
-		for seller in [get_crom_object(s) for s in sellers]:
-			paym.paid_to = seller
-			acq.transferred_title_from = seller
-		for buyer in [get_crom_object(b) for b in buyers]:
-			paym.paid_from = buyer
-			acq.transferred_title_to = buyer
-		for amnt in amnts:
-			paym.paid_amount = amnt
-
- 		# TODO: `annotation` here is from add_physical_catalog_objects
-# 		paym.referred_to_by = annotation
-# 		acq.part_of = lot
-		add_crom_data(data=data, what=acq)
-
-		yield data
+		yield from add_acquisition(data, object, buyers, sellers)
 	elif transaction in ('Unknown', 'Unbekannt', 'Inconnue', 'Withdrawn', 'Non Vendu', ''):
-		bids = parent.get('bid', )
-		if amnts:
-			lot = get_crom_object(parent)
-			all_bids = model.Activity(label=f'Bidding on {cno} {lno}')
-			all_bids.part_of = lot
-
-			for amnt in amnts:
-				bid = vocab.Bidding()
-				amnt_label = amnt._label
-				bid._label = f'Bid of {amnt_label} on {lno}'
-				# TODO: there are often no buyers listed for non-sold records.
-				#       should we construct an anonymous person to carry out the bid?
-				for buyer in [get_crom_object(b) for b in buyers]:
-					bid.carried_out_by = buyer
-
-				prop = model.PropositionalObject(label=f'Promise to pay {amnt_label}')
-				bid.created = prop
-
-				all_bids.part = bid
-
-			add_crom_data(data=data, what=all_bids)
-
-			yield data
-		else:
-			pass
-# 			print(f'*** No price data found for {transaction!r} transaction')
+		yield from add_bidding(data, buyers)
 	else:
 		print(f'Cannot create acquisition data for unknown transaction type: {transaction!r}')
 		pprint.pprint(data)
@@ -694,6 +706,7 @@ def populate_auction_catalog(data):
 class ProvenancePipeline:
 	'''Bonobo-based pipeline for transforming Provenance data from CSV into JSON-LD.'''
 	def __init__(self, input_path, catalogs, auction_events, contents, **kwargs):
+		self.output_chain = None
 		self.graph_0 = None
 		self.graph_1 = None
 		self.graph_2 = None
@@ -832,7 +845,7 @@ class ProvenancePipeline:
 
 	def add_acquisitions_chain(self, graph, sales, serialize=True):
 		acqs = graph.add_chain(
-			add_acquisition,
+			add_acquisition_or_bidding,
 			AddArchesModel(model=self.models['Activity']),
 			_input=sales.output
 		)
@@ -931,15 +944,15 @@ class ProvenancePipeline:
 			self.add_serialization_chain(graph, people.output)
 		return people
 
-	def _construct_graph(self, all=False):
-		# if all=False, generate two Graphs (self.graph_1 and self.graph_2), that will be run sequentially. the first for catalogs and events, the second for sales auctions (which depends on output from the first).
-		# if all=True, then generate a single Graph that has the entire pipeline in it (self.graph_0). this is used to be able to produce graphviz output of the pipeline for visual inspection.
+	def _construct_graph(self, single_graph=False):
+		# if single_graph=False, generate two Graphs (self.graph_1 and self.graph_2), that will be run sequentially. the first for catalogs and events, the second for sales auctions (which depends on output from the first).
+		# if single_graph=True, then generate a single Graph that has the entire pipeline in it (self.graph_0). this is used to be able to produce graphviz output of the pipeline for visual inspection.
 		graph0 = bonobo.Graph()
 		graph1 = bonobo.Graph()
 		graph2 = bonobo.Graph()
 
-		component1 = [graph0] if all else [graph1]
-		component2 = [graph0] if all else [graph2]
+		component1 = [graph0] if single_graph else [graph1]
+		component2 = [graph0] if single_graph else [graph2]
 		for g in component1:
 			physical_catalog_records = g.add_chain(
 				MatchingFiles(path='/', pattern=self.catalogs_files_pattern, fs='fs.data.pir'),
@@ -951,13 +964,13 @@ class ProvenancePipeline:
 				CurriedCSVReader(fs='fs.data.pir'),
 			)
 
-			physical_catalogs = self.add_physical_catalogs_chain(g, physical_catalog_records, serialize=True)
+			_ = self.add_physical_catalogs_chain(g, physical_catalog_records, serialize=True)
 			auction_events = self.add_auction_events_chain(g, auction_events_records, serialize=True)
-			catalog_los = self.add_catalog_linguistic_objects(g, auction_events, serialize=True)
-			auction_houses = self.add_auction_houses_chain(g, auction_events, serialize=True)
-			places = self.add_places_chain(g, auction_events, serialize=True)
+			_ = self.add_catalog_linguistic_objects(g, auction_events, serialize=True)
+			_ = self.add_auction_houses_chain(g, auction_events, serialize=True)
+			_ = self.add_places_chain(g, auction_events, serialize=True)
 
-		if not all:
+		if not single_graph:
 			self.output_chain = None
 
 		for g in component2:
@@ -969,9 +982,9 @@ class ProvenancePipeline:
 			objects = self.add_object_chain(g, sales, serialize=True)
 			acquisitions = self.add_acquisitions_chain(g, objects, serialize=True)
 			self.add_buyers_sellers_chain(g, acquisitions, serialize=True)
-			people = self.add_people_chain(g, objects, serialize=True)
+			_ = self.add_people_chain(g, objects, serialize=True)
 
-		if all:
+		if single_graph:
 			self.graph_0 = graph0
 		else:
 			self.graph_1 = graph1
@@ -979,7 +992,7 @@ class ProvenancePipeline:
 
 	def get_graph(self):
 		if not self.graph_0:
-			self._construct_graph(all=True)
+			self._construct_graph(single_graph=True)
 
 		return self.graph_0
 
@@ -1001,7 +1014,6 @@ class ProvenancePipeline:
 		sys.stderr.write("- Using serializer: %r\n" % (self.serializer,))
 		sys.stderr.write("- Using writer: %r\n" % (self.writer,))
 		services = self.get_services(**options)
-		fs = services['fs.data.pir']
 
 		print('Running graph component 1...')
 		graph1 = self.get_graph_1(**options)
@@ -1028,12 +1040,10 @@ class ProvenanceFilePipeline(ProvenancePipeline):
 		if debug:
 			self.serializer	= Serializer(compact=False)
 			self.writer		= MergingFileWriter(directory=output_path)
-			# self.writer	= MultiFileWriter(directory=output_path)
 			# self.writer	= ArchesWriter()
 		else:
 			self.serializer	= Serializer(compact=True)
 			self.writer		= MergingFileWriter(directory=output_path)
-			# self.writer	= MultiFileWriter(directory=output_path)
 			# self.writer	= ArchesWriter()
 
 	def add_serialization_chain(self, graph, input_node):

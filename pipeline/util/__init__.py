@@ -1,4 +1,5 @@
 import os
+import sys
 import fnmatch
 from threading import Lock
 from contextlib import ContextDecorator, suppress
@@ -18,13 +19,13 @@ Dimension = namedtuple("Dimension", [
 def identity(d):
 	'''
 	Simply yield the value that is passed as an argument.
-	
+
 	This is trivial, but necessary for use in constructing some bonobo graphs.
 	For example, if two already instantiated graph chains need to be connected,
 	one being used as input to the other, bonobo does not allow this:
-	
+
 	`graph.add_chain(_input=prefix.output, _output=suffix.input)`
-	
+
 	Instead, the `add_chain` call requires at least one graph node to be added. Hence:
 
 	`graph.add_chain(identity, _input=prefix.output, _output=suffix.input)`
@@ -81,20 +82,18 @@ def configured_arches_writer():
 
 class CromObjectMerger:
 	def merge(self, obj, *to_merge):
-		pass
-# 		print('merging...')
-# 		print(f'base object: {obj}')
+		# print('merging...')
+		# print(f'base object: {obj}')
 		for m in to_merge:
-			pass
-# 			print('============================================')
-# 			print(f'merge: {m}')
+			# print('============================================')
+			# print(f'merge: {m}')
 			for p in m.list_my_props():
 				value = None
 				with suppress(AttributeError):
 					value = getattr(m, p)
 				if value is not None:
 # 					print(f'{p}: {value}')
-					if type(value) == list:
+					if isinstance(value, list):
 						self.set_or_merge(obj, p, *value)
 					else:
 						self.set_or_merge(obj, p, value)
@@ -108,7 +107,7 @@ class CromObjectMerger:
 # 		print('------------------------')
 		with suppress(AttributeError):
 			existing = getattr(obj, p)
-			if type(existing) == list:
+			if isinstance(existing, list):
 				existing.extend(existing)
 			else:
 				existing = [existing]
@@ -117,8 +116,7 @@ class CromObjectMerger:
 		identified = defaultdict(list)
 		unidentified = []
 		if existing:
-			pass
-# 			print('Existing value(s):')
+			# print('Existing value(s):')
 			for v in existing:
 				if hasattr(v, 'id'):
 					identified[v.id].append(v)
@@ -127,18 +125,16 @@ class CromObjectMerger:
 # 				print(f'- {v}')
 
 		for v in values:
-			pass
-# 			print(f'Setting {p} value to {v}')
+			# print(f'Setting {p} value to {v}')
 			if hasattr(v, 'id'):
 				identified[v.id].append(v)
 			else:
 				unidentified.append(v)
 
 		if p == 'type':
-			pass
-# 			print('*** TODO: calling setattr(_, "type") on crom objects throws an exception; skipping for now')
+			# print('*** TODO: calling setattr(_, "type") on crom objects throws; skipping')
 			return
-		for i, v in identified.items():
+		for _, v in identified.items():
 			setattr(obj, p, None)
 			setattr(obj, p, self.merge(*v))
 		for v in unidentified:
@@ -162,7 +158,7 @@ class ExtractKeyedValues(Configurable):
 		super().__init__(*v, **kw)
 		self.__name__ = f'{type(self).__name__} ({self.key})'
 
-	def __call__(self, data):
+	def __call__(self, data, *args, **kwargs):
 		for a in data.get(self.key, []):
 			child = {k: v for k, v in a.items()}
 			child.update({
@@ -188,7 +184,7 @@ class ExtractKeyedValue(Configurable):
 		super().__init__(*v, **kw)
 		self.__name__ = f'{type(self).__name__} ({self.key})'
 
-	def __call__(self, data):
+	def __call__(self, data, *args, **kwargs):
 		a = data.get(self.key)
 		if a:
 			child = {k: v for k, v in a.items()}
@@ -207,11 +203,11 @@ class MatchingFiles(Configurable):
 		'fs',
 		__doc__='''The filesystem instance to use.''',
 	)  # type: str
-	
+
 	def __init__(self, *args, **kwargs):
 		super().__init__(self, *args, **kwargs)
 		self.__name__ = f'{type(self).__name__} ({self.pattern})'
-	
+
 	def __call__(self, *, fs, **kwargs):
 		count = 0
 		subpath, pattern = os.path.split(self.pattern)
@@ -222,4 +218,3 @@ class MatchingFiles(Configurable):
 				count += 1
 		if not count:
 			sys.stderr.write(f'*** No files matching {pattern} found in {fullpath}\n')
-

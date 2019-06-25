@@ -17,10 +17,10 @@ def get_crom_object(data: dict):
 class MakeLinkedArtRecord:
 	def set_properties(self, data, thing):
 		for identifier in data.get('identifiers', []):
-			if type(identifier) == tuple:
+			if isinstance(identifier, tuple):
 				content, itype = identifier
 				if itype is not None:
-					if type(itype) == type:
+					if isinstance(itype, type):
 						ident = itype(content=content)
 					elif isinstance(itype, object):
 						ident = itype
@@ -150,10 +150,10 @@ class MakeLinkedArtHumanMadeObject(MakeLinkedArtRecord):
 			thing.member_of = coll
 
 		for identifier in data.get('identifiers', []):
-			if type(identifier) == tuple:
+			if isinstance(identifier, tuple):
 				content, itype = identifier
 				if itype is not None:
-					if type(itype) == type:
+					if isinstance(itype, type):
 						ident = itype(content=content)
 					elif isinstance(itype, object):
 						ident = itype
@@ -290,10 +290,10 @@ def make_la_person(data: dict):
 		who.identified_by = n
 
 	for identifier in data.get('identifiers', []):
-		if type(identifier) == tuple:
+		if isinstance(identifier, tuple):
 			content, itype = identifier
 			if itype is not None:
-				if type(itype) == type:
+				if isinstance(itype, type):
 					ident = itype(content=content)
 				elif isinstance(itype, object):
 					ident = itype
@@ -330,9 +330,9 @@ def make_la_place(data: dict):
 	'''
 	Given a dictionary representing data about a place, construct a model.Place object,
 	assign it as the crom data in the dictionary, and return the dictionary.
-	
+
 	The dictionary keys used to construct the place object are:
-	
+
 	- name
 	- type (one of: 'City' or 'Country')
 	- part_of (a recursive place dictionary)
@@ -348,7 +348,7 @@ def make_la_place(data: dict):
 	name = data['name']
 	label = name
 	parent_data = data.get('part_of')
-	
+
 	type = TYPES.get(type_name.lower())
 	parent = None
 	if parent_data:

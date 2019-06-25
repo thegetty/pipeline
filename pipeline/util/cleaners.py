@@ -1,10 +1,8 @@
 import locale
 import re
-import pprint
-from datetime import datetime, timedelta
-from dateutil.parser import parse
 import calendar
 from contextlib import contextmanager, suppress
+from datetime import datetime, timedelta
 from pipeline.util import Dimension
 
 CIRCA = 5 # years
@@ -12,30 +10,30 @@ CIRCA_D = timedelta(days=365*CIRCA)
 
 share_re = re.compile("([0-9]+)/([0-9]+)")
 
-number_pattern = '((?:\d+(?:[.,]\d+)?)|(?:\d+\s+\d+/\d+))'
-unit_pattern = '''('|"|d[.]?|duymen|pouces?|inches|inch|in[.]?|pieds?|v[.]?|voeten|feet|foot|ft[.]?|cm)'''
-dimension_pattern = f'({number_pattern}\s*{unit_pattern})'
-dimension_re = re.compile(f'\s*({number_pattern}\s*{unit_pattern})')
+number_pattern = r'((?:\d+(?:[.,]\d+)?)|(?:\d+\s+\d+/\d+))'
+unit_pattern = r'''('|"|d[.]?|duymen|pouces?|inches|inch|in[.]?|pieds?|v[.]?|voeten|feet|foot|ft[.]?|cm)'''
+dimension_pattern = f'({number_pattern}\\s*{unit_pattern})'
+dimension_re = re.compile(f'\\s*({number_pattern}\\s*{unit_pattern})')
 
-simple_width_height_pattern = '(?:\s*((?<!\w)[wh]|width|height))?'
+simple_width_height_pattern = r'(?:\s*((?<!\w)[wh]|width|height))?'
 simple_dimensions_pattern_x1 = ''\
-	f'(?P<d1>(?:{dimension_pattern}\s*)+)'\
+	f'(?P<d1>(?:{dimension_pattern}\\s*)+)'\
 	f'(?P<d1w>{simple_width_height_pattern})'
 simple_dimensions_re_x1 = re.compile(simple_dimensions_pattern_x1)
 simple_dimensions_pattern_x2 = ''\
-	f'(?P<d1>(?:{dimension_pattern}\s*)+)'\
+	f'(?P<d1>(?:{dimension_pattern}\\s*)+)'\
 	f'(?P<d1w>{simple_width_height_pattern})'\
-	'(?:,)?\s*(x|by)'\
-	f'(?P<d2>(?:\s*{dimension_pattern})+)'\
+	r'(?:,)?\s*(x|by)'\
+	f'(?P<d2>(?:\\s*{dimension_pattern})+)'\
 	f'(?P<d2w>{simple_width_height_pattern})'
 simple_dimensions_re_x2 = re.compile(simple_dimensions_pattern_x2)
 
 # Haut 14 pouces, large 10 pouces
-french_dimensions_pattern = f'[Hh]aut(?:eur)? (?P<d1>(?:{dimension_pattern}\s*)+), [Ll]arge(?:ur)? (?P<d2>(?:{dimension_pattern}\s*)+)'
+french_dimensions_pattern = f'[Hh]aut(?:eur)? (?P<d1>(?:{dimension_pattern}\\s*)+), [Ll]arge(?:ur)? (?P<d2>(?:{dimension_pattern}\\s*)+)'
 french_dimensions_re = re.compile(french_dimensions_pattern)
 
 # Hoog. 1 v. 6 d., Breed 2 v. 3 d.
-dutch_dimensions_pattern = f'(?P<d1w>[Hh]oogh?[.]?|[Bb]reedt?) (?P<d1>(?:{dimension_pattern}\s*)+), (?P<d2w>[Hh]oogh?[.]?|[Bb]reedt?) (?P<d2>(?:{dimension_pattern}\s*)+)'
+dutch_dimensions_pattern = f'(?P<d1w>[Hh]oogh?[.]?|[Bb]reedt?) (?P<d1>(?:{dimension_pattern}\\s*)+), (?P<d2w>[Hh]oogh?[.]?|[Bb]reedt?) (?P<d2>(?:{dimension_pattern}\\s*)+)'
 dutch_dimensions_re = re.compile(dutch_dimensions_pattern)
 
 def _canonical_value(value):
@@ -74,9 +72,9 @@ def parse_simple_dimensions(value, which=None):
 	'''
 	Parse the supplied string for dimensions (value + unit), and return a list of
 	`Dimension`s, optionally setting the `which` property to the supplied value.
-	
+
 	Examples:
-	
+
 	1 cm
 	2ft
 	5 pieds
@@ -87,8 +85,7 @@ def parse_simple_dimensions(value, which=None):
 	dims = []
 # 	print(f'DIMENSION: {value}')
 	for m in re.finditer(dimension_re, value):
-		pass
-# 		print(f'--> match {m}')
+		# print(f'--> match {m}')
 		v = _canonical_value(m.group(2))
 		if not v:
 			print(f'*** failed to canonicalize dimension value: {m.group(2)}')
@@ -107,19 +104,19 @@ def parse_simple_dimensions(value, which=None):
 def normalized_dimension_object(dimensions):
 	'''
 	Normalizes the given `dimensions`, or returns `None` is normalization fails.
-	
+
 	Returns a tuple of the normalized data, and a label which preserves the original
 	set of dimensions.
-	
+
 	For example, the input:
-	
+
 		[
 			Dimension(value='10', unit='feet', which=None),
 			Dimension(value='3', unit='inches', which=None),
 		]
-	
+
 	results in the output:
-	
+
 		(
 			Dimension(value='123.0', unit='inches', which=None),
 			"10 feet, 3 inches"
@@ -130,7 +127,6 @@ def normalized_dimension_object(dimensions):
 		return None
 	labels = []
 	for d in dimensions:
-		which = d.which
 		if d.unit == 'inches':
 			labels.append(f'{d.value} inches')
 		elif d.unit == 'feet':
@@ -142,12 +138,12 @@ def normalized_dimension_object(dimensions):
 			return None
 	label = ', '.join(labels)
 	return nd, label
-	
+
 def normalize_dimension(dimensions):
 	'''
 	Given a list of `Dimension`s, normalize them into a single Dimension (e.g. values in
 	both feet and inches become a single dimension of inches).
-	
+
 	If the values cannot be sensibly combined (e.g. inches + centimeters), returns `None`.
 	'''
 	inches = 0
@@ -173,6 +169,12 @@ def normalize_dimension(dimensions):
 		return Dimension(value=str(cm), unit='cm', which=which)
 
 def dimensions_cleaner(value):
+	'''
+	Attempt to parse a set of dimensions from the given string.
+
+	Returns a tuple of `pipeline.util.Dimension` objects if parsing succeeds,
+	None otherwise.
+	'''
 	if value is None:
 		return None
 	cleaners = [
@@ -188,6 +190,7 @@ def dimensions_cleaner(value):
 	return None
 
 def french_dimensions_cleaner_x2(value):
+	'''Attempt to parse 2 dimensions from a French-formatted string.'''
 	# Haut 14 pouces, large 10 pouces
 
 	m = french_dimensions_re.match(value)
@@ -208,6 +211,7 @@ def french_dimensions_cleaner_x2(value):
 	return None
 
 def dutch_dimensions_cleaner_x2(value):
+	'''Attempt to parse 2 dimensions from a Dutch-formatted string.'''
 	# Hoog. 1 v. 6 d., Breed 2 v. 3 d.
 	# Breedt 6 v., hoog 3 v
 
@@ -218,7 +222,7 @@ def dutch_dimensions_cleaner_x2(value):
 		w = 'w'
 		if 'breed' in d['d1w'].lower():
 			h, w = w, h
-		
+
 		d1 = parse_simple_dimensions(d['d1'], h)
 		d2 = parse_simple_dimensions(d['d2'], w)
 		if d1 and d2:
@@ -234,6 +238,7 @@ def dutch_dimensions_cleaner_x2(value):
 	return None
 
 def simple_dimensions_cleaner_x1(value):
+	'''Attempt to parse 1 dimension from a string.'''
 	# 1 cm
 	# 1' 2"
 	# 1 ft. 2 in. h
@@ -247,6 +252,7 @@ def simple_dimensions_cleaner_x1(value):
 	return None
 
 def simple_dimensions_cleaner_x2(value):
+	'''Attempt to parse 2 dimensions from a string.'''
 	# 1 cm x 2 in
 	# 1' 2" by 3 cm
 	# 1 ft. 2 in. h by 3 cm w
@@ -280,8 +286,6 @@ def share_parse(value):
 			return None
 
 def ymd_to_datetime(year, month, day, which="begin"):
-
-
 	if not isinstance(year, int):
 		try:
 			year = int(year)
@@ -488,7 +492,7 @@ def date_cleaner(value):
 			yearmonthday = datetime.strptime(value, '%Y %B %d')
 			if yearmonthday:
 				return [yearmonthday, yearmonthday+timedelta(days=1)]
-		
+
 		with c_locale(), suppress(ValueError):
 			yearmonth = datetime.strptime(value, '%Y %b')
 			if yearmonth:
@@ -511,7 +515,7 @@ def c_locale():
 		yield
 	finally:
 		locale.setlocale(locale.LC_ALL, l)
-	
+
 def test_date_cleaner():
 	import sqlite3
 	c = sqlite3.connect('/Users/rsanderson/Development/getty/provenance/matt/gpi.sqlite')

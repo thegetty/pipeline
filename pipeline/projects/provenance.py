@@ -125,7 +125,7 @@ def auction_event_location(data):
 	specific_name = data.get('specific_loc')
 	city_name = data.get('city_of_sale')
 	country_name = data.get('country_auth_1')
-	
+
 	current = None
 	if country_name:
 		country = {
@@ -176,7 +176,7 @@ def populate_auction_event(data, auction_locations):
 		begin=implode_date(data, 'sale_begin_'),
 		end=implode_date(data, 'sale_end_'),
 	)
-	
+
 	if ts:
 		auction.timespan = ts
 
@@ -230,7 +230,7 @@ def add_auction_houses(data, auction_houses):
 	d = data.copy()
 	houses = data.get('auction_house', [])
 	cno = data['catalog_number']
-	
+
 	house_objects = []
 
 	for h in houses:
@@ -260,11 +260,10 @@ class AddAuctionOfLot:
 		'''
 		Given a `lot_number` value, strip out the object-specific content, returning an
 		identifier for the entire lot.
-		
+
 		For example, strip the object identifier suffixes such as '[a]':
-		
+
 		'0001[a]' -> '0001'
-		
 		'''
 		# TODO: does this handle all the cases of data packed into the lot_number string that need to be stripped?
 		r = re.compile('(\[[a-z]\])')
@@ -331,7 +330,7 @@ def add_crom_price(data, parent):
 		'guineas': 'gb guineas',
 		'Reichsmark': 'de reichsmarks'
 	}
-	
+
 	if 'est_price' in data:
 		amnt = vocab.EstimatedPrice()
 		price_amount = data.get('est_price')
@@ -511,17 +510,29 @@ def populate_object(data):
 		vi.classified_as = genre
 	object.shows = vi
 
-	notes = data.get('hand_note')
-	if notes:
-		for note in notes:
-			c = note['hand_note']
-			catalog_owner = note.get('hand_note_so') # TODO: link this to a physical catalog copy if possible
-			note = vocab.Note(content=c)
-			object.referred_to_by = note
+	notes = data.get('hand_note', [])
+	for note in notes:
+		c = note['hand_note']
+		catalog_owner = note.get('hand_note_so') # TODO: link this to a physical catalog copy if possible
+		note = vocab.Note(content=c)
+		object.referred_to_by = note
 
 	inscription = data.get('inscription')
 	if inscription:
 		object.carries = vocab.Note(content=inscription)
+
+	cno = parent['auction_of_lot']['catalog_number']
+	lno = parent['auction_of_lot']['lot_number']
+	now_key = f'{cno}-{lno}'
+	post_sales = data.get('post_sale', [])
+	for post_sale in post_sales:
+		pcno = post_sale.get('post_sale_cat')
+		plno = post_sale.get('post_sale_lot')
+		year = post_sale.get('post_sale_year')
+		month = post_sale.get('post_sale_mo')
+		day = post_sale.get('post_sale_day')
+		later_key = f'{pcno}-{plno}'
+		# TODO: if {later_key} identifies an auction of lot of a single object, {object} can be smushed with the single object in that lot
 
 	dimstr = data.get('dimensions')
 	if dimstr:
@@ -646,7 +657,7 @@ def add_physical_catalog_objects(data):
 	data['uri'] = uri
 	catalogObject = model.HumanMadeObject(ident=uri, label=data.get('annotation_info'))
 	catalogObject.carries = catalog
-	
+
 	# TODO: Rob's build-sample-auction-data.py script adds this annotation. where does it come from?
 # 	anno = vocab.Annotation()
 # 	anno._label = "Additional annotations in WSHC copy of BR-A1"
@@ -855,7 +866,7 @@ class ProvenancePipeline:
 			}),
 			GroupKeys(mapping={
 				'auction_of_lot': {'properties': ('catalog_number', 'lot_number', 'lot_sale_year', 'lot_sale_month', 'lot_sale_day', 'lot_sale_mod', 'lot_notes')},
-				'_object': {'postprocess': add_pir_object_uuid, 'properties': ('title', 'title_modifier', 'object_type', 'materials', 'dimensions', 'formatted_dimens', 'format', 'genre', 'subject', 'inscription', 'present_loc_geog', 'present_loc_inst', 'present_loc_insq', 'present_loc_insi', 'present_loc_acc', 'present_loc_accq', 'present_loc_note', '_artists', 'hand_note')},
+				'_object': {'postprocess': add_pir_object_uuid, 'properties': ('title', 'title_modifier', 'object_type', 'materials', 'dimensions', 'formatted_dimens', 'format', 'genre', 'subject', 'inscription', 'present_loc_geog', 'present_loc_inst', 'present_loc_insq', 'present_loc_insi', 'present_loc_acc', 'present_loc_accq', 'present_loc_note', '_artists', 'hand_note', 'post_sale')},
 				'estimated_price': {'postprocess': add_crom_price, 'properties': ('est_price', 'est_price_curr', 'est_price_desc', 'est_price_so')},
 				'bid': {'properties': ('start_price', 'start_price_curr', 'start_price_desc', 'start_price_so', 'ask_price', 'ask_price_curr', 'ask_price_so')},
 			}),
@@ -894,7 +905,7 @@ class ProvenancePipeline:
 			# write OBJECTS data
 			self.add_serialization_chain(graph, places.output)
 		return places
-	
+
 	def add_auction_houses_chain(self, graph, auction_events, serialize=True):
 		houses = graph.add_chain(
 			ExtractKeyedValues(key='auction_house'),
@@ -971,7 +982,6 @@ class ProvenancePipeline:
 			self._construct_graph(all=True)
 
 		return self.graph_0
-		
 
 	def get_graph_1(self):
 		'''Construct the bonobo pipeline to fully transform Provenance data from CSV to JSON-LD.'''
@@ -1025,7 +1035,6 @@ class ProvenanceFilePipeline(ProvenancePipeline):
 			self.writer		= MergingFileWriter(directory=output_path)
 			# self.writer	= MultiFileWriter(directory=output_path)
 			# self.writer	= ArchesWriter()
-
 
 	def add_serialization_chain(self, graph, input_node):
 		'''Add serialization of the passed transformer node to the bonobo graph.'''

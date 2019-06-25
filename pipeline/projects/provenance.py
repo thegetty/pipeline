@@ -366,6 +366,9 @@ class AddAuctionOfLot:
 		est_price = data.get('estimated_price')
 		if est_price:
 			coll.dimension = get_crom_object(est_price)
+		start_price = data.get('start_price')
+		if start_price:
+			coll.dimension = get_crom_object(start_price)
 
 		lot.used_specific_object = coll
 		data['_lot_object_set'] = coll
@@ -408,40 +411,52 @@ def add_crom_price(data, _):
 		'Reichsmark': 'de reichsmarks'
 	}
 
+	note = data.get('price_note')
+	if note:
+		print(f'PRICE NOTE: {note}')
+
+	amount_type = 'Price'
 	if 'est_price' in data:
 		amnt = vocab.EstimatedPrice()
 		price_amount = data.get('est_price')
 		price_currency = data.get('est_price_curr')
+		amount_type = 'Estimated Price'
+	elif 'start_price' in data:
+		amnt = vocab.StartingPrice()
+		price_amount = data.get('start_price')
+		price_currency = data.get('start_price_curr')
+		amount_type = 'Starting Price'
 	else:
 		amnt = model.MonetaryAmount()
 		price_amount = data.get('price_amount')
 		price_currency = data.get('price_currency')
 
-	if price_amount:
-		try:
-			v = price_amount
-			v = v.replace('[?]', '')
-			v = v.replace('?', '')
-			v = v.strip()
-			price_amount = float(v)
-			amnt.value =  price_amount
-		except ValueError:
-			amnt._label = price_amount
-			amnt.identified_by = model.Name(content=price_amount)
-# 			print(f'*** Not a numeric price amount: {v}')
-	if price_currency:
-		if price_currency in MAPPING:
-			price_currency = MAPPING[price_currency] # TODO: can this be done safely with the PIR data?
-# 		print(f'*** CURRENCY: {currency}')
-		if price_currency in vocab.instances:
-			amnt.currency = vocab.instances[price_currency]
-		else:
-			print(f'*** No currency instance defined for {price_currency}')
-	if price_amount and price_currency:
-		amnt._label = f'{price_amount} {price_currency}'
-	elif price_amount:
-		amnt._label = f'{price_amount}'
-	add_crom_data(data=data, what=amnt)
+	if price_amount or price_currency:
+		if price_amount:
+			try:
+				v = price_amount
+				v = v.replace('[?]', '')
+				v = v.replace('?', '')
+				v = v.strip()
+				price_amount = float(v)
+				amnt.value =  price_amount
+			except ValueError:
+				amnt._label = price_amount
+				amnt.identified_by = model.Name(content=price_amount)
+	# 			print(f'*** Not a numeric price amount: {v}')
+		if price_currency:
+			if price_currency in MAPPING:
+				price_currency = MAPPING[price_currency] # TODO: can this be done safely with the PIR data?
+	# 		print(f'*** CURRENCY: {currency}')
+			if price_currency in vocab.instances:
+				amnt.currency = vocab.instances[price_currency]
+			else:
+				print(f'*** No currency instance defined for {price_currency}')
+		if price_amount and price_currency:
+			amnt._label = f'{price_amount} {price_currency}'
+		elif price_amount:
+			amnt._label = f'{price_amount}'
+		add_crom_data(data=data, what=amnt)
 	return data
 
 def add_person(data: dict):
@@ -562,7 +577,6 @@ def add_acquisition_or_bidding(data):
 		yield from add_bidding(data, buyers)
 	else:
 		print(f'Cannot create acquisition data for unknown transaction type: {transaction!r}')
-		pprint.pprint(data)
 
 #mark - Auction of Lot - Physical Object
 
@@ -796,8 +810,7 @@ def populate_auction_catalog(data):
 	catalog.identified_by = vocab.LocalNumber(content=sno)
 	notes = data.get('notes')
 	if notes:
-		note = vocab.Note()
-		note.content = parent['notes']
+		note = vocab.Note(content=parent['notes'])
 		catalog.referred_to_by = note
 	yield d
 
@@ -1119,12 +1132,16 @@ class ProvenancePipeline:
 						'est_price_curr',
 						'est_price_desc',
 						'est_price_so')},
-				'bid': {
+				'start_price': {
+					'postprocess': add_crom_price,
 					'properties': (
 						'start_price',
 						'start_price_curr',
 						'start_price_desc',
-						'start_price_so',
+						'start_price_so')},
+				'ask_price': {
+					'postprocess': add_crom_price,
+					'properties': (
 						'ask_price',
 						'ask_price_curr',
 						'ask_price_so')},

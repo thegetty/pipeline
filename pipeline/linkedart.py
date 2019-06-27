@@ -38,10 +38,10 @@ class MakeLinkedArtRecord:
 			thing = data['_LOD_OBJECT']
 		else:
 			otype = data['object_type']
-			if 'uuid' in data:
-				thing = otype(ident="urn:uuid:%s" % data['uuid'])
-			elif 'uri' in data:
+			if 'uri' in data:
 				thing = otype(ident=data['uri'])
+			elif 'uuid' in data:
+				thing = otype(ident="urn:uuid:%s" % data['uuid'])
 			else:
 				raise Exception('MakeLinkedArtRecord called with a dictionary with neither uuid or uri member')
 

@@ -40,8 +40,8 @@ def implode_date(data: dict, prefix: str):
 	missing, may also return a year-month ('YYYY-MM') or year ('YYYY') string.
 	'''
 	year = data.get(f'{prefix}year')
-	month = data.get('{prefix}month')
-	day = data.get('{prefix}day')
+	month = data.get(f'{prefix}month', data.get(f'{prefix}mo'))
+	day = data.get(f'{prefix}day')
 	if year and month and day:
 		return f'{year}-{month}-{day}'
 	elif year and month:

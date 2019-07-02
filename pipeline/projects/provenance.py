@@ -44,6 +44,7 @@ from pipeline.nodes.basic import \
 			AddArchesModel, \
 			Serializer, \
 			Trace
+from pipeline.util.rewriting import rewrite_output_files
 
 #mark - utility functions and classes
 
@@ -424,7 +425,8 @@ class AddAuctionOfLot(Configurable):
 		tx_uri = AddAuctionOfLot.transaction_uri_for_lot(auction_data, data.get('price', []))
 		tx = vocab.Procurement(ident=tx_uri)
 		lot.caused = tx
-		data['_transaction'] = tx
+		tx_data = {'_date': lot.timespan}
+		data['_transaction'] = add_crom_data(data=tx_data, what=tx)
 
 		add_crom_data(data=data, what=lot)
 		yield data
@@ -535,12 +537,12 @@ def add_acquisition(data, object, buyers, sellers):
 	object_label = object._label
 	amnts = [get_crom_object(p) for p in prices]
 
-	if not prices:
-		print(f'*** No price data found for {transaction} transaction')
+# 	if not prices:
+# 		print(f'*** No price data found for {transaction} transaction')
 
 	acq = model.Acquisition(label=f'Acquisition of {cno} {lno}: {object_label}')
 	acq.transferred_title_of = object
-	paym = model.Payment(label=f'Payment for {object_label}')
+	paym = model.Payment(label=f'Payment for “{object_label}”')
 	for seller in [get_crom_object(s) for s in sellers]:
 		paym.paid_to = seller
 		acq.transferred_title_from = seller
@@ -550,7 +552,11 @@ def add_acquisition(data, object, buyers, sellers):
 	for amnt in amnts:
 		paym.paid_amount = amnt
 
-	tx = parent['_transaction']
+	tx_data = parent['_transaction']
+	tx = get_crom_object(tx_data)
+	ts = tx_data.get('_date')
+	if ts:
+		acq.timespan = ts
 	tx.part = paym
 	tx.part = acq
 	data['_transaction'] = add_crom_data(data={}, what=tx)
@@ -697,16 +703,22 @@ def populate_object(data, post_sale_map):
 	date = implode_date(auction_data, 'lot_sale_')
 	lot = AddAuctionOfLot.shared_lot_number_from_lno(lno)
 	now_key = (cno, lot, date)
+	
+	
 	post_sales = data.get('post_sale', [])
-	for post_sale in post_sales:
-		pcno = post_sale.get('post_sale_cat')
-		plno = post_sale.get('post_sale_lot')
-		plot = AddAuctionOfLot.shared_lot_number_from_lno(plno)
-		pdate = implode_date(post_sale, 'post_sale_')
-		if pcno and plot and pdate:
-			later_key = (pcno, plot, pdate)
-			post_sale_map.set(later_key, now_key)
-			# TODO: if {later_key} identifies an auction of lot of a single object, {object} can be smushed with the single object in that lot
+	prev_sales = data.get('prev_sale', [])
+	records = [(post_sales, False), (prev_sales, True)]
+	for sales_data, rev in records:
+		for sale_record in sales_data:
+			pcno = sale_record.get('cat')
+			plno = sale_record.get('lot')
+			plot = AddAuctionOfLot.shared_lot_number_from_lno(plno)
+			pdate = implode_date(sale_record, '')
+			if pcno and plot and pdate:
+				later_key = (pcno, plot, pdate)
+				if rev:
+					later_key, now_key = now_key, later_key
+				post_sale_map.set(later_key, now_key)
 
 	dimstr = data.get('dimensions')
 	if dimstr:
@@ -1025,7 +1037,7 @@ class ProvenancePipeline:
 		'''Add modeling of the procurement event of an auction of a lot.'''
 		p = graph.add_chain(
 			ExtractKeyedValue(key='_transaction'),
-			AddArchesModel(model=self.models['Activity']),
+			AddArchesModel(model=self.models['Procurement']),
 			_input=acquisitions.output
 		)
 		if serialize:
@@ -1124,7 +1136,8 @@ class ProvenancePipeline:
 						'prev_own_auth_L',
 						'prev_own_auth_Q',
 						'prev_own_ulan')},
-				'prev': {
+				'prev_sale': {
+					'postprocess': lambda x, _: strip_key_prefix('prev_sale_', x),
 					'prefixes': (
 						'prev_sale_year',
 						'prev_sale_mo',
@@ -1138,6 +1151,7 @@ class ProvenancePipeline:
 						'prev_sale_coll',
 						'prev_sale_cat')},
 				'post_sale': {
+					'postprocess': lambda x, _: strip_key_prefix('post_sale_', x),
 					'prefixes': (
 						'post_sale_year',
 						'post_sale_mo',
@@ -1193,7 +1207,8 @@ class ProvenancePipeline:
 						'present_loc_note',
 						'_artists',
 						'hand_note',
-						'post_sale')},
+						'post_sale',
+						'prev_sale')},
 				'estimated_price': {
 					'postprocess': add_crom_price,
 					'properties': (
@@ -1366,10 +1381,6 @@ class ProvenancePipeline:
 	def merge_post_sale_objects(self, counter, post_map):
 		singles = {k for k in counter if counter[k] == 1}
 		multiples = {k for k in counter if counter[k] > 1}
-# 		print('==================')
-# 		print('Single-Object Lots:')
-# 		for key in sorted(singles):
-# 			print(f'{key}')
 		
 		total = 0
 		mapped = 0
@@ -1386,27 +1397,32 @@ class ProvenancePipeline:
 			else:
 				print(f'  {src} maps to an UNKNOWN lot')
 		
-# 		print('POST SALE MAP:')
+		large_components = set(g.largest_component_canonical_keys(None))
 		dot = graphviz.Digraph()
-		for n in g.nodes.keys():
-			i = f'n{n!s}'
-			dot.node(i, str(n))
+		node_id = lambda n: f'n{n!s}'
+		for n, i in g.nodes.items():
+			key, _ = g.canonical_key(n)
+			if key in large_components:
+				dot.node(node_id(i), str(n))
+		rewrite_map = {}
+		print('Rewrite output files, replacing the following URIs:')
 		for src, dst in g:
-			s = str(src)
-			d = str(dst)
 			canonical, steps = g.canonical_key(src)
 			src_uri = pir_uri('OBJECT', *src)
 			dst_uri = pir_uri('OBJECT', *canonical)
 			print(f's/ {src_uri:<100} / {dst_uri:<100} /')
-# 			print(f'    {s:<40} --> {canonical!s:<40} ({steps} steps)')
-			i = f'n{s}'
-			j = f'n{d}'
-			dot.edge(i, j, f'{steps} steps')
+			rewrite_map[src_uri] = dst_uri
+			if canonical in large_components:
+				i = node_id(g.nodes[src])
+				j = node_id(g.nodes[dst])
+				dot.edge(i, j, f'{steps} steps')
 		dot.save(filename='/tmp/sales.dot')
+		# TODO: do a pass over the output files, rewriting URIs in `rewrite_map`
+		
+# 		pprint.pprint(rewrite_map)
+		r = SharedObjectURIRewriter(rewrite_map)
+		rewrite_output_files(r)
 		print(f'mapped {mapped}/{total} objects to a previous sale')
-		print('*** TODO: use lot object counts to aid in merging post sale object URIs')
-		
-		
 
 	def run(self, **options):
 		'''Run the Provenance bonobo pipeline.'''
@@ -1428,6 +1444,8 @@ class ProvenancePipeline:
 		counter = services['lot_counter']
 		post_map = services['post_sale_map']
 		self.merge_post_sale_objects(counter, post_map.d)
+		print(f'>>> {len(post_map.d)} post sales records')
+		
 
 class ProvenanceFilePipeline(ProvenancePipeline):
 	'''
@@ -1478,6 +1496,17 @@ class SalesTree:
 		i = self.nodes[node]
 		return i
 
+	def largest_component_canonical_keys(self, limit=None):
+		components = Counter()
+		for src in self.nodes.keys():
+			key, _ = self.canonical_key(src)
+			components[key] += 1
+		print(f'Post sales records connected component sizes (top {limit}):')
+		for key, count in components.most_common(limit):
+			uri = pir_uri('OBJECT', *key)
+			print(f'{count}\t{key!s:>40}\t\t{uri}')
+			yield key
+
 	def add_edge(self, src, dst):
 		i = self.add_node(src)
 		j = self.add_node(dst)
@@ -1519,3 +1548,25 @@ class SalesTree:
 			key = parent
 			steps += 1
 		return key, steps
+
+class SharedObjectURIRewriter:
+	def __init__(self, mapping):
+		self.mapping = mapping
+
+	def rewrite(self, d, *args, **kwargs):
+		file = kwargs.get('file')
+		if isinstance(d, dict):
+			return {k: self.rewrite(v, *args, **kwargs) for k, v in d.items()}
+		elif isinstance(d, list):
+			return [self.rewrite(v, *args, **kwargs) for v in d]
+		elif isinstance(d, int):
+			return d
+		elif isinstance(d, float):
+			return d
+		elif isinstance(d, str):
+			if d in self.mapping:
+				return self.mapping[d]
+			return d
+		else:
+			print(f'failed to rewrite JSON value: {d!r}')
+			raise Exception(f'failed to rewrite JSON value: {d!r}')

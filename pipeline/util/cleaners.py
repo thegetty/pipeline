@@ -1,3 +1,4 @@
+import pprint
 import locale
 import re
 import calendar
@@ -10,10 +11,10 @@ CIRCA_D = timedelta(days=365*CIRCA)
 
 share_re = re.compile("([0-9]+)/([0-9]+)")
 
-number_pattern = r'((?:\d+(?:[.,]\d+)?)|(?:\d+\s+\d+/\d+))'
+number_pattern = r'((?:\d+\s+\d+/\d+)|(?:\d+(?:[.,]\d+)?))'
 unit_pattern = r'''('|"|d[.]?|duymen|pouces?|inches|inch|in[.]?|pieds?|v[.]?|voeten|feet|foot|ft[.]?|cm)'''
-dimension_pattern = f'({number_pattern}\\s*{unit_pattern})'
-dimension_re = re.compile(f'\\s*({number_pattern}\\s*{unit_pattern})')
+dimension_pattern = f'({number_pattern}\\s*(?:{unit_pattern})?)'
+dimension_re = re.compile(f'\\s*{dimension_pattern}')
 
 simple_width_height_pattern = r'(?:\s*((?<!\w)[wh]|width|height))?'
 simple_dimensions_pattern_x1 = ''\
@@ -48,6 +49,8 @@ def _canonical_value(value):
 	return value
 
 def _canonical_unit(value):
+	if value is None:
+		return None
 	value = value.lower()
 	if 'in' in value or value in ('pouces', 'pouce', 'duymen', 'd.', 'd') or value == '"':
 		return 'inches'
@@ -90,10 +93,10 @@ def parse_simple_dimensions(value, which=None):
 		if not v:
 			print(f'*** failed to canonicalize dimension value: {m.group(2)}')
 			return None
-		u = _canonical_unit(m.group(3))
-		if not u:
-			print(f'*** not a recognized unit: {m.group(3)}')
-			return None
+		unit_value = m.group(3)
+		u = _canonical_unit(unit_value)
+		if unit_value and not u:
+			print(f'*** not a recognized unit: {unit_value}')
 		which = _canonical_which(which)
 		d = Dimension(value=v, unit=u, which=which)
 		dims.append(d)
@@ -133,6 +136,8 @@ def normalized_dimension_object(dimensions):
 			labels.append(f'{d.value} feet')
 		elif d.unit == 'cm':
 			labels.append(f'{d.value} cm')
+		elif d.unit is None:
+			labels.append(f'{d.value}')
 		else:
 			print(f'*** unrecognized unit: {d.unit}')
 			return None

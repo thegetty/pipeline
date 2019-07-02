@@ -8,7 +8,8 @@ from collections import defaultdict, namedtuple
 import settings
 import pipeline.io.arches
 from bonobo.config import Configurable, Option, Service
-from cromulent.model import factory
+from cromulent import model
+from cromulent.model import factory, BaseResource
 
 Dimension = namedtuple("Dimension", [
 	'value',	# numeric value
@@ -81,6 +82,12 @@ def configured_arches_writer():
 	)
 
 class CromObjectMerger:
+	def __init__(self):
+		self.content_based_identity = (
+			model.Name,
+			model.Identifier,
+		)
+
 	def merge(self, obj, *to_merge):
 		# print('merging...')
 		# print(f'base object: {obj}')
@@ -106,36 +113,33 @@ class CromObjectMerger:
 		existing = []
 # 		print('------------------------')
 		with suppress(AttributeError):
-			existing = getattr(obj, p)
-			if isinstance(existing, list):
-				existing.extend(existing)
+			e = getattr(obj, p)
+			if isinstance(e, list):
+				existing.extend(e)
 			else:
-				existing = [existing]
+				existing = [e]
 
 # 		print(f'Setting {p}')
 		identified = defaultdict(list)
 		unidentified = []
-		if existing:
-			# print('Existing value(s):')
-			for v in existing:
-				if hasattr(v, 'id'):
-					identified[v.id].append(v)
-				else:
-					unidentified.append(v)
-# 				print(f'- {v}')
-
-		for v in values:
-			# print(f'Setting {p} value to {v}')
+		for v in existing + list(values):
+			if isinstance(v, self.content_based_identity):
+				if hasattr(v, 'content'):
+					identified[v.content].append(v)
+				continue
 			if hasattr(v, 'id'):
 				identified[v.id].append(v)
 			else:
 				unidentified.append(v)
+# 			print(f'- {v}')
 
 		if p == 'type':
 			# print('*** TODO: calling setattr(_, "type") on crom objects throws; skipping')
 			return
-		for _, v in identified.items():
-			setattr(obj, p, None)
+		setattr(obj, p, None)
+		for v in identified.values():
+			if not obj.allows_multiple(p):
+				setattr(obj, p, None)
 			setattr(obj, p, self.merge(*v))
 		for v in unidentified:
 			setattr(obj, p, v)

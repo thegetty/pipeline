@@ -541,7 +541,7 @@ def add_acquisition(data, object, buyers, sellers):
 # 	if not prices:
 # 		print(f'*** No price data found for {transaction} transaction')
 
-	acq = model.Acquisition(label=f'Acquisition of {cno} {lno}: {object_label}')
+	acq = model.Acquisition(label=f'Acquisition of {cno} {lno}: “{object_label}”')
 	acq.transferred_title_of = object
 	paym = model.Payment(label=f'Payment for “{object_label}”')
 	for seller in [get_crom_object(s) for s in sellers]:
@@ -748,7 +748,8 @@ def populate_object(data, post_sale_map):
 					pass
 # 					print(f'Failed to normalize dimensions: {orig_d}')
 		else:
-			print(f'No dimension data was parsed from the dimension statement: {dimstr}')
+			pass
+# 			print(f'No dimension data was parsed from the dimension statement: {dimstr}')
 	yield data
 
 def add_object_type(data):
@@ -1421,7 +1422,7 @@ class ProvenancePipeline:
 		# TODO: do a pass over the output files, rewriting URIs in `rewrite_map`
 		
 # 		pprint.pprint(rewrite_map)
-		r = SharedObjectURIRewriter(rewrite_map)
+		r = JSONValueRewriter(rewrite_map)
 		rewrite_output_files(r)
 		print(f'mapped {mapped}/{total} objects to a previous sale')
 
@@ -1457,7 +1458,7 @@ class ProvenanceFilePipeline(ProvenancePipeline):
 	'''
 	def __init__(self, input_path, catalogs, auction_events, contents, **kwargs):
 		super().__init__(input_path, catalogs, auction_events, contents, **kwargs)
-		self.use_single_serializer = True
+		self.use_single_serializer = False
 		self.output_chain = None
 		debug = kwargs.get('debug', False)
 		output_path = kwargs.get('output_path')
@@ -1550,12 +1551,13 @@ class SalesTree:
 			steps += 1
 		return key, steps
 
-class SharedObjectURIRewriter:
+class JSONValueRewriter:
 	def __init__(self, mapping):
 		self.mapping = mapping
 
 	def rewrite(self, d, *args, **kwargs):
-		file = kwargs.get('file')
+		if d in self.mapping:
+			return self.mapping[d]
 		if isinstance(d, dict):
 			return {k: self.rewrite(v, *args, **kwargs) for k, v in d.items()}
 		elif isinstance(d, list):
@@ -1565,8 +1567,6 @@ class SharedObjectURIRewriter:
 		elif isinstance(d, float):
 			return d
 		elif isinstance(d, str):
-			if d in self.mapping:
-				return self.mapping[d]
 			return d
 		else:
 			print(f'failed to rewrite JSON value: {d!r}')

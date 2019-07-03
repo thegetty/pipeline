@@ -151,6 +151,7 @@ def normalize_dimension(dimensions):
 
 	If the values cannot be sensibly combined (e.g. inches + centimeters), returns `None`.
 	'''
+	unknown = 0
 	inches = 0
 	cm = 0
 	which = None
@@ -162,16 +163,24 @@ def normalize_dimension(dimensions):
 			inches += 12 * float(d.value)
 		elif d.unit == 'cm':
 			cm += float(d.value)
+		elif d.unit is None:
+			unknown += float(d.value)
 		else:
 			print(f'*** unrecognized unit: {d.unit}')
 			return None
-	if inches and cm:
-		print(f'*** dimension used both metric and imperial!?')
+	used_systems = 0
+	for v in (inches, cm, unknown):
+		if v:
+			used_systems += 1
+	if used_systems != 1:
+		print(f'*** dimension used a mix of unit systems (metric, imperial, and/or unknown)')
 		return None
 	elif inches:
 		return Dimension(value=str(inches), unit='inches', which=which)
-	else:
+	elif cm:
 		return Dimension(value=str(cm), unit='cm', which=which)
+	else:
+		return Dimension(value=str(cm), unit=None, which=which)
 
 def dimensions_cleaner(value):
 	'''

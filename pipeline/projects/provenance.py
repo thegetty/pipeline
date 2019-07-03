@@ -1399,7 +1399,7 @@ class ProvenancePipeline:
 			else:
 				print(f'  {src} maps to an UNKNOWN lot')
 		
-		large_components = set(g.largest_component_canonical_keys(None))
+		large_components = set(g.largest_component_canonical_keys(25))
 		dot = graphviz.Digraph()
 		node_id = lambda n: f'n{n!s}'
 		for n, i in g.nodes.items():
@@ -1556,8 +1556,9 @@ class JSONValueRewriter:
 		self.mapping = mapping
 
 	def rewrite(self, d, *args, **kwargs):
-		if d in self.mapping:
-			return self.mapping[d]
+		with suppress(TypeError):
+			if d in self.mapping:
+				return self.mapping[d]
 		if isinstance(d, dict):
 			return {k: self.rewrite(v, *args, **kwargs) for k, v in d.items()}
 		elif isinstance(d, list):

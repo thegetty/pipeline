@@ -4,6 +4,7 @@ import os
 import sys
 import csv
 import bonobo
+from cromulent import vocab
 
 from pipeline.projects.provenance import ProvenanceFilePipeline, ProvenancePipeline
 from settings import pir_data_path, output_file_path, arches_models, DEBUG
@@ -28,6 +29,8 @@ if __name__ == '__main__':
 		'header_file': 'sales_descriptions_0.csv',
 		'files_pattern': 'sales_descriptions.csv',
 	}
+
+	vocab.add_linked_art_boundary_check()
 
 	print_dot = False
 	if 'dot' in sys.argv[1:]:

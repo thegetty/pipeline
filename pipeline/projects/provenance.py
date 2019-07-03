@@ -437,6 +437,7 @@ def add_crom_price(data, _):
 	the supplied `data` dict.
 	'''
 	MAPPING = {
+		'florins': 'de florins',
 		'fl': 'de florins',
 		'fl.': 'de florins',
 		'pounds': 'gb pounds',

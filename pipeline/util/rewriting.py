@@ -5,6 +5,7 @@ import uuid
 import pprint
 import itertools
 from pathlib import Path
+from contextlib import suppress
 
 from settings import output_file_path
 from pipeline.util import CromObjectMerger
@@ -38,7 +39,7 @@ def rewrite_output_files(r, update_filename=False, **kwargs):
 	p = Path(output_file_path)
 	files = list(p.rglob('*.json'))
 	for i, f in enumerate(files):
-# 		print(f'{i} {f}')
+		# print(f'{i} {f}', end="\r", flush=True)
 		with open(f) as data_file:
 			data = json.load(data_file)
 		d = r.rewrite(data, file=f)
@@ -46,8 +47,12 @@ def rewrite_output_files(r, update_filename=False, **kwargs):
 			newfile = filename_for(d, original_filename=f, **kwargs)
 		else:
 			newfile = f
-		if d != data:
-			print(f'*** rewrote data in {f} --> {newfile}')
+		if d == data and f == newfile:
+			# nothing changed; do not rewrite the file
+			continue
+		else:
+			pass
+			# print(f'*** rewrote data in {f} --> {newfile}')
 		if newfile != f:
 			if os.path.exists(newfile):
 				read = reader.Reader()
@@ -74,3 +79,26 @@ def rewrite_output_files(r, update_filename=False, **kwargs):
 		if newfile != f:
 			os.remove(f)
 	print(f'{i} files rewritten')
+
+class JSONValueRewriter:
+	def __init__(self, mapping):
+		self.mapping = mapping
+
+	def rewrite(self, d, *args, **kwargs):
+		with suppress(TypeError):
+			if d in self.mapping:
+				return self.mapping[d]
+		if isinstance(d, dict):
+			return {k: self.rewrite(v, *args, **kwargs) for k, v in d.items()}
+		elif isinstance(d, list):
+			return [self.rewrite(v, *args, **kwargs) for v in d]
+		elif isinstance(d, int):
+			return d
+		elif isinstance(d, float):
+			return d
+		elif isinstance(d, str):
+			return d
+		else:
+			print(f'failed to rewrite JSON value: {d!r}')
+			raise Exception(f'failed to rewrite JSON value: {d!r}')
+

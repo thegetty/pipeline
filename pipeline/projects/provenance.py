@@ -6,14 +6,18 @@ running a bonobo pipeline for converting Provenance Index CSV data into JSON-LD.
 # PIR Extracters
 
 import re
+import os
+import json
 import sys
 import uuid
 import csv
 import pprint
 import itertools
-from collections import Counter, defaultdict
+from collections import Counter, defaultdict, namedtuple
 from contextlib import suppress
+import inspect
 
+import timeit
 import urllib.parse
 from sqlalchemy import create_engine
 
@@ -44,7 +48,7 @@ from pipeline.nodes.basic import \
 			AddArchesModel, \
 			Serializer, \
 			Trace
-from pipeline.util.rewriting import rewrite_output_files
+from pipeline.util.rewriting import rewrite_output_files, JSONValueRewriter
 
 #mark - utility functions and classes
 
@@ -273,7 +277,6 @@ def add_auction_house_data(a):
 	auth = a.get('auc_house_auth')
 	if auth:
 		n = vocab.PrimaryName()
-# 		n.referred_to_by = catalog
 		n.content = auth
 		a['identifiers'].append(n)
 
@@ -299,9 +302,6 @@ def add_auction_houses(data, auction_houses):
 		add_auction_house_data(h)
 		house = get_crom_object(h)
 		auction.carried_out_by = house
-		# TODO: how can we associate this auction house with the lot auction,
-		# which is produced on an entirely different bonobo graph chain?
-# 		lot.carried_out_by = house
 		if auction_houses:
 			house_objects.append(house)
 	auction_houses.set(cno, house_objects)
@@ -481,7 +481,6 @@ def add_crom_price(data, _):
 		if price_currency:
 			if price_currency in MAPPING:
 				price_currency = MAPPING[price_currency] # TODO: can this be done safely with the PIR data?
-	# 		print(f'*** CURRENCY: {currency}')
 			if price_currency in vocab.instances:
 				amnt.currency = vocab.instances[price_currency]
 			else:
@@ -509,7 +508,7 @@ def add_person(data: dict):
 	if ulan:
 		key = f'PERSON-ULAN-{ulan}'
 		data['uid'] = key
-		data['uri'] = pir_uri(key)
+		data['uri'] = pir_uri('PERSON', 'ULAN', ulan)
 		data['identifiers'] = [model.Identifier(content=ulan)]
 		data['exact_match'] = [model.BaseResource(ident=f'http://vocab.getty.edu/ulan/{ulan}')]
 	else:
@@ -732,7 +731,6 @@ def populate_object(data, post_sale_map):
 				dimdata = normalized_dimension_object(orig_d)
 				if dimdata:
 					d, label = dimdata
-# 					print(f'Dimension {data["dimensions"]}: {d}')
 					if d.which == 'height':
 						dim = vocab.Height()
 					elif d.which == 'width':
@@ -741,16 +739,17 @@ def populate_object(data, post_sale_map):
 						dim = vocab.PhysicalDimension() # TODO: as soon as this is available from crom
 					dim.identified_by = model.Name(content=label)
 					dim.value = d.value
-					dim.unit = vocab.instances[d.unit]
+					unit = vocab.instances.get(d.unit)
+					if unit:
+						dim.unit = unit
 					object.dimension = dim
-# 					print(f'DIMENSION {dim} from {dimstr!r}')
 				else:
 					pass
 # 					print(f'Failed to normalize dimensions: {orig_d}')
 		else:
 			pass
 # 			print(f'No dimension data was parsed from the dimension statement: {dimstr}')
-	yield data
+	return data
 
 def add_object_type(data):
 	'''Add appropriate type information for an object based on its 'object_type' name'''
@@ -801,7 +800,7 @@ def add_pir_artists(data):
 		star_rec_no = a.get('star_rec_no')
 		key = f'PERSON-star-{star_rec_no}'
 		a['uid'] = key
-		a['uri'] = pir_uri(key)
+		a['uri'] = pir_uri('PERSON', 'star', star_rec_no) # TODO: Do we need to handle ULAN here?
 		if a.get('artist_name'):
 			name = a.get('artist_name')
 			a['names'] = [(name,)]
@@ -831,7 +830,7 @@ def add_auction_catalog(data):
 	'''Add modeling for auction catalogs as linguistic objects'''
 	cno = data['catalog_number']
 	key = f'CATALOG-{cno}'
-	cdata = {'uid': key, 'uri': pir_uri(key)}
+	cdata = {'uid': key, 'uri': pir_uri('CATALOG', cno)}
 	catalog = vocab.AuctionCatalog(ident=cdata['uri'])
 	catalog._label = f'Sale Catalog {cno}'
 	data['_catalog'] = cdata
@@ -845,8 +844,7 @@ def add_physical_catalog_objects(data):
 	cno = data['catalog_number']
 	owner = data['owner_code']
 	copy = data['copy_number']
-	key = f'CATALOG-{cno}-{owner}-{copy}'
-	uri = pir_uri(key)
+	uri = pir_uri('CATALOG', cno, owner, copy)
 	data['uri'] = uri
 	catalogObject = model.HumanMadeObject(ident=uri, label=data.get('annotation_info'))
 	catalogObject.carries = catalog
@@ -860,6 +858,7 @@ def add_physical_catalog_objects(data):
 
 def add_physical_catalog_owners(data):
 	'''Add information about the ownership of a physical copy of an auction catalog'''
+	# print('TODO: Add information about the current owner of the physical catalog copy')
 	# TODO: Add information about the current owner of the physical catalog copy
 	# TODO: are the values of data['owner_code'] mapped somewhere?
 	yield data
@@ -953,17 +952,11 @@ class ProvenancePipeline:
 
 	def add_physical_catalogs_chain(self, graph, records, serialize=True):
 		'''Add modeling of physical copies of auction catalogs.'''
-		if self.limit is not None:
-			records = graph.add_chain(
-				Limit(self.limit),
-				_input=records.output
-			)
-
 		catalogs = graph.add_chain(
 			AddFieldNames(field_names=self.catalogs_headers),
 			add_auction_catalog,
 			add_physical_catalog_objects,
-			add_physical_catalog_owners,
+# 			add_physical_catalog_owners, # TODO: enable this when we have enough understanding to process this data
 			AddArchesModel(model=self.models['HumanMadeObject']),
 			_input=records.output
 		)
@@ -987,11 +980,6 @@ class ProvenancePipeline:
 
 	def add_auction_events_chain(self, graph, records, serialize=True):
 		'''Add modeling of auction events.'''
-		if self.limit is not None:
-			records = graph.add_chain(
-				Limit(self.limit),
-				_input=records.output
-			)
 		auction_events = graph.add_chain(
 			AddFieldNames(field_names=self.auction_events_headers),
 			GroupRepeatingKeys(mapping={
@@ -1027,7 +1015,6 @@ class ProvenancePipeline:
 			add_auction_houses,
 			populate_auction_event,
 			AddArchesModel(model=self.models['Event']),
-# 			Trace(name='auction_events'),
 			_input=records.output
 		)
 		if serialize:
@@ -1072,11 +1059,6 @@ class ProvenancePipeline:
 
 	def add_sales_chain(self, graph, records, serialize=True):
 		'''Add transformation of sales records to the bonobo pipeline.'''
-		if self.limit is not None:
-			records = graph.add_chain(
-				Limit(self.limit),
-				_input=records.output
-			)
 		sales = graph.add_chain(
 			AddFieldNames(field_names=self.contents_headers),
 			GroupRepeatingKeys(mapping={
@@ -1210,7 +1192,9 @@ class ProvenancePipeline:
 						'_artists',
 						'hand_note',
 						'post_sale',
-						'prev_sale')},
+						'prev_sale',
+						'prev_owner',
+						'post_owner')},
 				'estimated_price': {
 					'postprocess': add_crom_price,
 					'properties': (
@@ -1232,7 +1216,6 @@ class ProvenancePipeline:
 						'ask_price_curr',
 						'ask_price_so')},
 			}),
-# 			Trace(name='sale'),
 			AddAuctionOfLot(),
 			AddArchesModel(model=self.models['Activity']),
 			_input=records.output
@@ -1245,7 +1228,6 @@ class ProvenancePipeline:
 	def add_single_object_lot_tracking_chain(self, graph, sales):
 		small_lots = graph.add_chain(
 			TrackLotSizes(),
-# 			Trace(name='lots'),
 			_input=sales.output
 		)
 		return small_lots
@@ -1325,12 +1307,12 @@ class ProvenancePipeline:
 		for g in component1:
 			physical_catalog_records = g.add_chain(
 				MatchingFiles(path='/', pattern=self.catalogs_files_pattern, fs='fs.data.pir'),
-				CurriedCSVReader(fs='fs.data.pir'),
+				CurriedCSVReader(fs='fs.data.pir', limit=self.limit),
 			)
 
 			auction_events_records = g.add_chain(
 				MatchingFiles(path='/', pattern=self.auction_events_files_pattern, fs='fs.data.pir'),
-				CurriedCSVReader(fs='fs.data.pir'),
+				CurriedCSVReader(fs='fs.data.pir', limit=self.limit),
 			)
 
 			_ = self.add_physical_catalogs_chain(g, physical_catalog_records, serialize=True)
@@ -1345,7 +1327,7 @@ class ProvenancePipeline:
 		for g in component2:
 			contents_records = g.add_chain(
 				MatchingFiles(path='/', pattern=self.contents_files_pattern, fs='fs.data.pir'),
-				CurriedCSVReader(fs='fs.data.pir')
+				CurriedCSVReader(fs='fs.data.pir', limit=self.limit)
 			)
 			sales = self.add_sales_chain(g, contents_records, serialize=True)
 			_ = self.add_single_object_lot_tracking_chain(g, sales)
@@ -1380,59 +1362,15 @@ class ProvenancePipeline:
 			self._construct_graph()
 		return self.graph_2
 
-	def merge_post_sale_objects(self, counter, post_map):
-		singles = {k for k in counter if counter[k] == 1}
-		multiples = {k for k in counter if counter[k] > 1}
-		
-		total = 0
-		mapped = 0
-		g = SalesTree()
-		for src, dst in post_map.items():
-			total += 1
-			if dst in singles:
-				mapped += 1
-				g.add_edge(src, dst)
-				# print(f'  {src} maps directly to an object in {dst}')
-			elif dst in multiples:
-				pass
-				print(f'  {src} maps to a MULTI-OBJECT lot')
-			else:
-				print(f'  {src} maps to an UNKNOWN lot')
-		
-		large_components = set(g.largest_component_canonical_keys(25))
-		dot = graphviz.Digraph()
-		node_id = lambda n: f'n{n!s}'
-		for n, i in g.nodes.items():
-			key, _ = g.canonical_key(n)
-			if key in large_components:
-				dot.node(node_id(i), str(n))
-		rewrite_map = {}
-		print('Rewrite output files, replacing the following URIs:')
-		for src, dst in g:
-			canonical, steps = g.canonical_key(src)
-			src_uri = pir_uri('OBJECT', *src)
-			dst_uri = pir_uri('OBJECT', *canonical)
-			print(f's/ {src_uri:<100} / {dst_uri:<100} /')
-			rewrite_map[src_uri] = dst_uri
-			if canonical in large_components:
-				i = node_id(g.nodes[src])
-				j = node_id(g.nodes[dst])
-				dot.edge(i, j, f'{steps} steps')
-		dot.save(filename='/tmp/sales.dot')
-		# TODO: do a pass over the output files, rewriting URIs in `rewrite_map`
-		
-# 		pprint.pprint(rewrite_map)
-		r = JSONValueRewriter(rewrite_map)
-		rewrite_output_files(r)
-		print(f'mapped {mapped}/{total} objects to a previous sale')
-
-	def run(self, **options):
+	def run(self, services=None, **options):
 		'''Run the Provenance bonobo pipeline.'''
 		sys.stderr.write("- Limiting to %d records per file\n" % (self.limit,))
 		sys.stderr.write("- Using serializer: %r\n" % (self.serializer,))
 		sys.stderr.write("- Using writer: %r\n" % (self.writer,))
-		services = self.get_services(**options)
+		if not services:
+			services = self.get_services(**options)
 
+		start = timeit.default_timer()
 		print('Running graph component 1...')
 		graph1 = self.get_graph_1(**options)
 		bonobo.run(graph1, services=services)
@@ -1441,13 +1379,8 @@ class ProvenancePipeline:
 		graph2 = self.get_graph_2(**options)
 		bonobo.run(graph2, services=services)
 		
-		print('====================================================')
-		print('Running post-processing of post-sale data...')
-		counter = services['lot_counter']
-		post_map = services['post_sale_map']
-		self.merge_post_sale_objects(counter, post_map.d)
-		print(f'>>> {len(post_map.d)} post sales records')
-		
+		print('Pipeline runtime: ', timeit.default_timer() - start)  
+
 
 class ProvenanceFilePipeline(ProvenancePipeline):
 	'''
@@ -1465,11 +1398,11 @@ class ProvenanceFilePipeline(ProvenancePipeline):
 
 		if debug:
 			self.serializer	= Serializer(compact=False)
-			self.writer		= MergingFileWriter(directory=output_path)
+			self.writer		= MergingFileWriter(directory=output_path, partition_directories=True)
 			# self.writer	= ArchesWriter()
 		else:
 			self.serializer	= Serializer(compact=True)
-			self.writer		= MergingFileWriter(directory=output_path)
+			self.writer		= MergingFileWriter(directory=output_path, partition_directories=True)
 			# self.writer	= ArchesWriter()
 
 	def add_serialization_chain(self, graph, input_node):
@@ -1481,6 +1414,86 @@ class ProvenanceFilePipeline(ProvenancePipeline):
 			graph.add_chain(identity, _input=input_node, _output=self.output_chain.input)
 		else:
 			super().add_serialization_chain(graph, input_node)
+
+	def merge_post_sale_objects(self, counter, post_map):
+		singles = {k for k in counter if counter[k] == 1}
+		multiples = {k for k in counter if counter[k] > 1}
+		
+		total = 0
+		mapped = 0
+
+		rewrite_map_filename = os.path.join(settings.pipeline_tmp_path, 'post_sale_rewrite_map.json')
+		sales_tree_filename = os.path.join(settings.pipeline_tmp_path, 'sales-tree.data')
+
+		if os.path.exists(sales_tree_filename):
+			with open(sales_tree_filename) as f:
+				g = SalesTree.load(f)
+		else:
+			g = SalesTree()
+
+		for src, dst in post_map.items():
+			total += 1
+			if dst in singles:
+				mapped += 1
+				g.add_edge(src, dst)
+			elif dst in multiples:
+				pass
+				print(f'  {src} maps to a MULTI-OBJECT lot')
+			else:
+				print(f'  {src} maps to an UNKNOWN lot')
+		print(f'mapped {mapped}/{total} objects to a previous sale')
+
+		large_components = set(g.largest_component_canonical_keys(10))
+		dot = graphviz.Digraph()
+		
+		node_id = lambda n: f'n{n!s}'
+		for n, i in g.nodes.items():
+			key, _ = g.canonical_key(n)
+			if key in large_components:
+				dot.node(node_id(i), str(n))
+		
+		post_sale_rewrite_map = {}
+		if os.path.exists(rewrite_map_filename):
+			with open(rewrite_map_filename, 'r') as f:
+				with suppress(json.decoder.JSONDecodeError):
+					post_sale_rewrite_map = json.load(f)
+		print('Rewrite output files, replacing the following URIs:')
+		for src, dst in g:
+			canonical, steps = g.canonical_key(src)
+			src_uri = pir_uri('OBJECT', *src)
+			dst_uri = pir_uri('OBJECT', *canonical)
+			print(f's/ {src_uri:<100} / {dst_uri:<100} /')
+			post_sale_rewrite_map[src_uri] = dst_uri
+			if canonical in large_components:
+				i = node_id(g.nodes[src])
+				j = node_id(g.nodes[dst])
+				dot.edge(i, j, f'{steps} steps')
+
+		dot_filename = os.path.join(settings.pipeline_tmp_path, 'sales.dot')
+		dot.save(filename=dot_filename)
+		with open(rewrite_map_filename, 'w') as f:
+			json.dump(post_sale_rewrite_map, f)
+			print(f'Saved post-sales rewrite map to {rewrite_map_filename}')
+		with open(sales_tree_filename, 'w') as f:
+			g.dump(f)
+
+# 		r = JSONValueRewriter(post_sale_rewrite_map)
+# 		rewrite_output_files(r)
+
+	def run(self, **options):
+		'''Run the Provenance bonobo pipeline.'''
+		start = timeit.default_timer()
+		services = self.get_services(**options)
+		super().run(services=services, **options)
+
+		print('====================================================')
+		print('Running post-processing of post-sale data...')
+		counter = services['lot_counter']
+		post_map = services['post_sale_map']
+		self.merge_post_sale_objects(counter, post_map.d)
+		print(f'>>> {len(post_map.d)} post sales records')
+		print('Total runtime: ', timeit.default_timer() - start)  
+		
 
 class SalesTree:
 	def __init__(self):
@@ -1527,6 +1540,26 @@ class SalesTree:
 			dst = self.nodes_rev[j]
 			yield (src, dst)
 
+	@staticmethod
+	def load(f):
+		d = json.load(f)
+		g = SalesTree()
+		g.counter = itertools.count(d['next'])
+		g.nodes_rev = {int(i): tuple(n) for i, n in d['nodes'].items()}
+		g.nodes = {n: i for i, n in g.nodes_rev.items()}
+		g.outgoing_edges = {int(k): int(v) for k, v in d['outgoing'].items()}
+		g.incoming_edges = {v: k for k, v in g.outgoing_edges.items()}
+		return g
+
+	def dump(self, f):
+		nodes = {i: list(n) for n, i in self.nodes.items()}
+		d = {
+			'next': next(self.counter),
+			'nodes': nodes,
+			'outgoing': self.outgoing_edges,
+		}
+		json.dump(d, f)
+
 	def canonical_key(self, src):
 		key = src
 		steps = 0
@@ -1550,25 +1583,3 @@ class SalesTree:
 			key = parent
 			steps += 1
 		return key, steps
-
-class JSONValueRewriter:
-	def __init__(self, mapping):
-		self.mapping = mapping
-
-	def rewrite(self, d, *args, **kwargs):
-		with suppress(TypeError):
-			if d in self.mapping:
-				return self.mapping[d]
-		if isinstance(d, dict):
-			return {k: self.rewrite(v, *args, **kwargs) for k, v in d.items()}
-		elif isinstance(d, list):
-			return [self.rewrite(v, *args, **kwargs) for v in d]
-		elif isinstance(d, int):
-			return d
-		elif isinstance(d, float):
-			return d
-		elif isinstance(d, str):
-			return d
-		else:
-			print(f'failed to rewrite JSON value: {d!r}')
-			raise Exception(f'failed to rewrite JSON value: {d!r}')

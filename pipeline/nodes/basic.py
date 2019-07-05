@@ -89,7 +89,7 @@ class GroupRepeatingKeys(Configurable):
 						for p in postprocess:
 							subd = p(subd, data)
 					d[key].append(subd)
-		yield d
+		return d
 
 class GroupKeys(Configurable):
 	mapping = Option(dict)
@@ -112,7 +112,7 @@ class GroupKeys(Configurable):
 				for p in postprocess:
 					subd = p(subd, data)
 			d[key] = subd
-		yield d
+		return d
 
 class AddDataDependentArchesModel(Configurable):
 	'''

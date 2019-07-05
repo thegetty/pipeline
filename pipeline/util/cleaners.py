@@ -173,7 +173,7 @@ def normalize_dimension(dimensions):
 		if v:
 			used_systems += 1
 	if used_systems != 1:
-		print(f'*** dimension used a mix of unit systems (metric, imperial, and/or unknown)')
+		print(f'*** dimension used a mix of unit systems (metric, imperial, and/or unknown): {dimensions}')
 		return None
 	elif inches:
 		return Dimension(value=str(inches), unit='inches', which=which)
@@ -218,10 +218,6 @@ def french_dimensions_cleaner_x2(value):
 			print(f'd1: {d1} {d["d1"]} h')
 			print(f'd2: {d2} {d["d2"]} w')
 			print(f'*** Failed to parse dimensions: {value}')
-	else:
-		pass
-# 		print(f'>>>>>> NO MATCH: {value}')
-# 		print(f'>>>>>> {french_dimensions_re}')
 	return None
 
 def dutch_dimensions_cleaner_x2(value):
@@ -245,10 +241,6 @@ def dutch_dimensions_cleaner_x2(value):
 			print(f'd1: {d1} {d["d1"]} h')
 			print(f'd2: {d2} {d["d2"]} w')
 			print(f'*** Failed to parse dimensions: {value}')
-	else:
-		pass
-# 		print(f'>>>>>> NO MATCH: {value}')
-# 		print(f'>>>>>> {dutch_dimensions_re}')
 	return None
 
 def simple_dimensions_cleaner_x1(value):
@@ -282,9 +274,6 @@ def simple_dimensions_cleaner_x2(value):
 			print(f'd1: {d1} {d["d1"]} {d["d1w"]}')
 			print(f'd2: {d2} {d["d2"]} {d["d2w"]}')
 			print(f'*** Failed to parse dimensions: {value}')
-	else:
-		pass
-# 		print(f'>>>>>> NO MATCH: {value}')
 	return None
 
 def share_parse(value):

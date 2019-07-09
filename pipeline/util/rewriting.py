@@ -4,6 +4,7 @@ import json
 import uuid
 import pprint
 import itertools
+import multiprocessing
 from pathlib import Path
 from contextlib import suppress
 
@@ -34,10 +35,20 @@ def filename_for(data: dict, original_filename: str, verify_uuid=False):
 	q = p.with_name(fn)
 	return q
 
-def rewrite_output_files(r, update_filename=False, **kwargs):
+def rewrite_output_files(r, update_filename=False, parallel=False, **kwargs):
 	print(f'Rewriting JSON output files')
 	p = Path(output_file_path)
-	files = list(p.rglob('*.json'))
+	files = sorted(p.rglob('*.json'))
+	
+	if parallel:
+		j = 8
+		pool = multiprocessing.Pool(j)
+		args = (((f,), r, update_filename) for f in files)
+		_ = pool.starmap(_rewrite_output_files, args)
+	else:
+		_rewrite_output_files(files, r, update_filename, **kwargs)
+
+def _rewrite_output_files(files, r, update_filename=False, **kwargs):
 	for i, f in enumerate(files):
 		# print(f'{i} {f}', end="\r", flush=True)
 		with open(f) as data_file:
@@ -78,7 +89,8 @@ def rewrite_output_files(r, update_filename=False, **kwargs):
 			json.dump(d, data_file, indent=2)
 		if newfile != f:
 			os.remove(f)
-	print(f'{i} files rewritten')
+	if i:
+		print(f'{i} files rewritten')
 
 class JSONValueRewriter:
 	def __init__(self, mapping):

@@ -94,6 +94,17 @@ def filter_empty_people(*people):
 		if d:
 			yield p
 
+def replace_key_pattern(pat, rep, value):
+	r = re.compile(pat)
+	d = {}
+	for k, v in value.items():
+		m = r.search(k)
+		if m:
+			d[k.replace(m.group(1), rep, 1)] = v
+		else:
+			d[k] = v
+	return d
+
 def strip_key_prefix(prefix, value):
 	'''
 	Strip the given `prefix` string from the beginning of all keys in the supplied `value`
@@ -162,7 +173,7 @@ def timespan_from_bounds(begin=None, end=None):
 	If both `begin` and `end` are `None`, returns `None`.
 	'''
 	if begin or end:
-		ts = model.TimeSpan(ident='')
+		ts = model.TimeSpan()
 		if begin is not None:
 			ts.begin_of_the_begin = begin
 		if end is not None:
@@ -358,7 +369,7 @@ class AddAuctionOfLot(Configurable):
 		if date:
 			ts = timespan_from_bounds(begin=date)
 			# TODO: expand this to day bounds
-			ts.identified_by = model.Name(content=date)
+			ts.identified_by = model.Name(ident='', content=date)
 			lot.timespan = ts
 
 	@staticmethod
@@ -559,13 +570,58 @@ def add_acquisition(data, object, buyers, sellers):
 		acq.timespan = ts
 	tx.part = paym
 	tx.part = acq
-	data['_transaction'] = add_crom_data(data={}, what=tx)
-	lot_uid, lot_uri = AddAuctionOfLot.shared_lot_number_ids(cno, lno)
+	data['_transactions'] = [add_crom_data(data={}, what=tx)]
+# 	lot_uid, lot_uri = AddAuctionOfLot.shared_lot_number_ids(cno, lno)
 	# TODO: `annotation` here is from add_physical_catalog_objects
 # 	paym.referred_to_by = annotation
 	add_crom_data(data=data, what=acq)
 
+	post_own = data.get('post_owner', [])
+	prev_own = data.get('prev_owner', [])
+	prev_post_owner_records = [(post_own, False), (prev_own, True)]
+	for owner_data, rev in prev_post_owner_records:
+		for owner_record in owner_data:
+			name = owner_record.get('own_auth', owner_record.get('own'))
+			owner_record['names'] = [(name,)]
+			owner_record['label'] = name
+			owner_record['uuid'] = str(uuid.uuid4())
+			# TODO: handle other fields of owner_record: own_auth_D, own_auth_L, own_auth_Q, own_ques, own_so, own_ulan
+			make_la_person(owner_record)
+			owner = get_crom_object(owner_record)
+			own_info_source = owner_record.get('own_so')
+			if own_info_source:
+				note = vocab.Note(content=own_info_source)
+				object.referred_to_by = note
+				owner.referred_to_by = note
+			tx = vocab.Procurement()
+			pacq = model.Acquisition(label=f'Acquisition of: “{object_label}”')
+			pacq.transferred_title_of = object
+			pacq.transferred_title_to = owner
+			tx.part = pacq
+			tx_data = {}
+			if ts:
+				if rev:
+					pacq.timespan = timespan_before(ts)
+				else:
+					pacq.timespan = timespan_after(ts)
+			data['_transactions'].append(add_crom_data(data=tx_data, what=tx))
 	yield data
+
+def timespan_before(after):
+	ts = model.TimeSpan()
+	try:
+		ts.end_of_the_end = after.begin_of_the_begin
+		return ts
+	except AttributeError:
+		return None
+
+def timespan_after(before):
+	ts = model.TimeSpan()
+	try:
+		ts.begin_of_the_begin = before.end_of_the_end
+		return ts
+	except AttributeError:
+		return None
 
 def add_bidding(data, buyers):
 	'''Add modeling of bids that did not lead to an acquisition'''
@@ -583,16 +639,21 @@ def add_bidding(data, buyers):
 
 		for amnt in amnts:
 			bid = vocab.Bidding()
-			amnt_label = amnt._label
-			bid._label = f'Bid of {amnt_label} on {lno}'
+			try:
+				amnt_label = amnt._label
+				bid._label = f'Bid of {amnt_label} on {lno}'
+				prop = model.PropositionalObject(label=f'Promise to pay {amnt_label}')
+			except AttributeError:
+				bid._label = f'Bid on {lno}'
+				prop = model.PropositionalObject(label=f'Promise to pay')
+
+			prop.refers_to = amnt
+			bid.created = prop
+
 			# TODO: there are often no buyers listed for non-sold records.
 			#       should we construct an anonymous person to carry out the bid?
 			for buyer in [get_crom_object(b) for b in buyers]:
 				bid.carried_out_by = buyer
-
-			prop = model.PropositionalObject(label=f'Promise to pay {amnt_label}')
-			prop.refers_to = amnt
-			bid.created = prop
 
 			all_bids.part = bid
 
@@ -707,8 +768,8 @@ def populate_object(data, post_sale_map):
 	
 	post_sales = data.get('post_sale', [])
 	prev_sales = data.get('prev_sale', [])
-	records = [(post_sales, False), (prev_sales, True)]
-	for sales_data, rev in records:
+	prev_post_sales_records = [(post_sales, False), (prev_sales, True)]
+	for sales_data, rev in prev_post_sales_records:
 		for sale_record in sales_data:
 			pcno = sale_record.get('cat')
 			plno = sale_record.get('lot')
@@ -736,7 +797,7 @@ def populate_object(data, post_sale_map):
 					elif d.which == 'width':
 						dim = vocab.Width()
 					else:
-						dim = vocab.PhysicalDimension() # TODO: as soon as this is available from crom
+						dim = vocab.PhysicalDimension()
 					dim.identified_by = model.Name(content=label)
 					dim.value = d.value
 					unit = vocab.instances.get(d.unit)
@@ -811,11 +872,6 @@ def add_pir_artists(data):
 		make_la_person(a)
 		person = get_crom_object(a)
 		subevent = model.Production()
-		# TODO: The should really be asserted as object -created_by-> CreationEvent -part-> SubEvent
-		# however, right now that assertion would get lost as it's data that belongs to the object,
-		# and we're on the author's chain in the bonobo graph; object serialization has already happened.
-		# we need to serialize the object's relationship to the creation event, and let it get merged
-		# with the rest of the object's data.
 		event.part = subevent
 		names = a.get('names')
 		if names:
@@ -858,7 +914,6 @@ def add_physical_catalog_objects(data):
 
 def add_physical_catalog_owners(data):
 	'''Add information about the ownership of a physical copy of an auction catalog'''
-	# print('TODO: Add information about the current owner of the physical catalog copy')
 	# TODO: Add information about the current owner of the physical catalog copy
 	# TODO: are the values of data['owner_code'] mapped somewhere?
 	yield data
@@ -1025,7 +1080,7 @@ class ProvenancePipeline:
 	def add_procurement_chain(self, graph, acquisitions, serialize=True):
 		'''Add modeling of the procurement event of an auction of a lot.'''
 		p = graph.add_chain(
-			ExtractKeyedValue(key='_transaction'),
+			ExtractKeyedValues(key='_transactions'),
 			AddArchesModel(model=self.models['Procurement']),
 			_input=acquisitions.output
 		)
@@ -1111,6 +1166,10 @@ class ProvenancePipeline:
 						'buy_auth_mod_a',
 						'buy_ulan')},
 				'prev_owner': {
+					'postprocess': [
+						lambda x, _: replace_key_pattern(r'(prev_owner)', 'prev_own', x),
+						lambda x, _: strip_key_prefix('prev_', x),
+					],
 					'prefixes': (
 						'prev_owner',
 						'prev_own_ques',
@@ -1149,6 +1208,7 @@ class ProvenancePipeline:
 						'post_sale_col',
 						'post_sale_cat')},
 				'post_owner': {
+					'postprocess': lambda x, _: strip_key_prefix('post_', x),
 					'prefixes': (
 						'post_own',
 						'post_own_q',

@@ -526,10 +526,13 @@ def add_person(data: dict):
 		# not enough information to identify this person uniquely, so they get a UUID
 		data['uuid'] = str(uuid.uuid4())
 
-	name = data.get('auth_name', data.get('name'))
-	if name:
-		data['names'] = [(name,)]
-		data['label'] = name
+	names = []
+	for k in ('auth_name', 'name'):
+		if k in data:
+			names.append((data[k],))
+	if names:
+		data['names'] = names
+		data['label'] = names[0][0]
 	else:
 		data['label'] = '(Anonymous person)'
 

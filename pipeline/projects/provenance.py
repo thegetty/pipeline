@@ -654,6 +654,8 @@ def add_acquisition_or_bidding(data):
 	'''Determine if this record has an acquisition or bidding, and add appropriate modeling'''
 	parent = data['parent_data']
 	transaction = parent['transaction']
+	transaction = transaction.replace('[?]')
+	transaction = transaction.rstrip()
 
 	data = data.copy()
 	object = get_crom_object(data)

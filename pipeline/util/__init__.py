@@ -83,10 +83,9 @@ def configured_arches_writer():
 
 class CromObjectMerger:
 	def __init__(self):
-		self.content_based_identity = (
-			model.Name,
-			model.Identifier,
-		)
+		self.attribute_based_identity = {
+			'content': (model.Name, model.Identifier),
+		}
 
 	def merge(self, obj, *to_merge):
 		# print('merging...')
@@ -123,10 +122,11 @@ class CromObjectMerger:
 		identified = defaultdict(list)
 		unidentified = []
 		for v in existing + list(values):
-			if isinstance(v, self.content_based_identity):
-				if hasattr(v, 'content'):
-					identified[v.content].append(v)
-				continue
+			for attr, classes in self.attribute_based_identity.items():
+				if isinstance(v, classes):
+					if hasattr(v, 'content'):
+						identified[getattr(v, attr)].append(v)
+					continue
 			if hasattr(v, 'id'):
 				identified[v.id].append(v)
 			else:

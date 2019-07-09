@@ -222,3 +222,20 @@ class MatchingFiles(Configurable):
 				count += 1
 		if not count:
 			sys.stderr.write(f'*** No files matching {pattern} found in {fullpath}\n')
+
+def timespan_before(after):
+	ts = model.TimeSpan()
+	try:
+		ts.end_of_the_end = after.begin_of_the_begin
+		return ts
+	except AttributeError:
+		return None
+
+def timespan_after(before):
+	ts = model.TimeSpan()
+	try:
+		ts.begin_of_the_begin = before.end_of_the_end
+		return ts
+	except AttributeError:
+		return None
+

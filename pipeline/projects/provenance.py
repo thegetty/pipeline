@@ -29,7 +29,7 @@ from bonobo.nodes import Limit
 import settings
 from cromulent import model, vocab
 from pipeline.util import identity, ExtractKeyedValue, ExtractKeyedValues, MatchingFiles,\
-			implode_date
+			implode_date, timespan_before, timespan_after
 from pipeline.util.cleaners import dimensions_cleaner, normalized_dimension_object
 from pipeline.io.file import MergingFileWriter
 # from pipeline.io.arches import ArchesWriter
@@ -606,22 +606,6 @@ def add_acquisition(data, object, buyers, sellers):
 					pacq.timespan = timespan_after(ts)
 			data['_transactions'].append(add_crom_data(data=tx_data, what=tx))
 	yield data
-
-def timespan_before(after):
-	ts = model.TimeSpan()
-	try:
-		ts.end_of_the_end = after.begin_of_the_begin
-		return ts
-	except AttributeError:
-		return None
-
-def timespan_after(before):
-	ts = model.TimeSpan()
-	try:
-		ts.begin_of_the_begin = before.end_of_the_end
-		return ts
-	except AttributeError:
-		return None
 
 def add_bidding(data, buyers):
 	'''Add modeling of bids that did not lead to an acquisition'''

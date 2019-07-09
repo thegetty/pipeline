@@ -99,7 +99,7 @@ class MergingFileWriter(Configurable):
 
 					factory = data['_CROM_FACTORY']
 					d = factory.toString(m, False)
-			fh = open(fn, 'w')
-			fh.write(d)
-			fh.close()
+			if d:
+				with open(fn, 'w') as fh:
+					fh.write(d)
 			return data

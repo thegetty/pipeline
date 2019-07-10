@@ -28,9 +28,9 @@ from bonobo.nodes import Limit
 
 import settings
 from cromulent import model, vocab
-from pipeline.util import identity, ExtractKeyedValue, ExtractKeyedValues, MatchingFiles,\
-			implode_date, timespan_before, timespan_after
-from pipeline.util.cleaners import dimensions_cleaner, normalized_dimension_object
+from pipeline.util import RecursiveExtractKeyedValue, ExtractKeyedValue, ExtractKeyedValues, \
+			MatchingFiles, identity, implode_date, timespan_before, timespan_after
+from pipeline.util.cleaners import dimensions_cleaner, normalized_dimension_object, parse_location_name
 from pipeline.io.file import MergingFileWriter
 # from pipeline.io.arches import ArchesWriter
 from pipeline.linkedart import \
@@ -49,6 +49,8 @@ from pipeline.nodes.basic import \
 			Serializer, \
 			Trace
 from pipeline.util.rewriting import rewrite_output_files, JSONValueRewriter
+
+UID_TAG_PREFIX = 'tag:getty.edu,2019:digital:pipeline:REPLACE-WITH-UUID#'
 
 #mark - utility functions and classes
 
@@ -70,7 +72,6 @@ class DictWrapper:
 
 def pir_uri(*values):
 	'''Convert a set of identifying `values` into a URI'''
-	UID_TAG_PREFIX = 'tag:getty.edu,2019:digital:pipeline:REPLACE-WITH-UUID#'
 	if values:
 		suffix = ','.join([urllib.parse.quote(str(v)) for v in values])
 		return UID_TAG_PREFIX + suffix
@@ -475,6 +476,9 @@ def add_crom_price(data, _):
 		price_amount = data.get('price_amount')
 		price_currency = data.get('price_currency')
 		note = data.get('price_note')
+		cite = data.get('price_citation')
+		if cite:
+			amnt.referred_to_by = vocab.Note(content=cite)
 
 	if price_amount or price_currency:
 		if price_amount:
@@ -654,7 +658,7 @@ def add_acquisition_or_bidding(data):
 	'''Determine if this record has an acquisition or bidding, and add appropriate modeling'''
 	parent = data['parent_data']
 	transaction = parent['transaction']
-	transaction = transaction.replace('[?]')
+	transaction = transaction.replace('[?]', '')
 	transaction = transaction.rstrip()
 
 	data = data.copy()
@@ -736,6 +740,25 @@ def populate_object(data, post_sale_map):
 	if genre:
 		vi.classified_as = genre
 	object.shows = vi
+
+	location = data.get('present_location')
+	if location:
+		# pprint.pprint(location)
+		loc = location.get('geog')
+		if loc:
+			current = parse_location_name(loc, uri_base=UID_TAG_PREFIX)
+			# TODO: if `parse_location_name` fails, still preserve the location string somehow
+			inst = location.get('inst')
+			if inst:
+				current = {
+					'type': 'Specific Place',
+					'name': inst,
+					'part_of': current
+				}
+			place_data = make_la_place(current)
+			place = get_crom_object(place_data)
+			data['_location'] = place_data
+		object.current_location = place # TODO: is this the right property for "present location" data?
 
 	notes = data.get('hand_note', [])
 	for note in notes:
@@ -1209,6 +1232,20 @@ class ProvenancePipeline:
 						'post_own_ulan')},
 			}),
 			GroupKeys(mapping={
+				'present_location': {
+					'postprocess': lambda x, _: strip_key_prefix('present_loc_', x),
+					'properties': (
+						'present_loc_geog',
+						'present_loc_inst',
+						'present_loc_insq',
+						'present_loc_insi',
+						'present_loc_acc',
+						'present_loc_accq',
+						'present_loc_note',
+					)
+				}
+			}),
+			GroupKeys(mapping={
 				'auction_of_lot': {
 					'properties': (
 						'catalog_number',
@@ -1231,13 +1268,7 @@ class ProvenancePipeline:
 						'genre',
 						'subject',
 						'inscription',
-						'present_loc_geog',
-						'present_loc_inst',
-						'present_loc_insq',
-						'present_loc_insi',
-						'present_loc_acc',
-						'present_loc_accq',
-						'present_loc_note',
+						'present_location',
 						'_artists',
 						'hand_note',
 						'post_sale',
@@ -1301,6 +1332,7 @@ class ProvenancePipeline:
 		'''Add modeling of the location of an auction event.'''
 		places = graph.add_chain(
 			ExtractKeyedValue(key='_location'),
+			RecursiveExtractKeyedValue(key='part_of'),
 			AddArchesModel(model=self.models['Place']),
 			_input=auction_events.output
 		)
@@ -1381,6 +1413,7 @@ class ProvenancePipeline:
 			sales = self.add_sales_chain(g, contents_records, serialize=True)
 			_ = self.add_single_object_lot_tracking_chain(g, sales)
 			objects = self.add_object_chain(g, sales, serialize=True)
+			_ = self.add_places_chain(g, objects, serialize=True)
 			acquisitions = self.add_acquisitions_chain(g, objects, serialize=True)
 			self.add_buyers_sellers_chain(g, acquisitions, serialize=True)
 			self.add_procurement_chain(g, acquisitions, serialize=True)

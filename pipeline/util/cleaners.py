@@ -276,6 +276,126 @@ def simple_dimensions_cleaner_x2(value):
 			print(f'*** Failed to parse dimensions: {value}')
 	return None
 
+_COUNTRIES = {
+	# These are the current countries found in the PIR data
+	'Algeria',
+	'Argentina',
+	'Armenia',
+	'Australia',
+	'Austria', 'Oesterreich', 'Österreich',
+	'België', 'Belgique', 'Belgium',
+	'Brasil', 'Brazil',
+	'Canada',
+	'Ceska Republika', 'Ceská Republika', 'Céska republika', 'Céska Republika',
+	'Cuba',
+	'Czech Republic',
+	'Danmark', 'Denmark',
+	'Deutschalnd', 'Deutschland', 'Duetschland', 'Germany',
+	'Eire', 'Ireland',
+	'England',
+	'Espagne', 'Espana', 'España',
+	'France',
+	'Great Britain',
+	'Hungary', 'Magyarorszag', 'Magyarország',
+	'India',
+	'Israel',
+	'Italia', 'Italy',
+	'Japan',
+	'Latvija',
+	'Liechtenstein',
+	'Luxembourg',
+	'México',
+	'Nederland', 'Netherlands',
+	'New Zealand',
+	'Norge', 'Norway',
+	'Poland', 'Polska',
+	'Portugal',
+	'Puerto Rico',
+	'Romania',
+	'Rossiya', 'Russia',
+	'Schweiz', 'Suisse', 'Switzerland',
+	'Scotland',
+	'Slovakia',
+	'South Africa',
+	'Suomen',
+	'Sverige', 'Sweden',
+	'UK', 'United Kingdom',
+	'Ukraïna',
+	'USA',
+	'Wales',
+}
+
+def parse_location_name(value, uri_base=None):
+	'''
+	Parses a string like 'Los Angeles, CA, USA' or 'Genève, Schweiz'
+	and returns a structure that can be passed to `pipeline.linkedart.make_la_place`, or
+	`None` if the string cannot be parsed.
+	'''
+	if uri_base is None:
+		uri_base = 'tag:getty.edu,2019:digital:pipeline:REPLACE-WITH-UUID#'
+	current = None
+	parts = value.split(', ')
+	country_name = parts[-1]
+	if country_name not in _COUNTRIES:
+		# not a recognized place name format; assert a generic Place with the associated value as a name
+		return {'name': value}
+
+	# TODO: canonicalize the country names
+	# TODO: canonicalize US state names
+	# TODO: figure out how to use consistent URIs for countries, or uniquely identifying pairs (city, state, 'US')
+	if len(parts) == 2:
+		city_name, country_name = parts
+		city = {
+			'type': 'City',
+			'name': city_name,
+			'part_of': {
+				'type': 'Country',
+				'name': country_name,
+				'uri': f'{uri_base}PLACE-COUNTRY-{country_name}',
+			}
+		}
+		current = city
+	elif len(parts) == 3 and parts[-1] == 'USA':
+		city_name, state_name, _ = parts
+		country_name = 'United States'
+		city = {
+			'type': 'City',
+			'name': city_name,
+			'part_of': {
+				'type': 'State',
+				'name': state_name,
+				'part_of': {
+					'type': 'Country',
+					'name': country_name,
+					'uri': f'{uri_base}PLACE-COUNTRY-{country_name}',
+				}
+			}
+		}
+		current = city
+	elif len(parts) == 3 and parts[-1] == 'UK':
+		country_name = 'United Kingdom'
+		if len(parts) == 3 and parts[-2] == 'England':
+			place_name = parts[0]
+			place = {
+				# The first component of the triple isn't always a city in UK data
+				# (e.g. "Burton Constable, England, UK" or "Castle Howard, England, UK")
+				# so do not assert a type for this level of the place hierarchy.
+				'name': place_name,
+				'part_of': {
+					'type': 'Country',
+					'name': country_name,
+					'uri': f'{uri_base}PLACE-COUNTRY-{country_name}',
+				}
+			}
+			current = place
+	else:
+		current = {
+			'type': 'Specific Place',
+			'name': value
+		}
+	
+	return current
+
 def share_parse(value):
 	if value is None:
 		return None

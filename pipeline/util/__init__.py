@@ -197,6 +197,23 @@ class ExtractKeyedValue(Configurable):
 			})
 			yield child
 
+class RecursiveExtractKeyedValue(ExtractKeyedValue):
+	include_self = Option(bool, default=True)
+
+	def __call__(self, data, *args, **kwargs):
+		if self.include_self:
+			a = data
+		else:
+			a = data.get(self.key)
+		while a:
+			child = {k: v for k, v in a.items()}
+			child.update({
+				'parent_data': data,
+			})
+			yield child
+			data = a
+			a = a.get(self.key)
+
 class MatchingFiles(Configurable):
 	'''
 	Given a path and a pattern, yield the names of all files in the path that match the pattern.

@@ -339,23 +339,29 @@ def make_la_place(data: dict):
 	'''
 	TYPES = {
 		'city': vocab.instances['city'],
+		'province': vocab.instances['province'],
+		'state': vocab.instances['province'],
 		'country': vocab.instances['nation'],
 	}
 
 	if data is None:
 		return None
-	type_name = data['type']
+	type_name = data.get('type', 'place').lower()
 	name = data['name']
 	label = name
 	parent_data = data.get('part_of')
 
-	type = TYPES.get(type_name.lower())
+	type = TYPES.get(type_name)
 	parent = None
 	if parent_data:
 		parent_data = make_la_place(parent_data)
 		parent = get_crom_object(parent_data)
 		label = f'{label}, {parent._label}'
-	p = model.Place(label=label)
+		
+	placeargs = {'label': label}
+	if 'uri' in data:
+		placeargs['ident'] = data['uri']
+	p = model.Place(**placeargs)
 	if type:
 		p.classified_as = type
 	p.identified_by = model.Name(content=name)

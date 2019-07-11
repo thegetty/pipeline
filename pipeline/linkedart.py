@@ -359,7 +359,7 @@ def make_la_place(data: dict):
 		label = f'{label}, {parent._label}'
 		
 	placeargs = {'label': label}
-	if 'uri' in data:
+	if data.get('uri'):
 		placeargs['ident'] = data['uri']
 	p = model.Place(**placeargs)
 	if type:

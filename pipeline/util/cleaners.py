@@ -325,6 +325,66 @@ _COUNTRIES = {
 	'Wales',
 }
 
+_US_STATES = {
+	'AK': 'Alaska',
+	'AL': 'Alabama',
+	'AR': 'Arkansas',
+	'AS': 'American Samoa',
+	'AZ': 'Arizona',
+	'CA': 'California',
+	'CO': 'Colorado',
+	'CT': 'Connecticut',
+	'DC': 'District of Columbia',
+	'DE': 'Delaware',
+	'FL': 'Florida',
+	'GA': 'Georgia',
+	'GU': 'Guam',
+	'HI': 'Hawaii',
+	'IA': 'Iowa',
+	'ID': 'Idaho',
+	'IL': 'Illinois',
+	'IN': 'Indiana',
+	'KS': 'Kansas',
+	'KY': 'Kentucky',
+	'LA': 'Louisiana',
+	'MA': 'Massachusetts',
+	'MD': 'Maryland',
+	'ME': 'Maine',
+	'MI': 'Michigan',
+	'MN': 'Minnesota',
+	'MO': 'Missouri',
+	'MP': 'Northern Mariana Islands',
+	'MS': 'Mississippi',
+	'MT': 'Montana',
+	'NA': 'National',
+	'NC': 'North Carolina',
+	'ND': 'North Dakota',
+	'NE': 'Nebraska',
+	'NH': 'New Hampshire',
+	'NJ': 'New Jersey',
+	'NM': 'New Mexico',
+	'NV': 'Nevada',
+	'NY': 'New York',
+	'OH': 'Ohio',
+	'OK': 'Oklahoma',
+	'OR': 'Oregon',
+	'PA': 'Pennsylvania',
+	'PR': 'Puerto Rico',
+	'RI': 'Rhode Island',
+	'SC': 'South Carolina',
+	'SD': 'South Dakota',
+	'TN': 'Tennessee',
+	'TX': 'Texas',
+	'UT': 'Utah',
+	'VA': 'Virginia',
+	'VI': 'Virgin Islands',
+	'VT': 'Vermont',
+	'WA': 'Washington',
+	'WI': 'Wisconsin',
+	'WV': 'West Virginia',
+	'WY': 'Wyoming',
+}
+
 def parse_location_name(value, uri_base=None):
 	'''
 	Parses a string like 'Los Angeles, CA, USA' or 'Genève, Schweiz'
@@ -337,6 +397,7 @@ def parse_location_name(value, uri_base=None):
 	parts = value.split(', ')
 	country_name = parts[-1]
 	if country_name not in _COUNTRIES:
+		print(f'*** Expecting country name, but found unexpected value: {country_name!r}')
 		# not a recognized place name format; assert a generic Place with the associated value as a name
 		return {'name': value}
 
@@ -355,15 +416,25 @@ def parse_location_name(value, uri_base=None):
 			}
 		}
 		current = city
-	elif len(parts) == 3 and parts[-1] == 'USA':
+	elif len(parts) == 3 and parts[-1] in ('USA', 'US'):
 		city_name, state_name, _ = parts
 		country_name = 'United States'
+		state_type = 'State'
+		state_uri = None
+		if len(state_name) == 2:
+			try:
+				state_name = _US_STATES[state_name]
+				state_uri = f'{uri_base}PLACE-COUNTRY-{country_name}-STATE-{state_name}'
+			except:
+				# Not a recognized state, so fall back to just a general place
+				state_type = 'Place'
 		city = {
 			'type': 'City',
 			'name': city_name,
 			'part_of': {
-				'type': 'State',
+				'type': state_type,
 				'name': state_name,
+				'uri': state_uri,
 				'part_of': {
 					'type': 'Country',
 					'name': country_name,

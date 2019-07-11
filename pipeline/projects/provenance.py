@@ -201,6 +201,7 @@ def auction_event_location(data):
 		country = {
 			'type': 'Country',
 			'name': country_name,
+			'uri': f'{UID_TAG_PREFIX}PLACE-COUNTRY-{country_name}',
 		}
 		current = country
 	if city_name:
@@ -374,10 +375,10 @@ class AddAuctionOfLot(Configurable):
 			lot.timespan = ts
 
 	@staticmethod
-	def shared_lot_number_ids(cno, lno):
+	def shared_lot_number_ids(cno, lno, date):
 		shared_lot_number = AddAuctionOfLot.shared_lot_number_from_lno(lno)
-		uid = f'AUCTION-{cno}-LOT-{shared_lot_number}'
-		uri = pir_uri('AUCTION', cno, 'LOT', shared_lot_number)
+		uid = f'AUCTION-{cno}-LOT-{shared_lot_number}-DATE-{date}'
+		uri = pir_uri('AUCTION', cno, 'LOT', shared_lot_number, 'DATE', date)
 		return uid, uri
 
 	@staticmethod
@@ -421,7 +422,7 @@ class AddAuctionOfLot(Configurable):
 		auction_data = data['auction_of_lot']
 		cno, lno, date = object_key(auction_data)
 		shared_lot_number = self.shared_lot_number_from_lno(lno)
-		uid, uri = self.shared_lot_number_ids(cno, lno)
+		uid, uri = self.shared_lot_number_ids(cno, lno, date)
 		data['uid'] = uid
 		data['uri'] = uri
 
@@ -478,7 +479,7 @@ def add_crom_price(data, _):
 		note = data.get('price_note')
 		cite = data.get('price_citation')
 		if cite:
-			amnt.referred_to_by = vocab.Note(content=cite)
+			amnt.referred_to_by = vocab.BibliographyStatement(content=cite)
 
 	if price_amount or price_currency:
 		if price_amount:
@@ -571,13 +572,13 @@ def add_acquisition(data, object, buyers, sellers):
 		paym.paid_amount = amnt
 
 	tx_data = parent['_transaction']
-	tx = get_crom_object(tx_data)
+	current_tx = get_crom_object(tx_data)
 	ts = tx_data.get('_date')
 	if ts:
 		acq.timespan = ts
-	tx.part = paym
-	tx.part = acq
-	data['_transactions'] = [add_crom_data(data={}, what=tx)]
+	current_tx.part = paym
+	current_tx.part = acq
+	data['_transactions'] = [add_crom_data(data={}, what=current_tx)]
 # 	lot_uid, lot_uri = AddAuctionOfLot.shared_lot_number_ids(cno, lno)
 	# TODO: `annotation` here is from add_physical_catalog_objects
 # 	paym.referred_to_by = annotation
@@ -601,6 +602,10 @@ def add_acquisition(data, object, buyers, sellers):
 				object.referred_to_by = note
 				owner.referred_to_by = note
 			tx = vocab.Procurement()
+			if rev:
+				tx.ends_before_the_start_of = current_tx
+			else:
+				tx.starts_after_the_end_of = current_tx
 			pacq = model.Acquisition(label=f'Acquisition of: “{object_label}”')
 			pacq.transferred_title_of = object
 			pacq.transferred_title_to = owner
@@ -758,7 +763,7 @@ def populate_object(data, post_sale_map):
 			place_data = make_la_place(current)
 			place = get_crom_object(place_data)
 			data['_location'] = place_data
-		object.current_location = place # TODO: is this the right property for "present location" data?
+			object.current_location = place # TODO: is this the right property for "present location" data?
 
 	notes = data.get('hand_note', [])
 	for note in notes:

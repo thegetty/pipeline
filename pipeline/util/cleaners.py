@@ -276,54 +276,83 @@ def simple_dimensions_cleaner_x2(value):
 			print(f'*** Failed to parse dimensions: {value}')
 	return None
 
-_COUNTRIES = {
-	# These are the current countries found in the PIR data
-	'Algeria',
-	'Argentina',
-	'Armenia',
-	'Australia',
-	'Austria', 'Oesterreich', 'Österreich',
-	'België', 'Belgique', 'Belgium',
-	'Brasil', 'Brazil',
-	'Canada',
-	'Ceska Republika', 'Ceská Republika', 'Céska republika', 'Céska Republika',
-	'Cuba',
-	'Czech Republic',
-	'Danmark', 'Denmark',
-	'Deutschalnd', 'Deutschland', 'Duetschland', 'Germany',
-	'Eire', 'Ireland',
-	'England',
-	'Espagne', 'Espana', 'España',
-	'France',
-	'Great Britain',
-	'Hungary', 'Magyarorszag', 'Magyarország',
-	'India',
-	'Israel',
-	'Italia', 'Italy',
-	'Japan',
-	'Latvija',
-	'Liechtenstein',
-	'Luxembourg',
-	'México',
-	'Nederland', 'Netherlands',
-	'New Zealand',
-	'Norge', 'Norway',
-	'Poland', 'Polska',
-	'Portugal',
-	'Puerto Rico',
-	'Romania',
-	'Rossiya', 'Russia',
-	'Schweiz', 'Suisse', 'Switzerland',
-	'Scotland',
-	'Slovakia',
-	'South Africa',
-	'Suomen',
-	'Sverige', 'Sweden',
-	'UK', 'United Kingdom',
-	'Ukraïna',
-	'USA',
-	'Wales',
+_COUNTRY_NAMES = {
+	'Algeria': 'Algeria',
+	'Argentina': 'Argentina',
+	'Armenia': 'Armenia',
+	'Australia': 'Australia',
+	'Austria': 'Austria',
+	'Oesterreich': 'Austria',
+	'Österreich': 'Austria',
+	'Belgium': 'Belgium',
+	'België': 'Belgium',
+	'Belgique': 'Belgium',
+	'Brazil': 'Brazil',
+	'Brasil': 'Brazil',
+	'Canada': 'Canada',
+	'Czech Republic': 'Czech Republic',
+	'Ceska Republika': 'Czech Republic',
+	'Ceská Republika': 'Czech Republic',
+	'Céska republika': 'Czech Republic',
+	'Céska Republika': 'Czech Republic',
+	'Cuba': 'Cuba',
+	'Denmark': 'Denmark',
+	'Danmark': 'Denmark',
+	'Germany': 'Germany',
+	'Deutschalnd': 'Germany',
+	'Deutschland': 'Germany',
+	'Duetschland': 'Germany',
+	'Ireland': 'Ireland',
+	'Eire': 'Ireland',
+	'England': 'England',
+	'Espagne': 'Spain',
+	'Espana': 'Spain',
+	'España': 'Spain',
+	'France': 'France',
+	'Great Britain': 'Great Britain',
+	'Hungary': 'Hungary',
+	'Magyarorszag': 'Hungary',
+	'Magyarország': 'Hungary',
+	'India': 'India',
+	'Israel': 'Israel',
+	'Italy': 'Italy',
+	'Italia': 'Italy',
+	'Japan': 'Japan',
+	'Latvija': 'Latvia',
+	'Liechtenstein': 'Liechtenstein',
+	'Luxembourg': 'Luxembourg',
+	'México': 'Mexico',
+	'Netherlands': 'Netherlands',
+	'Nederland': 'Netherlands',
+	'New Zealand': 'New Zealand',
+	'Norway': 'Norway',
+	'Norge': 'Norway',
+	'Poland': 'Poland',
+	'Polska': 'Poland',
+	'Portugal': 'Portugal',
+	'Romania': 'Romania',
+	'Russia': 'Russia',
+	'Rossiya': 'Russia',
+	'Switzerland': 'Switzerland',
+	'Schweiz': 'Switzerland',
+	'Suisse': 'Switzerland',
+	'Scotland': 'Scotland',
+	'Slovakia': 'Slovakia',
+	'South Africa': 'South Africa',
+	'Finland': 'Finland',
+	'Suomen': 'Finland',
+	'Sweden': 'Sweden',
+	'Sverige': 'Sweden',
+	'United Kingdom': 'United Kingdom',
+	'UK': 'United Kingdom',
+	'Ukraine': 'Ukraine',
+	'Ukraïna': 'Ukraine',
+	'USA': 'United States of America',
+	'Wales': 'Wales',
 }
+
+# These are the current countries found in the PIR data
+_COUNTRIES = set(_COUNTRY_NAMES.keys())
 
 _US_STATES = {
 	'AK': 'Alaska',
@@ -396,13 +425,13 @@ def parse_location_name(value, uri_base=None):
 	current = None
 	parts = value.split(', ')
 	country_name = parts[-1]
-	if country_name not in _COUNTRIES:
+	if country_name in _COUNTRIES:
+		country_name = _COUNTRY_NAMES.get(country_name, country_name)
+	else:
 		print(f'*** Expecting country name, but found unexpected value: {country_name!r}')
 		# not a recognized place name format; assert a generic Place with the associated value as a name
 		return {'name': value}
 
-	# TODO: canonicalize the country names
-	# TODO: canonicalize US state names
 	# TODO: figure out how to use consistent URIs for countries, or uniquely identifying pairs (city, state, 'US')
 	if len(parts) == 2:
 		city_name, country_name = parts
@@ -418,7 +447,7 @@ def parse_location_name(value, uri_base=None):
 		current = city
 	elif len(parts) == 3 and parts[-1] in ('USA', 'US'):
 		city_name, state_name, _ = parts
-		country_name = 'United States'
+		country_name = 'United States of America'
 		state_type = 'State'
 		state_uri = None
 		if len(state_name) == 2:

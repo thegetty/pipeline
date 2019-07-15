@@ -131,10 +131,10 @@ class TestProvenancePipelineOutput(unittest.TestCase):
 		people_names = {o['_label'] for o in people.values()}
 		self.assertEqual(people_names, {'[Anonymous]', 'Gillemans', 'Vinckebooms'})
 		
-		auction_B_A139_0119 = auctions['6aeaba361447cc1aed15aba4178b58eccb1100eae6a6f1d583ec1d01947c01ca.json']
+		auction_B_A139_0119 = auctions['1a7203f187a316a7a881cbe4a8fbc48526d7bf5703151b41f8e51316f4f6a4ba.json']
 		self.verify_auction(auction_B_A139_0119, event='B-A139', idents={'0119[a]', '0119[b]'})
 
-		auction_B_A139_0120 = auctions['4451b78775482dd4967f08ec8897d2fe63711a25a556e78d43d7dda96c568498.json']
+		auction_B_A139_0120 = auctions['b6f9bb31c81c301d9a5ba7c36bd012aad4d857973caa42a6d0ac14790118accd.json']
 		self.verify_auction(auction_B_A139_0120, event='B-A139', idents={'0120'})
 		
 		house_names = {o['_label'] for o in houses.values()}

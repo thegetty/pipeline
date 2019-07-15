@@ -167,14 +167,14 @@ def add_auction_event(data):
 	add_crom_data(data=data, what=auction)
 	yield data
 
-def timespan_from_bounds(begin=None, end=None):
+def timespan_from_outer_bounds(begin=None, end=None):
 	'''
 	Return a `TimeSpan` based on the (optional) `begin` and `end` date strings.
 
 	If both `begin` and `end` are `None`, returns `None`.
 	'''
 	if begin or end:
-		ts = model.TimeSpan()
+		ts = model.TimeSpan(ident='')
 		if begin is not None:
 			ts.begin_of_the_begin = begin
 		if end is not None:
@@ -244,7 +244,7 @@ def populate_auction_event(data, auction_locations):
 		auction.took_place_at = place
 		auction_locations.set(cno, place)
 
-	ts = timespan_from_bounds(
+	ts = timespan_from_outer_bounds(
 		begin=implode_date(data, 'sale_begin_'),
 		end=implode_date(data, 'sale_end_'),
 	)
@@ -369,7 +369,7 @@ class AddAuctionOfLot(Configurable):
 		'''Associate a timespan with the auction lot.'''
 		date = implode_date(auction_data, 'lot_sale_')
 		if date:
-			ts = timespan_from_bounds(begin=date)
+			ts = timespan_from_outer_bounds(begin=date)
 			# TODO: expand this to day bounds
 			ts.identified_by = model.Name(ident='', content=date)
 			lot.timespan = ts
@@ -624,23 +624,22 @@ def add_bidding(data, buyers):
 	parent = data['parent_data']
 	prices = parent['price']
 	auction_data = parent['auction_of_lot']
-	cno = auction_data['catalog_number']
-	lno = auction_data['lot_number']
+	cno, lno, date = object_key(auction_data)
 	amnts = [get_crom_object(p) for p in prices]
 
 	if amnts:
 		lot = get_crom_object(parent)
-		all_bids = model.Activity(label=f'Bidding on {cno} {lno}')
+		all_bids = model.Activity(label=f'Bidding on {cno} {lno} ({date})')
 		all_bids.part_of = lot
 
 		for amnt in amnts:
 			bid = vocab.Bidding()
 			try:
 				amnt_label = amnt._label
-				bid._label = f'Bid of {amnt_label} on {lno}'
+				bid._label = f'Bid of {amnt_label} on {cno} {lno} ({date})'
 				prop = model.PropositionalObject(label=f'Promise to pay {amnt_label}')
 			except AttributeError:
-				bid._label = f'Bid on {lno}'
+				bid._label = f'Bid on {cno} {lno} ({date})'
 				prop = model.PropositionalObject(label=f'Promise to pay')
 
 			prop.refers_to = amnt
@@ -688,9 +687,7 @@ class TrackLotSizes(Configurable):
 
 	def __call__(self, data, lot_counter):
 		auction_data = data['auction_of_lot']
-		cno = auction_data['catalog_number']
-		lno = auction_data['lot_number']
-		date = implode_date(auction_data, 'lot_sale_')
+		cno, lno, date = object_key(auction_data)
 		lot = AddAuctionOfLot.shared_lot_number_from_lno(lno)
 		key = (cno, lot, date)
 		lot_counter[key] += 1
@@ -721,7 +718,8 @@ def genre_instance(value):
 	return MAPPING.get(value)
 
 @use('post_sale_map')
-def populate_object(data, post_sale_map):
+@use('unique_catalogs')
+def populate_object(data, post_sale_map, unique_catalogs):
 	'''Add modeling for an object described by a sales record'''
 	object = get_crom_object(data)
 	parent = data['parent_data']
@@ -764,13 +762,22 @@ def populate_object(data, post_sale_map):
 			place = get_crom_object(place_data)
 			data['_location'] = place_data
 			object.current_location = place # TODO: is this the right property for "present location" data?
+		note = location.get('note')
+		if note:
+			pass
+			# TODO: the acquisition_note needs to be attached as a Note to the final post owner acquisition
 
 	notes = data.get('hand_note', [])
 	for note in notes:
 		c = note['hand_note']
-		catalog_owner = note.get('hand_note_so') # TODO: link this to a physical catalog copy if possible
+		owner = note.get('hand_note_so')
+		cno = parent['auction_of_lot']['catalog_number']
+		catalog_uri = pir_uri('CATALOG', cno, owner, None)
+		catalogs = unique_catalogs.get(catalog_uri)
 		note = vocab.Note(content=c)
 		object.referred_to_by = note
+		if catalogs and len(catalogs) == 1:
+			note.carried_by = model.HumanMadeObject(ident=catalog_uri, label=f'Sale Catalog {cno}, owned by {owner}')
 
 	inscription = data.get('inscription')
 	if inscription:
@@ -781,8 +788,7 @@ def populate_object(data, post_sale_map):
 	date = implode_date(auction_data, 'lot_sale_')
 	lot = AddAuctionOfLot.shared_lot_number_from_lno(lno)
 	now_key = (cno, lot, date)
-	
-	
+
 	post_sales = data.get('post_sale', [])
 	prev_sales = data.get('prev_sale', [])
 	prev_post_sales_records = [(post_sales, False), (prev_sales, True)]
@@ -919,7 +925,13 @@ def add_physical_catalog_objects(data):
 	copy = data['copy_number']
 	uri = pir_uri('CATALOG', cno, owner, copy)
 	data['uri'] = uri
-	catalogObject = model.HumanMadeObject(ident=uri, label=data.get('annotation_info'))
+	labels = [f'Sale Catalog {cno}', f'owned by {owner}']
+	if copy:
+		labels.append(f'copy {copy}')
+	catalogObject = model.HumanMadeObject(ident=uri, label=', '.join(labels))
+	info = data.get('annotation_info')
+	if info:
+		catalogObject.referred_to_by = vocab.Note(content=info)
 	catalogObject.carries = catalog
 
 	# TODO: Rob's build-sample-auction-data.py script adds this annotation. where does it come from?
@@ -927,13 +939,24 @@ def add_physical_catalog_objects(data):
 # 	anno._label = "Additional annotations in WSHC copy of BR-A1"
 # 	catalogObject.carries = anno
 	add_crom_data(data=data, what=catalogObject)
-	yield data
+	return data
 
-def add_physical_catalog_owners(data):
+@use('unique_catalogs')
+def add_physical_catalog_owners(data, unique_catalogs):
 	'''Add information about the ownership of a physical copy of an auction catalog'''
 	# TODO: Add information about the current owner of the physical catalog copy
 	# TODO: are the values of data['owner_code'] mapped somewhere?
-	yield data
+	
+	# Add the URI of this physical catalog to `unique_catalogs`. This data will be used
+	# later to figure out which catalogs can be uniquely identified by a catalog number
+	# and owner code (e.g. for owners who do not have multiple copies of a catalog).
+	cno = data['catalog_number']
+	owner = data['owner_code']
+	uri = pir_uri('CATALOG', cno, owner, None)
+	if uri not in unique_catalogs.d:
+		unique_catalogs.d[uri] = set()
+	unique_catalogs.d[uri].add(uri)
+	return data
 
 
 #mark - Physical Catalogs - Informational Catalogs
@@ -1001,6 +1024,7 @@ class ProvenancePipeline:
 		'''Return a `dict` of named services available to the bonobo pipeline.'''
 		return {
 			'lot_counter': Counter(),
+			'unique_catalogs': DictWrapper(),
 			'post_sale_map': DictWrapper(),
 			'auction_houses': DictWrapper(),
 			'auction_locations': DictWrapper(),
@@ -1028,7 +1052,7 @@ class ProvenancePipeline:
 			AddFieldNames(field_names=self.catalogs_headers),
 			add_auction_catalog,
 			add_physical_catalog_objects,
-# 			add_physical_catalog_owners, # TODO: enable this when we have enough understanding to process this data
+			add_physical_catalog_owners,
 			AddArchesModel(model=self.models['HumanMadeObject']),
 			_input=records.output
 		)

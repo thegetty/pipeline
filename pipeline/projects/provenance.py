@@ -30,7 +30,7 @@ import settings
 from cromulent import model, vocab
 from pipeline.util import RecursiveExtractKeyedValue, ExtractKeyedValue, ExtractKeyedValues, \
 			MatchingFiles, identity, implode_date, timespan_before, timespan_after
-from pipeline.util.cleaners import dimensions_cleaner, normalized_dimension_object, parse_location_name
+from pipeline.util.cleaners import dimensions_cleaner, normalized_dimension_object, parse_location, parse_location_name, date_parse
 from pipeline.io.file import MergingFileWriter
 # from pipeline.io.arches import ArchesWriter
 from pipeline.linkedart import \
@@ -196,32 +196,9 @@ def auction_event_location(data):
 	city_name = data.get('city_of_sale')
 	country_name = data.get('country_auth_1')
 
-	current = None
-	if country_name:
-		
-		country = {
-			'type': 'Country',
-			'name': country_name,
-			'uri': f'{UID_TAG_PREFIX}PLACE-COUNTRY-' + urllib.parse.quote(country_name),
-		}
-		current = country
-	if city_name:
-		city = {
-			'type': 'City',
-			'name': city_name,
-		}
-		if current:
-			city['part_of'] = current
-		current = city
-	if specific_name:
-		specific = {
-			'type': 'Specific Place',
-			'name': specific_name,
-		}
-		if current:
-			specific['part_of'] = current
-		current = specific
-	return current
+	parts = [v for v in (specific_name, city_name, country_name) if v is not None]
+	loc = parse_location(*parts, uri_base=UID_TAG_PREFIX, types=('Place', 'City', 'Country'))
+	return loc
 
 #mark - Auction Events
 

@@ -364,7 +364,7 @@ def make_la_place(data: dict):
 	p = model.Place(**placeargs)
 	if type:
 		p.classified_as = type
-	p.identified_by = model.Name(content=name)
+	p.identified_by = model.Name(ident='', content=name)
 	if parent:
 		p.part_of = parent
 	return add_crom_data(data=data, what=p)

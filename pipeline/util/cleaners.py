@@ -450,16 +450,19 @@ def parse_location_name(value, uri_base=None):
 		country_name = 'United States of America'
 		state_type = 'State'
 		state_uri = None
+		city_uri = None
 		if len(state_name) == 2:
 			try:
 				state_name = _US_STATES[state_name]
 				state_uri = f'{uri_base}PLACE-COUNTRY-{country_name}-STATE-{state_name}'
+				city_uri = f'{uri_base}PLACE-COUNTRY-{country_name}-STATE-{state_name}-CITY-{city_name}'
 			except:
 				# Not a recognized state, so fall back to just a general place
 				state_type = 'Place'
 		city = {
 			'type': 'City',
 			'name': city_name,
+			'uri': city_uri,
 			'part_of': {
 				'type': state_type,
 				'name': state_name,

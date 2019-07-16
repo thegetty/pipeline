@@ -5,6 +5,7 @@ import calendar
 from contextlib import contextmanager, suppress
 from datetime import datetime, timedelta
 from pipeline.util import Dimension
+import urllib.parse
 
 CIRCA = 5 # years
 CIRCA_D = timedelta(days=365*CIRCA)
@@ -441,7 +442,7 @@ def parse_location_name(value, uri_base=None):
 			'part_of': {
 				'type': 'Country',
 				'name': country_name,
-				'uri': f'{uri_base}PLACE-COUNTRY-{country_name}',
+				'uri': f'{uri_base}PLACE-COUNTRY-' + urllib.parse.quote(country_name),
 			}
 		}
 		current = city
@@ -454,8 +455,8 @@ def parse_location_name(value, uri_base=None):
 		if len(state_name) == 2:
 			try:
 				state_name = _US_STATES[state_name]
-				state_uri = f'{uri_base}PLACE-COUNTRY-{country_name}-STATE-{state_name}'
-				city_uri = f'{uri_base}PLACE-COUNTRY-{country_name}-STATE-{state_name}-CITY-{city_name}'
+				state_uri = f'{uri_base}PLACE-COUNTRY-' + urllib.parse.quote(country_name) + '-STATE-' + urllib.parse.quote(state_name)
+				city_uri = state_uri + '-CITY-' + urllib.parse.quote(city_name)
 			except:
 				# Not a recognized state, so fall back to just a general place
 				state_type = 'Place'
@@ -470,7 +471,7 @@ def parse_location_name(value, uri_base=None):
 				'part_of': {
 					'type': 'Country',
 					'name': country_name,
-					'uri': f'{uri_base}PLACE-COUNTRY-{country_name}',
+					'uri': f'{uri_base}PLACE-COUNTRY-' + urllib.parse.quote(country_name),
 				}
 			}
 		}
@@ -487,7 +488,7 @@ def parse_location_name(value, uri_base=None):
 				'part_of': {
 					'type': 'Country',
 					'name': country_name,
-					'uri': f'{uri_base}PLACE-COUNTRY-{country_name}',
+					'uri': f'{uri_base}PLACE-COUNTRY-' + urllib.parse.quote(country_name),
 				}
 			}
 			current = place

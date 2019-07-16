@@ -198,10 +198,11 @@ def auction_event_location(data):
 
 	current = None
 	if country_name:
+		
 		country = {
 			'type': 'Country',
 			'name': country_name,
-			'uri': f'{UID_TAG_PREFIX}PLACE-COUNTRY-{country_name}',
+			'uri': f'{UID_TAG_PREFIX}PLACE-COUNTRY-' + urllib.parse.quote(country_name),
 		}
 		current = country
 	if city_name:

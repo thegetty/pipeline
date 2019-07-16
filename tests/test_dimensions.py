@@ -1,3 +1,5 @@
+#!/usr/bin/env python3
+
 import unittest
 import pprint
 from datetime import datetime
@@ -26,7 +28,7 @@ class TestDateCleaners(unittest.TestCase):
 			'2 pieds 3 pouces': [Dimension('2', 'feet', None), Dimension('3', 'inches', None)],
 			'1 pied 7 pouces': [Dimension('1', 'feet', None), Dimension('7', 'inches', None)],
 			'8 1/2 pouces': [Dimension('8.5', 'inches', None)],
-			'1': None,
+			'1': [Dimension('1', None, None)],
 		}
 
 		for value, expected in tests.items():
@@ -48,10 +50,11 @@ class TestDateCleaners(unittest.TestCase):
 			'''1'3"x4cm h''': ([Dimension('1', 'feet', None), Dimension('3', 'inches', None)], [Dimension('4', 'cm', 'height')]),
 			'''1'3" by 4"''': ([Dimension('1', 'feet', None), Dimension('3', 'inches', None)], [Dimension('4', 'inches', None)]),
 			'Haut 14 pouces, large 10 pouces': ([Dimension('14', 'inches', 'height')], [Dimension('10', 'inches', 'width')]),
-			'1 by 4': None,
+			'1 by 4': ([Dimension('1', None, None)], [Dimension('4', None, None)]),
 			'Hoog. 6 v., breed 3 v': ([Dimension('6', 'feet', 'height')], [Dimension('3', 'feet', 'width')]),
 			'Breedt 6 v., hoog 3 v': ([Dimension('6', 'feet', 'width')], [Dimension('3', 'feet', 'height')]),
 			'20 cm x 24,5 cm': ([Dimension('20', 'cm', None)], [Dimension('24.5', 'cm', None)]),
+			'2 w by 5 h': ([Dimension('2', None, 'width')], [Dimension('5', None, 'height')]),
 		}
 
 		for value, expected in tests.items():

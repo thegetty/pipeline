@@ -11,15 +11,19 @@ from cromulent import model, reader
 
 def filename_for(data: dict):
 	uu = data.get('uuid')
-	if not uu and 'uri' in data:
+	if uu:
+		partition = uu[:2]
+	elif 'uri' in data:
 		h = hashlib.md5(data['uri'].encode('utf-8')).hexdigest()
+		partition = h[:2]
 		uu = f'content-{h}'
 # 		print(f'*** No UUID in top-level resource. Using a hash of top-level URI: {uu}')
 	if not uu:
 		uu = str(uuid.uuid4())
+		partition = uu[:2]
 # 		print(f'*** No UUID in top-level resource. Using an assigned UUID filename for the content: {uu}')
 	fn = f'{uu}.json'
-	return fn
+	return fn, partition
 
 class FileWriter(Configurable):
 	directory = Option(default="output")
@@ -29,7 +33,7 @@ class FileWriter(Configurable):
 		dr = os.path.join(self.directory, data['_ARCHES_MODEL'])
 		if not os.path.exists(dr):
 			os.mkdir(dr)
-		filename = filename_for(data)
+		filename, partition = filename_for(data)
 		fn = os.path.join(dr, filename)
 		fh = open(fn, 'w')
 		fh.write(d)
@@ -41,7 +45,7 @@ class MultiFileWriter(Configurable):
 
 	def __call__(self, data: dict):
 		d = data['_OUTPUT']
-		filename = filename_for(data)
+		filename, partition = filename_for(data)
 		dr = os.path.join(self.directory, data['_ARCHES_MODEL'])
 		with ExclusiveValue(dr):
 			if not os.path.exists(dr):
@@ -60,15 +64,20 @@ class MultiFileWriter(Configurable):
 
 class MergingFileWriter(Configurable):
 	directory = Option(default="output")
+	partition_directories = Option(default=False)
 
 	def __call__(self, data: dict):
 		d = data['_OUTPUT']
+		filename, partition = filename_for(data)
 		dr = os.path.join(self.directory, data['_ARCHES_MODEL'])
 		merger = CromObjectMerger()
 		with ExclusiveValue(dr):
 			if not os.path.exists(dr):
 				os.mkdir(dr)
-			filename = filename_for(data)
+			if self.partition_directories:
+				dr = os.path.join(dr, partition)
+				if not os.path.exists(dr):
+					os.mkdir(dr)
 			fn = os.path.join(dr, filename)
 			if os.path.exists(fn):
 				r = reader.Reader()
@@ -90,7 +99,7 @@ class MergingFileWriter(Configurable):
 
 					factory = data['_CROM_FACTORY']
 					d = factory.toString(m, False)
-			fh = open(fn, 'w')
-			fh.write(d)
-			fh.close()
+			if d:
+				with open(fn, 'w') as fh:
+					fh.write(d)
 			return data

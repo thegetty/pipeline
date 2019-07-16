@@ -26,12 +26,26 @@ class CurriedCSVReader(Configurable):
 		default='utf-8',
 		__doc__='''Encoding.''',
 	)  # type: str
+	limit = Option(
+		int,
+		__doc__='''Limit the number of rows read (to allow early pipeline termination).''',
+	)
+
+	def __init__(self, *args, **kwargs):
+		super().__init__(*args, **kwargs)
+		self.count = 0
 
 	def read(self, path, *, fs):
 		sys.stderr.write('============================== %s\n' % (path,))
+		limit = self.limit
+		count = self.count
 		with fs.open(path, newline='') as csvfile:
 			r = csv.reader(csvfile)
 			for row in r:
+				if limit and count >= limit:
+					break
+				count += 1
 				yield row
+		self.count = count
 
 	__call__ = read

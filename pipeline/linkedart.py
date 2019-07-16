@@ -17,10 +17,10 @@ def get_crom_object(data: dict):
 class MakeLinkedArtRecord:
 	def set_properties(self, data, thing):
 		for identifier in data.get('identifiers', []):
-			if type(identifier) == tuple:
+			if isinstance(identifier, tuple):
 				content, itype = identifier
 				if itype is not None:
-					if type(itype) == type:
+					if isinstance(itype, type):
 						ident = itype(content=content)
 					elif isinstance(itype, object):
 						ident = itype
@@ -38,10 +38,10 @@ class MakeLinkedArtRecord:
 			thing = data['_LOD_OBJECT']
 		else:
 			otype = data['object_type']
-			if 'uuid' in data:
-				thing = otype(ident="urn:uuid:%s" % data['uuid'])
-			elif 'uri' in data:
+			if 'uri' in data:
 				thing = otype(ident=data['uri'])
+			elif 'uuid' in data:
+				thing = otype(ident="urn:uuid:%s" % data['uuid'])
 			else:
 				raise Exception('MakeLinkedArtRecord called with a dictionary with neither uuid or uri member')
 
@@ -150,10 +150,10 @@ class MakeLinkedArtHumanMadeObject(MakeLinkedArtRecord):
 			thing.member_of = coll
 
 		for identifier in data.get('identifiers', []):
-			if type(identifier) == tuple:
+			if isinstance(identifier, tuple):
 				content, itype = identifier
 				if itype is not None:
-					if type(itype) == type:
+					if isinstance(itype, type):
 						ident = itype(content=content)
 					elif isinstance(itype, object):
 						ident = itype
@@ -290,10 +290,10 @@ def make_la_person(data: dict):
 		who.identified_by = n
 
 	for identifier in data.get('identifiers', []):
-		if type(identifier) == tuple:
+		if isinstance(identifier, tuple):
 			content, itype = identifier
 			if itype is not None:
-				if type(itype) == type:
+				if isinstance(itype, type):
 					ident = itype(content=content)
 				elif isinstance(itype, object):
 					ident = itype
@@ -330,32 +330,38 @@ def make_la_place(data: dict):
 	'''
 	Given a dictionary representing data about a place, construct a model.Place object,
 	assign it as the crom data in the dictionary, and return the dictionary.
-	
+
 	The dictionary keys used to construct the place object are:
-	
+
 	- name
 	- type (one of: 'City' or 'Country')
 	- part_of (a recursive place dictionary)
 	'''
 	TYPES = {
 		'city': vocab.instances['city'],
+		'province': vocab.instances['province'],
+		'state': vocab.instances['province'],
 		'country': vocab.instances['nation'],
 	}
 
 	if data is None:
 		return None
-	type_name = data['type']
+	type_name = data.get('type', 'place').lower()
 	name = data['name']
 	label = name
 	parent_data = data.get('part_of')
-	
-	type = TYPES.get(type_name.lower())
+
+	type = TYPES.get(type_name)
 	parent = None
 	if parent_data:
 		parent_data = make_la_place(parent_data)
 		parent = get_crom_object(parent_data)
 		label = f'{label}, {parent._label}'
-	p = model.Place(label=label)
+		
+	placeargs = {'label': label}
+	if data.get('uri'):
+		placeargs['ident'] = data['uri']
+	p = model.Place(**placeargs)
 	if type:
 		p.classified_as = type
 	p.identified_by = model.Name(content=name)

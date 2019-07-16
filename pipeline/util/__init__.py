@@ -1,4 +1,5 @@
 import os
+import sys
 import fnmatch
 from threading import Lock
 from contextlib import ContextDecorator, suppress
@@ -7,7 +8,8 @@ from collections import defaultdict, namedtuple
 import settings
 import pipeline.io.arches
 from bonobo.config import Configurable, Option, Service
-from cromulent.model import factory
+from cromulent import model
+from cromulent.model import factory, BaseResource
 
 Dimension = namedtuple("Dimension", [
 	'value',	# numeric value
@@ -18,13 +20,13 @@ Dimension = namedtuple("Dimension", [
 def identity(d):
 	'''
 	Simply yield the value that is passed as an argument.
-	
+
 	This is trivial, but necessary for use in constructing some bonobo graphs.
 	For example, if two already instantiated graph chains need to be connected,
 	one being used as input to the other, bonobo does not allow this:
-	
+
 	`graph.add_chain(_input=prefix.output, _output=suffix.input)`
-	
+
 	Instead, the `add_chain` call requires at least one graph node to be added. Hence:
 
 	`graph.add_chain(identity, _input=prefix.output, _output=suffix.input)`
@@ -39,8 +41,8 @@ def implode_date(data: dict, prefix: str):
 	missing, may also return a year-month ('YYYY-MM') or year ('YYYY') string.
 	'''
 	year = data.get(f'{prefix}year')
-	month = data.get('{prefix}month')
-	day = data.get('{prefix}day')
+	month = data.get(f'{prefix}month', data.get(f'{prefix}mo'))
+	day = data.get(f'{prefix}day')
 	if year and month and day:
 		return f'{year}-{month}-{day}'
 	elif year and month:
@@ -80,21 +82,24 @@ def configured_arches_writer():
 	)
 
 class CromObjectMerger:
+	def __init__(self):
+		self.attribute_based_identity = {
+			'content': (model.Name, model.Identifier),
+		}
+
 	def merge(self, obj, *to_merge):
-		pass
-# 		print('merging...')
-# 		print(f'base object: {obj}')
+		# print('merging...')
+		# print(f'base object: {obj}')
 		for m in to_merge:
-			pass
-# 			print('============================================')
-# 			print(f'merge: {m}')
+			# print('============================================')
+			# print(f'merge: {m}')
 			for p in m.list_my_props():
 				value = None
 				with suppress(AttributeError):
 					value = getattr(m, p)
 				if value is not None:
 # 					print(f'{p}: {value}')
-					if type(value) == list:
+					if isinstance(value, list):
 						self.set_or_merge(obj, p, *value)
 					else:
 						self.set_or_merge(obj, p, value)
@@ -107,39 +112,34 @@ class CromObjectMerger:
 		existing = []
 # 		print('------------------------')
 		with suppress(AttributeError):
-			existing = getattr(obj, p)
-			if type(existing) == list:
-				existing.extend(existing)
+			e = getattr(obj, p)
+			if isinstance(e, list):
+				existing.extend(e)
 			else:
-				existing = [existing]
+				existing = [e]
 
 # 		print(f'Setting {p}')
 		identified = defaultdict(list)
 		unidentified = []
-		if existing:
-			pass
-# 			print('Existing value(s):')
-			for v in existing:
-				if hasattr(v, 'id'):
-					identified[v.id].append(v)
-				else:
-					unidentified.append(v)
-# 				print(f'- {v}')
-
-		for v in values:
-			pass
-# 			print(f'Setting {p} value to {v}')
+		for v in existing + list(values):
+			for attr, classes in self.attribute_based_identity.items():
+				if isinstance(v, classes):
+					if hasattr(v, 'content'):
+						identified[getattr(v, attr)].append(v)
+					continue
 			if hasattr(v, 'id'):
 				identified[v.id].append(v)
 			else:
 				unidentified.append(v)
+# 			print(f'- {v}')
 
 		if p == 'type':
-			pass
-# 			print('*** TODO: calling setattr(_, "type") on crom objects throws an exception; skipping for now')
+			# print('*** TODO: calling setattr(_, "type") on crom objects throws; skipping')
 			return
-		for i, v in identified.items():
-			setattr(obj, p, None)
+		setattr(obj, p, None)
+		for v in identified.values():
+			if not obj.allows_multiple(p):
+				setattr(obj, p, None)
 			setattr(obj, p, self.merge(*v))
 		for v in unidentified:
 			setattr(obj, p, v)
@@ -162,7 +162,7 @@ class ExtractKeyedValues(Configurable):
 		super().__init__(*v, **kw)
 		self.__name__ = f'{type(self).__name__} ({self.key})'
 
-	def __call__(self, data):
+	def __call__(self, data, *args, **kwargs):
 		for a in data.get(self.key, []):
 			child = {k: v for k, v in a.items()}
 			child.update({
@@ -188,7 +188,7 @@ class ExtractKeyedValue(Configurable):
 		super().__init__(*v, **kw)
 		self.__name__ = f'{type(self).__name__} ({self.key})'
 
-	def __call__(self, data):
+	def __call__(self, data, *args, **kwargs):
 		a = data.get(self.key)
 		if a:
 			child = {k: v for k, v in a.items()}
@@ -196,6 +196,23 @@ class ExtractKeyedValue(Configurable):
 				'parent_data': data,
 			})
 			yield child
+
+class RecursiveExtractKeyedValue(ExtractKeyedValue):
+	include_self = Option(bool, default=True)
+
+	def __call__(self, data, *args, **kwargs):
+		if self.include_self:
+			a = data
+		else:
+			a = data.get(self.key)
+		while a:
+			child = {k: v for k, v in a.items()}
+			child.update({
+				'parent_data': data,
+			})
+			yield child
+			data = a
+			a = a.get(self.key)
 
 class MatchingFiles(Configurable):
 	'''
@@ -207,11 +224,11 @@ class MatchingFiles(Configurable):
 		'fs',
 		__doc__='''The filesystem instance to use.''',
 	)  # type: str
-	
+
 	def __init__(self, *args, **kwargs):
 		super().__init__(self, *args, **kwargs)
 		self.__name__ = f'{type(self).__name__} ({self.pattern})'
-	
+
 	def __call__(self, *, fs, **kwargs):
 		count = 0
 		subpath, pattern = os.path.split(self.pattern)
@@ -222,4 +239,20 @@ class MatchingFiles(Configurable):
 				count += 1
 		if not count:
 			sys.stderr.write(f'*** No files matching {pattern} found in {fullpath}\n')
+
+def timespan_before(after):
+	ts = model.TimeSpan()
+	try:
+		ts.end_of_the_end = after.begin_of_the_begin
+		return ts
+	except AttributeError:
+		return None
+
+def timespan_after(before):
+	ts = model.TimeSpan()
+	try:
+		ts.begin_of_the_begin = before.end_of_the_end
+		return ts
+	except AttributeError:
+		return None
 

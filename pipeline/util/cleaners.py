@@ -349,6 +349,7 @@ _COUNTRY_NAMES = {
 	'Ukraine': 'Ukraine',
 	'Ukraïna': 'Ukraine',
 	'USA': 'United States of America',
+	'US': 'United States of America',
 	'Wales': 'Wales',
 }
 
@@ -415,89 +416,151 @@ _US_STATES = {
 	'WY': 'Wyoming',
 }
 
-def parse_location_name(value, uri_base=None):
-	'''
-	Parses a string like 'Los Angeles, CA, USA' or 'Genève, Schweiz'
-	and returns a structure that can be passed to `pipeline.linkedart.make_la_place`, or
-	`None` if the string cannot be parsed.
-	'''
-	if uri_base is None:
-		uri_base = 'tag:getty.edu,2019:digital:pipeline:REPLACE-WITH-UUID#'
-	current = None
-	parts = value.split(', ')
-	country_name = parts[-1]
-	if country_name in _COUNTRIES:
-		country_name = _COUNTRY_NAMES.get(country_name, country_name)
+def _parse_us_location(parts, *, uri_base):
+	city_name, state_name, country_name = parts
+	state_type = None
+	city_type = None
+	state_uri = None
+	city_uri = None
+	if state_name in _US_STATES or state_name in _US_STATES.values():
+		state_name = _US_STATES.get(state_name, state_name)
+		state_uri = f'{uri_base}PLACE-COUNTRY-' + urllib.parse.quote(country_name) + '-STATE-' + urllib.parse.quote(state_name)
+		city_uri = state_uri + '-CITY-' + urllib.parse.quote(city_name)
+		state_type = 'State'
+		city_type = 'City'
 	else:
-		print(f'*** Expecting country name, but found unexpected value: {country_name!r}')
-		# not a recognized place name format; assert a generic Place with the associated value as a name
-		return {'name': value}
+		# Not a recognized state, so fall back to just a general place
+		state_type = 'Place'
+		city_type = 'Place'
+	
+	country = {
+		'type': 'Country',
+		'name': country_name,
+		'uri': f'{uri_base}PLACE-COUNTRY-' + urllib.parse.quote(country_name),
+	}
+	
+	state = {
+		'type': state_type,
+		'name': state_name,
+		'uri': state_uri,
+		'part_of': country
+	}
+	
+	city = {
+		'type': city_type,
+		'name': city_name,
+		'uri': city_uri,
+		'part_of': state,
+	}
 
-	# TODO: figure out how to use consistent URIs for countries, or uniquely identifying pairs (city, state, 'US')
-	if len(parts) == 2:
-		city_name, country_name = parts
-		city = {
-			'type': 'City',
-			'name': city_name,
+	for current in (city, state, country):
+		for p in ('part_of', 'uri'):
+			if p in current and not current[p]:
+				del(current[p])
+
+	return city
+
+def _parse_uk_location(parts, *, uri_base):
+	country_name = 'United Kingdom'
+	if len(parts) == 3 and parts[-2] == 'England':
+		place_name = parts[0]
+		return {
+			# The first component of the triple isn't always a city in UK data
+			# (e.g. "Burton Constable, England, UK" or "Castle Howard, England, UK")
+			# so do not assert a type for this level of the place hierarchy.
+			'name': place_name,
 			'part_of': {
 				'type': 'Country',
 				'name': country_name,
 				'uri': f'{uri_base}PLACE-COUNTRY-' + urllib.parse.quote(country_name),
 			}
 		}
-		current = city
-	elif len(parts) == 3 and parts[-1] in ('USA', 'US'):
-		city_name, state_name, _ = parts
-		country_name = 'United States of America'
-		state_type = 'State'
-		state_uri = None
-		city_uri = None
-		if len(state_name) == 2:
-			try:
-				state_name = _US_STATES[state_name]
-				state_uri = f'{uri_base}PLACE-COUNTRY-' + urllib.parse.quote(country_name) + '-STATE-' + urllib.parse.quote(state_name)
-				city_uri = state_uri + '-CITY-' + urllib.parse.quote(city_name)
-			except:
-				# Not a recognized state, so fall back to just a general place
-				state_type = 'Place'
-		city = {
+	return None
+
+_COUNTRY_HANDLERS = {
+	'United States of America': _parse_us_location,
+	'United Kingdom': _parse_uk_location,
+}
+
+def parse_location_name(value, uri_base=None):
+	'''
+	Parses a string like 'Los Angeles, CA, USA' or 'Genève, Schweiz'
+	and returns a structure that can be passed to `pipeline.linkedart.make_la_place`, or
+	`None` if the string cannot be parsed.
+	'''
+	parts = value.split(', ')
+	return parse_location(*parts, uri_base=uri_base)
+
+def parse_location(*parts, uri_base=None, types=None):
+	'''
+	Takes a list of hierarchical place names, and returns a structure that can be passed
+	to `pipeline.linkedart.make_la_place`.
+	
+	If the iterable `types` is given, it supplies the type names of the associated names
+	(e.g. `('City', 'Country')`). Otherwise, heuristics are used to guide the parsing,
+	with the caveat that the final 
+	'''
+	value = ', '.join(parts)
+	if uri_base is None:
+		uri_base = 'tag:getty.edu,2019:digital:pipeline:REPLACE-WITH-UUID#'
+	
+	if types:
+		current = None
+		uri_parts = []
+		for t, name in zip(reversed(types), reversed(parts)):
+			uri = None
+			if t.upper() in ('COUNTRY', 'STATE', 'PROVINCE'):
+				uri_parts.append(t.upper())
+				uri_parts.append(urllib.parse.quote(name))
+				uri = f'{uri_base}PLACE-' + '-'.join(uri_parts)
+			current = {
+				'type': t,
+				'name': name,
+				'uri': uri,
+				'part_of': current
+			}
+			for p in ('part_of', 'uri'):
+				if not current[p]:
+					del(current[p])
+		return current
+
+	current = None
+	country_name = parts[-1]
+	country_type = None
+	if country_name in _COUNTRIES:
+		country_type = 'Country'
+		country_name = _COUNTRY_NAMES.get(country_name, country_name)
+	else:
+		print(f'*** Expecting country name, but found unexpected value: {country_name!r}')
+		# not a recognized place name format; assert a generic Place with the associated value as a name
+		return {'name': value}
+
+	if country_name in _COUNTRY_HANDLERS:
+		loc = _COUNTRY_HANDLERS[country_name](parts, uri_base=uri_base)
+		if loc:
+			return loc
+
+	current = {
+		'type': country_type,
+		'name': country_name,
+		'uri': f'{uri_base}PLACE-COUNTRY-' + urllib.parse.quote(country_name),
+	}
+
+	if len(parts) == 2:
+		city_name = parts.pop(0)
+		current = {
 			'type': 'City',
 			'name': city_name,
-			'uri': city_uri,
-			'part_of': {
-				'type': state_type,
-				'name': state_name,
-				'uri': state_uri,
-				'part_of': {
-					'type': 'Country',
-					'name': country_name,
-					'uri': f'{uri_base}PLACE-COUNTRY-' + urllib.parse.quote(country_name),
-				}
-			}
+			'part_of': current
 		}
-		current = city
-	elif len(parts) == 3 and parts[-1] == 'UK':
-		country_name = 'United Kingdom'
-		if len(parts) == 3 and parts[-2] == 'England':
-			place_name = parts[0]
-			place = {
-				# The first component of the triple isn't always a city in UK data
-				# (e.g. "Burton Constable, England, UK" or "Castle Howard, England, UK")
-				# so do not assert a type for this level of the place hierarchy.
-				'name': place_name,
-				'part_of': {
-					'type': 'Country',
-					'name': country_name,
-					'uri': f'{uri_base}PLACE-COUNTRY-' + urllib.parse.quote(country_name),
-				}
-			}
-			current = place
 	else:
-		current = {
-			'type': 'Specific Place',
-			'name': value
-		}
-	
+		for v in reversed(parts[:-1]):
+			current = {
+				'type': 'Place',
+				'name': v,
+				'part_of': current
+			}
+
 	return current
 
 def share_parse(value):

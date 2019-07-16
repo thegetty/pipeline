@@ -761,7 +761,7 @@ def populate_object(data, post_sale_map, unique_catalogs):
 			place_data = make_la_place(current)
 			place = get_crom_object(place_data)
 			data['_location'] = place_data
-			object.current_location = place # TODO: is this the right property for "present location" data?
+			object.current_location = place # TODO: this modeling should change to be equivalent to a final "post owner" of the "present location institution"
 		note = location.get('note')
 		if note:
 			pass

@@ -26,7 +26,10 @@ class CurriedCSVReader(Configurable):
 		default='utf-8',
 		__doc__='''Encoding.''',
 	)  # type: str
-	limit = Option(int)
+	limit = Option(
+		int,
+		__doc__='''Limit the number of rows read (to allow early pipeline termination).''',
+	)
 
 	def __init__(self, *args, **kwargs):
 		super().__init__(*args, **kwargs)

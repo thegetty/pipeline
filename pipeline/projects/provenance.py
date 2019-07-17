@@ -30,7 +30,7 @@ import settings
 from cromulent import model, vocab
 from pipeline.util import RecursiveExtractKeyedValue, ExtractKeyedValue, ExtractKeyedValues, \
 			MatchingFiles, identity, implode_date, timespan_before, timespan_after
-from pipeline.util.cleaners import dimensions_cleaner, normalized_dimension_object, parse_location_name
+from pipeline.util.cleaners import dimensions_cleaner, normalized_dimension_object, parse_location, parse_location_name, date_parse
 from pipeline.io.file import MergingFileWriter
 # from pipeline.io.arches import ArchesWriter
 from pipeline.linkedart import \
@@ -196,31 +196,9 @@ def auction_event_location(data):
 	city_name = data.get('city_of_sale')
 	country_name = data.get('country_auth_1')
 
-	current = None
-	if country_name:
-		country = {
-			'type': 'Country',
-			'name': country_name,
-			'uri': f'{UID_TAG_PREFIX}PLACE-COUNTRY-{country_name}',
-		}
-		current = country
-	if city_name:
-		city = {
-			'type': 'City',
-			'name': city_name,
-		}
-		if current:
-			city['part_of'] = current
-		current = city
-	if specific_name:
-		specific = {
-			'type': 'Specific Place',
-			'name': specific_name,
-		}
-		if current:
-			specific['part_of'] = current
-		current = specific
-	return current
+	parts = [v for v in (specific_name, city_name, country_name) if v is not None]
+	loc = parse_location(*parts, uri_base=UID_TAG_PREFIX, types=('Place', 'City', 'Country'))
+	return loc
 
 #mark - Auction Events
 
@@ -368,9 +346,9 @@ class AddAuctionOfLot(Configurable):
 	def set_lot_date(lot, auction_data):
 		'''Associate a timespan with the auction lot.'''
 		date = implode_date(auction_data, 'lot_sale_')
-		if date:
-			ts = timespan_from_outer_bounds(begin=date)
-			# TODO: expand this to day bounds
+		bounds = map(lambda v: v.strftime("%Y-%m-%dT%H:%M:%SZ"), date_parse(date, delim='-'))
+		if bounds:
+			ts = timespan_from_outer_bounds(*bounds)
 			ts.identified_by = model.Name(ident='', content=date)
 			lot.timespan = ts
 
@@ -559,7 +537,7 @@ def add_acquisition(data, object, buyers, sellers):
 # 	if not prices:
 # 		print(f'*** No price data found for {transaction} transaction')
 
-	acq = model.Acquisition(label=f'Acquisition of {cno} {lno}: “{object_label}”')
+	acq = model.Acquisition(label=f'Acquisition of {cno} {lno} ({date}): “{object_label}”')
 	acq.transferred_title_of = object
 	paym = model.Payment(label=f'Payment for “{object_label}”')
 	for seller in [get_crom_object(s) for s in sellers]:
@@ -606,7 +584,8 @@ def add_acquisition(data, object, buyers, sellers):
 				tx.ends_before_the_start_of = current_tx
 			else:
 				tx.starts_after_the_end_of = current_tx
-			pacq = model.Acquisition(label=f'Acquisition of: “{object_label}”')
+			modifier_label = 'Previous' if rev else 'Subsequent'
+			pacq = model.Acquisition(label=f'{modifier_label} Acquisition of: “{object_label}”')
 			pacq.transferred_title_of = object
 			pacq.transferred_title_to = owner
 			tx.part = pacq

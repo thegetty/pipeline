@@ -537,7 +537,7 @@ def add_acquisition(data, object, buyers, sellers):
 # 	if not prices:
 # 		print(f'*** No price data found for {transaction} transaction')
 
-	acq = model.Acquisition(label=f'Acquisition of {cno} {lno}: “{object_label}”')
+	acq = model.Acquisition(label=f'Acquisition of {cno} {lno} ({date}): “{object_label}”')
 	acq.transferred_title_of = object
 	paym = model.Payment(label=f'Payment for “{object_label}”')
 	for seller in [get_crom_object(s) for s in sellers]:
@@ -584,7 +584,8 @@ def add_acquisition(data, object, buyers, sellers):
 				tx.ends_before_the_start_of = current_tx
 			else:
 				tx.starts_after_the_end_of = current_tx
-			pacq = model.Acquisition(label=f'Acquisition of: “{object_label}”')
+			modifier_label = 'Previous' if rev else 'Subsequent'
+			pacq = model.Acquisition(label=f'{modifier_label} Acquisition of: “{object_label}”')
 			pacq.transferred_title_of = object
 			pacq.transferred_title_to = owner
 			tx.part = pacq

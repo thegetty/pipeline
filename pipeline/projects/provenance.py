@@ -13,6 +13,7 @@ import uuid
 import csv
 import pprint
 import itertools
+import datetime
 from collections import Counter, defaultdict, namedtuple
 from contextlib import suppress
 import inspect
@@ -30,7 +31,8 @@ import settings
 from cromulent import model, vocab
 from pipeline.util import RecursiveExtractKeyedValue, ExtractKeyedValue, ExtractKeyedValues, \
 			MatchingFiles, identity, implode_date, timespan_before, timespan_after
-from pipeline.util.cleaners import dimensions_cleaner, normalized_dimension_object, parse_location, parse_location_name, date_parse
+from pipeline.util.cleaners import dimensions_cleaner, normalized_dimension_object, \
+			parse_location, parse_location_name, date_parse, date_cleaner
 from pipeline.io.file import MergingFileWriter
 # from pipeline.io.arches import ArchesWriter
 from pipeline.linkedart import \
@@ -185,8 +187,12 @@ def timespan_from_outer_bounds(begin=None, end=None):
 	if begin or end:
 		ts = model.TimeSpan(ident='')
 		if begin is not None:
+			if isinstance(begin, datetime.datetime):
+				begin = begin.strftime("%Y-%m-%dT%H:%M:%SZ")
 			ts.begin_of_the_begin = begin
 		if end is not None:
+			if isinstance(end, datetime.datetime):
+				end = end.strftime("%Y-%m-%dT%H:%M:%SZ")
 			ts.end_of_the_end = end
 		return ts
 	return None
@@ -708,6 +714,35 @@ def genre_instance(value):
 	}
 	return MAPPING.get(value)
 
+def populate_destruction_events(data, note):
+	object = get_crom_object(data)
+	title = data.get('title')
+	DESTRUCTION_METHODS = { # TODO: 
+		'fire': model.Type(ident='http://vocab.getty.edu/aat/300068986', label='Fire'),
+	}
+	r = re.compile(r'Destroyed(?: by (\w+))?(?: in (\d{4}))?')
+	m = r.search(note)
+	if m:
+		method = m.group(1)
+		year = m.group(2)
+		d = model.Destruction(label=f'Destruction of “{title}”')
+		d.referred_to_by = vocab.Note(content=note)
+		if year is not None:
+			begin, end = date_cleaner(year)
+			ts = timespan_from_outer_bounds(begin, end)
+			d.timespan = ts
+		d.destroyed = object
+		
+		if method:
+			with suppress(KeyError, AttributeError):
+				print(f'METHOD: {method}')
+				type = DESTRUCTION_METHODS[method.lower()]
+				event = model.Event(label=f'{method.capitalize()} event causing the destruction of “{title}”')
+				event.classified_as = type
+				event.caused = d
+				data['_events'] = [add_crom_data(data={}, what=event)] + data.get('_events', [])
+		data['_destruction'] = add_crom_data(data={}, what=d)
+	
 @use('post_sale_map')
 @use('unique_catalogs')
 def populate_object(data, post_sale_map, unique_catalogs):
@@ -740,19 +775,22 @@ def populate_object(data, post_sale_map, unique_catalogs):
 		# pprint.pprint(location)
 		loc = location.get('geog')
 		if loc:
-			current = parse_location_name(loc, uri_base=UID_TAG_PREFIX)
-			# TODO: if `parse_location_name` fails, still preserve the location string somehow
-			inst = location.get('inst')
-			if inst:
-				current = {
-					'type': 'Specific Place',
-					'name': inst,
-					'part_of': current
-				}
-			place_data = make_la_place(current)
-			place = get_crom_object(place_data)
-			data['_location'] = place_data
-			object.current_location = place # TODO: this modeling should change to be equivalent to a final "post owner" of the "present location institution"
+			if 'Destroyed ' in loc:
+				populate_destruction_events(data, loc)
+			else:
+				current = parse_location_name(loc, uri_base=UID_TAG_PREFIX)
+				# TODO: if `parse_location_name` fails, still preserve the location string somehow
+				inst = location.get('inst')
+				if inst:
+					current = {
+						'type': 'Specific Place',
+						'name': inst,
+						'part_of': current
+					}
+				place_data = make_la_place(current)
+				place = get_crom_object(place_data)
+				data['_location'] = place_data
+				object.current_location = place # TODO: this modeling should change to be equivalent to a final "post owner" of the "present location institution"
 		note = location.get('note')
 		if note:
 			pass
@@ -1377,9 +1415,24 @@ class ProvenancePipeline:
 			add_pir_artists,
 			_input=sales.output
 		)
+		
+		destructions = graph.add_chain(
+			ExtractKeyedValue(key='_destruction'),
+			AddArchesModel(model=self.models['Destruction']),
+			_input=objects.output
+		)
+		events = graph.add_chain(
+			ExtractKeyedValues(key='_events'),
+			AddArchesModel(model=self.models['Event']),
+			_input=objects.output
+		)
+		
 		if serialize:
 			# write OBJECTS data
 			self.add_serialization_chain(graph, objects.output)
+			self.add_serialization_chain(graph, destructions.output)
+			self.add_serialization_chain(graph, events.output)
+
 		return objects
 
 	def add_places_chain(self, graph, auction_events, serialize=True):

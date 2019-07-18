@@ -260,10 +260,8 @@ def add_auction_house_data(a):
 		a['uid'] = key
 		a['uri'] = pir_uri('AUCTION-HOUSE', 'ULAN', ulan)
 		a['identifiers'] = [model.Identifier(content=ulan)]
-		a['exact_match'] = [model.BaseResource(ident=f'http://vocab.getty.edu/ulan/{ulan}')]
+		a['ulan'] = ulan
 		house = vocab.AuctionHouseOrg(ident=a['uri'])
-		for uri in a.get('exact_match', []):
-			house.exact_match = uri
 	else:
 		# not enough information to identify this person uniquely, so they get a UUID
 		a['uuid'] = str(uuid.uuid4())
@@ -520,7 +518,7 @@ def add_person(data: dict):
 		data['uid'] = key
 		data['uri'] = pir_uri('PERSON', 'ULAN', ulan)
 		data['identifiers'] = [model.Identifier(content=ulan)]
-		data['exact_match'] = [model.BaseResource(ident=f'http://vocab.getty.edu/ulan/{ulan}')]
+		data['ulan'] = ulan
 	else:
 		# not enough information to identify this person uniquely, so they get a UUID
 		data['uuid'] = str(uuid.uuid4())
@@ -919,7 +917,7 @@ def add_pir_artists(data):
 		if ulan:
 			key = f'PERSON-ULAN-{ulan}'
 			a['uri'] = pir_uri('PERSON', 'ULAN', ulan)
-			a['exact_match'] = [model.BaseResource(ident=f'http://vocab.getty.edu/ulan/{ulan}')]
+			a['ulan'] = ulan
 		else:
 			key = f'PERSON-STAR-{star_rec_no}'
 			a['uri'] = pir_uri('PERSON', 'star', star_rec_no)

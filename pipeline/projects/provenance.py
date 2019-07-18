@@ -38,6 +38,7 @@ from pipeline.linkedart import \
 			get_crom_object, \
 			MakeLinkedArtHumanMadeObject, \
 			MakeLinkedArtAuctionHouseOrganization, \
+			MakeLinkedArtOrganization, \
 			make_la_person, \
 			make_la_place
 from pipeline.io.csv import CurriedCSVReader
@@ -59,8 +60,13 @@ class DictWrapper:
 	Wrapper of a dictionary used to work around a limitation in bonobo services, which
 	seem to fail when using plain `dict` values.
 	'''
-	def __init__(self):
+	def __init__(self, value=None):
 		self.d = {}
+		if isinstance(value, dict):
+			self.d = value
+		elif isinstance(value, str):
+			with open(value, 'r') as f:
+				self.d = json.load(f)
 
 	def set(self, key, value):
 		'''Set `key` to `value`.'''
@@ -69,6 +75,9 @@ class DictWrapper:
 	def get(self, key):
 		'''Get the value associated with `key`.'''
 		return self.d.get(key)
+
+	def __getitem__(self, key):
+		return self.get(key)
 
 def pir_uri(*values):
 	'''Convert a set of identifying `values` into a URI'''
@@ -428,6 +437,7 @@ def add_crom_price(data, _):
 	the supplied `data` dict.
 	'''
 	MAPPING = {
+		'Österreichische Schilling': 'at shillings',
 		'florins': 'de florins',
 		'fl': 'de florins',
 		'fl.': 'de florins',
@@ -546,6 +556,8 @@ def add_acquisition(data, object, buyers, sellers):
 	for buyer in [get_crom_object(b) for b in buyers]:
 		paym.paid_from = buyer
 		acq.transferred_title_to = buyer
+	if len(amnts) > 1:
+		pprint.pprint(prices)
 	for amnt in amnts:
 		paym.paid_amount = amnt
 
@@ -861,9 +873,15 @@ def add_pir_artists(data):
 	data['_artists'] = artists
 	for a in artists:
 		star_rec_no = a.get('star_rec_no')
-		key = f'PERSON-star-{star_rec_no}'
+		ulan = a.get('artist_ulan')
+		if ulan:
+			key = f'PERSON-ULAN-{ulan}'
+			a['uri'] = pir_uri('PERSON', 'ULAN', ulan)
+			a['exact_match'] = [model.BaseResource(ident=f'http://vocab.getty.edu/ulan/{ulan}')]
+		else:
+			key = f'PERSON-STAR-{star_rec_no}'
+			a['uri'] = pir_uri('PERSON', 'star', star_rec_no)
 		a['uid'] = key
-		a['uri'] = pir_uri('PERSON', 'star', star_rec_no) # TODO: Do we need to handle ULAN here?
 		if a.get('artist_name'):
 			name = a.get('artist_name')
 			a['names'] = [(name,)]
@@ -920,8 +938,9 @@ def add_physical_catalog_objects(data):
 	add_crom_data(data=data, what=catalogObject)
 	return data
 
+@use('location_codes')
 @use('unique_catalogs')
-def add_physical_catalog_owners(data, unique_catalogs):
+def add_physical_catalog_owners(data, location_codes, unique_catalogs):
 	'''Add information about the ownership of a physical copy of an auction catalog'''
 	# TODO: Add information about the current owner of the physical catalog copy
 	# TODO: are the values of data['owner_code'] mapped somewhere?
@@ -930,8 +949,21 @@ def add_physical_catalog_owners(data, unique_catalogs):
 	# later to figure out which catalogs can be uniquely identified by a catalog number
 	# and owner code (e.g. for owners who do not have multiple copies of a catalog).
 	cno = data['catalog_number']
-	owner = data['owner_code']
-	uri = pir_uri('CATALOG', cno, owner, None)
+	owner_code = data['owner_code']
+	owner_name = location_codes[owner_code]
+	print(f'>>>>> OWNER: {owner_code}: {owner_name}')
+	data['_owner'] = {
+		'name': owner_name,
+		'label': owner_name,
+		'uri': pir_uri('ORGANIZATION', 'LOCATION-CODE', owner_code),
+		'identifiers': [model.Identifier(ident='', content=owner_code)],
+	}
+	owner = model.Group(ident=data['_owner']['uri'])
+	owner_data = add_crom_data(data=data['_owner'], what=owner)
+	catalog = get_crom_object(data)
+	catalog.current_owner = owner
+	
+	uri = pir_uri('CATALOG', cno, owner_code, None)
 	if uri not in unique_catalogs.d:
 		unique_catalogs.d[uri] = set()
 	unique_catalogs.d[uri].add(uri)
@@ -1007,6 +1039,7 @@ class ProvenancePipeline:
 			'post_sale_map': DictWrapper(),
 			'auction_houses': DictWrapper(),
 			'auction_locations': DictWrapper(),
+			'location_codes': DictWrapper(os.path.join(self.input_path, 'pir_location_codes.json')),
 			'trace_counter': itertools.count(),
 			'gpi': create_engine(settings.gpi_engine),
 			'aat': create_engine(settings.aat_engine),
@@ -1024,6 +1057,19 @@ class ProvenancePipeline:
 			)
 		else:
 			sys.stderr.write('*** No serialization chain defined\n')
+
+	def add_physical_catalog_owners_chain(self, graph, catalogs, serialize=True):
+		'''Add modeling of physical copies of auction catalogs.'''
+		groups = graph.add_chain(
+			ExtractKeyedValue(key='_owner'),
+			MakeLinkedArtOrganization(),
+			AddArchesModel(model=self.models['Group']),
+			_input=catalogs.output
+		)
+		if serialize:
+			# write SALES data
+			self.add_serialization_chain(graph, groups.output)
+		return groups
 
 	def add_physical_catalogs_chain(self, graph, records, serialize=True):
 		'''Add modeling of physical copies of auction catalogs.'''
@@ -1404,7 +1450,8 @@ class ProvenancePipeline:
 				CurriedCSVReader(fs='fs.data.pir', limit=self.limit),
 			)
 
-			_ = self.add_physical_catalogs_chain(g, physical_catalog_records, serialize=True)
+			catalogs = self.add_physical_catalogs_chain(g, physical_catalog_records, serialize=True)
+			_ = self.add_physical_catalog_owners_chain(g, catalogs, serialize=True)
 			auction_events = self.add_auction_events_chain(g, auction_events_records, serialize=True)
 			_ = self.add_catalog_linguistic_objects(g, auction_events, serialize=True)
 			_ = self.add_auction_houses_chain(g, auction_events, serialize=True)

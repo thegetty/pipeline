@@ -427,7 +427,7 @@ class AddAuctionOfLot(Configurable):
 		self.set_lot_date(lot, auction_data)
 		self.set_lot_notes(lot, auction_data)
 		self.set_lot_objects(lot, lno, data)
-
+		
 		tx_uri = AddAuctionOfLot.transaction_uri_for_lot(auction_data, data.get('price', []))
 		tx = vocab.Procurement(ident=tx_uri)
 		lot.caused = tx
@@ -720,7 +720,7 @@ def populate_destruction_events(data, note):
 	DESTRUCTION_METHODS = { # TODO: 
 		'fire': model.Type(ident='http://vocab.getty.edu/aat/300068986', label='Fire'),
 	}
-	r = re.compile(r'Destroyed(?: by (\w+))?(?: in (\d{4}))?')
+	r = re.compile(r'Destroyed(?: (?:by|during) (\w+))?(?: in (\d{4})[.]?)?')
 	m = r.search(note)
 	if m:
 		method = m.group(1)
@@ -795,6 +795,10 @@ def populate_object(data, post_sale_map, unique_catalogs):
 		if note:
 			pass
 			# TODO: the acquisition_note needs to be attached as a Note to the final post owner acquisition
+
+	notes = parent.get('auction_of_lot', {}).get('lot_notes')
+	if notes and notes.startswith('Destroyed'):
+		populate_destruction_events(data, notes)
 
 	notes = data.get('hand_note', [])
 	for note in notes:
@@ -989,7 +993,6 @@ def add_physical_catalog_owners(data, location_codes, unique_catalogs):
 	cno = data['catalog_number']
 	owner_code = data['owner_code']
 	owner_name = location_codes[owner_code]
-	print(f'>>>>> OWNER: {owner_code}: {owner_name}')
 	data['_owner'] = {
 		'name': owner_name,
 		'label': owner_name,

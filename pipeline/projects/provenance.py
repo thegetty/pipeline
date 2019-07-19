@@ -233,7 +233,7 @@ def populate_auction_event(data, auction_locations):
 	place_data = make_la_place(current)
 	place = get_crom_object(place_data)
 	if place:
-		data['_location'] = place_data
+		data['_locations'] = [place_data]
 		auction.took_place_at = place
 		auction_locations.set(cno, place)
 
@@ -418,7 +418,7 @@ class AddAuctionOfLot(Configurable):
 		data['uri'] = uri
 
 		lot = vocab.Auction(ident=data['uri'])
-		lot._label = f'Auction of Lot {cno} {shared_lot_number}'
+		lot._label = f'Auction of Lot {cno} {shared_lot_number} ({date})'
 
 		self.set_lot_auction_houses(lot, cno, auction_houses)
 		self.set_lot_location(lot, cno, auction_locations)
@@ -583,7 +583,7 @@ def add_acquisition(data, object, buyers, sellers):
 	final_owner = data.get('_final_owning_organization')
 	if final_owner:
 		tx = related_procurement(current_tx, object, ts, buyer=final_owner)
-		tx._label = 'Procurement leading to the currently known location of “{object_label}”'
+		tx._label = f'Procurement leading to the currently known location of “{object_label}”'
 		data['_procurements'].append(add_crom_data(data={}, what=tx))
 
 	post_own = data.get('post_owner', [])
@@ -822,10 +822,12 @@ def populate_object(data, post_sale_map, unique_catalogs):
 					owner_data = lao(owner_data)
 					owner = get_crom_object(owner_data)
 					owner.residence = place
+					data['_locations'] = [place_data]
+					pprint.pprint(place_data)
 					data['_final_owning_organization'] = owner
 				else:
 					pass # TODO: there's a location but no institution; create procurement->acquisition->(anonymous institution)->place->(place name)
-				object.current_location = place # TODO: this modeling should change to be equivalent to a final "post owner" of the "present location institution"
+# 				object.current_location = place # TODO: this modeling should change to be equivalent to a final "post owner" of the "present location institution"
 		note = location.get('note')
 		if note:
 			pass
@@ -1461,9 +1463,9 @@ class ProvenancePipeline:
 		return objects
 
 	def add_places_chain(self, graph, auction_events, serialize=True):
-		'''Add modeling of the location of an auction event.'''
+		'''Add extraction and serialization of locations.'''
 		places = graph.add_chain(
-			ExtractKeyedValue(key='_location'),
+			ExtractKeyedValues(key='_locations'),
 			RecursiveExtractKeyedValue(key='part_of'),
 			AddArchesModel(model=self.models['Place']),
 			_input=auction_events.output

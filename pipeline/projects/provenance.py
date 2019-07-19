@@ -757,17 +757,14 @@ def populate_destruction_events(data, note):
 			begin, end = date_cleaner(year)
 			ts = timespan_from_outer_bounds(begin, end)
 			d.timespan = ts
-		d.destroyed = object
-		
+		object.destroyed_by = d
+
 		if method:
 			with suppress(KeyError, AttributeError):
-				print(f'METHOD: {method}')
 				type = DESTRUCTION_METHODS[method.lower()]
 				event = model.Event(label=f'{method.capitalize()} event causing the destruction of “{title}”')
 				event.classified_as = type
-				event.caused = d
-				data['_events'] = [add_crom_data(data={}, what=event)] + data.get('_events', [])
-		data['_destruction'] = add_crom_data(data={}, what=d)
+				d.caused_by = event
 	
 @use('post_sale_map')
 @use('unique_catalogs')
@@ -1457,22 +1454,9 @@ class ProvenancePipeline:
 			_input=sales.output
 		)
 		
-		destructions = graph.add_chain(
-			ExtractKeyedValue(key='_destruction'),
-			AddArchesModel(model=self.models['Destruction']),
-			_input=objects.output
-		)
-		events = graph.add_chain(
-			ExtractKeyedValues(key='_events'),
-			AddArchesModel(model=self.models['Event']),
-			_input=objects.output
-		)
-		
 		if serialize:
 			# write OBJECTS data
 			self.add_serialization_chain(graph, objects.output)
-			self.add_serialization_chain(graph, destructions.output)
-			self.add_serialization_chain(graph, events.output)
 
 		return objects
 

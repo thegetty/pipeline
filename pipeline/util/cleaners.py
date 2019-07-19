@@ -547,7 +547,7 @@ def parse_location(*parts, uri_base=None, types=None):
 	}
 
 	if len(parts) == 2:
-		city_name = parts.pop(0)
+		city_name = parts[0]
 		current = {
 			'type': 'City',
 			'name': city_name,

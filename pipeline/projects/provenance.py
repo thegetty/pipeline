@@ -13,6 +13,7 @@ import uuid
 import csv
 import pprint
 import itertools
+import datetime
 from collections import Counter, defaultdict, namedtuple
 from contextlib import suppress
 import inspect
@@ -30,7 +31,8 @@ import settings
 from cromulent import model, vocab
 from pipeline.util import RecursiveExtractKeyedValue, ExtractKeyedValue, ExtractKeyedValues, \
 			MatchingFiles, identity, implode_date, timespan_before, timespan_after
-from pipeline.util.cleaners import dimensions_cleaner, normalized_dimension_object, parse_location, parse_location_name, date_parse
+from pipeline.util.cleaners import dimensions_cleaner, normalized_dimension_object, \
+			parse_location, parse_location_name, date_parse, date_cleaner
 from pipeline.io.file import MergingFileWriter
 # from pipeline.io.arches import ArchesWriter
 from pipeline.linkedart import \
@@ -38,6 +40,7 @@ from pipeline.linkedart import \
 			get_crom_object, \
 			MakeLinkedArtHumanMadeObject, \
 			MakeLinkedArtAuctionHouseOrganization, \
+			MakeLinkedArtOrganization, \
 			make_la_person, \
 			make_la_place
 from pipeline.io.csv import CurriedCSVReader
@@ -59,8 +62,13 @@ class DictWrapper:
 	Wrapper of a dictionary used to work around a limitation in bonobo services, which
 	seem to fail when using plain `dict` values.
 	'''
-	def __init__(self):
+	def __init__(self, value=None):
 		self.d = {}
+		if isinstance(value, dict):
+			self.d = value
+		elif isinstance(value, str):
+			with open(value, 'r') as f:
+				self.d = json.load(f)
 
 	def set(self, key, value):
 		'''Set `key` to `value`.'''
@@ -69,6 +77,9 @@ class DictWrapper:
 	def get(self, key):
 		'''Get the value associated with `key`.'''
 		return self.d.get(key)
+
+	def __getitem__(self, key):
+		return self.get(key)
 
 def pir_uri(*values):
 	'''Convert a set of identifying `values` into a URI'''
@@ -176,8 +187,12 @@ def timespan_from_outer_bounds(begin=None, end=None):
 	if begin or end:
 		ts = model.TimeSpan(ident='')
 		if begin is not None:
+			if isinstance(begin, datetime.datetime):
+				begin = begin.strftime("%Y-%m-%dT%H:%M:%SZ")
 			ts.begin_of_the_begin = begin
 		if end is not None:
+			if isinstance(end, datetime.datetime):
+				end = end.strftime("%Y-%m-%dT%H:%M:%SZ")
 			ts.end_of_the_end = end
 		return ts
 	return None
@@ -218,7 +233,7 @@ def populate_auction_event(data, auction_locations):
 	place_data = make_la_place(current)
 	place = get_crom_object(place_data)
 	if place:
-		data['_location'] = place_data
+		data['_locations'] = [place_data]
 		auction.took_place_at = place
 		auction_locations.set(cno, place)
 
@@ -245,10 +260,8 @@ def add_auction_house_data(a):
 		a['uid'] = key
 		a['uri'] = pir_uri('AUCTION-HOUSE', 'ULAN', ulan)
 		a['identifiers'] = [model.Identifier(content=ulan)]
-		a['exact_match'] = [model.BaseResource(ident=f'http://vocab.getty.edu/ulan/{ulan}')]
+		a['ulan'] = ulan
 		house = vocab.AuctionHouseOrg(ident=a['uri'])
-		for uri in a.get('exact_match', []):
-			house.exact_match = uri
 	else:
 		# not enough information to identify this person uniquely, so they get a UUID
 		a['uuid'] = str(uuid.uuid4())
@@ -405,19 +418,19 @@ class AddAuctionOfLot(Configurable):
 		data['uri'] = uri
 
 		lot = vocab.Auction(ident=data['uri'])
-		lot._label = f'Auction of Lot {cno} {shared_lot_number}'
+		lot._label = f'Auction of Lot {cno} {shared_lot_number} ({date})'
 
 		self.set_lot_auction_houses(lot, cno, auction_houses)
 		self.set_lot_location(lot, cno, auction_locations)
 		self.set_lot_date(lot, auction_data)
 		self.set_lot_notes(lot, auction_data)
 		self.set_lot_objects(lot, lno, data)
-
+		
 		tx_uri = AddAuctionOfLot.transaction_uri_for_lot(auction_data, data.get('price', []))
 		tx = vocab.Procurement(ident=tx_uri)
 		lot.caused = tx
 		tx_data = {'_date': lot.timespan}
-		data['_transaction'] = add_crom_data(data=tx_data, what=tx)
+		data['_procurement_data'] = add_crom_data(data=tx_data, what=tx)
 
 		add_crom_data(data=data, what=lot)
 		yield data
@@ -428,6 +441,7 @@ def add_crom_price(data, _):
 	the supplied `data` dict.
 	'''
 	MAPPING = {
+		'Österreichische Schilling': 'at shillings',
 		'florins': 'de florins',
 		'fl': 'de florins',
 		'fl.': 'de florins',
@@ -504,7 +518,7 @@ def add_person(data: dict):
 		data['uid'] = key
 		data['uri'] = pir_uri('PERSON', 'ULAN', ulan)
 		data['identifiers'] = [model.Identifier(content=ulan)]
-		data['exact_match'] = [model.BaseResource(ident=f'http://vocab.getty.edu/ulan/{ulan}')]
+		data['ulan'] = ulan
 	else:
 		# not enough information to identify this person uniquely, so they get a UUID
 		data['uuid'] = str(uuid.uuid4())
@@ -546,21 +560,31 @@ def add_acquisition(data, object, buyers, sellers):
 	for buyer in [get_crom_object(b) for b in buyers]:
 		paym.paid_from = buyer
 		acq.transferred_title_to = buyer
+	if len(amnts) > 1:
+		pprint.pprint(prices)
 	for amnt in amnts:
 		paym.paid_amount = amnt
 
-	tx_data = parent['_transaction']
+	tx_data = parent['_procurement_data']
 	current_tx = get_crom_object(tx_data)
 	ts = tx_data.get('_date')
 	if ts:
 		acq.timespan = ts
 	current_tx.part = paym
 	current_tx.part = acq
-	data['_transactions'] = [add_crom_data(data={}, what=current_tx)]
+	if '_procurements' not in data:
+		data['_procurements'] = []
+	data['_procurements'] += [add_crom_data(data={}, what=current_tx)]
 # 	lot_uid, lot_uri = AddAuctionOfLot.shared_lot_number_ids(cno, lno)
 	# TODO: `annotation` here is from add_physical_catalog_objects
 # 	paym.referred_to_by = annotation
 	add_crom_data(data=data, what=acq)
+
+	final_owner = data.get('_final_owning_organization')
+	if final_owner:
+		tx = related_procurement(current_tx, object, ts, buyer=final_owner)
+		tx._label = f'Procurement leading to the currently known location of “{object_label}”'
+		data['_procurements'].append(add_crom_data(data={}, what=tx))
 
 	post_own = data.get('post_owner', [])
 	prev_own = data.get('prev_owner', [])
@@ -579,24 +603,44 @@ def add_acquisition(data, object, buyers, sellers):
 				note = vocab.Note(content=own_info_source)
 				object.referred_to_by = note
 				owner.referred_to_by = note
-			tx = vocab.Procurement()
-			if rev:
-				tx.ends_before_the_start_of = current_tx
-			else:
-				tx.starts_after_the_end_of = current_tx
-			modifier_label = 'Previous' if rev else 'Subsequent'
-			pacq = model.Acquisition(label=f'{modifier_label} Acquisition of: “{object_label}”')
-			pacq.transferred_title_of = object
-			pacq.transferred_title_to = owner
-			tx.part = pacq
-			tx_data = {}
-			if ts:
-				if rev:
-					pacq.timespan = timespan_before(ts)
-				else:
-					pacq.timespan = timespan_after(ts)
-			data['_transactions'].append(add_crom_data(data=tx_data, what=tx))
+			tx = related_procurement(current_tx, object, ts, buyer=owner, previous=rev)
+			ptx_data = tx_data.copy()
+			data['_procurements'].append(add_crom_data(data=ptx_data, what=tx))
 	yield data
+
+def related_procurement(current_tx, object, current_ts=None, buyer=None, seller=None, previous=False):
+	'''
+	Returns a new `vocab.Procurement` object (and related acquisition) that is temporally
+	related to the supplied procurement and associated data. The new procurement is for
+	the given object, and has the given buyer and seller (both optional).
+	
+	If the `previous` flag is `True`, the new procurement is occurs before `current_tx`,
+	and if the timespan `current_ts` is given, has temporal data to that effect. If
+	`previous` is `False`, this relationship is reversed.
+	'''
+	tx = vocab.Procurement()
+	if previous:
+		tx.ends_before_the_start_of = current_tx
+	else:
+		tx.starts_after_the_end_of = current_tx
+	modifier_label = 'Previous' if previous else 'Subsequent'
+	try:
+		pacq = model.Acquisition(label=f'{modifier_label} Acquisition of: “{object._label}”')
+	except:
+		pacq = model.Acquisition(label=f'{modifier_label} Acquisition')
+	pacq.transferred_title_of = object
+	if buyer:
+		pacq.transferred_title_to = buyer
+	if seller:
+		pacq.transferred_title_from = seller
+	tx.part = pacq
+	tx_data = {}
+	if current_ts:
+		if previous:
+			pacq.timespan = timespan_before(current_ts)
+		else:
+			pacq.timespan = timespan_after(current_ts)
+	return tx
 
 def add_bidding(data, buyers):
 	'''Add modeling of bids that did not lead to an acquisition'''
@@ -696,6 +740,32 @@ def genre_instance(value):
 	}
 	return MAPPING.get(value)
 
+def populate_destruction_events(data, note):
+	object = get_crom_object(data)
+	title = data.get('title')
+	DESTRUCTION_METHODS = { # TODO: 
+		'fire': model.Type(ident='http://vocab.getty.edu/aat/300068986', label='Fire'),
+	}
+	r = re.compile(r'Destroyed(?: (?:by|during) (\w+))?(?: in (\d{4})[.]?)?')
+	m = r.search(note)
+	if m:
+		method = m.group(1)
+		year = m.group(2)
+		d = model.Destruction(label=f'Destruction of “{title}”')
+		d.referred_to_by = vocab.Note(content=note)
+		if year is not None:
+			begin, end = date_cleaner(year)
+			ts = timespan_from_outer_bounds(begin, end)
+			d.timespan = ts
+		object.destroyed_by = d
+
+		if method:
+			with suppress(KeyError, AttributeError):
+				type = DESTRUCTION_METHODS[method.lower()]
+				event = model.Event(label=f'{method.capitalize()} event causing the destruction of “{title}”')
+				event.classified_as = type
+				d.caused_by = event
+	
 @use('post_sale_map')
 @use('unique_catalogs')
 def populate_object(data, post_sale_map, unique_catalogs):
@@ -728,23 +798,44 @@ def populate_object(data, post_sale_map, unique_catalogs):
 		# pprint.pprint(location)
 		loc = location.get('geog')
 		if loc:
-			current = parse_location_name(loc, uri_base=UID_TAG_PREFIX)
-			# TODO: if `parse_location_name` fails, still preserve the location string somehow
-			inst = location.get('inst')
-			if inst:
-				current = {
-					'type': 'Specific Place',
-					'name': inst,
-					'part_of': current
-				}
-			place_data = make_la_place(current)
-			place = get_crom_object(place_data)
-			data['_location'] = place_data
-			object.current_location = place # TODO: this modeling should change to be equivalent to a final "post owner" of the "present location institution"
+			if 'Destroyed ' in loc:
+				populate_destruction_events(data, loc)
+			else:
+				current = parse_location_name(loc, uri_base=UID_TAG_PREFIX)
+				place_data = make_la_place(current)
+				place = get_crom_object(place_data)
+				# TODO: if `parse_location_name` fails, still preserve the location string somehow
+				inst = location.get('inst')
+				if inst:
+					owner_data = {
+						'name': inst,
+						'label': f'{inst} ({loc})',
+					}
+					ulan = location.get('insi')
+					if ulan:
+						owner_data['ulan'] = ulan
+						owner_data['uri'] = pir_uri('ORGANIZATION', 'ULAN', ulan)
+					else:
+						owner_data['uri'] = pir_uri('ORGANIZATION', 'NAME', inst, 'PLACE', loc)
+					
+					lao = MakeLinkedArtOrganization()
+					owner_data = lao(owner_data)
+					owner = get_crom_object(owner_data)
+					owner.residence = place
+					data['_locations'] = [place_data]
+					pprint.pprint(place_data)
+					data['_final_owning_organization'] = owner
+				else:
+					pass # TODO: there's a location but no institution; create procurement->acquisition->(anonymous institution)->place->(place name)
+# 				object.current_location = place # TODO: this modeling should change to be equivalent to a final "post owner" of the "present location institution"
 		note = location.get('note')
 		if note:
 			pass
 			# TODO: the acquisition_note needs to be attached as a Note to the final post owner acquisition
+
+	notes = parent.get('auction_of_lot', {}).get('lot_notes')
+	if notes and notes.startswith('Destroyed'):
+		populate_destruction_events(data, notes)
 
 	notes = data.get('hand_note', [])
 	for note in notes:
@@ -861,9 +952,15 @@ def add_pir_artists(data):
 	data['_artists'] = artists
 	for a in artists:
 		star_rec_no = a.get('star_rec_no')
-		key = f'PERSON-star-{star_rec_no}'
+		ulan = a.get('artist_ulan')
+		if ulan:
+			key = f'PERSON-ULAN-{ulan}'
+			a['uri'] = pir_uri('PERSON', 'ULAN', ulan)
+			a['ulan'] = ulan
+		else:
+			key = f'PERSON-STAR-{star_rec_no}'
+			a['uri'] = pir_uri('PERSON', 'star', star_rec_no)
 		a['uid'] = key
-		a['uri'] = pir_uri('PERSON', 'star', star_rec_no) # TODO: Do we need to handle ULAN here?
 		if a.get('artist_name'):
 			name = a.get('artist_name')
 			a['names'] = [(name,)]
@@ -920,8 +1017,9 @@ def add_physical_catalog_objects(data):
 	add_crom_data(data=data, what=catalogObject)
 	return data
 
+@use('location_codes')
 @use('unique_catalogs')
-def add_physical_catalog_owners(data, unique_catalogs):
+def add_physical_catalog_owners(data, location_codes, unique_catalogs):
 	'''Add information about the ownership of a physical copy of an auction catalog'''
 	# TODO: Add information about the current owner of the physical catalog copy
 	# TODO: are the values of data['owner_code'] mapped somewhere?
@@ -930,8 +1028,20 @@ def add_physical_catalog_owners(data, unique_catalogs):
 	# later to figure out which catalogs can be uniquely identified by a catalog number
 	# and owner code (e.g. for owners who do not have multiple copies of a catalog).
 	cno = data['catalog_number']
-	owner = data['owner_code']
-	uri = pir_uri('CATALOG', cno, owner, None)
+	owner_code = data['owner_code']
+	owner_name = location_codes[owner_code]
+	data['_owner'] = {
+		'name': owner_name,
+		'label': owner_name,
+		'uri': pir_uri('ORGANIZATION', 'LOCATION-CODE', owner_code),
+		'identifiers': [model.Identifier(ident='', content=owner_code)],
+	}
+	owner = model.Group(ident=data['_owner']['uri'])
+	owner_data = add_crom_data(data=data['_owner'], what=owner)
+	catalog = get_crom_object(data)
+	catalog.current_owner = owner
+	
+	uri = pir_uri('CATALOG', cno, owner_code, None)
 	if uri not in unique_catalogs.d:
 		unique_catalogs.d[uri] = set()
 	unique_catalogs.d[uri].add(uri)
@@ -1007,6 +1117,7 @@ class ProvenancePipeline:
 			'post_sale_map': DictWrapper(),
 			'auction_houses': DictWrapper(),
 			'auction_locations': DictWrapper(),
+			'location_codes': DictWrapper(os.path.join(self.input_path, 'pir_location_codes.json')),
 			'trace_counter': itertools.count(),
 			'gpi': create_engine(settings.gpi_engine),
 			'aat': create_engine(settings.aat_engine),
@@ -1024,6 +1135,19 @@ class ProvenancePipeline:
 			)
 		else:
 			sys.stderr.write('*** No serialization chain defined\n')
+
+	def add_physical_catalog_owners_chain(self, graph, catalogs, serialize=True):
+		'''Add modeling of physical copies of auction catalogs.'''
+		groups = graph.add_chain(
+			ExtractKeyedValue(key='_owner'),
+			MakeLinkedArtOrganization(),
+			AddArchesModel(model=self.models['Group']),
+			_input=catalogs.output
+		)
+		if serialize:
+			# write SALES data
+			self.add_serialization_chain(graph, groups.output)
+		return groups
 
 	def add_physical_catalogs_chain(self, graph, records, serialize=True):
 		'''Add modeling of physical copies of auction catalogs.'''
@@ -1100,7 +1224,7 @@ class ProvenancePipeline:
 	def add_procurement_chain(self, graph, acquisitions, serialize=True):
 		'''Add modeling of the procurement event of an auction of a lot.'''
 		p = graph.add_chain(
-			ExtractKeyedValues(key='_transactions'),
+			ExtractKeyedValues(key='_procurements'),
 			AddArchesModel(model=self.models['Procurement']),
 			_input=acquisitions.output
 		)
@@ -1331,15 +1455,17 @@ class ProvenancePipeline:
 			add_pir_artists,
 			_input=sales.output
 		)
+		
 		if serialize:
 			# write OBJECTS data
 			self.add_serialization_chain(graph, objects.output)
+
 		return objects
 
 	def add_places_chain(self, graph, auction_events, serialize=True):
-		'''Add modeling of the location of an auction event.'''
+		'''Add extraction and serialization of locations.'''
 		places = graph.add_chain(
-			ExtractKeyedValue(key='_location'),
+			ExtractKeyedValues(key='_locations'),
 			RecursiveExtractKeyedValue(key='part_of'),
 			AddArchesModel(model=self.models['Place']),
 			_input=auction_events.output
@@ -1404,7 +1530,8 @@ class ProvenancePipeline:
 				CurriedCSVReader(fs='fs.data.pir', limit=self.limit),
 			)
 
-			_ = self.add_physical_catalogs_chain(g, physical_catalog_records, serialize=True)
+			catalogs = self.add_physical_catalogs_chain(g, physical_catalog_records, serialize=True)
+			_ = self.add_physical_catalog_owners_chain(g, catalogs, serialize=True)
 			auction_events = self.add_auction_events_chain(g, auction_events_records, serialize=True)
 			_ = self.add_catalog_linguistic_objects(g, auction_events, serialize=True)
 			_ = self.add_auction_houses_chain(g, auction_events, serialize=True)

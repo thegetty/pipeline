@@ -13,7 +13,7 @@ def merge_lists(l, r):
 	other = []
 	for item in all_items:
 		try:
-			item_id = item.get('id')
+			item_id = item['id']
 			if item_id in identified:
 				identified[item_id] += [item]
 			else:
@@ -21,7 +21,7 @@ def merge_lists(l, r):
 		except:
 			other.append(item)
 
-	for items in identified.values():
+	for ident, items in identified.items():
 		r = items[:]
 		while len(r) > 1:
 			a = r.pop(0)

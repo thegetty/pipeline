@@ -1,4 +1,6 @@
 import pprint
+from contextlib import suppress
+
 from cromulent import model, vocab
 from cromulent.model import factory
 factory.auto_id_type = 'uuid'
@@ -186,7 +188,12 @@ class MakeLinkedArtOrganization(MakeLinkedArtRecord):
 	# TODO: document the expected format of data['names']
 	def set_properties(self, data, thing):
 		super().set_properties(data, thing)
-		thing._label = str(data['label'])
+		with suppress(KeyError):
+			thing._label = str(data['label'])
+
+		ulan = data.get('ulan')
+		if ulan:
+			thing.exact_match = model.BaseResource(ident=f'http://vocab.getty.edu/ulan/{ulan}')
 
 		if 'events' in data:
 			for event in data['events']:
@@ -220,6 +227,10 @@ def make_la_person(data: dict):
 		uri = "urn:uuid:%s" % data['uuid']
 	who = model.Person(ident=uri)
 	who._label = str(data['label'])
+
+	ulan = data.get('ulan')
+	if ulan:
+		who.exact_match = model.BaseResource(ident=f'http://vocab.getty.edu/ulan/{ulan}')
 
 	for ns in ['aat_nationality_1', 'aat_nationality_2','aat_nationality_3']:
 		# add nationality
@@ -281,8 +292,7 @@ def make_la_person(data: dict):
 
 	# Add names
 	for name in data.get('names', []):
-		n = model.Name()
-		n.content = name[0]
+		n = model.Name(ident='', content=name[0])
 		for ref in name[1:]:
 			l = model.LinguisticObject(ident="urn:uuid:%s" % ref[1])
 			# l._label = _row_label(ref[2][0], ref[2][1], ref[2][2])

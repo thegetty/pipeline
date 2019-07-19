@@ -430,7 +430,7 @@ class AddAuctionOfLot(Configurable):
 		tx = vocab.Procurement(ident=tx_uri)
 		lot.caused = tx
 		tx_data = {'_date': lot.timespan}
-		data['_transaction'] = add_crom_data(data=tx_data, what=tx)
+		data['_procurement'] = add_crom_data(data=tx_data, what=tx)
 
 		add_crom_data(data=data, what=lot)
 		yield data
@@ -565,14 +565,14 @@ def add_acquisition(data, object, buyers, sellers):
 	for amnt in amnts:
 		paym.paid_amount = amnt
 
-	tx_data = parent['_transaction']
+	tx_data = parent['_procurement']
 	current_tx = get_crom_object(tx_data)
 	ts = tx_data.get('_date')
 	if ts:
 		acq.timespan = ts
 	current_tx.part = paym
 	current_tx.part = acq
-	data['_transactions'] = [add_crom_data(data={}, what=current_tx)]
+	data['_procurements'] = [add_crom_data(data={}, what=current_tx)]
 # 	lot_uid, lot_uri = AddAuctionOfLot.shared_lot_number_ids(cno, lno)
 	# TODO: `annotation` here is from add_physical_catalog_objects
 # 	paym.referred_to_by = annotation
@@ -611,7 +611,7 @@ def add_acquisition(data, object, buyers, sellers):
 					pacq.timespan = timespan_before(ts)
 				else:
 					pacq.timespan = timespan_after(ts)
-			data['_transactions'].append(add_crom_data(data=tx_data, what=tx))
+			data['_procurements'].append(add_crom_data(data=tx_data, what=tx))
 	yield data
 
 def add_bidding(data, buyers):
@@ -1185,7 +1185,7 @@ class ProvenancePipeline:
 	def add_procurement_chain(self, graph, acquisitions, serialize=True):
 		'''Add modeling of the procurement event of an auction of a lot.'''
 		p = graph.add_chain(
-			ExtractKeyedValues(key='_transactions'),
+			ExtractKeyedValues(key='_procurements'),
 			AddArchesModel(model=self.models['Procurement']),
 			_input=acquisitions.output
 		)

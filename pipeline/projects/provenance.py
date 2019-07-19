@@ -430,7 +430,7 @@ class AddAuctionOfLot(Configurable):
 		tx = vocab.Procurement(ident=tx_uri)
 		lot.caused = tx
 		tx_data = {'_date': lot.timespan}
-		data['_procurement'] = add_crom_data(data=tx_data, what=tx)
+		data['_procurement_data'] = add_crom_data(data=tx_data, what=tx)
 
 		add_crom_data(data=data, what=lot)
 		yield data
@@ -565,18 +565,26 @@ def add_acquisition(data, object, buyers, sellers):
 	for amnt in amnts:
 		paym.paid_amount = amnt
 
-	tx_data = parent['_procurement']
+	tx_data = parent['_procurement_data']
 	current_tx = get_crom_object(tx_data)
 	ts = tx_data.get('_date')
 	if ts:
 		acq.timespan = ts
 	current_tx.part = paym
 	current_tx.part = acq
-	data['_procurements'] = [add_crom_data(data={}, what=current_tx)]
+	if '_procurements' not in data:
+		data['_procurements'] = []
+	data['_procurements'] += [add_crom_data(data={}, what=current_tx)]
 # 	lot_uid, lot_uri = AddAuctionOfLot.shared_lot_number_ids(cno, lno)
 	# TODO: `annotation` here is from add_physical_catalog_objects
 # 	paym.referred_to_by = annotation
 	add_crom_data(data=data, what=acq)
+
+	final_owner = data.get('_final_owning_organization')
+	if final_owner:
+		tx = related_procurement(current_tx, object, ts, buyer=final_owner)
+		tx._label = 'Procurement leading to the currently known location of “{object_label}”'
+		data['_procurements'].append(add_crom_data(data={}, what=tx))
 
 	post_own = data.get('post_owner', [])
 	prev_own = data.get('prev_owner', [])
@@ -595,24 +603,44 @@ def add_acquisition(data, object, buyers, sellers):
 				note = vocab.Note(content=own_info_source)
 				object.referred_to_by = note
 				owner.referred_to_by = note
-			tx = vocab.Procurement()
-			if rev:
-				tx.ends_before_the_start_of = current_tx
-			else:
-				tx.starts_after_the_end_of = current_tx
-			modifier_label = 'Previous' if rev else 'Subsequent'
-			pacq = model.Acquisition(label=f'{modifier_label} Acquisition of: “{object_label}”')
-			pacq.transferred_title_of = object
-			pacq.transferred_title_to = owner
-			tx.part = pacq
-			tx_data = {}
-			if ts:
-				if rev:
-					pacq.timespan = timespan_before(ts)
-				else:
-					pacq.timespan = timespan_after(ts)
-			data['_procurements'].append(add_crom_data(data=tx_data, what=tx))
+			tx = related_procurement(current_tx, object, ts, buyer=owner, previous=rev)
+			ptx_data = tx_data.copy()
+			data['_procurements'].append(add_crom_data(data=ptx_data, what=tx))
 	yield data
+
+def related_procurement(current_tx, object, current_ts=None, buyer=None, seller=None, previous=False):
+	'''
+	Returns a new `vocab.Procurement` object (and related acquisition) that is temporally
+	related to the supplied procurement and associated data. The new procurement is for
+	the given object, and has the given buyer and seller (both optional).
+	
+	If the `previous` flag is `True`, the new procurement is occurs before `current_tx`,
+	and if the timespan `current_ts` is given, has temporal data to that effect. If
+	`previous` is `False`, this relationship is reversed.
+	'''
+	tx = vocab.Procurement()
+	if previous:
+		tx.ends_before_the_start_of = current_tx
+	else:
+		tx.starts_after_the_end_of = current_tx
+	modifier_label = 'Previous' if previous else 'Subsequent'
+	try:
+		pacq = model.Acquisition(label=f'{modifier_label} Acquisition of: “{object._label}”')
+	except:
+		pacq = model.Acquisition(label=f'{modifier_label} Acquisition')
+	pacq.transferred_title_of = object
+	if buyer:
+		pacq.transferred_title_to = buyer
+	if seller:
+		pacq.transferred_title_from = seller
+	tx.part = pacq
+	tx_data = {}
+	if current_ts:
+		if previous:
+			pacq.timespan = timespan_before(current_ts)
+		else:
+			pacq.timespan = timespan_after(current_ts)
+	return tx
 
 def add_bidding(data, buyers):
 	'''Add modeling of bids that did not lead to an acquisition'''
@@ -777,17 +805,29 @@ def populate_object(data, post_sale_map, unique_catalogs):
 				populate_destruction_events(data, loc)
 			else:
 				current = parse_location_name(loc, uri_base=UID_TAG_PREFIX)
+				place_data = make_la_place(current)
+				place = get_crom_object(place_data)
 				# TODO: if `parse_location_name` fails, still preserve the location string somehow
 				inst = location.get('inst')
 				if inst:
-					current = {
-						'type': 'Specific Place',
+					owner_data = {
 						'name': inst,
-						'part_of': current
+						'label': f'{inst} ({loc})',
 					}
-				place_data = make_la_place(current)
-				place = get_crom_object(place_data)
-				data['_location'] = place_data
+					ulan = location.get('insi')
+					if ulan:
+						owner_data['ulan'] = ulan
+						owner_data['uri'] = pir_uri('ORGANIZATION', 'ULAN', ulan)
+					else:
+						owner_data['uri'] = pir_uri('ORGANIZATION', 'NAME', inst, 'PLACE', loc)
+					
+					lao = MakeLinkedArtOrganization()
+					owner_data = lao(owner_data)
+					owner = get_crom_object(owner_data)
+					owner.residence = place
+					data['_final_owning_organization'] = owner
+				else:
+					pass # TODO: there's a location but no institution; create procurement->acquisition->(anonymous institution)->place->(place name)
 				object.current_location = place # TODO: this modeling should change to be equivalent to a final "post owner" of the "present location institution"
 		note = location.get('note')
 		if note:

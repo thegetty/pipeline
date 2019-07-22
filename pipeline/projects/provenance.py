@@ -54,6 +54,7 @@ from pipeline.nodes.basic import \
 from pipeline.util.rewriting import rewrite_output_files, JSONValueRewriter
 
 UID_TAG_PREFIX = 'tag:getty.edu,2019:digital:pipeline:REPLACE-WITH-UUID#'
+PROBLEMATIC_RECORD_URI = 'tag:getty.edu,2019:digital:pipeline:ProblematicRecord'
 
 #mark - utility functions and classes
 
@@ -317,6 +318,7 @@ def add_auction_houses(data, auction_houses):
 class AddAuctionOfLot(Configurable):
 	'''Add modeling data for the auction of a lot of objects.'''
 	
+	problematic_records = Service('problematic_records')
 	auction_locations = Service('auction_locations')
 	auction_houses = Service('auction_houses')
 	def __init__(self, *args, **kwargs):
@@ -408,7 +410,7 @@ class AddAuctionOfLot(Configurable):
 		lot.used_specific_object = coll
 		data['_lot_object_set'] = coll
 
-	def __call__(self, data, auction_houses, auction_locations):
+	def __call__(self, data, auction_houses, auction_locations, problematic_records):
 		'''Add modeling data for the auction of a lot of objects.'''
 		auction_data = data['auction_of_lot']
 		cno, lno, date = object_key(auction_data)
@@ -419,6 +421,13 @@ class AddAuctionOfLot(Configurable):
 
 		lot = vocab.Auction(ident=data['uri'])
 		lot._label = f'Auction of Lot {cno} {shared_lot_number} ({date})'
+
+		for pcno, plno, pdate, problem in problematic_records['lots']:
+			if cno == pcno and lno == plno and date == pdate:
+				note = model.LinguisticObject(content=problem)
+				note.classified_as = vocab.instances["brief text"]
+				note.classified_as = model.Type(ident=PROBLEMATIC_RECORD_URI, label='Problematic Record')
+				lot.referred_to_by = note
 
 		self.set_lot_auction_houses(lot, cno, auction_houses)
 		self.set_lot_location(lot, cno, auction_locations)
@@ -683,7 +692,7 @@ def add_bidding(data, buyers):
 		final_owner_data = data.get('_final_org')
 		if final_owner_data:
 			final_owner = get_crom_object(final_owner_data)
-			tx = final_owner_procurement(final_owner, current_tx, object, ts)
+			tx = final_owner_procurement(final_owner, None, object, ts)
 			data['_procurements'].append(add_crom_data(data={}, what=tx))
 
 		add_crom_data(data=data, what=all_bids)
@@ -845,6 +854,8 @@ def populate_object(data, post_sale_map, unique_catalogs):
 				owner.residence = place
 				data['_locations'] = [place_data]
 				data['_final_org'] = owner_data
+		else:
+			pass # there is no present location place string
 		note = location.get('note')
 		if note:
 			pass
@@ -1097,6 +1108,7 @@ class ProvenancePipeline:
 		self.limit = kwargs.get('limit')
 		self.debug = kwargs.get('debug', False)
 		self.input_path = input_path
+		self.pipeline_service_files_path = kwargs.get('pipeline_service_files_path', settings.pipeline_service_files_path)
 
 		fs = bonobo.open_fs(input_path)
 		with fs.open(self.catalogs_header_file, newline='') as csvfile:
@@ -1128,7 +1140,8 @@ class ProvenancePipeline:
 			'post_sale_map': DictWrapper(),
 			'auction_houses': DictWrapper(),
 			'auction_locations': DictWrapper(),
-			'location_codes': DictWrapper(os.path.join(self.input_path, 'pir_location_codes.json')),
+			'location_codes': DictWrapper(os.path.join(self.pipeline_service_files_path, 'pir_location_codes.json')),
+			'problematic_records': DictWrapper(os.path.join(self.pipeline_service_files_path, 'pir_problematic_records.json')),
 			'trace_counter': itertools.count(),
 			'gpi': create_engine(settings.gpi_engine),
 			'aat': create_engine(settings.aat_engine),

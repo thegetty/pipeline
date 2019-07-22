@@ -1257,23 +1257,23 @@ class ProvenancePipeline:
 
 	def add_acquisitions_chain(self, graph, sales, serialize=True):
 		'''Add modeling of the acquisitions and bidding on lots being auctioned.'''
-		_acqs = graph.add_chain(
+		acqs = graph.add_chain(
 			add_acquisition_or_bidding,
 			_input=sales.output
 		)
-		acqs = graph.add_chain(
+		_acqs1 = graph.add_chain(
 			AddArchesModel(model=self.models['Activity']),
-			_input=_acqs.output
+			_input=acqs.output
 		)
 		orgs = graph.add_chain(
 			ExtractKeyedValue(key='_final_org'),
 			AddArchesModel(model=self.models['Group']),
-			_input=_acqs.output
+			_input=acqs.output
 		)
 		
 		if serialize:
 			# write SALES data
-			self.add_serialization_chain(graph, acqs.output)
+			self.add_serialization_chain(graph, _acqs1.output)
 			self.add_serialization_chain(graph, orgs.output)
 		return acqs
 
@@ -1734,6 +1734,22 @@ class ProvenanceFilePipeline(ProvenancePipeline):
 		
 
 class SalesTree:
+	'''
+	This class is used to represent the repeated sales of objects in provenance data.
+	It stores a graph of trees where each node is a lot sale, and edges connect sales
+	of the same object over time.
+	
+	The `post_sale_map` data that is generated during the pipeline run is used to identify
+	lots which contain just a single object. When this data indicates that a single object
+	was sold multiple times, links are added to this `SalesTree` by a call to `add_edge`
+	using the lot keys.
+	
+	Subsequently, `canonical_key` is used to return a single key for each sales record
+	that belongs to a connected component in the `SalesTree` graph. This canonical key
+	is used in a post-processing phase (based on the `post_sale_rewrite_map` file) that
+	rewrites many URLs in the output data which all identify a single object to a single
+	URL.
+	'''
 	def __init__(self):
 		self.counter = itertools.count()
 		self.nodes = {}

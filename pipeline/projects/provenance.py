@@ -536,6 +536,12 @@ def add_person(data: dict):
 	make_la_person(data)
 	return data
 
+def final_owner_procurement(final_owner, current_tx, object, current_ts):
+	object_label = object._label
+	tx = related_procurement(current_tx, object, current_ts, buyer=final_owner)
+	tx._label = f'Procurement leading to the currently known location of “{object_label}”'
+	return tx
+
 def add_acquisition(data, object, buyers, sellers):
 	'''Add modeling of an acquisition as a transfer of title from the seller to the buyer'''
 	parent = data['parent_data']
@@ -560,8 +566,6 @@ def add_acquisition(data, object, buyers, sellers):
 	for buyer in [get_crom_object(b) for b in buyers]:
 		paym.paid_from = buyer
 		acq.transferred_title_to = buyer
-	if len(amnts) > 1:
-		pprint.pprint(prices)
 	for amnt in amnts:
 		paym.paid_amount = amnt
 
@@ -580,10 +584,10 @@ def add_acquisition(data, object, buyers, sellers):
 # 	paym.referred_to_by = annotation
 	add_crom_data(data=data, what=acq)
 
-	final_owner = data.get('_final_owning_organization')
-	if final_owner:
-		tx = related_procurement(current_tx, object, ts, buyer=final_owner)
-		tx._label = f'Procurement leading to the currently known location of “{object_label}”'
+	final_owner_data = data.get('_final_org')
+	if final_owner_data:
+		final_owner = get_crom_object(final_owner_data)
+		tx = final_owner_procurement(final_owner, current_tx, object, ts)
 		data['_procurements'].append(add_crom_data(data={}, what=tx))
 
 	post_own = data.get('post_owner', [])
@@ -619,10 +623,11 @@ def related_procurement(current_tx, object, current_ts=None, buyer=None, seller=
 	`previous` is `False`, this relationship is reversed.
 	'''
 	tx = vocab.Procurement()
-	if previous:
-		tx.ends_before_the_start_of = current_tx
-	else:
-		tx.starts_after_the_end_of = current_tx
+	if current_tx:
+		if previous:
+			tx.ends_before_the_start_of = current_tx
+		else:
+			tx.starts_after_the_end_of = current_tx
 	modifier_label = 'Previous' if previous else 'Subsequent'
 	try:
 		pacq = model.Acquisition(label=f'{modifier_label} Acquisition of: “{object._label}”')
@@ -674,6 +679,12 @@ def add_bidding(data, buyers):
 				bid.carried_out_by = buyer
 
 			all_bids.part = bid
+
+		final_owner_data = data.get('_final_org')
+		if final_owner_data:
+			final_owner = get_crom_object(final_owner_data)
+			tx = final_owner_procurement(final_owner, current_tx, object, ts)
+			data['_procurements'].append(add_crom_data(data={}, what=tx))
 
 		add_crom_data(data=data, what=all_bids)
 		yield data
@@ -784,6 +795,12 @@ def populate_object(data, post_sale_map, unique_catalogs):
 		matstmt.content = m
 		object.referred_to_by = matstmt
 
+	cno = auction_data['catalog_number']
+	lno = auction_data['lot_number']
+	date = implode_date(auction_data, 'lot_sale_')
+	lot = AddAuctionOfLot.shared_lot_number_from_lno(lno)
+	now_key = (cno, lot, date) # the current key for this object; may be associated later with prev and post object keys
+
 	title = data.get('title')
 	vi = model.VisualItem()
 	if title:
@@ -795,7 +812,6 @@ def populate_object(data, post_sale_map, unique_catalogs):
 
 	location = data.get('present_location')
 	if location:
-		# pprint.pprint(location)
 		loc = location.get('geog')
 		if loc:
 			if 'Destroyed ' in loc:
@@ -817,17 +833,18 @@ def populate_object(data, post_sale_map, unique_catalogs):
 						owner_data['uri'] = pir_uri('ORGANIZATION', 'ULAN', ulan)
 					else:
 						owner_data['uri'] = pir_uri('ORGANIZATION', 'NAME', inst, 'PLACE', loc)
-					
-					lao = MakeLinkedArtOrganization()
-					owner_data = lao(owner_data)
-					owner = get_crom_object(owner_data)
-					owner.residence = place
-					data['_locations'] = [place_data]
-					pprint.pprint(place_data)
-					data['_final_owning_organization'] = owner
 				else:
-					pass # TODO: there's a location but no institution; create procurement->acquisition->(anonymous institution)->place->(place name)
-# 				object.current_location = place # TODO: this modeling should change to be equivalent to a final "post owner" of the "present location institution"
+					owner_data = {
+						'label': '(Anonymous organization)',
+						'name': '(Anonymous organization)',
+						'uri': pir_uri('ORGANIZATION', 'PRESENT-OWNER', *now_key)
+					}
+				lao = MakeLinkedArtOrganization()
+				owner_data = lao(owner_data)
+				owner = get_crom_object(owner_data)
+				owner.residence = place
+				data['_locations'] = [place_data]
+				data['_final_org'] = owner_data
 		note = location.get('note')
 		if note:
 			pass
@@ -852,12 +869,6 @@ def populate_object(data, post_sale_map, unique_catalogs):
 	inscription = data.get('inscription')
 	if inscription:
 		object.carries = vocab.Note(content=inscription)
-
-	cno = auction_data['catalog_number']
-	lno = auction_data['lot_number']
-	date = implode_date(auction_data, 'lot_sale_')
-	lot = AddAuctionOfLot.shared_lot_number_from_lno(lno)
-	now_key = (cno, lot, date)
 
 	post_sales = data.get('post_sale', [])
 	prev_sales = data.get('prev_sale', [])
@@ -1246,14 +1257,24 @@ class ProvenancePipeline:
 
 	def add_acquisitions_chain(self, graph, sales, serialize=True):
 		'''Add modeling of the acquisitions and bidding on lots being auctioned.'''
-		acqs = graph.add_chain(
+		_acqs = graph.add_chain(
 			add_acquisition_or_bidding,
-			AddArchesModel(model=self.models['Activity']),
 			_input=sales.output
 		)
+		acqs = graph.add_chain(
+			AddArchesModel(model=self.models['Activity']),
+			_input=_acqs.output
+		)
+		orgs = graph.add_chain(
+			ExtractKeyedValue(key='_final_org'),
+			AddArchesModel(model=self.models['Group']),
+			_input=_acqs.output
+		)
+		
 		if serialize:
 			# write SALES data
 			self.add_serialization_chain(graph, acqs.output)
+			self.add_serialization_chain(graph, orgs.output)
 		return acqs
 
 	def add_sales_chain(self, graph, records, serialize=True):

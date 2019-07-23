@@ -113,7 +113,7 @@ class TestProvenancePipelineOutput(unittest.TestCase):
 		los = output['model-lo']
 		people = output['model-person']
 		auctions = output['model-activity']
-		houses = output['model-auctionhouse']
+		houses = {k:h for k, h in output['model-auctionhouse'].items() if h.get('classified_as', [{}])[0].get('id') == 'http://vocab.getty.edu/aat/300417515'}
 		
 		self.assertEqual(len(people), 3, 'expected count of people')
 		self.assertEqual(len(objects), 6, 'expected count of physical objects')

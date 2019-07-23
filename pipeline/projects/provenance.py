@@ -413,36 +413,36 @@ class AddAuctionOfLot(Configurable):
 
 def add_crom_price(data, _):
 	'''
-	Add modeling data for `MonetaryAmount`, `StartingPrice`, or `EstimatedPrice`s,
+	Add modeling data for `MonetaryAmount`, `StartingPrice`, or `EstimatedPrice`,
 	based on properties of the supplied `data` dict.
 	
-	For estimated prices, values will be accessed from these keys:
+	For `EstimatedPrice`, values will be accessed from these keys:
 	  - amount: `est_price_amount` or `est_price`
 	  - currency: `est_price_currency` or `est_price_curr`
 	  - note: `est_price_note` or `est_price_desc`
 	  - bibliographic statement: `est_price_citation`
 	
-	For starting prices, values will be accessed from these keys:
+	For `StartingPrice`, values will be accessed from these keys:
 	  - amount: `start_price_amount` or `start_price`
 	  - currency: `start_price_currency` or `start_price_curr`
 	  - note: `start_price_note` or `start_price_desc`
 	  - bibliographic statement: `start_price_citation`
 	
-	For MonetaryAmount prices, values will be accessed from these keys:
+	For `MonetaryAmount` prices, values will be accessed from these keys:
 	  - amount: `price_amount` or `price`
 	  - currency: `price_currency` or `price_curr`
 	  - note: `price_note` or `price_desc`
 	  - bibliographic statement: `price_citation`
 	'''
 	MAPPING = { # TODO: can this be refactored somewhere?
-		'Österreichische Schilling': 'at shillings',
+		'österreichische Schilling': 'at shillings',
 		'florins': 'de florins',
 		'fl': 'de florins',
 		'fl.': 'de florins',
 		'pounds': 'gb pounds',
 		'livres': 'fr livres',
 		'guineas': 'gb guineas',
-		'Reichsmark': 'de reichsmarks'
+		'reichsmark': 'de reichsmarks'
 	}
 
 	amount_type = 'Price'
@@ -486,15 +486,16 @@ def add_crom_price(data, _):
 	# 			print(f'*** Not a numeric price amount: {v}')
 		if price_currency:
 			if price_currency in MAPPING:
-				price_currency = MAPPING[price_currency] # TODO: can this be done safely with the PIR data?
+				with suppress(KeyError):
+					price_currency = MAPPING[price_currency.lower()]
 			if price_currency in vocab.instances:
 				amnt.currency = vocab.instances[price_currency]
 			else:
-				print(f'*** No currency instance defined for {price_currency}')
+				print('*** No currency instance defined for %s' % (price_currency,))
 		if price_amount and price_currency:
-			amnt._label = f'{price_amount} {price_currency}'
+			amnt._label = '%s %s' % (price_amount, price_currency)
 		elif price_amount:
-			amnt._label = f'{price_amount}'
+			amnt._label = '%s' % (price_amount,)
 
 		add_crom_data(data=data, what=amnt)
 	return data

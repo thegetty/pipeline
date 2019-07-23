@@ -11,12 +11,12 @@ from bonobo.config import Configurable, Option, Service
 from cromulent import model
 from cromulent.model import factory, BaseResource
 
-Dimension = namedtuple("Dimension", [
-	'value',	# numeric value
-	'unit',		# unit
-	'which'		# e.g. width, height, ...
-])
-
+# Dimension = namedtuple("Dimension", [
+# 	'value',	# numeric value
+# 	'unit',		# unit
+# 	'which'		# e.g. width, height, ...
+# ])
+# 
 def identity(d):
 	'''
 	Simply yield the value that is passed as an argument.
@@ -255,4 +255,28 @@ def timespan_after(before):
 		return ts
 	except AttributeError:
 		return None
+
+def replace_key_pattern(pat, rep, value):
+	r = re.compile(pat)
+	d = {}
+	for k, v in value.items():
+		m = r.search(k)
+		if m:
+			d[k.replace(m.group(1), rep, 1)] = v
+		else:
+			d[k] = v
+	return d
+
+def strip_key_prefix(prefix, value):
+	'''
+	Strip the given `prefix` string from the beginning of all keys in the supplied `value`
+	dict, returning a copy of `value` with the new keys.
+	'''
+	d = {}
+	for k, v in value.items():
+		if k.startswith(prefix):
+			d[k.replace(prefix, '', 1)] = v
+		else:
+			d[k] = v
+	return d
 

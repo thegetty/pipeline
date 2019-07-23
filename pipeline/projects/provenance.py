@@ -31,9 +31,14 @@ from bonobo.nodes import Limit
 import settings
 from cromulent import model, vocab
 from pipeline.util import RecursiveExtractKeyedValue, ExtractKeyedValue, ExtractKeyedValues, \
-			MatchingFiles, identity, implode_date, timespan_before, timespan_after
-from pipeline.util.cleaners import dimensions_cleaner, normalized_dimension_object, \
-			parse_location, parse_location_name, date_parse, date_cleaner
+			MatchingFiles, identity, implode_date, timespan_before, timespan_after, \
+			replace_key_pattern, strip_key_prefix
+from cromulent.extract import extract_physical_dimensions
+from pipeline.util.cleaners import \
+			parse_location, \
+			parse_location_name, \
+			date_parse, \
+			date_cleaner
 from pipeline.io.file import MergingFileWriter
 # from pipeline.io.arches import ArchesWriter
 from pipeline.linkedart import \
@@ -83,30 +88,6 @@ def filter_empty_people(*people):
 		d = {k: p[k] for k in data_keys if p[k] and p[k] != '0'}
 		if d:
 			yield p
-
-def replace_key_pattern(pat, rep, value):
-	r = re.compile(pat)
-	d = {}
-	for k, v in value.items():
-		m = r.search(k)
-		if m:
-			d[k.replace(m.group(1), rep, 1)] = v
-		else:
-			d[k] = v
-	return d
-
-def strip_key_prefix(prefix, value):
-	'''
-	Strip the given `prefix` string from the beginning of all keys in the supplied `value`
-	dict, returning a copy of `value` with the new keys.
-	'''
-	d = {}
-	for k, v in value.items():
-		if k.startswith(prefix):
-			d[k.replace(prefix, '', 1)] = v
-		else:
-			d[k] = v
-	return d
 
 def add_pir_record_ids(data, parent):
 	'''Copy identifying key-value pairs from `parent` to `data`, returning `data`'''
@@ -432,10 +413,28 @@ class AddAuctionOfLot(Configurable):
 
 def add_crom_price(data, _):
 	'''
-	Add modeling data for `MonetaryAmount`s or `EstimatedPrice`s, based on properties of
-	the supplied `data` dict.
+	Add modeling data for `MonetaryAmount`, `StartingPrice`, or `EstimatedPrice`s,
+	based on properties of the supplied `data` dict.
+	
+	For estimated prices, values will be accessed from these keys:
+	  - amount: `est_price_amount` or `est_price`
+	  - currency: `est_price_currency` or `est_price_curr`
+	  - note: `est_price_note` or `est_price_desc`
+	  - bibliographic statement: `est_price_citation`
+	
+	For starting prices, values will be accessed from these keys:
+	  - amount: `start_price_amount` or `start_price`
+	  - currency: `start_price_currency` or `start_price_curr`
+	  - note: `start_price_note` or `start_price_desc`
+	  - bibliographic statement: `start_price_citation`
+	
+	For MonetaryAmount prices, values will be accessed from these keys:
+	  - amount: `price_amount` or `price`
+	  - currency: `price_currency` or `price_curr`
+	  - note: `price_note` or `price_desc`
+	  - bibliographic statement: `price_citation`
 	'''
-	MAPPING = {
+	MAPPING = { # TODO: can this be refactored somewhere?
 		'Österreichische Schilling': 'at shillings',
 		'florins': 'de florins',
 		'fl': 'de florins',
@@ -449,24 +448,28 @@ def add_crom_price(data, _):
 	amount_type = 'Price'
 	if 'est_price' in data:
 		amnt = vocab.EstimatedPrice()
-		price_amount = data.get('est_price')
-		price_currency = data.get('est_price_curr')
+		price_amount = data.get('est_price_amount', data.get('est_price'))
+		price_currency = data.get('est_price_currency', data.get('est_price_curr'))
 		amount_type = 'Estimated Price'
-		note = data.get('est_price_desc')
+		note = data.get('est_price_note', data.get('est_price_desc'))
+		cite = data.get('est_price_citation')
 	elif 'start_price' in data:
 		amnt = vocab.StartingPrice()
-		price_amount = data.get('start_price')
-		price_currency = data.get('start_price_curr')
+		price_amount = data.get('start_price_amount', data.get('start_price'))
+		price_currency = data.get('start_price_currency', data.get('start_price_curr'))
 		amount_type = 'Starting Price'
-		note = data.get('start_price_desc')
+		note = data.get('start_price_note', data.get('start_price_desc'))
+		cite = data.get('start_price_citation')
 	else:
 		amnt = model.MonetaryAmount()
-		price_amount = data.get('price_amount')
-		price_currency = data.get('price_currency')
-		note = data.get('price_note')
+		price_amount = data.get('price_amount', data.get('price'))
+		price_currency = data.get('price_currency', data.get('price_curr'))
+		note = data.get('price_note', data.get('price_desc'))
 		cite = data.get('price_citation')
-		if cite:
-			amnt.referred_to_by = vocab.BibliographyStatement(content=cite)
+	if cite:
+		amnt.referred_to_by = vocab.BibliographyStatement(content=cite)
+	if note:
+		amnt.referred_to_by = vocab.Note(content=note)
 
 	if price_amount or price_currency:
 		if price_amount:
@@ -493,8 +496,6 @@ def add_crom_price(data, _):
 		elif price_amount:
 			amnt._label = f'{price_amount}'
 
-		if note:
-			amnt.referred_to_by = vocab.Note(content=note)
 		add_crom_data(data=data, what=amnt)
 	return data
 
@@ -739,7 +740,7 @@ def genre_instance(value):
 	# TODO: are these OK AAT instances for these genres?
 	ANIMALS = model.Type(ident='http://vocab.getty.edu/aat/300249395', label='Animals')
 	HISTORY = model.Type(ident='http://vocab.getty.edu/aat/300033898', label='History')
-	MAPPING = {
+	MAPPING = { # TODO: can this be refactored somewhere?
 		'animals': ANIMALS,
 		'tiere': ANIMALS,
 		'stilleben': vocab.instances['style still life'],
@@ -756,7 +757,7 @@ def genre_instance(value):
 def populate_destruction_events(data, note):
 	hmo = get_crom_object(data)
 	title = data.get('title')
-	DESTRUCTION_METHODS = { # TODO: 
+	DESTRUCTION_METHODS = { # TODO: can this be refactored somewhere?
 		'fire': model.Type(ident='http://vocab.getty.edu/aat/300068986', label='Fire'),
 	}
 	r = re.compile(r'Destroyed(?: (?:by|during) (\w+))?(?: in (\d{4})[.]?)?')
@@ -894,27 +895,8 @@ def populate_object(data, post_sale_map, unique_catalogs):
 		dimstmt = vocab.DimensionStatement()
 		dimstmt.content = dimstr
 		hmo.referred_to_by = dimstmt
-		dimensions = dimensions_cleaner(dimstr)
-		if dimensions:
-			for orig_d in dimensions:
-				dimdata = normalized_dimension_object(orig_d)
-				if dimdata:
-					d, label = dimdata
-					if d.which == 'height':
-						dim = vocab.Height()
-					elif d.which == 'width':
-						dim = vocab.Width()
-					else:
-						dim = vocab.PhysicalDimension()
-					dim.identified_by = model.Name(content=label)
-					dim.value = d.value
-					unit = vocab.instances.get(d.unit)
-					if unit:
-						dim.unit = unit
-					hmo.dimension = dim
-				else:
-					pass
-# 					print(f'Failed to normalize dimensions: {orig_d}')
+		for dim in extract_physical_dimensions(dimstr):
+			hmo.dimension = dim
 		else:
 			pass
 # 			print(f'No dimension data was parsed from the dimension statement: {dimstr}')
@@ -922,7 +904,7 @@ def populate_object(data, post_sale_map, unique_catalogs):
 
 def add_object_type(data):
 	'''Add appropriate type information for an object based on its 'object_type' name'''
-	TYPES = { # TODO: should this be in settings (or elsewhere)?
+	TYPES = { # TODO: can this be refactored somewhere?
 		'dessin': vocab.Drawing,
 		'drawing': vocab.Drawing,
 		'émail': vocab.Enamel,

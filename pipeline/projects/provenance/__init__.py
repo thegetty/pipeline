@@ -1577,5 +1577,3 @@ class ProvenanceFilePipeline(ProvenancePipeline):
 		self.merge_post_sale_objects(counter, post_map)
 		print(f'>>> {len(post_map)} post sales records')
 		print('Total runtime: ', timeit.default_timer() - start)  
-		
-

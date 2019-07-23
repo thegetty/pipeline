@@ -59,30 +59,6 @@ PROBLEMATIC_RECORD_URI = 'tag:getty.edu,2019:digital:pipeline:ProblematicRecord'
 
 #mark - utility functions and classes
 
-class DictWrapper:
-	'''
-	Wrapper of a dictionary used to work around a limitation in bonobo services, which
-	seem to fail when using plain `dict` values.
-	'''
-	def __init__(self, value=None):
-		self.d = {}
-		if isinstance(value, dict):
-			self.d = value
-		elif isinstance(value, (str, pathlib.Path)):
-			with open(value, 'r') as f:
-				self.d = json.load(f)
-
-	def set(self, key, value):
-		'''Set `key` to `value`.'''
-		self.d[key] = value
-
-	def get(self, key):
-		'''Get the value associated with `key`.'''
-		return self.d.get(key)
-
-	def __getitem__(self, key):
-		return self.get(key)
-
 def pir_uri(*values):
 	'''Convert a set of identifying `values` into a URI'''
 	if values:
@@ -237,7 +213,7 @@ def populate_auction_event(data, auction_locations):
 	if place:
 		data['_locations'] = [place_data]
 		auction.took_place_at = place
-		auction_locations.set(cno, place)
+		auction_locations[cno] = place
 
 	ts = timespan_from_outer_bounds(
 		begin=implode_date(data, 'sale_begin_'),
@@ -310,7 +286,7 @@ def add_auction_houses(data, auction_houses):
 		auction.carried_out_by = house
 		if auction_houses:
 			house_objects.append(house)
-	auction_houses.set(cno, house_objects)
+	auction_houses[cno] = house_objects
 	yield d
 
 
@@ -555,13 +531,16 @@ def add_person(data: dict):
 	make_la_person(data)
 	return data
 
-def final_owner_procurement(final_owner, current_tx, object, current_ts):
-	object_label = object._label
-	tx = related_procurement(current_tx, object, current_ts, buyer=final_owner)
-	tx._label = f'Procurement leading to the currently known location of “{object_label}”'
+def final_owner_procurement(final_owner, current_tx, hmo, current_ts):
+	tx = related_procurement(current_tx, hmo, current_ts, buyer=final_owner)
+	try:
+		object_label = hmo._label
+		tx._label = f'Procurement leading to the currently known location of “{object_label}”'
+	except AttributeError:
+		tx._label = f'Procurement leading to the currently known location of object'
 	return tx
 
-def add_acquisition(data, object, buyers, sellers):
+def add_acquisition(data, hmo, buyers, sellers):
 	'''Add modeling of an acquisition as a transfer of title from the seller to the buyer'''
 	parent = data['parent_data']
 	transaction = parent['transaction']
@@ -570,14 +549,14 @@ def add_acquisition(data, object, buyers, sellers):
 	cno, lno, date = object_key(auction_data)
 	data['buyer'] = buyers
 	data['seller'] = sellers
-	object_label = object._label
+	object_label = hmo._label
 	amnts = [get_crom_object(p) for p in prices]
 
 # 	if not prices:
 # 		print(f'*** No price data found for {transaction} transaction')
 
 	acq = model.Acquisition(label=f'Acquisition of {cno} {lno} ({date}): “{object_label}”')
-	acq.transferred_title_of = object
+	acq.transferred_title_of = hmo
 	paym = model.Payment(label=f'Payment for “{object_label}”')
 	for seller in [get_crom_object(s) for s in sellers]:
 		paym.paid_to = seller
@@ -606,7 +585,7 @@ def add_acquisition(data, object, buyers, sellers):
 	final_owner_data = data.get('_final_org')
 	if final_owner_data:
 		final_owner = get_crom_object(final_owner_data)
-		tx = final_owner_procurement(final_owner, current_tx, object, ts)
+		tx = final_owner_procurement(final_owner, current_tx, hmo, ts)
 		data['_procurements'].append(add_crom_data(data={}, what=tx))
 
 	post_own = data.get('post_owner', [])
@@ -624,14 +603,14 @@ def add_acquisition(data, object, buyers, sellers):
 			own_info_source = owner_record.get('own_so')
 			if own_info_source:
 				note = vocab.Note(content=own_info_source)
-				object.referred_to_by = note
+				hmo.referred_to_by = note
 				owner.referred_to_by = note
-			tx = related_procurement(current_tx, object, ts, buyer=owner, previous=rev)
+			tx = related_procurement(current_tx, hmo, ts, buyer=owner, previous=rev)
 			ptx_data = tx_data.copy()
 			data['_procurements'].append(add_crom_data(data=ptx_data, what=tx))
 	yield data
 
-def related_procurement(current_tx, object, current_ts=None, buyer=None, seller=None, previous=False):
+def related_procurement(current_tx, hmo, current_ts=None, buyer=None, seller=None, previous=False):
 	'''
 	Returns a new `vocab.Procurement` object (and related acquisition) that is temporally
 	related to the supplied procurement and associated data. The new procurement is for
@@ -649,10 +628,10 @@ def related_procurement(current_tx, object, current_ts=None, buyer=None, seller=
 			tx.starts_after_the_end_of = current_tx
 	modifier_label = 'Previous' if previous else 'Subsequent'
 	try:
-		pacq = model.Acquisition(label=f'{modifier_label} Acquisition of: “{object._label}”')
-	except:
+		pacq = model.Acquisition(label=f'{modifier_label} Acquisition of: “{hmo._label}”')
+	except AttributeError:
 		pacq = model.Acquisition(label=f'{modifier_label} Acquisition')
-	pacq.transferred_title_of = object
+	pacq.transferred_title_of = hmo
 	if buyer:
 		pacq.transferred_title_to = buyer
 	if seller:
@@ -702,7 +681,11 @@ def add_bidding(data, buyers):
 		final_owner_data = data.get('_final_org')
 		if final_owner_data:
 			final_owner = get_crom_object(final_owner_data)
-			tx = final_owner_procurement(final_owner, None, object, ts)
+			ts = lot.timespan
+			hmo = get_crom_object(data)
+			tx = final_owner_procurement(final_owner, None, hmo, ts)
+			if '_procurements' not in data:
+				data['_procurements'] = []
 			data['_procurements'].append(add_crom_data(data={}, what=tx))
 
 		add_crom_data(data=data, what=all_bids)
@@ -719,7 +702,7 @@ def add_acquisition_or_bidding(data):
 	transaction = transaction.rstrip()
 
 	data = data.copy()
-	object = get_crom_object(data)
+	hmo = get_crom_object(data)
 
 	# TODO: filtering empty people should be moved much earlier in the pipeline
 	buyers = [add_person(p) for p in filter_empty_people(*parent['buyer'])]
@@ -727,7 +710,7 @@ def add_acquisition_or_bidding(data):
 
 	# TODO: is this the right set of transaction types to represent acquisition?
 	if transaction in ('Sold', 'Vendu', 'Verkauft', 'Bought In'):
-		yield from add_acquisition(data, object, buyers, sellers)
+		yield from add_acquisition(data, hmo, buyers, sellers)
 	elif transaction in ('Unknown', 'Unbekannt', 'Inconnue', 'Withdrawn', 'Non Vendu', ''):
 		yield from add_bidding(data, buyers)
 	else:
@@ -771,7 +754,7 @@ def genre_instance(value):
 	return MAPPING.get(value)
 
 def populate_destruction_events(data, note):
-	object = get_crom_object(data)
+	hmo = get_crom_object(data)
 	title = data.get('title')
 	DESTRUCTION_METHODS = { # TODO: 
 		'fire': model.Type(ident='http://vocab.getty.edu/aat/300068986', label='Fire'),
@@ -787,7 +770,7 @@ def populate_destruction_events(data, note):
 			begin, end = date_cleaner(year)
 			ts = timespan_from_outer_bounds(begin, end)
 			d.timespan = ts
-		object.destroyed_by = d
+		hmo.destroyed_by = d
 
 		if method:
 			with suppress(KeyError, AttributeError):
@@ -800,7 +783,7 @@ def populate_destruction_events(data, note):
 @use('unique_catalogs')
 def populate_object(data, post_sale_map, unique_catalogs):
 	'''Add modeling for an object described by a sales record'''
-	object = get_crom_object(data)
+	hmo = get_crom_object(data)
 	parent = data['parent_data']
 	auction_data = parent.get('auction_of_lot')
 	if auction_data:
@@ -812,7 +795,7 @@ def populate_object(data, post_sale_map, unique_catalogs):
 	if m:
 		matstmt = vocab.MaterialStatement()
 		matstmt.content = m
-		object.referred_to_by = matstmt
+		hmo.referred_to_by = matstmt
 
 	cno = auction_data['catalog_number']
 	lno = auction_data['lot_number']
@@ -827,7 +810,7 @@ def populate_object(data, post_sale_map, unique_catalogs):
 	genre = genre_instance(data.get('genre'))
 	if genre:
 		vi.classified_as = genre
-	object.shows = vi
+	hmo.shows = vi
 
 	location = data.get('present_location')
 	if location:
@@ -883,13 +866,13 @@ def populate_object(data, post_sale_map, unique_catalogs):
 		catalog_uri = pir_uri('CATALOG', cno, owner, None)
 		catalogs = unique_catalogs.get(catalog_uri)
 		note = vocab.Note(content=c)
-		object.referred_to_by = note
+		hmo.referred_to_by = note
 		if catalogs and len(catalogs) == 1:
 			note.carried_by = model.HumanMadeObject(ident=catalog_uri, label=f'Sale Catalog {cno}, owned by {owner}')
 
 	inscription = data.get('inscription')
 	if inscription:
-		object.carries = vocab.Note(content=inscription)
+		hmo.carries = vocab.Note(content=inscription)
 
 	post_sales = data.get('post_sale', [])
 	prev_sales = data.get('prev_sale', [])
@@ -904,13 +887,13 @@ def populate_object(data, post_sale_map, unique_catalogs):
 				later_key = (pcno, plot, pdate)
 				if rev:
 					later_key, now_key = now_key, later_key
-				post_sale_map.set(later_key, now_key)
+				post_sale_map[later_key] = now_key
 
 	dimstr = data.get('dimensions')
 	if dimstr:
 		dimstmt = vocab.DimensionStatement()
 		dimstmt.content = dimstr
-		object.referred_to_by = dimstmt
+		hmo.referred_to_by = dimstmt
 		dimensions = dimensions_cleaner(dimstr)
 		if dimensions:
 			for orig_d in dimensions:
@@ -928,7 +911,7 @@ def populate_object(data, post_sale_map, unique_catalogs):
 					unit = vocab.instances.get(d.unit)
 					if unit:
 						dim.unit = unit
-					object.dimension = dim
+					hmo.dimension = dim
 				else:
 					pass
 # 					print(f'Failed to normalize dimensions: {orig_d}')
@@ -1061,22 +1044,26 @@ def add_physical_catalog_owners(data, location_codes, unique_catalogs):
 	# and owner code (e.g. for owners who do not have multiple copies of a catalog).
 	cno = data['catalog_number']
 	owner_code = data['owner_code']
-	owner_name = location_codes[owner_code]
-	data['_owner'] = {
-		'name': owner_name,
-		'label': owner_name,
-		'uri': pir_uri('ORGANIZATION', 'LOCATION-CODE', owner_code),
-		'identifiers': [model.Identifier(ident='', content=owner_code)],
-	}
-	owner = model.Group(ident=data['_owner']['uri'])
-	owner_data = add_crom_data(data=data['_owner'], what=owner)
-	catalog = get_crom_object(data)
-	catalog.current_owner = owner
-	
+	owner_name = None
+	try:
+		owner_name = location_codes[owner_code]
+		data['_owner'] = {
+			'name': owner_name,
+			'label': owner_name,
+			'uri': pir_uri('ORGANIZATION', 'LOCATION-CODE', owner_code),
+			'identifiers': [model.Identifier(ident='', content=owner_code)],
+		}
+		owner = model.Group(ident=data['_owner']['uri'])
+		owner_data = add_crom_data(data=data['_owner'], what=owner)
+		catalog = get_crom_object(data)
+		catalog.current_owner = owner
+	except KeyError:
+		pass
+
 	uri = pir_uri('CATALOG', cno, owner_code, None)
-	if uri not in unique_catalogs.d:
-		unique_catalogs.d[uri] = set()
-	unique_catalogs.d[uri].add(uri)
+	if uri not in unique_catalogs:
+		unique_catalogs[uri] = set()
+	unique_catalogs[uri].add(uri)
 	return data
 
 
@@ -1146,10 +1133,10 @@ class ProvenancePipeline:
 		'''Return a `dict` of named services available to the bonobo pipeline.'''
 		services = {
 			'lot_counter': Counter(),
-			'unique_catalogs': DictWrapper(),
-			'post_sale_map': DictWrapper(),
-			'auction_houses': DictWrapper(),
-			'auction_locations': DictWrapper(),
+			'unique_catalogs': {},
+			'post_sale_map': {},
+			'auction_houses': {},
+			'auction_locations': {},
 			'trace_counter': itertools.count(),
 			'gpi': create_engine(settings.gpi_engine),
 			'aat': create_engine(settings.aat_engine),
@@ -1159,7 +1146,8 @@ class ProvenancePipeline:
 		
 		p = pathlib.Path(self.pipeline_service_files_path)
 		for file in p.rglob('*.json'):
-			services[file.stem] = DictWrapper(file)
+			with open(file, 'r') as f:
+				services[file.stem] = json.load(f)
 		return services
 
 	def add_serialization_chain(self, graph, input_node):
@@ -1754,8 +1742,8 @@ class ProvenanceFilePipeline(ProvenancePipeline):
 		print('Running post-processing of post-sale data...')
 		counter = services['lot_counter']
 		post_map = services['post_sale_map']
-		self.merge_post_sale_objects(counter, post_map.d)
-		print(f'>>> {len(post_map.d)} post sales records')
+		self.merge_post_sale_objects(counter, post_map)
+		print(f'>>> {len(post_map)} post sales records')
 		print('Total runtime: ', timeit.default_timer() - start)  
 		
 

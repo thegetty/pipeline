@@ -411,29 +411,31 @@ class AddAuctionOfLot(Configurable):
 		add_crom_data(data=data, what=lot)
 		yield data
 
-def add_crom_price(data, _):
+def extract_monetary_amount(data: dict):
 	'''
-	Add modeling data for `MonetaryAmount`, `StartingPrice`, or `EstimatedPrice`,
-	based on properties of the supplied `data` dict.
-	
+	Returns a `MonetaryAmount`, `StartingPrice`, or `EstimatedPrice` object
+	based on properties of the supplied `data` dict. If no amount or currency
+	data is found in found, returns `None`.
+
 	For `EstimatedPrice`, values will be accessed from these keys:
 	  - amount: `est_price_amount` or `est_price`
 	  - currency: `est_price_currency` or `est_price_curr`
 	  - note: `est_price_note` or `est_price_desc`
 	  - bibliographic statement: `est_price_citation`
-	
+
 	For `StartingPrice`, values will be accessed from these keys:
 	  - amount: `start_price_amount` or `start_price`
 	  - currency: `start_price_currency` or `start_price_curr`
 	  - note: `start_price_note` or `start_price_desc`
 	  - bibliographic statement: `start_price_citation`
-	
+
 	For `MonetaryAmount` prices, values will be accessed from these keys:
 	  - amount: `price_amount` or `price`
 	  - currency: `price_currency` or `price_curr`
 	  - note: `price_note` or `price_desc`
 	  - bibliographic statement: `price_citation`
 	'''
+
 	MAPPING = { # TODO: can this be refactored somewhere?
 		'österreichische Schilling': 'at shillings',
 		'florins': 'de florins',
@@ -466,12 +468,13 @@ def add_crom_price(data, _):
 		price_currency = data.get('price_currency', data.get('price_curr'))
 		note = data.get('price_note', data.get('price_desc'))
 		cite = data.get('price_citation')
-	if cite:
-		amnt.referred_to_by = vocab.BibliographyStatement(content=cite)
-	if note:
-		amnt.referred_to_by = vocab.Note(content=note)
 
 	if price_amount or price_currency:
+		if cite:
+			amnt.referred_to_by = vocab.BibliographyStatement(content=cite)
+		if note:
+			amnt.referred_to_by = vocab.Note(content=note)
+		
 		if price_amount:
 			try:
 				v = price_amount
@@ -496,7 +499,35 @@ def add_crom_price(data, _):
 			amnt._label = '%s %s' % (price_amount, price_currency)
 		elif price_amount:
 			amnt._label = '%s' % (price_amount,)
+		return amnt
+	return None
 
+
+def add_crom_price(data, _):
+	'''
+	Add modeling data for `MonetaryAmount`, `StartingPrice`, or `EstimatedPrice`,
+	based on properties of the supplied `data` dict.
+	
+	For `EstimatedPrice`, values will be accessed from these keys:
+	  - amount: `est_price_amount` or `est_price`
+	  - currency: `est_price_currency` or `est_price_curr`
+	  - note: `est_price_note` or `est_price_desc`
+	  - bibliographic statement: `est_price_citation`
+	
+	For `StartingPrice`, values will be accessed from these keys:
+	  - amount: `start_price_amount` or `start_price`
+	  - currency: `start_price_currency` or `start_price_curr`
+	  - note: `start_price_note` or `start_price_desc`
+	  - bibliographic statement: `start_price_citation`
+	
+	For `MonetaryAmount` prices, values will be accessed from these keys:
+	  - amount: `price_amount` or `price`
+	  - currency: `price_currency` or `price_curr`
+	  - note: `price_note` or `price_desc`
+	  - bibliographic statement: `price_citation`
+	'''
+	amnt = extract_monetary_amount(data)
+	if amnt:
 		add_crom_data(data=data, what=amnt)
 	return data
 

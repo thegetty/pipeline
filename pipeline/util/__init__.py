@@ -2,6 +2,8 @@ import re
 import os
 import sys
 import fnmatch
+import pprint
+import calendar
 from threading import Lock
 from contextlib import ContextDecorator, suppress
 from collections import defaultdict, namedtuple
@@ -34,22 +36,53 @@ def identity(d):
 	'''
 	yield d
 
-def implode_date(data: dict, prefix: str):
+def implode_date(data: dict, prefix: str, clamp:str=None):
 	'''
 	Given a dict `data` and a string `prefix`, extract year, month, and day elements
 	from `data` (e.g. '{prefix}year', '{prefix}month', and '{prefix}day'), and return
 	an ISO 8601 date string ('YYYY-MM-DD'). If the day, or day and month elements are
 	missing, may also return a year-month ('YYYY-MM') or year ('YYYY') string.
+	
+	If `clamp='begin'` and a year value is found, the resulting date string will use
+	the earliest valid value for any field (month or day) that is not present or false.
+	For example, '1800-02' would become '1800-02-01'.
+	
+	If `clamp='end'`, clamping occurs using the latest valid values. For example,
+	'1800-02' would become '1800-02-28'.
 	'''
 	year = data.get(f'{prefix}year')
+	try:
+		year = int(year)
+	except:
+		return None
 	month = data.get(f'{prefix}month', data.get(f'{prefix}mo'))
 	day = data.get(f'{prefix}day')
+	try:
+		month = int(month)
+		if month < 1 or month > 12:
+			raise Exception
+	except:
+		if clamp == 'begin':
+			month = 1
+		elif clamp == 'end':
+			month = 12
+
+	try:
+		day = int(day)
+		if day < 1 or day > 31:
+			raise Exception
+	except:
+		if clamp == 'begin':
+			day = 1
+		elif clamp == 'end':
+			day = calendar.monthrange(year, month)[1]	
+
 	if year and month and day:
-		return f'{year}-{month}-{day}'
+		return '%04d-%02d-%02d' % (int(year), month, day)
 	elif year and month:
-		return f'{year}-{month}'
+		return '%04d-%02d' % (int(year), month)
 	elif year:
-		return f'{year}'
+		return '%04d' % (int(year),)
 	return None
 
 class ExclusiveValue(ContextDecorator):

@@ -15,6 +15,7 @@ import pprint
 import pathlib
 import itertools
 import datetime
+import dateutil.parser
 from collections import Counter, defaultdict, namedtuple
 from contextlib import suppress
 import inspect
@@ -33,7 +34,7 @@ from cromulent import model, vocab
 from pipeline.util import RecursiveExtractKeyedValue, ExtractKeyedValue, ExtractKeyedValues, \
 			MatchingFiles, identity, implode_date, timespan_before, timespan_after, \
 			replace_key_pattern, strip_key_prefix
-from cromulent.extract import extract_physical_dimensions
+from cromulent.extract import extract_physical_dimensions, extract_monetary_amount
 from pipeline.util.cleaners import \
 			parse_location, \
 			parse_location_name, \
@@ -146,13 +147,22 @@ def timespan_from_outer_bounds(begin=None, end=None):
 	if begin or end:
 		ts = model.TimeSpan(ident='')
 		if begin is not None:
-			if isinstance(begin, datetime.datetime):
+			try:
+				if not isinstance(begin, datetime.datetime):
+					begin = dateutil.parser.parse(begin)
 				begin = begin.strftime("%Y-%m-%dT%H:%M:%SZ")
-			ts.begin_of_the_begin = begin
+				ts.begin_of_the_begin = begin
+			except ValueError:
+				print(f'*** failed to parse begin date: {begin}')
+				raise
 		if end is not None:
-			if isinstance(end, datetime.datetime):
+			try:
+				if not isinstance(end, datetime.datetime):
+					end = dateutil.parser.parse(end)
 				end = end.strftime("%Y-%m-%dT%H:%M:%SZ")
-			ts.end_of_the_end = end
+				ts.end_of_the_end = end
+			except ValueError:
+				print(f'*** failed to parse end date: {end}')
 		return ts
 	return None
 
@@ -197,8 +207,8 @@ def populate_auction_event(data, auction_locations):
 		auction_locations[cno] = place
 
 	ts = timespan_from_outer_bounds(
-		begin=implode_date(data, 'sale_begin_'),
-		end=implode_date(data, 'sale_end_'),
+		begin=implode_date(data, 'sale_begin_', clamp='begin'),
+		end=implode_date(data, 'sale_end_', clamp='end'),
 	)
 
 	if ts:
@@ -411,120 +421,10 @@ class AddAuctionOfLot(Configurable):
 		add_crom_data(data=data, what=lot)
 		yield data
 
-def extract_monetary_amount(data: dict):
-	'''
-	Returns a `MonetaryAmount`, `StartingPrice`, or `EstimatedPrice` object
-	based on properties of the supplied `data` dict. If no amount or currency
-	data is found in found, returns `None`.
-
-	For `EstimatedPrice`, values will be accessed from these keys:
-	  - amount: `est_price_amount` or `est_price`
-	  - currency: `est_price_currency` or `est_price_curr`
-	  - note: `est_price_note` or `est_price_desc`
-	  - bibliographic statement: `est_price_citation`
-
-	For `StartingPrice`, values will be accessed from these keys:
-	  - amount: `start_price_amount` or `start_price`
-	  - currency: `start_price_currency` or `start_price_curr`
-	  - note: `start_price_note` or `start_price_desc`
-	  - bibliographic statement: `start_price_citation`
-
-	For `MonetaryAmount` prices, values will be accessed from these keys:
-	  - amount: `price_amount` or `price`
-	  - currency: `price_currency` or `price_curr`
-	  - note: `price_note` or `price_desc`
-	  - bibliographic statement: `price_citation`
-	'''
-
-	MAPPING = { # TODO: can this be refactored somewhere?
-		'österreichische Schilling': 'at shillings',
-		'florins': 'de florins',
-		'fl': 'de florins',
-		'fl.': 'de florins',
-		'pounds': 'gb pounds',
-		'livres': 'fr livres',
-		'guineas': 'gb guineas',
-		'reichsmark': 'de reichsmarks'
-	}
-
-	amount_type = 'Price'
-	if 'est_price' in data:
-		amnt = vocab.EstimatedPrice()
-		price_amount = data.get('est_price_amount', data.get('est_price'))
-		price_currency = data.get('est_price_currency', data.get('est_price_curr'))
-		amount_type = 'Estimated Price'
-		note = data.get('est_price_note', data.get('est_price_desc'))
-		cite = data.get('est_price_citation')
-	elif 'start_price' in data:
-		amnt = vocab.StartingPrice()
-		price_amount = data.get('start_price_amount', data.get('start_price'))
-		price_currency = data.get('start_price_currency', data.get('start_price_curr'))
-		amount_type = 'Starting Price'
-		note = data.get('start_price_note', data.get('start_price_desc'))
-		cite = data.get('start_price_citation')
-	else:
-		amnt = model.MonetaryAmount()
-		price_amount = data.get('price_amount', data.get('price'))
-		price_currency = data.get('price_currency', data.get('price_curr'))
-		note = data.get('price_note', data.get('price_desc'))
-		cite = data.get('price_citation')
-
-	if price_amount or price_currency:
-		if cite:
-			amnt.referred_to_by = vocab.BibliographyStatement(content=cite)
-		if note:
-			amnt.referred_to_by = vocab.Note(content=note)
-		
-		if price_amount:
-			try:
-				v = price_amount
-				v = v.replace('[?]', '')
-				v = v.replace('?', '')
-				v = v.strip()
-				price_amount = float(v)
-				amnt.value =  price_amount
-			except ValueError:
-				amnt._label = price_amount
-				amnt.identified_by = model.Name(content=price_amount)
-	# 			print(f'*** Not a numeric price amount: {v}')
-		if price_currency:
-			if price_currency in MAPPING:
-				with suppress(KeyError):
-					price_currency = MAPPING[price_currency.lower()]
-			if price_currency in vocab.instances:
-				amnt.currency = vocab.instances[price_currency]
-			else:
-				print('*** No currency instance defined for %s' % (price_currency,))
-		if price_amount and price_currency:
-			amnt._label = '%s %s' % (price_amount, price_currency)
-		elif price_amount:
-			amnt._label = '%s' % (price_amount,)
-		return amnt
-	return None
-
-
 def add_crom_price(data, _):
 	'''
 	Add modeling data for `MonetaryAmount`, `StartingPrice`, or `EstimatedPrice`,
 	based on properties of the supplied `data` dict.
-	
-	For `EstimatedPrice`, values will be accessed from these keys:
-	  - amount: `est_price_amount` or `est_price`
-	  - currency: `est_price_currency` or `est_price_curr`
-	  - note: `est_price_note` or `est_price_desc`
-	  - bibliographic statement: `est_price_citation`
-	
-	For `StartingPrice`, values will be accessed from these keys:
-	  - amount: `start_price_amount` or `start_price`
-	  - currency: `start_price_currency` or `start_price_curr`
-	  - note: `start_price_note` or `start_price_desc`
-	  - bibliographic statement: `start_price_citation`
-	
-	For `MonetaryAmount` prices, values will be accessed from these keys:
-	  - amount: `price_amount` or `price`
-	  - currency: `price_currency` or `price_curr`
-	  - note: `price_note` or `price_desc`
-	  - bibliographic statement: `price_citation`
 	'''
 	amnt = extract_monetary_amount(data)
 	if amnt:

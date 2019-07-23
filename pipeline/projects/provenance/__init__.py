@@ -30,7 +30,7 @@ from bonobo.nodes import Limit
 
 import settings
 from cromulent import model, vocab
-from pipeline.projects.provenance.util import UID_TAG_PREFIX, SalesTree, filter_empty_people, pir_uri
+from pipeline.projects.provenance.util import *
 from pipeline.util import RecursiveExtractKeyedValue, ExtractKeyedValue, ExtractKeyedValues, \
 			MatchingFiles, identity, implode_date, timespan_before, timespan_after, \
 			replace_key_pattern, strip_key_prefix
@@ -64,34 +64,6 @@ PROBLEMATIC_RECORD_URI = 'tag:getty.edu,2019:digital:pipeline:ProblematicRecord'
 
 #mark - utility functions and classes
 
-def add_pir_record_ids(data, parent):
-	'''Copy identifying key-value pairs from `parent` to `data`, returning `data`'''
-	for p in ('pi_record_no', 'persistent_puid'):
-		data[p] = parent.get(p)
-	return data
-
-def object_key(data):
-	'''
-	Returns a 3-tuple of (catalog number, lot number, sale date) that identify an object
-	from a sales record, extracted from properties of the supplied `data` dict.
-	'''
-	cno = data['catalog_number']
-	lno = data['lot_number']
-	date = implode_date(data, 'lot_sale_')
-	return (cno, lno, date)
-
-def object_uri(data):
-	key = object_key(data)
-	return pir_uri('OBJECT', *key)
-
-def add_pir_object_uri(data, parent):
-	'''
-	Set 'uri' keys in `data` based on its identifying properties, returning `data`.
-	'''
-	add_pir_record_ids(data, parent)
-	data['uri'] = object_uri(parent)
-	return data
-
 def auction_event_for_catalog_number(catalog_number):
 	'''
 	Return a `vocab.AuctionEvent` object and its associated 'uid' key and URI, based on
@@ -111,34 +83,6 @@ def add_auction_event(data):
 	data['uri'] = uri
 	add_crom_data(data=data, what=auction)
 	yield data
-
-def timespan_from_outer_bounds(begin=None, end=None):
-	'''
-	Return a `TimeSpan` based on the (optional) `begin` and `end` date strings.
-
-	If both `begin` and `end` are `None`, returns `None`.
-	'''
-	if begin or end:
-		ts = model.TimeSpan(ident='')
-		if begin is not None:
-			try:
-				if not isinstance(begin, datetime.datetime):
-					begin = dateutil.parser.parse(begin)
-				begin = begin.strftime("%Y-%m-%dT%H:%M:%SZ")
-				ts.begin_of_the_begin = begin
-			except ValueError:
-				print(f'*** failed to parse begin date: {begin}')
-				raise
-		if end is not None:
-			try:
-				if not isinstance(end, datetime.datetime):
-					end = dateutil.parser.parse(end)
-				end = end.strftime("%Y-%m-%dT%H:%M:%SZ")
-				ts.end_of_the_end = end
-			except ValueError:
-				print(f'*** failed to parse end date: {end}')
-		return ts
-	return None
 
 #mark - Places
 

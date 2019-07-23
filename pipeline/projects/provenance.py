@@ -12,6 +12,7 @@ import sys
 import uuid
 import csv
 import pprint
+import pathlib
 import itertools
 import datetime
 from collections import Counter, defaultdict, namedtuple
@@ -67,7 +68,7 @@ class DictWrapper:
 		self.d = {}
 		if isinstance(value, dict):
 			self.d = value
-		elif isinstance(value, str):
+		elif isinstance(value, (str, pathlib.Path)):
 			with open(value, 'r') as f:
 				self.d = json.load(f)
 
@@ -413,7 +414,8 @@ class AddAuctionOfLot(Configurable):
 	def __call__(self, data, auction_houses, auction_locations, problematic_records):
 		'''Add modeling data for the auction of a lot of objects.'''
 		auction_data = data['auction_of_lot']
-		cno, lno, date = object_key(auction_data)
+		lot_object_key = object_key(auction_data)
+		cno, lno, date = lot_object_key
 		shared_lot_number = self.shared_lot_number_from_lno(lno)
 		uid, uri = self.shared_lot_number_ids(cno, lno, date)
 		data['uid'] = uid
@@ -423,10 +425,18 @@ class AddAuctionOfLot(Configurable):
 		lot._label = f'Auction of Lot {cno} {shared_lot_number} ({date})'
 
 		for pcno, plno, pdate, problem in problematic_records['lots']:
-			if cno == pcno and lno == plno and date == pdate:
+			# TODO: this is inefficient, but will probably be OK so long as the number
+			#       of problematic records is small. We do it this way because we can't
+			#       represent a tuple directly as a JSON dict key, and we don't want to
+			#       have to do post-processing on the services JSON files after loading.
+			problem_key = (pcno, plno, pdate)
+			if problem_key == lot_object_key:
 				note = model.LinguisticObject(content=problem)
 				note.classified_as = vocab.instances["brief text"]
-				note.classified_as = model.Type(ident=PROBLEMATIC_RECORD_URI, label='Problematic Record')
+				note.classified_as = model.Type(
+					ident=PROBLEMATIC_RECORD_URI,
+					label='Problematic Record'
+				)
 				lot.referred_to_by = note
 
 		self.set_lot_auction_houses(lot, cno, auction_houses)
@@ -1134,20 +1144,23 @@ class ProvenancePipeline:
 	# Set up environment
 	def get_services(self):
 		'''Return a `dict` of named services available to the bonobo pipeline.'''
-		return {
+		services = {
 			'lot_counter': Counter(),
 			'unique_catalogs': DictWrapper(),
 			'post_sale_map': DictWrapper(),
 			'auction_houses': DictWrapper(),
 			'auction_locations': DictWrapper(),
-			'location_codes': DictWrapper(os.path.join(self.pipeline_service_files_path, 'pir_location_codes.json')),
-			'problematic_records': DictWrapper(os.path.join(self.pipeline_service_files_path, 'pir_problematic_records.json')),
 			'trace_counter': itertools.count(),
 			'gpi': create_engine(settings.gpi_engine),
 			'aat': create_engine(settings.aat_engine),
 			'uuid_cache': create_engine(settings.uuid_cache_engine),
 			'fs.data.pir': bonobo.open_fs(self.input_path)
 		}
+		
+		p = pathlib.Path(self.pipeline_service_files_path)
+		for file in p.rglob('*.json'):
+			services[file.stem] = DictWrapper(file)
+		return services
 
 	def add_serialization_chain(self, graph, input_node):
 		'''Add serialization of the passed transformer node to the bonobo graph.'''

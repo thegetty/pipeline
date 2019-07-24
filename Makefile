@@ -27,6 +27,10 @@ pirgraph: /tmp/pir.pdf
 
 knoedler:
 	QUIET=$(QUIET) GETTY_PIPELINE_DEBUG=$(DEBUG) GETTY_PIPELINE_LIMIT=$(LIMIT) time ./knoedler.py
+	./rewrite_uris_to_uuids.py 'tag:getty.edu,2019:digital:pipeline:REPLACE-WITH-UUID#'
+
+knoedlergraph: /tmp/knoedler.pdf
+	open -a Preview /tmp/knoedler.pdf
 
 knoedlergraph: /tmp/knoedler.pdf
 	open -a Preview /tmp/knoedler.pdf

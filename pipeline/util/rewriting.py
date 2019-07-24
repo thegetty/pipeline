@@ -52,7 +52,11 @@ def _rewrite_output_files(files, r, update_filename=False, **kwargs):
 	for i, f in enumerate(files):
 		# print(f'{i} {f}', end="\r", flush=True)
 		with open(f) as data_file:
-			data = json.load(data_file)
+			try:
+				data = json.load(data_file)
+			except json.decoder.JSONDecodeError:
+				sys.stderr.write(f'Failed to load JSON during rewriting of {f}\n')
+				raise
 		d = r.rewrite(data, file=f)
 		if update_filename:
 			newfile = filename_for(d, original_filename=f, **kwargs)

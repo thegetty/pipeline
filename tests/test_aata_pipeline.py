@@ -205,3 +205,7 @@ class TestAATAPipelineOutput(unittest.TestCase):
 		people_creation_events = self.verify_people_for_AATA140375(output, people_model)
 		self.verify_organizations_for_AATA140375(output, orgs_model)
 		self.verify_data_for_AATA140375(output, lo_model)
+
+
+if __name__ == '__main__':
+	unittest.main()

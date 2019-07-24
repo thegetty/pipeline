@@ -43,3 +43,7 @@ class TestDateCleaners(unittest.TestCase):
 			self.assertIsInstance(date_range, list)
 			if expected is not None:
 				self.assertEqual(date_range, expected, msg=f'date string: {value!r}')
+
+
+if __name__ == '__main__':
+	unittest.main()

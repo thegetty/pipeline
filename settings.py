@@ -24,7 +24,7 @@ pipeline_service_files_path = os.environ.get('GETTY_PIPELINE_SERVICE_FILES_PATH'
 aata_data_path = os.environ.get('GETTY_PIPELINE_AATA_INPUT', '/data/input/aata')
 data_path = os.environ.get('GETTY_PIPELINE_INPUT', '/data/input/provenance/knoedler')
 output_file_path = os.environ.get('GETTY_PIPELINE_OUTPUT', '/data2/output/provenance/knoedler')
-DEBUG = os.environ.get('GETTY_PIPELINE_DEBUG', False)
+DEBUG = os.environ.get('GETTY_PIPELINE_DEBUG', True)
 SPAM = os.environ.get('GETTY_PIPELINE_VERBOSE', False)
 
 gpi_engine = 'sqlite:///%s/gpi.sqlite' % (data_path,)

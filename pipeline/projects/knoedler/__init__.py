@@ -7,7 +7,7 @@ from sqlalchemy import create_engine
 import bonobo
 import bonobo_sqlalchemy
 
-from pipeline.nodes.basic import AddArchesModel, AddFieldNames, Serializer, deep_copy, Offset, add_uuid, Trace
+from pipeline.nodes.basic import AddArchesModel, AddFieldNames, Serializer, deep_copy, Offset, Trace
 from pipeline.projects.knoedler.data import *
 from pipeline.projects.knoedler.linkedart import *
 from pipeline.io.file import FileWriter
@@ -42,9 +42,7 @@ class KnoedlerFilePipeline:
 		'''Return a `dict` of named services available to the bonobo pipeline.'''
 		services = {
 			'trace_counter': itertools.count(),
-			'aat': create_engine(aat_engine),
 			'gpi': create_engine(gpi_engine),
-			'uuid_cache': create_engine(uuid_cache_engine),
 			'raw': create_engine(raw_engine)
 		}
 		
@@ -59,7 +57,6 @@ class KnoedlerFilePipeline:
 			bonobo_sqlalchemy.Select('SELECT * from knoedler_purchase_info', engine='gpi', limit=self.limit, pack_size=self.pack_size),
 			AddFieldNames(key="purchase_info", field_names=all_names),
 			AddArchesModel(model=arches_models['Acquisition']),
-			add_uuid,
 			add_purchase_people,
 			add_purchase_thing,
 			add_ownership_phase_purchase,
@@ -84,7 +81,6 @@ class KnoedlerFilePipeline:
 			bonobo_sqlalchemy.Select('SELECT * from knoedler_sale_info', engine='gpi', limit=self.limit, pack_size=self.pack_size),
 			AddFieldNames(key="sale_info", field_names=all_names),
 			AddArchesModel(model=arches_models['Acquisition']),
-			add_uuid,
 			add_sale_people,
 			add_sale_thing, # includes adding reference to phase it terminates
 			make_la_sale,
@@ -168,7 +164,6 @@ class KnoedlerFilePipeline:
 			bonobo_sqlalchemy.Select('SELECT DISTINCT object_id FROM knoedler', engine='gpi', limit=self.limit, pack_size=self.pack_size),
 			make_objects,
 			AddArchesModel(model=arches_models['HumanMadeObject']),
-			add_uuid,
 			make_objects_names,
 			make_objects_dims,
 			make_objects_tags_ids,
@@ -204,7 +199,6 @@ class KnoedlerFilePipeline:
 				engine='gpi', limit=self.limit, pack_size=self.pack_size),
 			AddFieldNames(key="gpi_people", field_names=all_names),
 			AddArchesModel(model=arches_models['Person']),
-			add_uuid,
 			add_person_names,
 			add_person_aat_labels,
 			clean_dates,
@@ -221,17 +215,14 @@ class KnoedlerFilePipeline:
 			bonobo_sqlalchemy.Select('SELECT DISTINCT stock_book_no FROM knoedler ORDER BY stock_book_no', engine='gpi', limit=self.limit, pack_size=self.pack_size),
 			make_stock_books,
 			AddArchesModel(model=arches_models['LinguisticObject']),
-			add_uuid,
 			make_la_book,
 
 			fan_pages,
 			AddArchesModel(model=arches_models['LinguisticObject']),
-			add_uuid,
 			make_la_page,
 
 			fan_rows,
 			AddArchesModel(model=arches_models['LinguisticObject']),
-			add_uuid,
 			make_la_row
 		)
 
@@ -249,15 +240,15 @@ class KnoedlerFilePipeline:
 		graph = bonobo.Graph()
 
 		# Sales
-		if not self.debug or 1:
+		if not self.debug or 0:
 			self.add_sales(graph)
 
 		# Here we do both missing purchases and inventory events
-		if not self.debug or 1:
+		if not self.debug or 0:
 			self.add_missing(graph)
 
 		# Pre/Post owners
-		if not self.debug or 1:
+		if not self.debug or 0:
 			self.add_pre_post(graph)
 
 		# Objects
@@ -265,11 +256,11 @@ class KnoedlerFilePipeline:
 			self.add_objects(graph)
 
 		# People
-		if not self.debug or 1:
+		if not self.debug or 0:
 			self.add_people(graph)
 
 		# Documents
-		if not self.debug or 1:
+		if not self.debug or 0:
 			self.add_documents(graph)
 
 		return graph

@@ -20,11 +20,11 @@ from cromulent import vocab
 
 if __name__ == '__main__':
 	if settings.DEBUG:
-		LIMIT		= int(os.environ.get('GETTY_PIPELINE_LIMIT', 10))
-		PACK_SIZE = 10
+		LIMIT		= int(os.environ.get('GETTY_PIPELINE_LIMIT', 1))
+		PACK_SIZE = 1
 	else:
 		LIMIT		= int(os.environ.get('GETTY_PIPELINE_LIMIT', 10000000))
-	PACK_SIZE = 10000000
+		PACK_SIZE = 10000000
 
 	vocab.add_linked_art_boundary_check()
 

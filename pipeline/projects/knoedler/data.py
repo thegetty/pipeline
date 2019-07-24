@@ -2,7 +2,6 @@
 
 from bonobo.config import use
 from pipeline.util.cleaners import date_cleaner, share_parse
-from pipeline.nodes.basic import fetch_uuid, get_actor_type, get_aat_label
 import copy
 
 # Here we extract the data from the sources and collect it together
@@ -126,10 +125,7 @@ def make_objects_artists(data, gpi=None, ulan_type=None):
 			if attr['pref']:
 				artistById[attr['artist']]['pref'] = 1
 		else:
-			# XXX
-			# XXX this needs to be refactored to a service table lookup
-			# XXX
-			atype = get_actor_type(attr['ulan'], ulan_type)
+			atype = ulan_type.get(attr['ulan'], "Person")
 			who = {'uid': attr['artist'], 'ulan': attr['ulan'], 'type': atype, 'mod': attr['mod'], \
 					'label': attr['label'], 'pref': attr['pref'], \
 					'sources': [ [attr['star_id'], attr['book'], attr['page'], attr['row']] ]}
@@ -225,7 +221,7 @@ def make_objects_names(data, gpi=None):
 
 
 @use('gpi')
-@use('aat')
+@use('aat_labels')
 def make_objects_tags_ids(data, gpi=None, uuid_cache=None, aat=None):
 	object_id = data['uid']
 	# Pull in "tags"
@@ -246,7 +242,7 @@ def make_objects_tags_ids(data, gpi=None, uuid_cache=None, aat=None):
 	res = gpi.execute(s, id=object_id)
 	tags = []
 	for tag in res:
-		lbl = get_aat_label(tag[1], aat=aat)
+		lbl = aat_labels.get(tag[1], "")
 		tags.append({"type": tagMap[tag[0]], "aat": str(tag[1]), "label": lbl})
 	data['tags'] = tags
 
@@ -282,7 +278,7 @@ def add_purchase_people(thing: dict, gpi=None, ulan_type=None):
 
 	shares = False
 	for row in res:
-		atype = get_actor_type(str(row[3]), ulan_type)
+		atype = ulan_type.get(str(row[3]), "Person")
 		buyers.append({'ulan': row[3], 'type': atype, 'label': str(row[2]), 'share': row[1]})
 		if row[1] < 1.0:
 			shares = True
@@ -300,7 +296,7 @@ def add_purchase_people(thing: dict, gpi=None, ulan_type=None):
 	sellers = []
 	res = gpi.execute(s, id=thing['uid'])
 	for row in res:
-		atype = get_actor_type(str(row[3]), ulan_type)
+		atype = ulan_type.get(str(row[3]), "Person")
 		sellers.append({'ulan': row[3], 'type': atype, 'label': str(row[2]), 'mod': row[1]})
 	thing['sellers'] = sellers
 	return thing
@@ -393,7 +389,7 @@ def add_sale_people(thing: dict, gpi=None, ulan_type=None):
 	buyers = []
 	res = gpi.execute(s, id=thing['uid'])
 	for row in res:
-		atype = get_actor_type(str(row[2]), ulan_type)
+		atype = ulan_type.get(str(row[2]), "Person")
 		buyers.append({'ulan': row[2], 'type': atype, 'label': str(row[1]), 'mod': row[3], 'auth_mod': row[4]})
 	thing['buyers'] = buyers
 
@@ -409,7 +405,7 @@ def add_sale_people(thing: dict, gpi=None, ulan_type=None):
 	sellers = []
 	res = gpi.execute(s, id=thing['uid'])
 	for row in res:
-		atype = get_actor_type(str(row[2]), ulan_type)
+		atype = ulan_type.get(str(row[2]), "Person")
 		sellers.append({'type': atype, 'ulan': row[2], 'label': str(row[1]), 'share': row[3]})
 	thing['sellers'] = sellers
 	return thing
@@ -607,7 +603,7 @@ def make_missing_purchase(data: dict, gpi=None, ulan_type=None):
 			rows = res.fetchall()
 			if len(rows) == 1:
 				(puid, plabel) = rows[0]
-				ptyp = get_actor_type(sell['ulan'], ulan_type)
+				ptyp = ulan_type.get(sell['ulan'], "Person") 
 			else:
 				print("In make_missing_purchase, cleaning sellers:")
 				print("Data: %r" % data)
@@ -623,7 +619,7 @@ def make_missing_purchase(data: dict, gpi=None, ulan_type=None):
 			if not 'uuid' in buy:
 				# find type based on ULAN, otherwise default to Group
 				if buy['ulan'] is not None:
-					ptyp = get_actor_type(buy['ulan'], ulan_type, default="Group")
+					ptyp = ulan_type.get(buy['ulan'], "Group")
 					s = "SELECT person_uid FROM gpi_people WHERE person_ulan = :ulan"
 					res = gpi.execute(s, ulan=buy['ulan'])
 				else:
@@ -689,7 +685,7 @@ def fan_prev_post_purchase_sale(data: dict, uuid_cache=None):
 	# One owner = two acquisitions... transfer to, transfer from
 
 	data['owner_uid'] = data['owner_uid']
-	data['owner_type'] = get_actor_type(data['owner_ulan'], ulan_type)
+	data['owner_type'] = ulan_type.get(data['owner_ulan'], "Person")
 	data['object_uid'] = data['object_uid']
 	if 'prev_uid' in data and data['prev_uid']:
 		data['prev_uid'] = data['prev_uid']
@@ -732,14 +728,14 @@ def add_person_names(thing: dict, gpi=None):
 		thing['names'].append(name)
 	return thing
 
-@use('aat')
+@use('aat_labels')
 def add_person_aat_labels(data: dict, aat=None):
 	if data.get('aat_nationality_1'):
-		data['aat_nationality_1_label'] = get_aat_label(data['aat_nationality_1'], aat=aat)
+		data['aat_nationality_1_label'] = aat_labels.get(data['aat_nationality_1'])
 	if data.get('aat_nationality_2'):
-		data['aat_nationality_2_label'] = get_aat_label(data['aat_nationality_2'], aat=aat)
+		data['aat_nationality_2_label'] = aat_labels.get(data['aat_nationality_2'])
 	if data.get('aat_nationality_3'):
-		data['aat_nationality_4_label'] = get_aat_label(data['aat_nationality_3'], aat=aat)
+		data['aat_nationality_4_label'] = aat_labels.get(data['aat_nationality_3'])
 	return data
 
 @use('gpi')

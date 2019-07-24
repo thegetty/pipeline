@@ -15,7 +15,6 @@ class UUIDRewriter:
 	def __init__(self, prefix):
 		self.map = {}
 		self.prefix = prefix
-		self.next = itertools.count(1000)
 
 	def rewrite(self, d, *args, **kwargs):
 		if isinstance(d, dict):

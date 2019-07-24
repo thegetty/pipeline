@@ -31,8 +31,9 @@ class FileWriter(Configurable):
 	def __call__(self, data: dict):
 		d = data['_OUTPUT']
 		dr = os.path.join(self.directory, data['_ARCHES_MODEL'])
-		if not os.path.exists(dr):
-			os.mkdir(dr)
+		with ExclusiveValue(dr):
+			if not os.path.exists(dr):
+				os.mkdir(dr)
 		filename, partition = filename_for(data)
 		fn = os.path.join(dr, filename)
 		fh = open(fn, 'w')

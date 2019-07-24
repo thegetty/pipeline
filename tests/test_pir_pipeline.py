@@ -5,8 +5,6 @@ import os.path
 import hashlib
 import json
 import uuid
-import pprint
-from collections import defaultdict
 
 from tests import merge
 from pipeline.projects.provenance import ProvenancePipeline
@@ -31,7 +29,8 @@ class TestWriter():
 			print(f'*** No UUID in top-level resource. Using a hash of top-level URI: {uu}')
 		if not uu:
 			uu = str(uuid.uuid4())
-			print(f'*** No UUID in top-level resource. Using an assigned UUID filename for the content: {uu}')
+			print(f'*** No UUID in top-level resource;')
+			print(f'*** Using an assigned UUID filename for the content: {uu}')
 		fn = '%s.json' % uu
 		data = json.loads(d)
 		if fn in self.output[dr]:
@@ -101,7 +100,7 @@ class TestProvenancePipelineOutput(unittest.TestCase):
 			'LinguisticObject': 'model-lo',
 			'Person': 'model-person',
 			'Event': 'model-event',
-			'Group': 'model-auctionhouse',
+			'Group': 'model-groups',
 			'Activity': 'model-activity',
 			'Procurement': 'model-activity',
 			'Place': 'model-place'
@@ -113,8 +112,11 @@ class TestProvenancePipelineOutput(unittest.TestCase):
 		los = output['model-lo']
 		people = output['model-person']
 		auctions = output['model-activity']
-		houses = output['model-auctionhouse']
-		
+		groups = output['model-groups']
+		AUCTION_HOUSE_TYPE = 'http://vocab.getty.edu/aat/300417515'
+		houses = {k: h for k, h in groups.items()
+					if h.get('classified_as', [{}])[0].get('id') == AUCTION_HOUSE_TYPE}
+
 		self.assertEqual(len(people), 3, 'expected count of people')
 		self.assertEqual(len(objects), 6, 'expected count of physical objects')
 		self.assertEqual(len(los), 1, 'expected count of linguistic objects')
@@ -127,16 +129,18 @@ class TestProvenancePipelineOutput(unittest.TestCase):
 
 		lo_types = {c['_label'] for o in los.values() for c in o.get('classified_as', [])}
 		self.assertEqual(lo_types, {'Auction Catalog'})
-		
+
 		people_names = {o['_label'] for o in people.values()}
 		self.assertEqual(people_names, {'[Anonymous]', 'Gillemans', 'Vinckebooms'})
-		
-		auction_B_A139_0119 = auctions['1a7203f187a316a7a881cbe4a8fbc48526d7bf5703151b41f8e51316f4f6a4ba.json']
+
+		key_119, key_120 = sorted(auctions.keys())
+
+		auction_B_A139_0119 = auctions[key_119]
 		self.verify_auction(auction_B_A139_0119, event='B-A139', idents={'0119[a]', '0119[b]'})
 
-		auction_B_A139_0120 = auctions['b6f9bb31c81c301d9a5ba7c36bd012aad4d857973caa42a6d0ac14790118accd.json']
+		auction_B_A139_0120 = auctions[key_120]
 		self.verify_auction(auction_B_A139_0120, event='B-A139', idents={'0120'})
-		
+
 		house_names = {o['_label'] for o in houses.values()}
 		house_ids = {o['id'] for o in houses.values()}
 		house_types = {c['_label'] for o in houses.values() for c in o.get('classified_as', [])}

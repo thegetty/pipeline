@@ -20,6 +20,7 @@ arches_client_id = os.environ.get('GETTY_PIPELINE_ARCHES_CLIENT_ID', 'OaGs0HfnBN
 
 pipeline_tmp_path = os.environ.get('GETTY_PIPELINE_TMP_PATH', '/tmp')
 pir_data_path = os.environ.get('GETTY_PIPELINE_PIR_INPUT', '/data/input/pir')
+pipeline_service_files_path = os.environ.get('GETTY_PIPELINE_SERVICE_FILES_PATH', pir_data_path)
 aata_data_path = os.environ.get('GETTY_PIPELINE_AATA_INPUT', '/data/input/aata')
 data_path = os.environ.get('GETTY_PIPELINE_INPUT', '/data/input/provenance/knoedler')
 output_file_path = os.environ.get('GETTY_PIPELINE_OUTPUT', '/data2/output/provenance/knoedler')

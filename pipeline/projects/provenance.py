@@ -12,8 +12,10 @@ import sys
 import uuid
 import csv
 import pprint
+import pathlib
 import itertools
 import datetime
+import dateutil.parser
 from collections import Counter, defaultdict, namedtuple
 from contextlib import suppress
 import inspect
@@ -30,9 +32,14 @@ from bonobo.nodes import Limit
 import settings
 from cromulent import model, vocab
 from pipeline.util import RecursiveExtractKeyedValue, ExtractKeyedValue, ExtractKeyedValues, \
-			MatchingFiles, identity, implode_date, timespan_before, timespan_after
-from pipeline.util.cleaners import dimensions_cleaner, normalized_dimension_object, \
-			parse_location, parse_location_name, date_parse, date_cleaner
+			MatchingFiles, identity, implode_date, timespan_before, timespan_after, \
+			replace_key_pattern, strip_key_prefix
+from cromulent.extract import extract_physical_dimensions, extract_monetary_amount
+from pipeline.util.cleaners import \
+			parse_location, \
+			parse_location_name, \
+			date_parse, \
+			date_cleaner
 from pipeline.io.file import MergingFileWriter
 # from pipeline.io.arches import ArchesWriter
 from pipeline.linkedart import \
@@ -54,32 +61,9 @@ from pipeline.nodes.basic import \
 from pipeline.util.rewriting import rewrite_output_files, JSONValueRewriter
 
 UID_TAG_PREFIX = 'tag:getty.edu,2019:digital:pipeline:REPLACE-WITH-UUID#'
+PROBLEMATIC_RECORD_URI = 'tag:getty.edu,2019:digital:pipeline:ProblematicRecord'
 
 #mark - utility functions and classes
-
-class DictWrapper:
-	'''
-	Wrapper of a dictionary used to work around a limitation in bonobo services, which
-	seem to fail when using plain `dict` values.
-	'''
-	def __init__(self, value=None):
-		self.d = {}
-		if isinstance(value, dict):
-			self.d = value
-		elif isinstance(value, str):
-			with open(value, 'r') as f:
-				self.d = json.load(f)
-
-	def set(self, key, value):
-		'''Set `key` to `value`.'''
-		self.d[key] = value
-
-	def get(self, key):
-		'''Get the value associated with `key`.'''
-		return self.d.get(key)
-
-	def __getitem__(self, key):
-		return self.get(key)
 
 def pir_uri(*values):
 	'''Convert a set of identifying `values` into a URI'''
@@ -105,30 +89,6 @@ def filter_empty_people(*people):
 		d = {k: p[k] for k in data_keys if p[k] and p[k] != '0'}
 		if d:
 			yield p
-
-def replace_key_pattern(pat, rep, value):
-	r = re.compile(pat)
-	d = {}
-	for k, v in value.items():
-		m = r.search(k)
-		if m:
-			d[k.replace(m.group(1), rep, 1)] = v
-		else:
-			d[k] = v
-	return d
-
-def strip_key_prefix(prefix, value):
-	'''
-	Strip the given `prefix` string from the beginning of all keys in the supplied `value`
-	dict, returning a copy of `value` with the new keys.
-	'''
-	d = {}
-	for k, v in value.items():
-		if k.startswith(prefix):
-			d[k.replace(prefix, '', 1)] = v
-		else:
-			d[k] = v
-	return d
 
 def add_pir_record_ids(data, parent):
 	'''Copy identifying key-value pairs from `parent` to `data`, returning `data`'''
@@ -187,13 +147,22 @@ def timespan_from_outer_bounds(begin=None, end=None):
 	if begin or end:
 		ts = model.TimeSpan(ident='')
 		if begin is not None:
-			if isinstance(begin, datetime.datetime):
+			try:
+				if not isinstance(begin, datetime.datetime):
+					begin = dateutil.parser.parse(begin)
 				begin = begin.strftime("%Y-%m-%dT%H:%M:%SZ")
-			ts.begin_of_the_begin = begin
+				ts.begin_of_the_begin = begin
+			except ValueError:
+				print(f'*** failed to parse begin date: {begin}')
+				raise
 		if end is not None:
-			if isinstance(end, datetime.datetime):
+			try:
+				if not isinstance(end, datetime.datetime):
+					end = dateutil.parser.parse(end)
 				end = end.strftime("%Y-%m-%dT%H:%M:%SZ")
-			ts.end_of_the_end = end
+				ts.end_of_the_end = end
+			except ValueError:
+				print(f'*** failed to parse end date: {end}')
 		return ts
 	return None
 
@@ -235,11 +204,11 @@ def populate_auction_event(data, auction_locations):
 	if place:
 		data['_locations'] = [place_data]
 		auction.took_place_at = place
-		auction_locations.set(cno, place)
+		auction_locations[cno] = place
 
 	ts = timespan_from_outer_bounds(
-		begin=implode_date(data, 'sale_begin_'),
-		end=implode_date(data, 'sale_end_'),
+		begin=implode_date(data, 'sale_begin_', clamp='begin'),
+		end=implode_date(data, 'sale_end_', clamp='end'),
 	)
 
 	if ts:
@@ -308,7 +277,7 @@ def add_auction_houses(data, auction_houses):
 		auction.carried_out_by = house
 		if auction_houses:
 			house_objects.append(house)
-	auction_houses.set(cno, house_objects)
+	auction_houses[cno] = house_objects
 	yield d
 
 
@@ -317,6 +286,7 @@ def add_auction_houses(data, auction_houses):
 class AddAuctionOfLot(Configurable):
 	'''Add modeling data for the auction of a lot of objects.'''
 	
+	problematic_records = Service('problematic_records')
 	auction_locations = Service('auction_locations')
 	auction_houses = Service('auction_houses')
 	def __init__(self, *args, **kwargs):
@@ -408,10 +378,11 @@ class AddAuctionOfLot(Configurable):
 		lot.used_specific_object = coll
 		data['_lot_object_set'] = coll
 
-	def __call__(self, data, auction_houses, auction_locations):
+	def __call__(self, data, auction_houses, auction_locations, problematic_records):
 		'''Add modeling data for the auction of a lot of objects.'''
 		auction_data = data['auction_of_lot']
-		cno, lno, date = object_key(auction_data)
+		lot_object_key = object_key(auction_data)
+		cno, lno, date = lot_object_key
 		shared_lot_number = self.shared_lot_number_from_lno(lno)
 		uid, uri = self.shared_lot_number_ids(cno, lno, date)
 		data['uid'] = uid
@@ -419,6 +390,21 @@ class AddAuctionOfLot(Configurable):
 
 		lot = vocab.Auction(ident=data['uri'])
 		lot._label = f'Auction of Lot {cno} {shared_lot_number} ({date})'
+
+		for pcno, plno, pdate, problem in problematic_records['lots']:
+			# TODO: this is inefficient, but will probably be OK so long as the number
+			#       of problematic records is small. We do it this way because we can't
+			#       represent a tuple directly as a JSON dict key, and we don't want to
+			#       have to do post-processing on the services JSON files after loading.
+			problem_key = (pcno, plno, pdate)
+			if problem_key == lot_object_key:
+				note = model.LinguisticObject(content=problem)
+				note.classified_as = vocab.instances["brief text"]
+				note.classified_as = model.Type(
+					ident=PROBLEMATIC_RECORD_URI,
+					label='Problematic Record'
+				)
+				lot.referred_to_by = note
 
 		self.set_lot_auction_houses(lot, cno, auction_houses)
 		self.set_lot_location(lot, cno, auction_locations)
@@ -437,69 +423,11 @@ class AddAuctionOfLot(Configurable):
 
 def add_crom_price(data, _):
 	'''
-	Add modeling data for `MonetaryAmount`s or `EstimatedPrice`s, based on properties of
-	the supplied `data` dict.
+	Add modeling data for `MonetaryAmount`, `StartingPrice`, or `EstimatedPrice`,
+	based on properties of the supplied `data` dict.
 	'''
-	MAPPING = {
-		'Österreichische Schilling': 'at shillings',
-		'florins': 'de florins',
-		'fl': 'de florins',
-		'fl.': 'de florins',
-		'pounds': 'gb pounds',
-		'livres': 'fr livres',
-		'guineas': 'gb guineas',
-		'Reichsmark': 'de reichsmarks'
-	}
-
-	amount_type = 'Price'
-	if 'est_price' in data:
-		amnt = vocab.EstimatedPrice()
-		price_amount = data.get('est_price')
-		price_currency = data.get('est_price_curr')
-		amount_type = 'Estimated Price'
-		note = data.get('est_price_desc')
-	elif 'start_price' in data:
-		amnt = vocab.StartingPrice()
-		price_amount = data.get('start_price')
-		price_currency = data.get('start_price_curr')
-		amount_type = 'Starting Price'
-		note = data.get('start_price_desc')
-	else:
-		amnt = model.MonetaryAmount()
-		price_amount = data.get('price_amount')
-		price_currency = data.get('price_currency')
-		note = data.get('price_note')
-		cite = data.get('price_citation')
-		if cite:
-			amnt.referred_to_by = vocab.BibliographyStatement(content=cite)
-
-	if price_amount or price_currency:
-		if price_amount:
-			try:
-				v = price_amount
-				v = v.replace('[?]', '')
-				v = v.replace('?', '')
-				v = v.strip()
-				price_amount = float(v)
-				amnt.value =  price_amount
-			except ValueError:
-				amnt._label = price_amount
-				amnt.identified_by = model.Name(content=price_amount)
-	# 			print(f'*** Not a numeric price amount: {v}')
-		if price_currency:
-			if price_currency in MAPPING:
-				price_currency = MAPPING[price_currency] # TODO: can this be done safely with the PIR data?
-			if price_currency in vocab.instances:
-				amnt.currency = vocab.instances[price_currency]
-			else:
-				print(f'*** No currency instance defined for {price_currency}')
-		if price_amount and price_currency:
-			amnt._label = f'{price_amount} {price_currency}'
-		elif price_amount:
-			amnt._label = f'{price_amount}'
-
-		if note:
-			amnt.referred_to_by = vocab.Note(content=note)
+	amnt = extract_monetary_amount(data)
+	if amnt:
 		add_crom_data(data=data, what=amnt)
 	return data
 
@@ -536,7 +464,16 @@ def add_person(data: dict):
 	make_la_person(data)
 	return data
 
-def add_acquisition(data, object, buyers, sellers):
+def final_owner_procurement(final_owner, current_tx, hmo, current_ts):
+	tx = related_procurement(current_tx, hmo, current_ts, buyer=final_owner)
+	try:
+		object_label = hmo._label
+		tx._label = f'Procurement leading to the currently known location of “{object_label}”'
+	except AttributeError:
+		tx._label = f'Procurement leading to the currently known location of object'
+	return tx
+
+def add_acquisition(data, hmo, buyers, sellers):
 	'''Add modeling of an acquisition as a transfer of title from the seller to the buyer'''
 	parent = data['parent_data']
 	transaction = parent['transaction']
@@ -545,14 +482,14 @@ def add_acquisition(data, object, buyers, sellers):
 	cno, lno, date = object_key(auction_data)
 	data['buyer'] = buyers
 	data['seller'] = sellers
-	object_label = object._label
+	object_label = hmo._label
 	amnts = [get_crom_object(p) for p in prices]
 
 # 	if not prices:
 # 		print(f'*** No price data found for {transaction} transaction')
 
 	acq = model.Acquisition(label=f'Acquisition of {cno} {lno} ({date}): “{object_label}”')
-	acq.transferred_title_of = object
+	acq.transferred_title_of = hmo
 	paym = model.Payment(label=f'Payment for “{object_label}”')
 	for seller in [get_crom_object(s) for s in sellers]:
 		paym.paid_to = seller
@@ -560,8 +497,6 @@ def add_acquisition(data, object, buyers, sellers):
 	for buyer in [get_crom_object(b) for b in buyers]:
 		paym.paid_from = buyer
 		acq.transferred_title_to = buyer
-	if len(amnts) > 1:
-		pprint.pprint(prices)
 	for amnt in amnts:
 		paym.paid_amount = amnt
 
@@ -580,10 +515,10 @@ def add_acquisition(data, object, buyers, sellers):
 # 	paym.referred_to_by = annotation
 	add_crom_data(data=data, what=acq)
 
-	final_owner = data.get('_final_owning_organization')
-	if final_owner:
-		tx = related_procurement(current_tx, object, ts, buyer=final_owner)
-		tx._label = f'Procurement leading to the currently known location of “{object_label}”'
+	final_owner_data = data.get('_final_org')
+	if final_owner_data:
+		final_owner = get_crom_object(final_owner_data)
+		tx = final_owner_procurement(final_owner, current_tx, hmo, ts)
 		data['_procurements'].append(add_crom_data(data={}, what=tx))
 
 	post_own = data.get('post_owner', [])
@@ -601,14 +536,14 @@ def add_acquisition(data, object, buyers, sellers):
 			own_info_source = owner_record.get('own_so')
 			if own_info_source:
 				note = vocab.Note(content=own_info_source)
-				object.referred_to_by = note
+				hmo.referred_to_by = note
 				owner.referred_to_by = note
-			tx = related_procurement(current_tx, object, ts, buyer=owner, previous=rev)
+			tx = related_procurement(current_tx, hmo, ts, buyer=owner, previous=rev)
 			ptx_data = tx_data.copy()
 			data['_procurements'].append(add_crom_data(data=ptx_data, what=tx))
 	yield data
 
-def related_procurement(current_tx, object, current_ts=None, buyer=None, seller=None, previous=False):
+def related_procurement(current_tx, hmo, current_ts=None, buyer=None, seller=None, previous=False):
 	'''
 	Returns a new `vocab.Procurement` object (and related acquisition) that is temporally
 	related to the supplied procurement and associated data. The new procurement is for
@@ -619,16 +554,17 @@ def related_procurement(current_tx, object, current_ts=None, buyer=None, seller=
 	`previous` is `False`, this relationship is reversed.
 	'''
 	tx = vocab.Procurement()
-	if previous:
-		tx.ends_before_the_start_of = current_tx
-	else:
-		tx.starts_after_the_end_of = current_tx
+	if current_tx:
+		if previous:
+			tx.ends_before_the_start_of = current_tx
+		else:
+			tx.starts_after_the_end_of = current_tx
 	modifier_label = 'Previous' if previous else 'Subsequent'
 	try:
-		pacq = model.Acquisition(label=f'{modifier_label} Acquisition of: “{object._label}”')
-	except:
+		pacq = model.Acquisition(label=f'{modifier_label} Acquisition of: “{hmo._label}”')
+	except AttributeError:
 		pacq = model.Acquisition(label=f'{modifier_label} Acquisition')
-	pacq.transferred_title_of = object
+	pacq.transferred_title_of = hmo
 	if buyer:
 		pacq.transferred_title_to = buyer
 	if seller:
@@ -675,6 +611,16 @@ def add_bidding(data, buyers):
 
 			all_bids.part = bid
 
+		final_owner_data = data.get('_final_org')
+		if final_owner_data:
+			final_owner = get_crom_object(final_owner_data)
+			ts = lot.timespan
+			hmo = get_crom_object(data)
+			tx = final_owner_procurement(final_owner, None, hmo, ts)
+			if '_procurements' not in data:
+				data['_procurements'] = []
+			data['_procurements'].append(add_crom_data(data={}, what=tx))
+
 		add_crom_data(data=data, what=all_bids)
 		yield data
 	else:
@@ -689,7 +635,7 @@ def add_acquisition_or_bidding(data):
 	transaction = transaction.rstrip()
 
 	data = data.copy()
-	object = get_crom_object(data)
+	hmo = get_crom_object(data)
 
 	# TODO: filtering empty people should be moved much earlier in the pipeline
 	buyers = [add_person(p) for p in filter_empty_people(*parent['buyer'])]
@@ -697,7 +643,7 @@ def add_acquisition_or_bidding(data):
 
 	# TODO: is this the right set of transaction types to represent acquisition?
 	if transaction in ('Sold', 'Vendu', 'Verkauft', 'Bought In'):
-		yield from add_acquisition(data, object, buyers, sellers)
+		yield from add_acquisition(data, hmo, buyers, sellers)
 	elif transaction in ('Unknown', 'Unbekannt', 'Inconnue', 'Withdrawn', 'Non Vendu', ''):
 		yield from add_bidding(data, buyers)
 	else:
@@ -726,7 +672,7 @@ def genre_instance(value):
 	# TODO: are these OK AAT instances for these genres?
 	ANIMALS = model.Type(ident='http://vocab.getty.edu/aat/300249395', label='Animals')
 	HISTORY = model.Type(ident='http://vocab.getty.edu/aat/300033898', label='History')
-	MAPPING = {
+	MAPPING = { # TODO: can this be refactored somewhere?
 		'animals': ANIMALS,
 		'tiere': ANIMALS,
 		'stilleben': vocab.instances['style still life'],
@@ -741,9 +687,9 @@ def genre_instance(value):
 	return MAPPING.get(value)
 
 def populate_destruction_events(data, note):
-	object = get_crom_object(data)
+	hmo = get_crom_object(data)
 	title = data.get('title')
-	DESTRUCTION_METHODS = { # TODO: 
+	DESTRUCTION_METHODS = { # TODO: can this be refactored somewhere?
 		'fire': model.Type(ident='http://vocab.getty.edu/aat/300068986', label='Fire'),
 	}
 	r = re.compile(r'Destroyed(?: (?:by|during) (\w+))?(?: in (\d{4})[.]?)?')
@@ -757,7 +703,7 @@ def populate_destruction_events(data, note):
 			begin, end = date_cleaner(year)
 			ts = timespan_from_outer_bounds(begin, end)
 			d.timespan = ts
-		object.destroyed_by = d
+		hmo.destroyed_by = d
 
 		if method:
 			with suppress(KeyError, AttributeError):
@@ -770,7 +716,7 @@ def populate_destruction_events(data, note):
 @use('unique_catalogs')
 def populate_object(data, post_sale_map, unique_catalogs):
 	'''Add modeling for an object described by a sales record'''
-	object = get_crom_object(data)
+	hmo = get_crom_object(data)
 	parent = data['parent_data']
 	auction_data = parent.get('auction_of_lot')
 	if auction_data:
@@ -782,7 +728,13 @@ def populate_object(data, post_sale_map, unique_catalogs):
 	if m:
 		matstmt = vocab.MaterialStatement()
 		matstmt.content = m
-		object.referred_to_by = matstmt
+		hmo.referred_to_by = matstmt
+
+	cno = auction_data['catalog_number']
+	lno = auction_data['lot_number']
+	date = implode_date(auction_data, 'lot_sale_')
+	lot = AddAuctionOfLot.shared_lot_number_from_lno(lno)
+	now_key = (cno, lot, date) # the current key for this object; may be associated later with prev and post object keys
 
 	title = data.get('title')
 	vi = model.VisualItem()
@@ -791,11 +743,10 @@ def populate_object(data, post_sale_map, unique_catalogs):
 	genre = genre_instance(data.get('genre'))
 	if genre:
 		vi.classified_as = genre
-	object.shows = vi
+	hmo.shows = vi
 
 	location = data.get('present_location')
 	if location:
-		# pprint.pprint(location)
 		loc = location.get('geog')
 		if loc:
 			if 'Destroyed ' in loc:
@@ -817,17 +768,20 @@ def populate_object(data, post_sale_map, unique_catalogs):
 						owner_data['uri'] = pir_uri('ORGANIZATION', 'ULAN', ulan)
 					else:
 						owner_data['uri'] = pir_uri('ORGANIZATION', 'NAME', inst, 'PLACE', loc)
-					
-					lao = MakeLinkedArtOrganization()
-					owner_data = lao(owner_data)
-					owner = get_crom_object(owner_data)
-					owner.residence = place
-					data['_locations'] = [place_data]
-					pprint.pprint(place_data)
-					data['_final_owning_organization'] = owner
 				else:
-					pass # TODO: there's a location but no institution; create procurement->acquisition->(anonymous institution)->place->(place name)
-# 				object.current_location = place # TODO: this modeling should change to be equivalent to a final "post owner" of the "present location institution"
+					owner_data = {
+						'label': '(Anonymous organization)',
+						'name': '(Anonymous organization)',
+						'uri': pir_uri('ORGANIZATION', 'PRESENT-OWNER', *now_key)
+					}
+				lao = MakeLinkedArtOrganization()
+				owner_data = lao(owner_data)
+				owner = get_crom_object(owner_data)
+				owner.residence = place
+				data['_locations'] = [place_data]
+				data['_final_org'] = owner_data
+		else:
+			pass # there is no present location place string
 		note = location.get('note')
 		if note:
 			pass
@@ -845,19 +799,13 @@ def populate_object(data, post_sale_map, unique_catalogs):
 		catalog_uri = pir_uri('CATALOG', cno, owner, None)
 		catalogs = unique_catalogs.get(catalog_uri)
 		note = vocab.Note(content=c)
-		object.referred_to_by = note
+		hmo.referred_to_by = note
 		if catalogs and len(catalogs) == 1:
 			note.carried_by = model.HumanMadeObject(ident=catalog_uri, label=f'Sale Catalog {cno}, owned by {owner}')
 
 	inscription = data.get('inscription')
 	if inscription:
-		object.carries = vocab.Note(content=inscription)
-
-	cno = auction_data['catalog_number']
-	lno = auction_data['lot_number']
-	date = implode_date(auction_data, 'lot_sale_')
-	lot = AddAuctionOfLot.shared_lot_number_from_lno(lno)
-	now_key = (cno, lot, date)
+		hmo.carries = vocab.Note(content=inscription)
 
 	post_sales = data.get('post_sale', [])
 	prev_sales = data.get('prev_sale', [])
@@ -872,34 +820,15 @@ def populate_object(data, post_sale_map, unique_catalogs):
 				later_key = (pcno, plot, pdate)
 				if rev:
 					later_key, now_key = now_key, later_key
-				post_sale_map.set(later_key, now_key)
+				post_sale_map[later_key] = now_key
 
 	dimstr = data.get('dimensions')
 	if dimstr:
 		dimstmt = vocab.DimensionStatement()
 		dimstmt.content = dimstr
-		object.referred_to_by = dimstmt
-		dimensions = dimensions_cleaner(dimstr)
-		if dimensions:
-			for orig_d in dimensions:
-				dimdata = normalized_dimension_object(orig_d)
-				if dimdata:
-					d, label = dimdata
-					if d.which == 'height':
-						dim = vocab.Height()
-					elif d.which == 'width':
-						dim = vocab.Width()
-					else:
-						dim = vocab.PhysicalDimension()
-					dim.identified_by = model.Name(content=label)
-					dim.value = d.value
-					unit = vocab.instances.get(d.unit)
-					if unit:
-						dim.unit = unit
-					object.dimension = dim
-				else:
-					pass
-# 					print(f'Failed to normalize dimensions: {orig_d}')
+		hmo.referred_to_by = dimstmt
+		for dim in extract_physical_dimensions(dimstr):
+			hmo.dimension = dim
 		else:
 			pass
 # 			print(f'No dimension data was parsed from the dimension statement: {dimstr}')
@@ -907,7 +836,7 @@ def populate_object(data, post_sale_map, unique_catalogs):
 
 def add_object_type(data):
 	'''Add appropriate type information for an object based on its 'object_type' name'''
-	TYPES = { # TODO: should this be in settings (or elsewhere)?
+	TYPES = { # TODO: can this be refactored somewhere?
 		'dessin': vocab.Drawing,
 		'drawing': vocab.Drawing,
 		'émail': vocab.Enamel,
@@ -1029,22 +958,26 @@ def add_physical_catalog_owners(data, location_codes, unique_catalogs):
 	# and owner code (e.g. for owners who do not have multiple copies of a catalog).
 	cno = data['catalog_number']
 	owner_code = data['owner_code']
-	owner_name = location_codes[owner_code]
-	data['_owner'] = {
-		'name': owner_name,
-		'label': owner_name,
-		'uri': pir_uri('ORGANIZATION', 'LOCATION-CODE', owner_code),
-		'identifiers': [model.Identifier(ident='', content=owner_code)],
-	}
-	owner = model.Group(ident=data['_owner']['uri'])
-	owner_data = add_crom_data(data=data['_owner'], what=owner)
-	catalog = get_crom_object(data)
-	catalog.current_owner = owner
-	
+	owner_name = None
+	try:
+		owner_name = location_codes[owner_code]
+		data['_owner'] = {
+			'name': owner_name,
+			'label': owner_name,
+			'uri': pir_uri('ORGANIZATION', 'LOCATION-CODE', owner_code),
+			'identifiers': [model.Identifier(ident='', content=owner_code)],
+		}
+		owner = model.Group(ident=data['_owner']['uri'])
+		owner_data = add_crom_data(data=data['_owner'], what=owner)
+		catalog = get_crom_object(data)
+		catalog.current_owner = owner
+	except KeyError:
+		pass
+
 	uri = pir_uri('CATALOG', cno, owner_code, None)
-	if uri not in unique_catalogs.d:
-		unique_catalogs.d[uri] = set()
-	unique_catalogs.d[uri].add(uri)
+	if uri not in unique_catalogs:
+		unique_catalogs[uri] = set()
+	unique_catalogs[uri].add(uri)
 	return data
 
 
@@ -1086,6 +1019,7 @@ class ProvenancePipeline:
 		self.limit = kwargs.get('limit')
 		self.debug = kwargs.get('debug', False)
 		self.input_path = input_path
+		self.pipeline_service_files_path = kwargs.get('pipeline_service_files_path', settings.pipeline_service_files_path)
 
 		fs = bonobo.open_fs(input_path)
 		with fs.open(self.catalogs_header_file, newline='') as csvfile:
@@ -1111,19 +1045,24 @@ class ProvenancePipeline:
 	# Set up environment
 	def get_services(self):
 		'''Return a `dict` of named services available to the bonobo pipeline.'''
-		return {
+		services = {
 			'lot_counter': Counter(),
-			'unique_catalogs': DictWrapper(),
-			'post_sale_map': DictWrapper(),
-			'auction_houses': DictWrapper(),
-			'auction_locations': DictWrapper(),
-			'location_codes': DictWrapper(os.path.join(self.input_path, 'pir_location_codes.json')),
+			'unique_catalogs': {},
+			'post_sale_map': {},
+			'auction_houses': {},
+			'auction_locations': {},
 			'trace_counter': itertools.count(),
 			'gpi': create_engine(settings.gpi_engine),
 			'aat': create_engine(settings.aat_engine),
 			'uuid_cache': create_engine(settings.uuid_cache_engine),
 			'fs.data.pir': bonobo.open_fs(self.input_path)
 		}
+		
+		p = pathlib.Path(self.pipeline_service_files_path)
+		for file in p.rglob('*.json'):
+			with open(file, 'r') as f:
+				services[file.stem] = json.load(f)
+		return services
 
 	def add_serialization_chain(self, graph, input_node):
 		'''Add serialization of the passed transformer node to the bonobo graph.'''
@@ -1248,12 +1187,22 @@ class ProvenancePipeline:
 		'''Add modeling of the acquisitions and bidding on lots being auctioned.'''
 		acqs = graph.add_chain(
 			add_acquisition_or_bidding,
-			AddArchesModel(model=self.models['Activity']),
 			_input=sales.output
 		)
+		_acqs1 = graph.add_chain(
+			AddArchesModel(model=self.models['Activity']),
+			_input=acqs.output
+		)
+		orgs = graph.add_chain(
+			ExtractKeyedValue(key='_final_org'),
+			AddArchesModel(model=self.models['Group']),
+			_input=acqs.output
+		)
+		
 		if serialize:
 			# write SALES data
-			self.add_serialization_chain(graph, acqs.output)
+			self.add_serialization_chain(graph, _acqs1.output)
+			self.add_serialization_chain(graph, orgs.output)
 		return acqs
 
 	def add_sales_chain(self, graph, records, serialize=True):
@@ -1707,12 +1656,28 @@ class ProvenanceFilePipeline(ProvenancePipeline):
 		print('Running post-processing of post-sale data...')
 		counter = services['lot_counter']
 		post_map = services['post_sale_map']
-		self.merge_post_sale_objects(counter, post_map.d)
-		print(f'>>> {len(post_map.d)} post sales records')
+		self.merge_post_sale_objects(counter, post_map)
+		print(f'>>> {len(post_map)} post sales records')
 		print('Total runtime: ', timeit.default_timer() - start)  
 		
 
 class SalesTree:
+	'''
+	This class is used to represent the repeated sales of objects in provenance data.
+	It stores a graph of trees where each node is a lot sale, and edges connect sales
+	of the same object over time.
+	
+	The `post_sale_map` data that is generated during the pipeline run is used to identify
+	lots which contain just a single object. When this data indicates that a single object
+	was sold multiple times, links are added to this `SalesTree` by a call to `add_edge`
+	using the lot keys.
+	
+	Subsequently, `canonical_key` is used to return a single key for each sales record
+	that belongs to a connected component in the `SalesTree` graph. This canonical key
+	is used in a post-processing phase (based on the `post_sale_rewrite_map` file) that
+	rewrites many URLs in the output data which all identify a single object to a single
+	URL.
+	'''
 	def __init__(self):
 		self.counter = itertools.count()
 		self.nodes = {}

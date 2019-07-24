@@ -14,6 +14,9 @@ from pipeline.io.arches import ArchesWriter
 from pipeline.linkedart import make_la_person
 from settings import *
 
+PROJECT_NAME = "knoedler"
+UID_TAG_PREFIX = f'tag:getty.edu,2019:digital:pipeline:{PROJECT_NAME}:REPLACE-WITH-UUID#'
+
 # Set up environment
 def get_services():
     return {
@@ -154,7 +157,7 @@ def add_objects(graph):
 	graph.add_chain(
 		bonobo_sqlalchemy.Select('SELECT DISTINCT object_id FROM knoedler', engine='gpi', limit=LIMIT, pack_size=PACK_SIZE),
 		make_objects,
-		AddArchesModel(model=arches_models['ManMadeObject']),
+		AddArchesModel(model=arches_models['HumanMadeObject']),
 		add_uuid,
 		make_objects_names,
 		make_objects_dims,

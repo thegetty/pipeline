@@ -154,6 +154,17 @@ class AddFieldNames(Configurable):
 		d = dict(zip(names, data))
 		return d
 
+class AddFieldNamesService(Configurable):
+	key = Option(required=False) # This is passed into __init__ as a kwarg but not into __call__
+	field_names = Service('header_names')   # This is passed into __call__ as a kwarg not at __init__  
+	# ... go figure
+	def __call__(self, *data, field_names={}):
+		if len(data) == 1 and type(data[0]) in (tuple, list):
+			data = data[0]
+		names = field_names.get(self.key, []) if isinstance(field_names, dict) else field_names
+		d = dict(zip(names, data))
+		return d
+
 class Offset(Configurable):
 	offset = Option()
 	seen = 0

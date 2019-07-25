@@ -7,23 +7,10 @@ from pipeline.linkedart import add_crom_data
 factory.auto_id_type = 'uuid'
 vocab.add_art_setter()
 
+from pipeline.projects.knoedler import UID_TAG_PREFIX
+
 vocab.register_aat_class("Clock", {"parent": model.HumanMadeObject, "id": "300041575", "label": "Clock"})
 vocab.register_aat_class("Cards", {"parent": model.HumanMadeObject, "id":"300211294", "label": "Playing Cards"})
-object_type_map = {
-	"Painting": vocab.Painting,
-	"Drawing": vocab.Drawing,
-	"Sculpture": vocab.Sculpture,
-	"Photograph": vocab.Photograph,
-	"Print": vocab.Print,
-	"Book": vocab.Book,
-	"Tapestry": vocab.Tapestry,
-	"Decorative Art": vocab.DecArts,
-	"Clocks": vocab.Clock,
-	"Maps": vocab.Map,
-	"Clothing": vocab.Clothing,
-	"Playing Cards": vocab.Cards,
-	"Furniture": vocab.Furniture
-}
 dimTypes = {300055624: vocab.Diameter, 300055644: vocab.Height, 300055647: vocab.Width}
 dimUnits = {300379100: vocab.instances["inches"], 300379098: vocab.instances["cm"]}
 
@@ -43,8 +30,17 @@ def _page_label(book, page):
 def _row_label(book, page, row):
 	return "Knoedler Stock Book %s, Page %s, Row %s" % (book, page, row)
 
+
+def _row_uid(book, page, row):
+	return f'{UID_TAG_PREFIX}K-ROW-{book}-{page}-{row}'
+def _page_uid(book, page):
+	return f'{UID_TAG_PREFIX}K-PAGE-{book}-{page}'
+def _book_uid(book):
+	return f'{UID_TAG_PREFIX}K-BOOK-{book}'
+
+
 def make_la_book(data: dict):
-	book = vocab.AccountBook(ident="urn:uuid:%s" % data['uuid'])
+	book = vocab.AccountBook(ident=_book_uid(data['identifier']))
 	book._label = _book_label(data['identifier'])
 	ident = vocab.LocalNumber()
 	ident.content = str(data['identifier'])
@@ -59,7 +55,7 @@ def make_la_book(data: dict):
 	return add_crom_data(data=data, what=book)
 
 def make_la_page(data: dict):
-	page = vocab.Page(ident="urn:uuid:%s" % data['uuid'])
+	page = vocab.Page(ident=_page_uid(data['parent']['identifier'], data['identifier']))
 	page._label = _page_label(data['parent']['identifier'], data['identifier'])
 	ident = vocab.LocalNumber()
 	ident.content = str(data['identifier'])
@@ -92,8 +88,8 @@ def make_la_page(data: dict):
 		l.content = data['subheading']
 		page.part = l
 
-	book = model.LinguisticObject(ident="urn:uuid:%s" % data['parent']['uuid'])
-	# book._label = "Book"
+	book = model.LinguisticObject(ident=_book_uid(data['parent']['identifier']))
+	book._label = _book_label(data['parent']['identifier'])
 	page.part_of = book
 
 	return add_crom_data(data=data, what=page)
@@ -141,19 +137,25 @@ def make_la_row(data: dict):
 ### the -list UI is much much nicer for editors
 ###
 
-def make_la_object(data: dict):
-	cls = object_type_map.get(data['object_type'], model.HumanMadeObject)
-	if cls == model.HumanMadeObject:
+@use('vocab_type_map')
+def make_la_object(data: dict, vocab_type_map=None):
+	clsname = vocab_type_map.get(data['object_type'], None)
+	if clsname:
+		cls = getattr(vocab, clsname)
+	else:
+		cls = model.HumanMadeObject
 		print("Could not match object type %s" % data['object_type'])
-	what = cls(ident="urn:uuid:%s" % data['uuid'], art=1)
+
+	uid = data['uid']
+	what = cls(ident=f'{UID_TAG_PREFIX}{uid}', art=1)
 
 	for dv in data['dimensions']:
 		ds = vocab.DimensionStatement()
 		ds.content =dv['value']
 		# add source as part_of, as this is transcription
 		for s in dv['sources']:
-			l = model.LinguisticObject(ident="urn:uuid:%s" % s[1])
-			#l._label = _row_label(s[2], s[3], s[4])
+			l = model.LinguisticObject(ident=_row_uid(s[1], s[2], s[3]))
+			l._label = _row_label(s[1], s[2], s[3])
 			ds.referred_to_by = l
 		what.referred_to_by = ds
 
@@ -162,8 +164,8 @@ def make_la_object(data: dict):
 		ds.content = dm['value']
 		# add source as part_of, as this is transcription
 		for s in dm['sources']:
-			l = model.LinguisticObject(ident="urn:uuid:%s" % s[1])
-			#l._label = _row_label(s[2], s[3], s[4])
+			l = model.LinguisticObject(ident=_row_uid(s[1], s[2], s[3]))
+			l._label = _row_label(s[1], s[2], s[3])
 			ds.referred_to_by = l
 		what.referred_to_by = ds
 
@@ -175,8 +177,8 @@ def make_la_object(data: dict):
 		name.content = n['value']
 
 		for s in n['sources']:
-			l = model.LinguisticObject(ident="urn:uuid:%s" % s[1])
-			#l._label = _row_label(s[2], s[3], s[4])
+			l = model.LinguisticObject(ident=_row_uid(s[1], s[2], s[3]))
+			l._label = _row_label(s[1], s[2], s[3])
 			name.referred_to_by = l
 		what.identified_by = name
 
@@ -190,8 +192,8 @@ def make_la_object(data: dict):
 		d.value = dim['value']
 		d.unit = dimUnits[dim['unit']]
 		for s in dim['sources']:
-			l = model.LinguisticObject(ident="urn:uuid:%s" % s[1])
-			#l._label = _row_label(s[2], s[3], s[4])
+			l = model.LinguisticObject(ident=_row_uid(s[1], s[2], s[3]))
+			l._label = _row_label(s[1], s[2], s[3])
 			d.referred_to_by = l
 		what.dimension = d
 
@@ -215,20 +217,20 @@ def make_la_object(data: dict):
 		# This is currently always a person. Need to process Workshop of X
 		# XXX FIXME this is the arches issue with multiple resource-instance models
 		#who = model.Person(ident="urn:uuid:%s" % a['uuid'])
-		who = model.Actor(ident="urn:uuid:%s" % a['uuid'])
-		# who._label = a['label']
+		who = model.Actor(ident=f'{UID_TAG_PREFIX}{a["uid"]}')
+		who._label = a['label']
 		prod.carried_out_by = who
 
 		for s in a['sources']:
 			# Can't associate with the relationship directly (as it's a source for carried_out_by)
 			# So just add to the Production, which is still true, and 99.9% of the time is sufficient
-			l = model.LinguisticObject(ident="urn:uuid:%s" % s[1])
-			#l._label = _row_label(s[2], s[3], s[4])
+			l = model.LinguisticObject(ident=_row_uid(s[1], s[2], s[3]))
+			l._label = _row_label(s[1], s[2], s[3])
 			prod.referred_to_by = l
 
 	for a in former:
 		fprod = model.Production()
-		who = model.Person(ident="urn:uuid:%s" % a['uuid'])
+		who = model.Person(ident=f'{UID_TAG_PREFIX}{a["uid"]}')
 		who._label = a['label']
 		fprod.carried_out_by = who
 		aa = model.AttributeAssignment()
@@ -237,14 +239,14 @@ def make_la_object(data: dict):
 		# XXX FIXME: aa.classified_as = produced_by
 		for s in a['sources']:
 			# Conversely, this is correct, as the LO refers to the AA carried out by Knoedler
-			l = model.LinguisticObject(ident="urn:uuid:%s" % s[1])
-			#l._label = _row_label(s[2], s[3], s[4])
+			l = model.LinguisticObject(ident=_row_uid(s[1], s[2], s[3]))
+			l._label = _row_label(s[1], s[2], s[3])
 			aa.referred_to_by = l
 
 	add_vi = False
 	for t in data['tags']:
-		aatv = "aat:%s" % t['aat']
-		aaturi = "http://vocab.getty.edu/aat/%s" % t['aat']
+		aatv = f"aat:{t['aat']}"
+		aaturi = f"http://vocab.getty.edu/aat/{t['aat']}" 
 		if t['type'] == 'classified_as':
 			# classification of the object
 			curr = [x.id for x in what.classified_as]
@@ -276,14 +278,14 @@ def make_la_object(data: dict):
 
 	if add_vi:
 		# This will be built in a different fork
-		vi = model.VisualItem(ident="urn:uuid:%s" % data['vizitem_uuid'])
+		vi = model.VisualItem(ident=f'{UID_TAG_PREFIX}{data["uid"]}-vizitem')
 		what.shows = vi
 
 	return add_crom_data(data=data, what=what)
 
 
 def make_la_vizitem(data: dict):
-	vi = model.VisualItem(ident="urn:uuid:%s" % data['vizitem_uuid'])
+	vi = model.VisualItem(ident=f'{UID_TAG_PREFIX}{data["uid"]}-vizitem')
 	add_vi = False
 	for t in data['tags']:
 		aaturi = "http://vocab.getty.edu/aat/%s" % t['aat']

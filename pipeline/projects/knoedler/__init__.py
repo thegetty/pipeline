@@ -7,7 +7,10 @@ from sqlalchemy import create_engine
 import bonobo
 import bonobo_sqlalchemy
 
-from pipeline.nodes.basic import AddArchesModel, AddFieldNames, Serializer, deep_copy, Offset, Trace
+PROJECT_NAME = "knoedler"
+UID_TAG_PREFIX = f'tag:getty.edu,2019:digital:pipeline:{PROJECT_NAME}:REPLACE-WITH-UUID#'
+
+from pipeline.nodes.basic import AddArchesModel, AddFieldNamesService, Serializer, deep_copy, Offset, Trace
 from pipeline.projects.knoedler.data import *
 from pipeline.projects.knoedler.linkedart import *
 from pipeline.io.file import FileWriter
@@ -16,7 +19,8 @@ from pipeline.linkedart import make_la_person
 from settings import *
 import settings
 
-class KnoedlerFilePipeline:
+
+class Pipeline:
 	'''Bonobo-based pipeline for transforming Knoedler data into JSON-LD.'''
 	def __init__(self, output_path, **kwargs):
 		self.output_chain = None
@@ -55,7 +59,7 @@ class KnoedlerFilePipeline:
 	def add_sales(self, graph):
 		graph.add_chain(
 			bonobo_sqlalchemy.Select('SELECT * from knoedler_purchase_info', engine='gpi', limit=self.limit, pack_size=self.pack_size),
-			AddFieldNames(key="purchase_info", field_names=all_names),
+			AddFieldNamesService(key="purchase_info"),
 			AddArchesModel(model=arches_models['Acquisition']),
 			add_purchase_people,
 			add_purchase_thing,
@@ -79,7 +83,7 @@ class KnoedlerFilePipeline:
 
 		acqs = graph.add_chain(
 			bonobo_sqlalchemy.Select('SELECT * from knoedler_sale_info', engine='gpi', limit=self.limit, pack_size=self.pack_size),
-			AddFieldNames(key="sale_info", field_names=all_names),
+			AddFieldNamesService(key="sale_info"),
 			AddArchesModel(model=arches_models['Acquisition']),
 			add_sale_people,
 			add_sale_thing, # includes adding reference to phase it terminates
@@ -100,7 +104,7 @@ class KnoedlerFilePipeline:
 				''',
 				engine='gpi', limit=self.limit, pack_size=self.pack_size),
 			find_raw,
-			AddFieldNames(key="raw", field_names=all_names),
+			AddFieldNamesService(key="raw"),
 			# bonobo.PrettyPrinter(),
 			make_missing_purchase_data,
 			make_missing_shared
@@ -134,7 +138,7 @@ class KnoedlerFilePipeline:
 				FROM knoedler_previous_owners AS pp
 					JOIN gpi_people as p ON (p.person_uid = pp.previous_owner_uid)
 				''', engine='gpi', limit=self.limit, pack_size=self.pack_size),
-				AddFieldNames(key="prev_post_owners", field_names=all_names),
+				AddFieldNamesService(key="prev_post_owners"),
 				add_prev_prev
 		)
 
@@ -146,7 +150,7 @@ class KnoedlerFilePipeline:
 					JOIN gpi_people as p ON (p.person_uid = pp.post_owner_uid)
 				''',
 				engine='gpi', limit=self.limit, pack_size=self.pack_size),
-				AddFieldNames(key="prev_post_owners", field_names=all_names),
+				AddFieldNamesService(key="prev_post_owners"),
 		)
 
 		for cin in [chain1.output, chain2.output]:
@@ -197,7 +201,7 @@ class KnoedlerFilePipeline:
 					ref.source_record_id LIKE "KNO%"
 				''',
 				engine='gpi', limit=self.limit, pack_size=self.pack_size),
-			AddFieldNames(key="gpi_people", field_names=all_names),
+			AddFieldNamesService(key="gpi_people"),
 			AddArchesModel(model=arches_models['Person']),
 			add_person_names,
 			add_person_aat_labels,

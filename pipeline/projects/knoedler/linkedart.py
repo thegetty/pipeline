@@ -14,23 +14,15 @@ vocab.register_aat_class("Cards", {"parent": model.HumanMadeObject, "id":"300211
 dimTypes = {300055624: vocab.Diameter, 300055644: vocab.Height, 300055647: vocab.Width}
 dimUnits = {300379100: vocab.instances["inches"], 300379098: vocab.instances["cm"]}
 
-
 # Here we take the data that has been collected and map it into Linked Art
 # This should just be mapping, not data collection, manipulation or validation
 
-### XXX This is the data from STAR, but not all the data we have about these objects
-### Need to consider data from Rosetta, ASpace etc.
-
 def _book_label(book):
 	return "Knoedler Stock Book %s" % book
-
 def _page_label(book, page):
 	return "Knoedler Stock Book %s, Page %s" % (book, page)
-
 def _row_label(book, page, row):
 	return "Knoedler Stock Book %s, Page %s, Row %s" % (book, page, row)
-
-
 def _row_uid(book, page, row):
 	return f'{UID_TAG_PREFIX}K-ROW-{book}-{page}-{row}'
 def _page_uid(book, page):
@@ -45,13 +37,11 @@ def make_la_book(data: dict):
 	ident = vocab.LocalNumber()
 	ident.content = str(data['identifier'])
 	book.identified_by = ident
-
 	booknum = int(data['identifier'])
 	d = vocab.SequencePosition()
 	d.value = booknum
 	d.unit = vocab.instances['numbers']
 	book.dimension = d
-
 	return add_crom_data(data=data, what=book)
 
 def make_la_page(data: dict):
@@ -60,31 +50,30 @@ def make_la_page(data: dict):
 	ident = vocab.LocalNumber()
 	ident.content = str(data['identifier'])
 	page.identified_by = ident
-
 	pagenum = int(data['identifier'])
 	d = vocab.SequencePosition()
 	d.value = pagenum
 	d.unit = vocab.instances['numbers']
 	page.dimension = d
 
-	# XXX This is a shortcut to avoid minting physical objects with depictions
-	# We should consider how terrible that is
+	# XXX This should go through a HumanMadeObject for consistency
+	# with Sales
 	if 'image' in data:
 		img = vocab.DigitalImage()
 		imgid = model.Identifier()
 		imgid.content = data['image']
 		img.identified_by = imgid
 		page.representation = img
+
 	if data['heading']:
 		# This is a transcription of the heading of the page
 		# Meaning it is part of the page linguistic object
 		l = vocab.Heading()
 		l.content = data['heading']
 		page.part = l
-
 	if data['subheading']:
 		# Transcription of the subheading of the page
-		l = vocab.Heading()
+		l = vocab.SubHeading()
 		l.content = data['subheading']
 		page.part = l
 

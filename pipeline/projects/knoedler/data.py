@@ -230,7 +230,7 @@ def add_purchase_people(thing: dict, gpi=None, ulan_type=None):
 	shares = False
 	for row in res:
 		atype = ulan_type.get(str(row[3]), "Person")
-		buyers.append({'ulan': row[3], 'type': atype, 'label': str(row[2]), 'share': row[1]})
+		buyers.append({'uid': str(row[0]), 'ulan': row[3], 'type': atype, 'label': str(row[2]), 'share': row[1]})
 		if row[1] < 1.0:
 			shares = True
 	thing['buyers'] = buyers
@@ -248,7 +248,7 @@ def add_purchase_people(thing: dict, gpi=None, ulan_type=None):
 	res = gpi.execute(s, id=thing['uid'])
 	for row in res:
 		atype = ulan_type.get(str(row[3]), "Person")
-		sellers.append({'ulan': row[3], 'type': atype, 'label': str(row[2]), 'mod': row[1]})
+		sellers.append({'uid': str(row[0]), 'ulan': row[3], 'type': atype, 'label': str(row[2]), 'mod': row[1]})
 	thing['sellers'] = sellers
 	return thing
 
@@ -313,10 +313,9 @@ def add_ownership_phase_purchase(data: dict, gpi=None):
 def fan_object_phases(data: dict):
 
 	# Copy the relevant info for phase off of Purchase
-
 	for o in data['objects']:
-		new = copy.copy(o['phase_info'])
-		new['object_uuid'] = o['uuid']
+		new = {'uid': o['phase_info']}
+		new['object_uid'] = o['uid']
 		new['object_label'] = o['label']
 		new['p_year'] = data['year']
 		new['p_month'] = data['month']
@@ -341,7 +340,7 @@ def add_sale_people(thing: dict, gpi=None, ulan_type=None):
 	res = gpi.execute(s, id=thing['uid'])
 	for row in res:
 		atype = ulan_type.get(str(row[2]), "Person")
-		buyers.append({'ulan': row[2], 'type': atype, 'label': str(row[1]), 'mod': row[3], 'auth_mod': row[4]})
+		buyers.append({'uid': str(row[0]), 'ulan': row[2], 'type': atype, 'label': str(row[1]), 'mod': row[3], 'auth_mod': row[4]})
 	thing['buyers'] = buyers
 
 	s = '''
@@ -357,7 +356,7 @@ def add_sale_people(thing: dict, gpi=None, ulan_type=None):
 	res = gpi.execute(s, id=thing['uid'])
 	for row in res:
 		atype = ulan_type.get(str(row[2]), "Person")
-		sellers.append({'type': atype, 'ulan': row[2], 'label': str(row[1]), 'share': row[3]})
+		sellers.append({'uid': str(row[0]), 'type': atype, 'ulan': row[2], 'label': str(row[1]), 'share': row[3]})
 	thing['sellers'] = sellers
 	return thing
 
@@ -378,8 +377,7 @@ def add_sale_thing(thing: dict, gpi=None):
 	thing['objects'] = []
 	for row in res:
 		thing['sources'].append([str(row[0]), row[1], row[2], row[3]])
-		phase = str(row[0])
-		thing['objects'].append({'uid': str(row[4]), 'label': row[5], 'ends_phase': phase})
+		thing['objects'].append({'uid': str(row[4]), 'label': row[5], 'phase': str(row[0])})
 
 	return thing
 

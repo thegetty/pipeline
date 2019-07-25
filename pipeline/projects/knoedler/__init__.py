@@ -19,7 +19,6 @@ from pipeline.linkedart import make_la_person
 from settings import *
 import settings
 
-
 class Pipeline:
 	'''Bonobo-based pipeline for transforming Knoedler data into JSON-LD.'''
 	def __init__(self, output_path, **kwargs):
@@ -244,7 +243,7 @@ class Pipeline:
 		graph = bonobo.Graph()
 
 		# Sales
-		if not self.debug or 0:
+		if not self.debug or 1:
 			self.add_sales(graph)
 
 		# Here we do both missing purchases and inventory events
@@ -256,7 +255,7 @@ class Pipeline:
 			self.add_pre_post(graph)
 
 		# Objects
-		if not self.debug or 1:
+		if not self.debug or 0:
 			self.add_objects(graph)
 
 		# People

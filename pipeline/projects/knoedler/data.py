@@ -4,6 +4,8 @@ from bonobo.config import use
 from pipeline.util.cleaners import date_cleaner, share_parse
 import copy
 
+from pipeline.projects.knoedler import UID_TAG_PREFIX
+
 # ~~~~ Object Tables ~~~~
 
 @use('gpi')
@@ -311,7 +313,6 @@ def add_ownership_phase_purchase(data: dict, gpi=None):
 	return data
 
 def fan_object_phases(data: dict):
-
 	# Copy the relevant info for phase off of Purchase
 	for o in data['objects']:
 		new = {'uid': o['phase_info']}
@@ -431,10 +432,20 @@ def make_missing_purchase_data(data: dict, uuid_cache=None):
 	seller2 = {'name': data['seller_name_2'], 'loc': data['seller_loc_2'], 'loc_auth': data['seller_auth_loc_2'],
 		'mod': data['seller_mod_2'], 'mod_auth': data['seller_auth_mod_2'], 'ulan': data['seller_ulan_2']}
 
-	# XXX Ensure Knoedler gets serialized!
-	knoedler = {'label': "Knoedler", 'type': 'Group', 'share': None, 'uuid': 'c19d4bfc-0375-4994-98f3-0659cffc40d8'}
+	# construct synthetic keys
+	if data['seller_ulan_1']:
+		seller1['uid'] = f"rob-k-person-{data['seller_ulan_1']}"
+	elif data['seller_name_1']:
+		seller1['uid'] = f"rob-k-person-{data['pi_id']}-{data['MATT_inventory_id']}-1"
+	if data['seller_ulan_2']:
+		seller2['uid'] = f"rob-k-person-{data['seller_ulan_2']}"
+	elif data['seller_name_2']:
+		seller2['uid'] = f"rob-k-person-{data['pi_id']}-{data['MATT_inventory_id']}-2"
 
-	# default to Group, as that's most likely
+	# XXX Ensure Knoedler gets serialized!
+	knoedler = {'label': "Knoedler", 'type': 'Group', 'share': None, 'uid': 'actor-group-knoedler', 'ulan': 500304270}
+
+	# default to Group, as that's most likely, but we don't know
 	joint_1 = {'label': data['joint_owner_1'], 'type': 'Group', 'share': share_parse(data['joint_owner_sh_1']), 'ulan': data['joint_owner_ulan_1']}
 	joint_2 = {'label': data['joint_owner_2'], 'type': 'Group', 'share': share_parse(data['joint_owner_sh_2']), 'ulan': data['joint_owner_ulan_2']}
 	joint_3 = {'label': data['joint_owner_3'], 'type': 'Group', 'share': share_parse(data['joint_owner_sh_3']), 'ulan': data['joint_owner_ulan_3']}
@@ -560,41 +571,40 @@ def make_missing_purchase(data: dict, gpi=None, ulan_type=None):
 				print("Rows: %r" % rows)
 				# print("Sent: %s %s Got: %s" % (sell['name'], sell['ulan'], len(rows)))
 				continue
-			new_sellers.append({'type': ptyp, 'label': plabel, 'mod': ''})
+			new_sellers.append({'type': ptyp, 'label': plabel, 'mod': '', 'uid': sell['uid']})
 		data['sellers'] = new_sellers
 
 		# Aaaaand ... clean up buyers
 		for buy in data['buyers']:
-			if not 'uuid' in buy:
-				# find type based on ULAN, otherwise default to Group
-				if buy['ulan'] is not None:
-					ptyp = ulan_type.get(buy['ulan'], "Group")
-					s = "SELECT person_uid FROM gpi_people WHERE person_ulan = :ulan"
-					res = gpi.execute(s, ulan=buy['ulan'])
-				else:
-					ptyp = "Group"
-					s = '''
-					SELECT
-						DISTINCT names.person_uid
-					FROM
-						gpi_people_names_references AS ref
-						JOIN gpi_people_names as names ON (ref.person_name_id = names.person_name_id)
-					WHERE
-						ref.source_record_id = :id
-						AND names.person_name = :name
-					'''
-					res = gpi.execute(s, id="KNOEDLER-%s" % data['star_id'], name=buy.get('name', ''))
-				rows = res.fetchall()
-				if len(rows) == 1:
-					puid = rows[0][0]
-				else:
-					print("In make_missing_purchase, cleaning buyers:")
-					print("Data: %r" % data)
-					print("buyer: %r" % buy)
-					# print("Sent: %s %s Got: %s" % (buy.get('name', '')], buy['ulan'], len(rows)))
-					continue
-				buy['type'] = ptyp
-				buy['uid'] = puid
+			# find type based on ULAN, otherwise default to Group
+			if buy['ulan'] is not None:
+				ptyp = ulan_type.get(buy['ulan'], "Group")
+				s = "SELECT person_uid FROM gpi_people WHERE person_ulan = :ulan"
+				res = gpi.execute(s, ulan=buy['ulan'])
+			else:
+				ptyp = "Group"
+				s = '''
+				SELECT
+					DISTINCT names.person_uid
+				FROM
+					gpi_people_names_references AS ref
+					JOIN gpi_people_names as names ON (ref.person_name_id = names.person_name_id)
+				WHERE
+					ref.source_record_id = :id
+					AND names.person_name = :name
+				'''
+				res = gpi.execute(s, id="KNOEDLER-%s" % data['star_id'], name=buy.get('name', ''))
+			rows = res.fetchall()
+			if len(rows) == 1:
+				puid = rows[0][0]
+			else:
+				print("In make_missing_purchase, cleaning buyers:")
+				print("Data: %r" % data)
+				print("buyer: %r" % buy)
+				# print("Sent: %s %s Got: %s" % (buy.get('name', '')], buy['ulan'], len(rows)))
+				continue
+			buy['type'] = ptyp
+			buy['uid'] = puid
 
 		return data
 
@@ -630,7 +640,7 @@ def add_prev_prev(data: dict, gpi=None):
 
 
 @use('ulan_type')
-def fan_prev_post_purchase_sale(data: dict, uuid_cache=None):
+def fan_prev_post_purchase_sale(data: dict, ulan_type=None):
 	# One owner = two acquisitions... transfer to, transfer from
 
 	data['owner_uid'] = data['owner_uid']
@@ -655,7 +665,7 @@ def fan_prev_post_purchase_sale(data: dict, uuid_cache=None):
 def add_person_names(thing: dict, gpi=None):
 	s = 'SELECT * FROM gpi_people_names WHERE person_uid = :id'
 	thing['names'] = []
-	print(thing)
+	thing['uri'] = f"{UID_TAG_PREFIX}{thing['uid']}"
 	for r in gpi.execute(s, id=thing['uid']):
 		name = [r[0]]
 		nid = r[2]
@@ -679,7 +689,7 @@ def add_person_names(thing: dict, gpi=None):
 	return thing
 
 @use('aat_labels')
-def add_person_aat_labels(data: dict, aat=None):
+def add_person_aat_labels(data: dict, aat_labels=None):
 	if data.get('aat_nationality_1'):
 		data['aat_nationality_1_label'] = aat_labels.get(data['aat_nationality_1'])
 	if data.get('aat_nationality_2'):

@@ -247,19 +247,19 @@ class Pipeline:
 			self.add_sales(graph)
 
 		# Here we do both missing purchases and inventory events
-		if not self.debug or 0:
+		if not self.debug or 1:
 			self.add_missing(graph)
 
 		# Pre/Post owners
-		if not self.debug or 0:
+		if not self.debug or 1:
 			self.add_pre_post(graph)
 
 		# Objects
-		if not self.debug or 0:
+		if not self.debug or 1:
 			self.add_objects(graph)
 
 		# People
-		if not self.debug or 0:
+		if not self.debug or 1:
 			self.add_people(graph)
 
 		# Documents

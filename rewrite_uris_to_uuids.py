@@ -12,9 +12,18 @@ from settings import output_file_path
 from pipeline.util.rewriting import rewrite_output_files
 
 class UUIDRewriter:
-	def __init__(self, prefix):
+	def __init__(self, prefix, map_file=None):
 		self.map = {}
 		self.prefix = prefix
+		self.map_file = map_file
+		if map_file:
+			# Load JSON map file for pre-written UUIDs
+			with open(map_file) as fh:
+				self.map = json.load(fh)
+
+	def persist_map(self):
+		with open(self.map_file, 'w') as fh:
+			json.dump(self.map, fh)
 
 	def rewrite(self, d, *args, **kwargs):
 		if isinstance(d, dict):
@@ -43,7 +52,7 @@ class UUIDRewriter:
 if len(sys.argv) < 2:
 	cmd = sys.argv[0]
 	print(f'''
-Usage: {cmd} URI_PREFIX
+Usage: {cmd} URI_PREFIX [MAP_FILE_NAME]
 
 Process all json files in the output path (configured with the GETTY_PIPELINE_OUTPUT
 environment variable), rewriting URIs that have the specified URI_PREFIX to urn:uuid:
@@ -52,5 +61,9 @@ URIs.
 	sys.exit(1)
 
 prefix = sys.argv[1]
-r = UUIDRewriter(prefix)
+map_file = sys.argv[2] if len(sys.argv) > 2 else None
+r = UUIDRewriter(prefix, map_file)
 rewrite_output_files(r, update_filename=True, verify_uuid=True)
+if map_file:
+	r.persist_map()
+

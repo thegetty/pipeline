@@ -220,6 +220,11 @@ class MakeLinkedArtAuctionHouseOrganization(MakeLinkedArtOrganization):
 
 def make_la_person(data: dict):
 	uri = data.get('uri')
+	if not uri:
+		if 'uuid' not in data:
+			print('No UUID for person:')
+			pprint.pprint(data)
+		uri = "urn:uuid:%s" % data['uuid']
 	who = model.Person(ident=uri)
 	who._label = str(data['label'])
 

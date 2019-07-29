@@ -309,6 +309,7 @@ def share_parse(value):
 			print("Could not parse raw share: %s" % value)
 			return None
 
+
 def ymd_to_datetime(year, month, day, which="begin"):
 	if not isinstance(year, int):
 		try:

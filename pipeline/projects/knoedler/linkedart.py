@@ -1,5 +1,6 @@
 from bonobo.config import use
 from pipeline.util.cleaners import ymd_to_datetime
+from pipeline.linkedart import make_ymd_timespan
 
 from cromulent import model, vocab
 from cromulent.model import factory
@@ -17,22 +18,31 @@ dimUnits = {300379100: vocab.instances["inches"], 300379098: vocab.instances["cm
 # Here we take the data that has been collected and map it into Linked Art
 # This should just be mapping, not data collection, manipulation or validation
 
-def _book_label(book):
+# Labels aren't to be rendered, so for now this is good enough
+def _book_label(book, which="LinguisticObject"):
 	return "Knoedler Stock Book %s" % book
-def _page_label(book, page):
+def _page_label(book, page, which="LinguisticObject"):
 	return "Knoedler Stock Book %s, Page %s" % (book, page)
-def _row_label(book, page, row):
+def _row_label(book, page, row, which="LinguisticObject"):
 	return "Knoedler Stock Book %s, Page %s, Row %s" % (book, page, row)
-def _row_uid(book, page, row):
-	return f'{UID_TAG_PREFIX}K-ROW-{book}-{page}-{row}'
-def _page_uid(book, page):
-	return f'{UID_TAG_PREFIX}K-PAGE-{book}-{page}'
-def _book_uid(book):
-	return f'{UID_TAG_PREFIX}K-BOOK-{book}'
-def _uid_uri(uid):
-	uid = urllib.parse.quote(uid)
-	return f'{UID_TAG_PREFIX}{uid}'
 
+def _row_uid(book, page, row, which="LinguisticObject"):
+	if which == "LinguisticObject":
+		return f'{UID_TAG_PREFIX}K-ROW-{book}-{page}-{row}'
+	else:
+		return f'{UID_TAG_PREFIX}K-ROW-PHYS-{book}-{page}-{row}'
+
+def _page_uid(book, page, which="LinguisticObject"):
+	if which == "LinguisticObject":
+		return f'{UID_TAG_PREFIX}K-PAGE-{book}-{page}'
+	else:
+		return f'{UID_TAG_PREFIX}K-PAGE-PHYS-{book}-{page}'
+
+def _book_uid(book, which="LinguisticObject"):
+	if which == "LinguisticObject":
+		return f'{UID_TAG_PREFIX}K-BOOK-{book}'
+	else:
+		return f'{UID_TAG_PREFIX}K-BOOK-PHYS-{book}'
 
 def make_la_book(data: dict):
 	book = vocab.AccountBook(ident=_book_uid(data['identifier']))
@@ -47,6 +57,14 @@ def make_la_book(data: dict):
 	book.dimension = d
 	return add_crom_data(data=data, what=book)
 
+def make_la_phys_book(data: dict):
+	book = vocab.BookThing(ident=_book_uid(data['identifier'], "HumanMadeObject"))
+	book._label = _book_label(data['identifier'])
+	book.identified_by = vocab.LocalNumber(content=data['identifier'])	
+	book.carries = model.LinguisticObject(ident=_book_uid(data['identifier']))
+	# Here would go a reference to the IIIF Manifest for the book
+	return add_crom_data(data=data, what=book)
+
 def make_la_page(data: dict):
 	page = vocab.Page(ident=_page_uid(data['parent']['identifier'], data['identifier']))
 	page._label = _page_label(data['parent']['identifier'], data['identifier'])
@@ -58,15 +76,6 @@ def make_la_page(data: dict):
 	d.value = pagenum
 	d.unit = vocab.instances['numbers']
 	page.dimension = d
-
-	# XXX This should go through a HumanMadeObject for consistency
-	# with Sales
-	if 'image' in data:
-		img = vocab.DigitalImage()
-		imgid = model.Identifier()
-		imgid.content = data['image']
-		img.identified_by = imgid
-		page.representation = img
 
 	if data['heading']:
 		# This is a transcription of the heading of the page
@@ -83,6 +92,23 @@ def make_la_page(data: dict):
 	book = model.LinguisticObject(ident=_book_uid(data['parent']['identifier']))
 	book._label = _book_label(data['parent']['identifier'])
 	page.part_of = book
+
+	return add_crom_data(data=data, what=page)
+
+def make_la_phys_page(data: dict):
+	page = vocab.PageThing(ident=_page_uid(data['parent']['identifier'], data['identifier'], "HumanMadeObject"))
+	page._label = _page_label(data['parent']['identifier'], data['identifier'], "HumanMadeObject")
+	page.identified_by = vocab.LocalNumber(content=data['identifier'])	
+	page.part_of = vocab.HumanMadeObject(ident=_book_uid(data['parent']['identifier'], "HumanMadeObject"))
+	page.carries = vocab.LinguisticObject(ident=_page_uid(data['parent']['identifier'], data['identifier']))
+
+	# XXX This needs to at least remap with Trang's concordance
+	if 'image' in data:
+		img = vocab.DigitalImage()
+		imgid = model.Identifier()
+		imgid.content = data['image']
+		img.identified_by = imgid
+		page.representation = img
 
 	return add_crom_data(data=data, what=page)
 
@@ -355,13 +381,7 @@ def make_la_purchase(data: dict):
 		what.part = p
 
 	if data['year']:
-		t = model.TimeSpan()
-		nm = model.Name()
-		nm.content = "%s %s %s" % (data['year'], data['month'], data['day'])
-		t.identified_by = nm
-		t.begin_of_the_begin = ymd_to_datetime(data['year'], data['month'], data['day'])
-		t.end_of_the_end = ymd_to_datetime(data['year'], data['month'], data['day'], which="end")
-		what.timespan = t
+		what.timespan = make_ymd_timespan(data)
 	for s in data['sources']:
 		what.referred_to_by = model.LinguisticObject(ident=_row_uid(s[1], s[2], s[3]), label=_row_label(s[1], s[2], s[3]))
 
@@ -390,21 +410,12 @@ def make_la_phase(data: dict):
 	pi.interest_for = what
 
 	if 'p_year' in data and data['p_year']:
-		ts = model.TimeSpan()
-		ts.begin_of_the_begin = ymd_to_datetime(data['p_year'], data['p_month'], data['p_day'])
+		if 's_type' in data and data['s_type'] == "Sold":
+			end_prefix = 's_'
+		else:
+			end_prefix = 'p_'
+		ts = make_ymd_timespan(data, start_prefix='p_', end_prefix=end_prefix)
 		phase.timespan = ts
-		# End comes from sale
-		if 's_type' in data:
-			stype = data['s_type']
-			if stype != "Sold":
-				# XXX Not sure what to do with these, see below!
-				print("Non 'sold' transaction (%s) is end of ownership phase for %s" % (stype, data['object_uuid'])  )
-			else:
-				ts.end_of_the_end = ymd_to_datetime(data['s_year'], data['s_month'], data['s_day'], which="end")
-		nm = model.Name()
-		nm.content = "%s %s %s to %s %s %s" % (data.get('p_year', '????'), data.get('p_month', '??'),
-			data.get('p_day', '??'), data.get('s_year', '????'), data.get('s_month', '??'), data.get('s_day', '??'))
-		ts.identified_by = nm
 
 	for b in data['buyers']:
 		if b['type'] in ["Person", "Actor"]:
@@ -472,13 +483,7 @@ def make_la_sale(data: dict):
 		what.part = p
 
 	if data['year']:
-		t = model.TimeSpan()
-		nm = model.Name()
-		nm.content = "%s %s %s" % (data['year'], data['month'], data['day'])
-		t.identified_by = nm
-		t.begin_of_the_begin = ymd_to_datetime(data['year'], data['month'], data['day'])
-		t.end_of_the_end = ymd_to_datetime(data['year'], data['month'], data['day'], which="end")
-		what.timespan = t
+		what.timespan = make_ymd_timespan(data)
 	for s in data['sources']:
 		what.referred_to_by = model.LinguisticObject(ident=_row_uid(s[1], s[2], s[3]), \
 			label=_row_label(s[1], s[2], s[3]))
@@ -496,8 +501,8 @@ def make_la_sale(data: dict):
 
 def make_la_inventory(data: dict):
 
-	what = vocab.Inventorying(ident=_uid_uri(data['uid']))
-	date = "%s-%s-%s" % (data['year'], data['month'], data['day'])
+	what = vocab.Inventorying(ident=f"{UID_TAG_PREFIX}{data['uid']}")
+	date = ymd_to_label(data['year'], data['month'], data['day'])
 	what._label = "Inventory taking for %s on %s" % (data['objects'][0]['label'], date)
 
 	o = data['objects'][0]
@@ -509,13 +514,7 @@ def make_la_inventory(data: dict):
 	what.carried_out_by = who
 
 	if data['year']:
-		t = model.TimeSpan()
-		nm = model.Name()
-		nm.content = "%s %s %s" % (data['year'], data['month'], data['day'])
-		t.identified_by = nm
-		t.begin_of_the_begin = ymd_to_datetime(data['year'], data['month'], data['day'])
-		t.end_of_the_end = ymd_to_datetime(data['year'], data['month'], data['day'], which="end")
-		what.timespan = t
+		what.timespan = make_ymd_timespan(data)
 
 	for s in data['sources']:
 		what.referred_to_by = model.LinguisticObject(ident=_row_uid(s[1], s[2], s[3]), \

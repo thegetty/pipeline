@@ -133,7 +133,7 @@ class TestProvenancePipelineOutput(unittest.TestCase):
 		people_names = {o['_label'] for o in people.values()}
 		self.assertEqual(people_names, {'[Anonymous]', 'Gillemans', 'Vinckebooms'})
 
-		key_119, key_120 = sorted(auctions.keys())
+		key_120, key_119 = sorted(auctions.keys())
 
 		auction_B_A139_0119 = auctions[key_119]
 		self.verify_auction(auction_B_A139_0119, event='B-A139', idents={'0119[a]', '0119[b]'})

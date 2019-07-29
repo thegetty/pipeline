@@ -3,21 +3,26 @@
 import os
 import sys
 import bonobo
-
-# project name could be passed on the command line as which pipeline to run
-# and then passed in to the appropriate project
-# then UID_TAG_PREFIX could be managed in the main code
-
-from pipeline.projects.knoedler import KnoedlerFilePipeline
-import settings
+import importlib
 from cromulent import vocab
 
-### Pipeline
+import settings
+
+if len(sys.argv) < 2:
+	print("python3 ./run.py project [dot] [*args]")
+	sys.exit()
+else:
+	project = sys.argv[1]
+	pipe = importlib.import_module(f'pipeline.projects.{project}')
+	Pipeline = pipe.Pipeline
+	sys.argv = [sys.argv[0], *sys.argv[2:]]
+
+### Run the Pipeline
 
 if __name__ == '__main__':
 	if settings.DEBUG:
-		LIMIT		= int(os.environ.get('GETTY_PIPELINE_LIMIT', 10))
-		PACK_SIZE = 10
+		LIMIT		= int(os.environ.get('GETTY_PIPELINE_LIMIT', 1))
+		PACK_SIZE = 1
 	else:
 		LIMIT		= int(os.environ.get('GETTY_PIPELINE_LIMIT', 10000000))
 		PACK_SIZE = 10000000
@@ -31,7 +36,7 @@ if __name__ == '__main__':
 	parser = bonobo.get_argument_parser()
 	with bonobo.parse_args(parser) as options:
 		try:
-			pipeline = KnoedlerFilePipeline(
+			pipeline = Pipeline(
 				output_path=settings.output_file_path,
 				models=settings.arches_models,
 				pack_size=PACK_SIZE,

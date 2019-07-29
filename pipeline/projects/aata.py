@@ -22,6 +22,7 @@ from bonobo.nodes import Limit
 
 import settings
 from cromulent import model, vocab
+from pipeline.projects import PipelineBase
 from pipeline.util import identity, ExtractKeyedValues, MatchingFiles
 from pipeline.io.file import MultiFileWriter, MergingFileWriter
 # from pipeline.io.arches import ArchesWriter
@@ -627,9 +628,10 @@ def filter_abstract_authors(data: dict):
 
 # AATA Pipeline class
 
-class AATAPipeline:
+class AATAPipeline(PipelineBase):
 	'''Bonobo-based pipeline for transforming AATA data from XML into JSON-LD.'''
 	def __init__(self, input_path, files_pattern, **kwargs):
+		self.project_name = 'knoedler'
 		self.graph = None
 		self.models = kwargs.get('models', {})
 		self.files_pattern = files_pattern

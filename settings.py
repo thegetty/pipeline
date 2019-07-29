@@ -34,4 +34,3 @@ SPAM = os.environ.get('GETTY_PIPELINE_VERBOSE', False)
 
 gpi_engine = 'sqlite:///%s/gpi.sqlite' % (data_path,)
 raw_engine = 'sqlite:///%s/raw_gpi.sqlite' % (data_path,)
-uuid_cache_engine = 'sqlite:///%s/uuid_cache.sqlite' % (data_path,)

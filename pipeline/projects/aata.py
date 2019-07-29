@@ -13,6 +13,7 @@ import iso639
 import lxml.etree
 from sqlalchemy import create_engine
 from langdetect import detect
+import urllib.parse
 
 import bonobo
 from bonobo.config import Configurable, Option, use
@@ -31,7 +32,6 @@ from pipeline.linkedart import \
 			make_la_person
 from pipeline.io.xml import CurriedXMLReader
 from pipeline.nodes.basic import \
-			add_uuid, \
 			AddArchesModel, \
 			CleanDateToSpan, \
 			Serializer
@@ -41,6 +41,17 @@ doiIdentifier = vocab.DoiIdentifier
 variantTitleIdentifier = vocab.Identifier # TODO: aat for variant titles?
 
 # utility functions
+
+UID_TAG_PREFIX = 'tag:getty.edu,2019:digital:pipeline:aata:REPLACE-WITH-UUID#'
+
+def aata_uri(*values):
+	'''Convert a set of identifying `values` into a URI'''
+	if values:
+		suffix = ','.join([urllib.parse.quote(str(v)) for v in values])
+		return UID_TAG_PREFIX + suffix
+	else:
+		suffix = str(uuid.uuid4())
+		return UID_TAG_PREFIX + suffix
 
 def language_object_from_code(code):
 	'''
@@ -232,7 +243,8 @@ def _xml_extract_article(e):
 		'qualified_identifiers': qualified_identifiers,
 		'classifications': classifications,
 		'indexing': indexings,
-		'uid': uid
+		'uid': uid,
+		'uri': aata_uri(uid),
 	}
 
 def _xml_extract_abstracts(e, aata_id):
@@ -274,6 +286,7 @@ def _xml_extract_organizations(e, aata_id):
 				name = aid.findtext('display_term')
 				auth_id = aid.findtext('gaia_auth_id')
 				auth_type = aid.findtext('gaia_auth_type')
+				uid = 'AATA-Org-%s-%s-%s' % (auth_type, auth_id, name)
 				yield {
 					'_aata_record_id': aata_id,
 					'_aata_record_organization_seq': i,
@@ -283,7 +296,8 @@ def _xml_extract_organizations(e, aata_id):
 					'names': [(name,)],
 					'object_type': _gaia_authority_type(auth_type),
 					'identifiers': [vocab.LocalNumber(ident='', content=auth_id)],
-					'uid': 'AATA-Org-%s-%s-%s' % (auth_type, auth_id, name)
+					'uid': uid,
+					'uri': aata_uri(uid),
 				}
 			else:
 				print('*** No organization_id found for record %s:' % (o,))
@@ -317,7 +331,8 @@ def _xml_extract_authors(e, aata_id):
 						'names': [(name,)],
 						'object_type': _gaia_authority_type(auth_type),
 						'identifiers': [vocab.LocalNumber(ident='', content=auth_id)],
-						'uid': uid
+						'uid': uid,
+						'uri': aata_uri(uid),
 					}
 
 					if role is not None:
@@ -359,8 +374,7 @@ def add_aata_object_type(data):
 
 # imprint organizations chain (publishers, distributors)
 
-@use('uuid_cache')
-def add_imprint_orgs(data, uuid_cache=None):
+def add_imprint_orgs(data):
 	'''
 	Given a `dict` representing an "article," extract the "imprint organization" records
 	and their role (e.g. publisher, distributor), and add add a new 'organizations' key
@@ -387,8 +401,7 @@ def add_imprint_orgs(data, uuid_cache=None):
 	organizations = []
 	for o in data.get('_organizations', []):
 		org = {k: v for k, v in o.items()}
-		add_uuid(org, uuid_cache)
-		org_obj = vocab.Group(ident="urn:uuid:%s" % org['uuid'])
+		org_obj = vocab.Group(ident=org['uri'])
 		org['_LOD_OBJECT'] = org_obj
 
 		event = model.Activity()
@@ -409,7 +422,7 @@ def add_imprint_orgs(data, uuid_cache=None):
 			else:
 				print('*** No/unknown organization role (%r) found for imprint_group in %s:' % (
 					role, lod_object,))
-				pprint.pprint(o)
+# 				pprint.pprint(o)
 
 			if role == 'Publisher' and 'DatesOfPublication' in properties:
 				pubdate = properties['DatesOfPublication']
@@ -467,8 +480,7 @@ def make_aata_org_event(o: dict):
 
 # article authors chain
 
-@use('uuid_cache')
-def add_aata_authors(data, uuid_cache=None):
+def add_aata_authors(data):
 	'''
 	Given a `dict` representing an "article," extract the authorship records
 	and their role (e.g. author, editor). yield a new `dict`s for each such
@@ -496,7 +508,6 @@ def add_aata_authors(data, uuid_cache=None):
 
 	authors = data.get('_authors', [])
 	for a in authors:
-		add_uuid(a, uuid_cache)
 		make_la_person(a)
 		person = a['_LOD_OBJECT']
 		subevent = model.Creation()
@@ -604,7 +615,8 @@ def make_aata_abstract(data):
 		abstract_dict.update({
 			'_LOD_OBJECT': abstract,
 			'parent_data': data,
-			'uid': uid
+			'uid': uid,
+			'uri': aata_uri(uid),
 		})
 		yield abstract_dict
 
@@ -639,9 +651,6 @@ class AATAPipeline:
 		'''Return a `dict` of named services available to the bonobo pipeline.'''
 		return {
 			'trace_counter': itertools.count(),
-			'gpi': create_engine(settings.gpi_engine),
-# 			'aat': create_engine(settings.aat_engine),
-			'uuid_cache': create_engine(settings.uuid_cache_engine),
 			'fs.data.aata': bonobo.open_fs(self.input_path)
 		}
 
@@ -665,7 +674,7 @@ class AATAPipeline:
 			)
 		articles = graph.add_chain(
 			make_aata_article_dict,
-			add_uuid,
+# 			add_uuid,
 			add_aata_object_type,
 			detect_title_language,
 			MakeLinkedArtLinguisticObject(),
@@ -706,7 +715,7 @@ class AATAPipeline:
 		abstracts = graph.add_chain(
 			make_aata_abstract,
 			AddArchesModel(model=model_id),
-			add_uuid,
+# 			add_uuid,
 			MakeLinkedArtAbstract(),
 			_input=articles.output
 		)
@@ -729,7 +738,7 @@ class AATAPipeline:
 		organizations = graph.add_chain(
 			ExtractKeyedValues(key='organizations'),
 			AddArchesModel(model=model_id),
-			add_uuid,
+# 			add_uuid,
 			MakeLinkedArtOrganization(),
 			_input=articles.output
 		)

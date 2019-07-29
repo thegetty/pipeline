@@ -594,9 +594,6 @@ def genre_instance(value, vocab_instance_map):
 		return None
 	value = value.lower()
 
-	vocab.register_instance('animal', {'parent': model.Type, 'id': '300249395', 'label': 'Animal'})
-	vocab.register_instance('history', {'parent': model.Type, 'id': '300033898', 'label': 'History'})
-
 	instance_name = vocab_instance_map.get(value)
 	if instance_name:
 		instance = vocab.instances.get(instance_name)
@@ -610,8 +607,6 @@ def genre_instance(value, vocab_instance_map):
 def populate_destruction_events(data, note, destruction_types_map):
 	hmo = get_crom_object(data)
 	title = data.get('title')
-
-	vocab.register_instance('fire', {'parent': model.Type, 'id': '300068986', 'label': 'Fire'})
 
 	r = re.compile(r'Destroyed(?: (?:by|during) (\w+))?(?: in (\d{4})[.]?)?')
 	m = r.search(note)
@@ -914,6 +909,10 @@ def populate_auction_catalog(data):
 class ProvenancePipeline(PipelineBase):
 	'''Bonobo-based pipeline for transforming Provenance data from CSV into JSON-LD.'''
 	def __init__(self, input_path, catalogs, auction_events, contents, **kwargs):
+		vocab.register_instance('fire', {'parent': model.Type, 'id': '300068986', 'label': 'Fire'})
+		vocab.register_instance('animal', {'parent': model.Type, 'id': '300249395', 'label': 'Animal'})
+		vocab.register_instance('history', {'parent': model.Type, 'id': '300033898', 'label': 'History'})
+		
 		self.project_name = 'provenance'
 		self.output_chain = None
 		self.graph_0 = None

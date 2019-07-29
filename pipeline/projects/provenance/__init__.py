@@ -30,6 +30,7 @@ from bonobo.nodes import Limit
 
 import settings
 from cromulent import model, vocab
+from pipeline.projects import PipelineBase
 from pipeline.projects.provenance.util import *
 from pipeline.util import RecursiveExtractKeyedValue, ExtractKeyedValue, ExtractKeyedValues, \
 			MatchingFiles, identity, implode_date, timespan_before, timespan_after, \
@@ -920,9 +921,10 @@ def populate_auction_catalog(data):
 
 #mark - Provenance Pipeline class
 
-class ProvenancePipeline:
+class ProvenancePipeline(PipelineBase):
 	'''Bonobo-based pipeline for transforming Provenance data from CSV into JSON-LD.'''
 	def __init__(self, input_path, catalogs, auction_events, contents, **kwargs):
+		self.project_name = 'provenance'
 		self.output_chain = None
 		self.graph_0 = None
 		self.graph_1 = None
@@ -937,7 +939,8 @@ class ProvenancePipeline:
 		self.limit = kwargs.get('limit')
 		self.debug = kwargs.get('debug', False)
 		self.input_path = input_path
-		self.pipeline_service_files_path = kwargs.get('pipeline_service_files_path', settings.pipeline_service_files_path)
+		self.pipeline_project_service_files_path = kwargs.get('pipeline_project_service_files_path', settings.pipeline_project_service_files_path)
+		self.pipeline_common_service_files_path = kwargs.get('pipeline_common_service_files_path', settings.pipeline_common_service_files_path)
 
 		fs = bonobo.open_fs(input_path)
 		with fs.open(self.catalogs_header_file, newline='') as csvfile:
@@ -963,20 +966,14 @@ class ProvenancePipeline:
 	# Set up environment
 	def get_services(self):
 		'''Return a `dict` of named services available to the bonobo pipeline.'''
-		services = {
+		services = super().get_services()
+		services.update({
 			'lot_counter': Counter(),
 			'unique_catalogs': {},
 			'post_sale_map': {},
 			'auction_houses': {},
 			'auction_locations': {},
-			'trace_counter': itertools.count(),
-			'fs.data.pir': bonobo.open_fs(self.input_path)
-		}
-		
-		p = pathlib.Path(self.pipeline_service_files_path)
-		for file in p.rglob('*.json'):
-			with open(file, 'r') as f:
-				services[file.stem] = json.load(f)
+		})
 		return services
 
 	def add_serialization_chain(self, graph, input_node):
@@ -1385,13 +1382,13 @@ class ProvenancePipeline:
 		component2 = [graph0] if single_graph else [graph2]
 		for g in component1:
 			physical_catalog_records = g.add_chain(
-				MatchingFiles(path='/', pattern=self.catalogs_files_pattern, fs='fs.data.pir'),
-				CurriedCSVReader(fs='fs.data.pir', limit=self.limit),
+				MatchingFiles(path='/', pattern=self.catalogs_files_pattern, fs='fs.data.provenance'),
+				CurriedCSVReader(fs='fs.data.provenance', limit=self.limit),
 			)
 
 			auction_events_records = g.add_chain(
-				MatchingFiles(path='/', pattern=self.auction_events_files_pattern, fs='fs.data.pir'),
-				CurriedCSVReader(fs='fs.data.pir', limit=self.limit),
+				MatchingFiles(path='/', pattern=self.auction_events_files_pattern, fs='fs.data.provenance'),
+				CurriedCSVReader(fs='fs.data.provenance', limit=self.limit),
 			)
 
 			catalogs = self.add_physical_catalogs_chain(g, physical_catalog_records, serialize=True)
@@ -1406,8 +1403,8 @@ class ProvenancePipeline:
 
 		for g in component2:
 			contents_records = g.add_chain(
-				MatchingFiles(path='/', pattern=self.contents_files_pattern, fs='fs.data.pir'),
-				CurriedCSVReader(fs='fs.data.pir', limit=self.limit)
+				MatchingFiles(path='/', pattern=self.contents_files_pattern, fs='fs.data.provenance'),
+				CurriedCSVReader(fs='fs.data.provenance', limit=self.limit)
 			)
 			sales = self.add_sales_chain(g, contents_records, serialize=True)
 			_ = self.add_single_object_lot_tracking_chain(g, sales)

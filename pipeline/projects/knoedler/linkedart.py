@@ -29,6 +29,9 @@ def _page_uid(book, page):
 	return f'{UID_TAG_PREFIX}K-PAGE-{book}-{page}'
 def _book_uid(book):
 	return f'{UID_TAG_PREFIX}K-BOOK-{book}'
+def _uid_uri(uid):
+	uid = urllib.parse.quote(uid)
+	return f'{UID_TAG_PREFIX}{uid}'
 
 
 def make_la_book(data: dict):
@@ -134,8 +137,7 @@ def make_la_object(data: dict, vocab_type_map=None):
 		cls = model.HumanMadeObject
 		print("Could not match object type %s" % data['object_type'])
 
-	uid = data['uid']
-	what = cls(ident=f'{UID_TAG_PREFIX}{uid}', art=1)
+	what = cls(ident=_uid_uri(data['uid']), art=1)
 
 	for dv in data['dimensions']:
 		ds = vocab.DimensionStatement()
@@ -207,7 +209,7 @@ def make_la_object(data: dict, vocab_type_map=None):
 		#who = model.Person(ident="urn:uuid:%s" % a['uuid'])
 
 		# XXX This should use ulan_type mapping?
-		who = model.Actor(ident=f'{UID_TAG_PREFIX}{a["uid"]}')
+		who = model.Actor(ident=_uid_uri(a["uid"]))
 		who._label = a['label']
 		prod.carried_out_by = who
 
@@ -220,7 +222,7 @@ def make_la_object(data: dict, vocab_type_map=None):
 
 	for a in former:
 		fprod = model.Production()
-		who = model.Person(ident=f'{UID_TAG_PREFIX}{a["uid"]}')
+		who = model.Person(ident=_uid_uri(a["uid"]))
 		who._label = a['label']
 		fprod.carried_out_by = who
 		aa = model.AttributeAssignment()
@@ -268,14 +270,14 @@ def make_la_object(data: dict, vocab_type_map=None):
 
 	if add_vi:
 		# This will be built in a different fork
-		vi = model.VisualItem(ident=f'{UID_TAG_PREFIX}{data["uid"]}-vizitem')
+		vi = model.VisualItem(ident=_uid_uri(data["uid"]+'-vizitem'))
 		what.shows = vi
 
 	return add_crom_data(data=data, what=what)
 
 
 def make_la_vizitem(data: dict):
-	vi = model.VisualItem(ident=f'{UID_TAG_PREFIX}{data["uid"]}-vizitem')
+	vi = model.VisualItem(ident=_uid_uri(data["uid"]+'-vizitem'))
 	add_vi = False
 	for t in data['tags']:
 		aaturi = "http://vocab.getty.edu/aat/%s" % t['aat']
@@ -300,7 +302,7 @@ def make_la_vizitem(data: dict):
 
 def make_la_purchase(data: dict):
 
-	what = model.Acquisition(ident=f"{UID_TAG_PREFIX}{data['uid']}")
+	what = model.Acquisition(ident= _uid_uri(data['uid']))
 	try:
 		what._label = "Purchase of %s by %s" % (data['objects'][0]['label'], data['buyers'][0]['label'])
 	except IndexError:
@@ -312,29 +314,29 @@ def make_la_purchase(data: dict):
 			what._label = "Purchase?"
 
 	for o in data['objects']:
-		what.transferred_title_of = model.HumanMadeObject(ident=f'{UID_TAG_PREFIX}{o["uid"]}', label=o['label'])
+		what.transferred_title_of = model.HumanMadeObject(ident=_uid_uri(o["uid"]), label=o['label'])
 		if 'phase_info' in o:
-			what.initiated = model.Phase(ident=f"{UID_TAG_PREFIX}{['phase_info']}-phase")
+			what.initiated = model.Phase(ident=_uid_uri(['phase_info']+'-phase'))
 	for b in data['buyers']:
 		# XXX Could [indeed very very likely to] be Group
 		if b['type'] in ["Person", "Actor"]:
 			try:
-				what.transferred_title_to = model.Person(ident=f"{UID_TAG_PREFIX}{b['uid']}", label=b['label'])
+				what.transferred_title_to = model.Person(ident=_uid_uri(b['uid']), label=b['label'])
 			except:
 				print("Could not build person in make_la_purchase: %r" % b)
 				# ????
 		else:
 			try:
-				what.transferred_title_to = model.Group(ident=f"{UID_TAG_PREFIX}{b['uid']}", label=b['label'])
+				what.transferred_title_to = model.Group(ident=_uid_uri(b['uid']), label=b['label'])
 			except:
 				print("Could not build group in make_la_purchase: %r" % b)
 				# What to do??
 
 	for s in data['sellers']:
 		if s['type'] in ['Person', 'Actor']:
-			what.transferred_title_from = model.Person(ident=f"{UID_TAG_PREFIX}{s['uid']}", label=s['label'])
+			what.transferred_title_from = model.Person(ident=_uid_uri(s['uid']), label=s['label'])
 		else:
-			what.transferred_title_from = model.Group(ident=f"{UID_TAG_PREFIX}{s['uid']}", label=s['label'])
+			what.transferred_title_from = model.Group(ident=_uid_uri(s['uid']), label=s['label'])
 		if s['mod']:
 			print("NOT HANDLED MOD: %s" % s['mod'])
 
@@ -376,13 +378,13 @@ def make_la_purchase(data: dict):
 
 def make_la_phase(data: dict):
 
-	phase = vocab.OwnershipPhase(ident=f"{UID_TAG_PREFIX}{data['uid']}-phase")
+	phase = vocab.OwnershipPhase(ident=_uid_uri({data['uid']}+"-phase"))
 	try:
 		phase._label = "Ownership Phase of %s" % data['object_label']
 	except:
 		phase._label = "Ownership Phase of unknown object"
 
-	what = model.HumanMadeObject(ident=f"{UID_TAG_PREFIX}{data['object_uid']}", label=data['object_label'])
+	what = model.HumanMadeObject(ident=_uid_uri(data['object_uid']), label=data['object_label'])
 	phase.phase_of = what
 	pi = model.PropertyInterest()
 	pi.interest_for = what
@@ -406,9 +408,9 @@ def make_la_phase(data: dict):
 
 	for b in data['buyers']:
 		if b['type'] in ["Person", "Actor"]:
-			who = model.Person(ident=f"{UID_TAG_PREFIX}{b['uid']}", label=b['label'])
+			who = model.Person(ident=_uid_uri(b['uid']), label=b['label'])
 		else:
-			who = model.Group(ident=f"{UID_TAG_PREFIX}{b['uid']}", label=b['label'])
+			who = model.Group(ident=_uid_uri(b['uid']), label=b['label'])
 		pi.claimed_by = who
 
 		if b['share'] != 1.0:
@@ -429,26 +431,26 @@ def make_la_sale(data: dict):
 		print("Matt's notes say not to generate acquisitions for non-Sold, but not what to do instead")
 		print("Generating it, and we can sort it out later")
 
-	what = model.Acquisition(ident=f"{UID_TAG_PREFIX}{data['uid']}")
+	what = model.Acquisition(ident=_uid_uri(data['uid']))
 	what._label = "Sale of %s by %s" % (data['objects'][0]['label'], data['sellers'][0]['label'])
 	for o in data['objects']:
-		what.transferred_title_of = model.HumanMadeObject(ident=f"{UID_TAG_PREFIX}{o['uid']}", label=o['label'])
+		what.transferred_title_of = model.HumanMadeObject(ident=_uid_uri(o['uid']), label=o['label'])
 		if 'phase' in o:
-			what.terminated = model.Phase(ident=f"{UID_TAG_PREFIX}{o['phase']}-phase")
+			what.terminated = model.Phase(ident=_uid_uri(o['phase']+"-phase"))
 
 	for b in data['sellers']:
 		if b['type'] in ["Person", "Actor"]:
-			what.transferred_title_to = model.Person(ident=f"{UID_TAG_PREFIX}{b['uid']}", label=b['label'])
+			what.transferred_title_to = model.Person(ident=_uid_uri(b['uid']), label=b['label'])
 		else:
-			what.transferred_title_to = model.Group(ident=f"{UID_TAG_PREFIX}{b['uid']}", label=b['label'])
+			what.transferred_title_to = model.Group(ident=_uid_uri(b['uid']), label=b['label'])
 		if b['share'] != 1.0:
 			do_property_interest = True
 			print("NOT HANDLED SHARES FOR SALE %s" % data['uid'])
 	for s in data['buyers']:
 		if s['type'] in ['Person', 'Actor']:
-			what.transferred_title_from = model.Person(ident=f"{UID_TAG_PREFIX}{s['uid']}", label=s['label'])
+			what.transferred_title_from = model.Person(ident=_uid_uri(s['uid']), label=s['label'])
 		else:
-			what.transferred_title_from = model.Group(ident=f"{UID_TAG_PREFIX}{s['uid']}", label=s['label'])
+			what.transferred_title_from = model.Group(ident=_uid_uri(s['uid']), label=s['label'])
 		if s['mod']:
 			print("NOT HANDLED MOD: %s" % s['mod'])
 		if s['auth_mod']:
@@ -494,16 +496,16 @@ def make_la_sale(data: dict):
 
 def make_la_inventory(data: dict):
 
-	what = vocab.Inventorying(ident=f"{UID_TAG_PREFIX}{data['uid']}")
+	what = vocab.Inventorying(ident=_uid_uri(data['uid']))
 	date = "%s-%s-%s" % (data['year'], data['month'], data['day'])
 	what._label = "Inventory taking for %s on %s" % (data['objects'][0]['label'], date)
 
 	o = data['objects'][0]
-	obj = model.HumanMadeObject(ident=f"{UID_TAG_PREFIX}{o['uid']}", label=o['label'])
+	obj = model.HumanMadeObject(ident=_uid_uri(o['uid']), label=o['label'])
 	what.used_specific_object = obj
 
 	buy = data['buyers'][0]
-	who = model.Group(ident=f"{UID_TAG_PREFIX}{buy['uid']}", label=buy['label'])
+	who = model.Group(ident=_uid_uri(buy['uid']), label=buy['label'])
 	what.carried_out_by = who
 
 	if data['year']:
@@ -528,13 +530,13 @@ def make_la_inventory(data: dict):
 
 def make_la_prev_post(data: dict):
 
-	what = model.Acquisition(ident=f"{UID_TAG_PREFIX}{data['uid']}")
+	what = model.Acquisition(ident=_uid_uri(data['uid']))
 	what._label = "%s of object by %s" % (data['acq_type'], data['owner_label'])
 
 	if data['owner_type'] in ["Person", "Actor"]:
-		who = model.Person(ident=f"{UID_TAG_PREFIX}{data['owner_uid']}", label=data['owner_label'])
+		who = model.Person(ident=_uid_uri(data['owner_uid']), label=data['owner_label'])
 	else:
-		who = model.Group(ident=f"{UID_TAG_PREFIX}{data['owner_uid']}", label=data['owner_label'])
+		who = model.Group(ident=_uid_uri(data['owner_uid']), label=data['owner_label'])
 
 	if data['acq_type'] == 'purchase':
 		what.transferred_title_to = who
@@ -542,11 +544,11 @@ def make_la_prev_post(data: dict):
 		what.transferred_title_from = who
 
 	# XXX Should we capture labels
-	obj = model.HumanMadeObject(ident=f"{UID_TAG_PREFIX}{data['object_uid']}")
+	obj = model.HumanMadeObject(ident=_uid_uri(data['object_uid']))
 	what.transferred_title_of = obj
 
 	if 'prev_uuid' in data and data['prev_uid']:
-		prev = model.Acquisition(ident=f"{UID_TAG_PREFIX}{data['prev_uid']}")
+		prev = model.Acquisition(ident=_uid_uri(data['prev_uid']))
 		# XXX p183
 		what.occurs_after = prev
 

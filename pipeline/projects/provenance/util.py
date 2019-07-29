@@ -8,7 +8,7 @@ import dateutil.parser
 from pipeline.util import implode_date
 from cromulent import model
 
-UID_TAG_PREFIX = 'tag:getty.edu,2019:digital:pipeline:REPLACE-WITH-UUID#'
+UID_TAG_PREFIX = 'tag:getty.edu,2019:digital:pipeline:provenance:REPLACE-WITH-UUID#'
 
 def pir_uri(*values):
 	'''Convert a set of identifying `values` into a URI'''

@@ -248,7 +248,11 @@ class AddAuctionOfLot(Configurable):
 	def set_lot_date(lot, auction_data):
 		'''Associate a timespan with the auction lot.'''
 		date = implode_date(auction_data, 'lot_sale_')
-		bounds = map(lambda v: v.strftime("%Y-%m-%dT%H:%M:%SZ"), date_parse(date, delim='-'))
+		dates = date_parse(date, delim='-')
+		if dates:
+			bounds = map(lambda v: v.strftime("%Y-%m-%dT%H:%M:%SZ"), dates)
+		else:
+			bounds = []
 		if bounds:
 			ts = timespan_from_outer_bounds(*bounds)
 			ts.identified_by = model.Name(ident='', content=date)
@@ -334,7 +338,9 @@ class AddAuctionOfLot(Configurable):
 		tx_uri = AddAuctionOfLot.transaction_uri_for_lot(auction_data, data.get('price', []))
 		tx = vocab.Procurement(ident=tx_uri)
 		lot.caused = tx
-		tx_data = {'_date': lot.timespan}
+		tx_data = {}
+		with suppress(AttributeError):
+			tx_data['_date'] = lot.timespan
 		data['_procurement_data'] = add_crom_data(data=tx_data, what=tx)
 
 		add_crom_data(data=data, what=lot)
@@ -582,35 +588,31 @@ class TrackLotSizes(Configurable):
 
 #mark - Auction of Lot - Physical Object
 
-def genre_instance(value):
+def genre_instance(value, vocab_instance_map):
 	'''Return the appropriate type instance for the supplied genre name'''
 	if value is None:
 		return None
 	value = value.lower()
 
-	# TODO: are these OK AAT instances for these genres?
-	ANIMALS = model.Type(ident='http://vocab.getty.edu/aat/300249395', label='Animals')
-	HISTORY = model.Type(ident='http://vocab.getty.edu/aat/300033898', label='History')
-	MAPPING = { # TODO: can this be refactored somewhere?
-		'animals': ANIMALS,
-		'tiere': ANIMALS,
-		'stilleben': vocab.instances['style still life'],
-		'still life': vocab.instances['style still life'],
-		'portraits': vocab.instances['style portrait'],
-		'porträt': vocab.instances['style portrait'],
-		'historie': HISTORY,
-		'history': HISTORY,
-		'landscape': vocab.instances['style landscape'],
-		'landschaft': vocab.instances['style landscape'],
-	}
-	return MAPPING.get(value)
+	vocab.register_instance('animal', {'parent': model.Type, 'id': '300249395', 'label': 'Animal'})
+	vocab.register_instance('history', {'parent': model.Type, 'id': '300033898', 'label': 'History'})
 
-def populate_destruction_events(data, note):
+	instance_name = vocab_instance_map.get(value)
+	if instance_name:
+		instance = vocab.instances.get(instance_name)
+		if instance:
+			print(f'GENRE: {value}')
+		else:
+			print(f'*** No genre instance available for {instance_name!r} in vocab_instance_map')
+		return instance
+	return None
+
+def populate_destruction_events(data, note, destruction_types_map):
 	hmo = get_crom_object(data)
 	title = data.get('title')
-	DESTRUCTION_METHODS = { # TODO: can this be refactored somewhere?
-		'fire': model.Type(ident='http://vocab.getty.edu/aat/300068986', label='Fire'),
-	}
+
+	vocab.register_instance('fire', {'parent': model.Type, 'id': '300068986', 'label': 'Fire'})
+
 	r = re.compile(r'Destroyed(?: (?:by|during) (\w+))?(?: in (\d{4})[.]?)?')
 	m = r.search(note)
 	if m:
@@ -626,14 +628,17 @@ def populate_destruction_events(data, note):
 
 		if method:
 			with suppress(KeyError, AttributeError):
-				type = DESTRUCTION_METHODS[method.lower()]
+				type_name = destruction_types_map[method.lower()]
+				type = vocab.instances[type_name]
 				event = model.Event(label=f'{method.capitalize()} event causing the destruction of “{title}”')
 				event.classified_as = type
 				d.caused_by = event
 	
 @use('post_sale_map')
 @use('unique_catalogs')
-def populate_object(data, post_sale_map, unique_catalogs):
+@use('vocab_instance_map')
+@use('destruction_types_map')
+def populate_object(data, post_sale_map, unique_catalogs, vocab_instance_map, destruction_types_map):
 	'''Add modeling for an object described by a sales record'''
 	hmo = get_crom_object(data)
 	parent = data['parent_data']
@@ -659,7 +664,7 @@ def populate_object(data, post_sale_map, unique_catalogs):
 	vi = model.VisualItem()
 	if title:
 		vi._label = f'Visual work of “{title}”'
-	genre = genre_instance(data.get('genre'))
+	genre = genre_instance(data.get('genre'), vocab_instance_map)
 	if genre:
 		vi.classified_as = genre
 	hmo.shows = vi
@@ -669,7 +674,7 @@ def populate_object(data, post_sale_map, unique_catalogs):
 		loc = location.get('geog')
 		if loc:
 			if 'Destroyed ' in loc:
-				populate_destruction_events(data, loc)
+				populate_destruction_events(data, loc, destruction_types_map)
 			else:
 				current = parse_location_name(loc, uri_base=UID_TAG_PREFIX)
 				place_data = make_la_place(current)
@@ -708,7 +713,7 @@ def populate_object(data, post_sale_map, unique_catalogs):
 
 	notes = parent.get('auction_of_lot', {}).get('lot_notes')
 	if notes and notes.startswith('Destroyed'):
-		populate_destruction_events(data, notes)
+		populate_destruction_events(data, notes, destruction_types_map)
 
 	notes = data.get('hand_note', [])
 	for note in notes:
@@ -753,28 +758,13 @@ def populate_object(data, post_sale_map, unique_catalogs):
 # 			print(f'No dimension data was parsed from the dimension statement: {dimstr}')
 	return data
 
-def add_object_type(data):
+@use('vocab_type_map')
+def add_object_type(data, vocab_type_map):
 	'''Add appropriate type information for an object based on its 'object_type' name'''
-	TYPES = { # TODO: can this be refactored somewhere?
-		'dessin': vocab.Drawing,
-		'drawing': vocab.Drawing,
-		'émail': vocab.Enamel,
-		'enamel': vocab.Enamel,
-		'gemälde': vocab.Painting,
-		'miniatur': vocab.Miniature,
-		'miniature': vocab.Miniature,
-		'painting': vocab.Painting,
-		'peinture': vocab.Painting,
-		'sculpture': vocab.Sculpture,
-		'skulptur': vocab.Sculpture,
-		'tapestry': vocab.Tapestry,
-		'tapisserie': vocab.Tapestry,
-		'zeichnung': vocab.Drawing,
-		# TODO: these are the most common, but more should be added
-	}
-	typestring = data.get('object_type', '').lower()
-	if typestring in TYPES:
-		otype = TYPES[typestring]
+	typestring = data.get('object_type', '')
+	if typestring in vocab_type_map:
+		clsname = vocab_type_map.get(typestring, None)
+		otype = getattr(vocab, clsname)
 		add_crom_data(data=data, what=otype(ident=data['uri']))
 	else:
 		print(f'*** No object type for {typestring!r}')

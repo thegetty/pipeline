@@ -225,10 +225,6 @@ def print_jsonld(data: dict):
 	return data
 
 def deep_copy(data):
-	new = {}
 	# Not actually very deep, just shallow copies everything except
 	# the object generated in another thread
-	for (k,v) in data.items():
-		if k != "_LOD_OBJECT":
-			new[k] = v
-	return new
+	return {k:v for k,v in x.items() if k != "_LOD_OBJECT"}

@@ -10,6 +10,7 @@ import functools
 import itertools
 from contextlib import suppress
 from pipeline.util.cleaners import date_cleaner
+from cromulent import model
 
 # ~~~~ Core Functions ~~~~
 

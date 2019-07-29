@@ -32,7 +32,6 @@ from pipeline.linkedart import \
 			make_la_person
 from pipeline.io.xml import CurriedXMLReader
 from pipeline.nodes.basic import \
-			add_uuid, \
 			AddArchesModel, \
 			CleanDateToSpan, \
 			Serializer

@@ -7,100 +7,88 @@ from pipeline.linkedart import add_crom_data
 factory.auto_id_type = 'uuid'
 vocab.add_art_setter()
 
+from pipeline.projects.knoedler import UID_TAG_PREFIX
+
 vocab.register_aat_class("Clock", {"parent": model.HumanMadeObject, "id": "300041575", "label": "Clock"})
 vocab.register_aat_class("Cards", {"parent": model.HumanMadeObject, "id":"300211294", "label": "Playing Cards"})
-object_type_map = {
-	"Painting": vocab.Painting,
-	"Drawing": vocab.Drawing,
-	"Sculpture": vocab.Sculpture,
-	"Photograph": vocab.Photograph,
-	"Print": vocab.Print,
-	"Book": vocab.Book,
-	"Tapestry": vocab.Tapestry,
-	"Decorative Art": vocab.DecArts,
-	"Clocks": vocab.Clock,
-	"Maps": vocab.Map,
-	"Clothing": vocab.Clothing,
-	"Playing Cards": vocab.Cards,
-	"Furniture": vocab.Furniture
-}
 dimTypes = {300055624: vocab.Diameter, 300055644: vocab.Height, 300055647: vocab.Width}
 dimUnits = {300379100: vocab.instances["inches"], 300379098: vocab.instances["cm"]}
-
 
 # Here we take the data that has been collected and map it into Linked Art
 # This should just be mapping, not data collection, manipulation or validation
 
-### XXX This is the data from STAR, but not all the data we have about these objects
-### Need to consider data from Rosetta, ASpace etc.
-
 def _book_label(book):
 	return "Knoedler Stock Book %s" % book
-
 def _page_label(book, page):
 	return "Knoedler Stock Book %s, Page %s" % (book, page)
-
 def _row_label(book, page, row):
 	return "Knoedler Stock Book %s, Page %s, Row %s" % (book, page, row)
+def _row_uid(book, page, row):
+	return f'{UID_TAG_PREFIX}K-ROW-{book}-{page}-{row}'
+def _page_uid(book, page):
+	return f'{UID_TAG_PREFIX}K-PAGE-{book}-{page}'
+def _book_uid(book):
+	return f'{UID_TAG_PREFIX}K-BOOK-{book}'
+def _uid_uri(uid):
+	uid = urllib.parse.quote(uid)
+	return f'{UID_TAG_PREFIX}{uid}'
+
 
 def make_la_book(data: dict):
-	book = vocab.AccountBook(ident="urn:uuid:%s" % data['uuid'])
+	book = vocab.AccountBook(ident=_book_uid(data['identifier']))
 	book._label = _book_label(data['identifier'])
 	ident = vocab.LocalNumber()
 	ident.content = str(data['identifier'])
 	book.identified_by = ident
-
 	booknum = int(data['identifier'])
 	d = vocab.SequencePosition()
 	d.value = booknum
 	d.unit = vocab.instances['numbers']
 	book.dimension = d
-
 	return add_crom_data(data=data, what=book)
 
 def make_la_page(data: dict):
-	page = vocab.Page(ident="urn:uuid:%s" % data['uuid'])
+	page = vocab.Page(ident=_page_uid(data['parent']['identifier'], data['identifier']))
 	page._label = _page_label(data['parent']['identifier'], data['identifier'])
 	ident = vocab.LocalNumber()
 	ident.content = str(data['identifier'])
 	page.identified_by = ident
-
 	pagenum = int(data['identifier'])
 	d = vocab.SequencePosition()
 	d.value = pagenum
 	d.unit = vocab.instances['numbers']
 	page.dimension = d
 
-	# XXX This is a shortcut to avoid minting physical objects with depictions
-	# We should consider how terrible that is
+	# XXX This should go through a HumanMadeObject for consistency
+	# with Sales
 	if 'image' in data:
 		img = vocab.DigitalImage()
 		imgid = model.Identifier()
 		imgid.content = data['image']
 		img.identified_by = imgid
 		page.representation = img
+
 	if data['heading']:
 		# This is a transcription of the heading of the page
 		# Meaning it is part of the page linguistic object
 		l = vocab.Heading()
 		l.content = data['heading']
 		page.part = l
-
 	if data['subheading']:
 		# Transcription of the subheading of the page
-		l = vocab.Heading()
+		l = vocab.SubHeading()
 		l.content = data['subheading']
 		page.part = l
 
-	book = model.LinguisticObject(ident="urn:uuid:%s" % data['parent']['uuid'])
-	# book._label = "Book"
+	book = model.LinguisticObject(ident=_book_uid(data['parent']['identifier']))
+	book._label = _book_label(data['parent']['identifier'])
 	page.part_of = book
 
 	return add_crom_data(data=data, what=page)
 
 
 def make_la_row(data: dict):
-	row = model.LinguisticObject(ident="urn:uuid:%s" % data['uuid'])
+	row = model.LinguisticObject(ident=_row_uid(data['parent']['parent']['identifier'], data['parent']['identifier'], data['identifier']))
 	row._label = _row_label(data['parent']['parent']['identifier'], data['parent']['identifier'], data['identifier'])
 
 	rownum = int(data['identifier'])
@@ -128,32 +116,36 @@ def make_la_row(data: dict):
 		note3.content = data['verbatim']
 		row.referred_to_by = note3
 
-	page = model.LinguisticObject(ident="urn:uuid:%s" % data['parent']['uuid'])
-	# page._label = "Page"
+	page = model.LinguisticObject(ident=_page_uid(data['parent']['parent']['identifier'], data['parent']['identifier']))
+	page._label = _page_label(data['parent']['parent']['identifier'], data['parent']['identifier'])
 	row.part_of = page
-
 	return add_crom_data(data=data, what=row)
 
 ###
-### Labels are commented out as resource-instance won't accept them
+### Labels will be commented out as resource-instance in Arches won't accept them
 ### and adding label to the model won't export, plus doesn't work
 ### with resource-instance-list, as there's one label per list and
 ### the -list UI is much much nicer for editors
 ###
 
-def make_la_object(data: dict):
-	cls = object_type_map.get(data['object_type'], model.HumanMadeObject)
-	if cls == model.HumanMadeObject:
+@use('vocab_type_map')
+def make_la_object(data: dict, vocab_type_map=None):
+	clsname = vocab_type_map.get(data['object_type'], None)
+	if clsname:
+		cls = getattr(vocab, clsname)
+	else:
+		cls = model.HumanMadeObject
 		print("Could not match object type %s" % data['object_type'])
-	what = cls(ident="urn:uuid:%s" % data['uuid'], art=1)
+
+	what = cls(ident=_uid_uri(data['uid']), art=1)
 
 	for dv in data['dimensions']:
 		ds = vocab.DimensionStatement()
 		ds.content =dv['value']
 		# add source as part_of, as this is transcription
 		for s in dv['sources']:
-			l = model.LinguisticObject(ident="urn:uuid:%s" % s[1])
-			#l._label = _row_label(s[2], s[3], s[4])
+			l = model.LinguisticObject(ident=_row_uid(s[1], s[2], s[3]))
+			l._label = _row_label(s[1], s[2], s[3])
 			ds.referred_to_by = l
 		what.referred_to_by = ds
 
@@ -162,8 +154,8 @@ def make_la_object(data: dict):
 		ds.content = dm['value']
 		# add source as part_of, as this is transcription
 		for s in dm['sources']:
-			l = model.LinguisticObject(ident="urn:uuid:%s" % s[1])
-			#l._label = _row_label(s[2], s[3], s[4])
+			l = model.LinguisticObject(ident=_row_uid(s[1], s[2], s[3]))
+			l._label = _row_label(s[1], s[2], s[3])
 			ds.referred_to_by = l
 		what.referred_to_by = ds
 
@@ -175,8 +167,8 @@ def make_la_object(data: dict):
 		name.content = n['value']
 
 		for s in n['sources']:
-			l = model.LinguisticObject(ident="urn:uuid:%s" % s[1])
-			#l._label = _row_label(s[2], s[3], s[4])
+			l = model.LinguisticObject(ident=_row_uid(s[1], s[2], s[3]))
+			l._label = _row_label(s[1], s[2], s[3])
 			name.referred_to_by = l
 		what.identified_by = name
 
@@ -190,8 +182,8 @@ def make_la_object(data: dict):
 		d.value = dim['value']
 		d.unit = dimUnits[dim['unit']]
 		for s in dim['sources']:
-			l = model.LinguisticObject(ident="urn:uuid:%s" % s[1])
-			#l._label = _row_label(s[2], s[3], s[4])
+			l = model.LinguisticObject(ident=_row_uid(s[1], s[2], s[3]))
+			l._label = _row_label(s[1], s[2], s[3])
 			d.referred_to_by = l
 		what.dimension = d
 
@@ -215,20 +207,22 @@ def make_la_object(data: dict):
 		# This is currently always a person. Need to process Workshop of X
 		# XXX FIXME this is the arches issue with multiple resource-instance models
 		#who = model.Person(ident="urn:uuid:%s" % a['uuid'])
-		who = model.Actor(ident="urn:uuid:%s" % a['uuid'])
-		# who._label = a['label']
+
+		# XXX This should use ulan_type mapping?
+		who = model.Actor(ident=_uid_uri(a["uid"]))
+		who._label = a['label']
 		prod.carried_out_by = who
 
 		for s in a['sources']:
 			# Can't associate with the relationship directly (as it's a source for carried_out_by)
 			# So just add to the Production, which is still true, and 99.9% of the time is sufficient
-			l = model.LinguisticObject(ident="urn:uuid:%s" % s[1])
-			#l._label = _row_label(s[2], s[3], s[4])
+			l = model.LinguisticObject(ident=_row_uid(s[1], s[2], s[3]))
+			l._label = _row_label(s[1], s[2], s[3])
 			prod.referred_to_by = l
 
 	for a in former:
 		fprod = model.Production()
-		who = model.Person(ident="urn:uuid:%s" % a['uuid'])
+		who = model.Person(ident=_uid_uri(a["uid"]))
 		who._label = a['label']
 		fprod.carried_out_by = who
 		aa = model.AttributeAssignment()
@@ -237,14 +231,14 @@ def make_la_object(data: dict):
 		# XXX FIXME: aa.classified_as = produced_by
 		for s in a['sources']:
 			# Conversely, this is correct, as the LO refers to the AA carried out by Knoedler
-			l = model.LinguisticObject(ident="urn:uuid:%s" % s[1])
-			#l._label = _row_label(s[2], s[3], s[4])
+			l = model.LinguisticObject(ident=_row_uid(s[1], s[2], s[3]))
+			l._label = _row_label(s[1], s[2], s[3])
 			aa.referred_to_by = l
 
 	add_vi = False
 	for t in data['tags']:
-		aatv = "aat:%s" % t['aat']
-		aaturi = "http://vocab.getty.edu/aat/%s" % t['aat']
+		aatv = f"aat:{t['aat']}"
+		aaturi = f"http://vocab.getty.edu/aat/{t['aat']}" 
 		if t['type'] == 'classified_as':
 			# classification of the object
 			curr = [x.id for x in what.classified_as]
@@ -276,14 +270,14 @@ def make_la_object(data: dict):
 
 	if add_vi:
 		# This will be built in a different fork
-		vi = model.VisualItem(ident="urn:uuid:%s" % data['vizitem_uuid'])
+		vi = model.VisualItem(ident=_uid_uri(data["uid"]+'-vizitem'))
 		what.shows = vi
 
 	return add_crom_data(data=data, what=what)
 
 
 def make_la_vizitem(data: dict):
-	vi = model.VisualItem(ident="urn:uuid:%s" % data['vizitem_uuid'])
+	vi = model.VisualItem(ident=_uid_uri(data["uid"]+'-vizitem'))
 	add_vi = False
 	for t in data['tags']:
 		aaturi = "http://vocab.getty.edu/aat/%s" % t['aat']
@@ -308,7 +302,7 @@ def make_la_vizitem(data: dict):
 
 def make_la_purchase(data: dict):
 
-	what = model.Acquisition(ident="urn:uuid:%s" % data['uuid'])
+	what = model.Acquisition(ident= _uid_uri(data['uid']))
 	try:
 		what._label = "Purchase of %s by %s" % (data['objects'][0]['label'], data['buyers'][0]['label'])
 	except IndexError:
@@ -320,29 +314,29 @@ def make_la_purchase(data: dict):
 			what._label = "Purchase?"
 
 	for o in data['objects']:
-		what.transferred_title_of = model.HumanMadeObject(ident="urn:uuid:%s" % o['uuid'], label=o['label'])
+		what.transferred_title_of = model.HumanMadeObject(ident=_uid_uri(o["uid"]), label=o['label'])
 		if 'phase_info' in o:
-			what.initiated = model.Phase(ident="urn:uuid:%s" % o['phase_info']['uuid'])
+			what.initiated = model.Phase(ident=_uid_uri(['phase_info']+'-phase'))
 	for b in data['buyers']:
 		# XXX Could [indeed very very likely to] be Group
 		if b['type'] in ["Person", "Actor"]:
 			try:
-				what.transferred_title_to = model.Person(ident="urn:uuid:%s" % b['uuid'], label=b['label'])
+				what.transferred_title_to = model.Person(ident=_uid_uri(b['uid']), label=b['label'])
 			except:
 				print("Could not build person in make_la_purchase: %r" % b)
 				# ????
 		else:
 			try:
-				what.transferred_title_to = model.Group(ident="urn:uuid:%s" % b['uuid'], label=b['label'])
+				what.transferred_title_to = model.Group(ident=_uid_uri(b['uid']), label=b['label'])
 			except:
 				print("Could not build group in make_la_purchase: %r" % b)
 				# What to do??
 
 	for s in data['sellers']:
 		if s['type'] in ['Person', 'Actor']:
-			what.transferred_title_from = model.Person(ident="urn:uuid:%s" % s['uuid'], label=s['label'])
+			what.transferred_title_from = model.Person(ident=_uid_uri(s['uid']), label=s['label'])
 		else:
-			what.transferred_title_from = model.Group(ident="urn:uuid:%s" % s['uuid'], label=s['label'])
+			what.transferred_title_from = model.Group(ident=_uid_uri(s['uid']), label=s['label'])
 		if s['mod']:
 			print("NOT HANDLED MOD: %s" % s['mod'])
 
@@ -369,7 +363,7 @@ def make_la_purchase(data: dict):
 		t.end_of_the_end = ymd_to_datetime(data['year'], data['month'], data['day'], which="end")
 		what.timespan = t
 	for s in data['sources']:
-		what.referred_to_by = model.LinguisticObject(ident="urn:uuid:%s" % s[1], label=_row_label(s[2], s[3], s[4]))
+		what.referred_to_by = model.LinguisticObject(ident=_row_uid(s[1], s[2], s[3]), label=_row_label(s[1], s[2], s[3]))
 
 	if data['note']:
 		n = vocab.Note()
@@ -384,13 +378,13 @@ def make_la_purchase(data: dict):
 
 def make_la_phase(data: dict):
 
-	phase = vocab.OwnershipPhase(ident="urn:uuid:%s" % data['uuid'])
+	phase = vocab.OwnershipPhase(ident=_uid_uri({data['uid']}+"-phase"))
 	try:
 		phase._label = "Ownership Phase of %s" % data['object_label']
 	except:
 		phase._label = "Ownership Phase of unknown object"
 
-	what = model.HumanMadeObject(ident="urn:uuid:%s" % data['object_uuid'], label=data['object_label'])
+	what = model.HumanMadeObject(ident=_uid_uri(data['object_uid']), label=data['object_label'])
 	phase.phase_of = what
 	pi = model.PropertyInterest()
 	pi.interest_for = what
@@ -414,9 +408,9 @@ def make_la_phase(data: dict):
 
 	for b in data['buyers']:
 		if b['type'] in ["Person", "Actor"]:
-			who = model.Person(ident="urn:uuid:%s" % b['uuid'], label=b['label'])
+			who = model.Person(ident=_uid_uri(b['uid']), label=b['label'])
 		else:
-			who = model.Group(ident="urn:uuid:%s" % b['uuid'], label=b['label'])
+			who = model.Group(ident=_uid_uri(b['uid']), label=b['label'])
 		pi.claimed_by = who
 
 		if b['share'] != 1.0:
@@ -437,26 +431,26 @@ def make_la_sale(data: dict):
 		print("Matt's notes say not to generate acquisitions for non-Sold, but not what to do instead")
 		print("Generating it, and we can sort it out later")
 
-	what = model.Acquisition(ident="urn:uuid:%s" % data['uuid'])
+	what = model.Acquisition(ident=_uid_uri(data['uid']))
 	what._label = "Sale of %s by %s" % (data['objects'][0]['label'], data['sellers'][0]['label'])
 	for o in data['objects']:
-		what.transferred_title_of = model.HumanMadeObject(ident="urn:uuid:%s" % o['uuid'], label=o['label'])
+		what.transferred_title_of = model.HumanMadeObject(ident=_uid_uri(o['uid']), label=o['label'])
 		if 'phase' in o:
-			what.terminates = model.Phase(ident="urn:uuid:%s" % o['phase'])
+			what.terminated = model.Phase(ident=_uid_uri(o['phase']+"-phase"))
 
 	for b in data['sellers']:
 		if b['type'] in ["Person", "Actor"]:
-			what.transferred_title_to = model.Person(ident="urn:uuid:%s" % b['uuid'], label=b['label'])
+			what.transferred_title_to = model.Person(ident=_uid_uri(b['uid']), label=b['label'])
 		else:
-			what.transferred_title_to = model.Group(ident="urn:uuid:%s" % b['uuid'], label=b['label'])
+			what.transferred_title_to = model.Group(ident=_uid_uri(b['uid']), label=b['label'])
 		if b['share'] != 1.0:
 			do_property_interest = True
 			print("NOT HANDLED SHARES FOR SALE %s" % data['uid'])
 	for s in data['buyers']:
 		if s['type'] in ['Person', 'Actor']:
-			what.transferred_title_from = model.Person(ident="urn:uuid:%s" % s['uuid'], label=s['label'])
+			what.transferred_title_from = model.Person(ident=_uid_uri(s['uid']), label=s['label'])
 		else:
-			what.transferred_title_from = model.Group(ident="urn:uuid:%s" % s['uuid'], label=s['label'])
+			what.transferred_title_from = model.Group(ident=_uid_uri(s['uid']), label=s['label'])
 		if s['mod']:
 			print("NOT HANDLED MOD: %s" % s['mod'])
 		if s['auth_mod']:
@@ -486,7 +480,8 @@ def make_la_sale(data: dict):
 		t.end_of_the_end = ymd_to_datetime(data['year'], data['month'], data['day'], which="end")
 		what.timespan = t
 	for s in data['sources']:
-		what.referred_to_by = model.LinguisticObject(ident="urn:uuid:%s" % s[1], label=_row_label(s[2], s[3], s[4]))
+		what.referred_to_by = model.LinguisticObject(ident=_row_uid(s[1], s[2], s[3]), \
+			label=_row_label(s[1], s[2], s[3]))
 
 	if data['note']:
 		n = vocab.Note()
@@ -501,16 +496,16 @@ def make_la_sale(data: dict):
 
 def make_la_inventory(data: dict):
 
-	what = vocab.Inventorying(ident="urn:uuid:%s" % data['uuid'])
+	what = vocab.Inventorying(ident=_uid_uri(data['uid']))
 	date = "%s-%s-%s" % (data['year'], data['month'], data['day'])
 	what._label = "Inventory taking for %s on %s" % (data['objects'][0]['label'], date)
 
 	o = data['objects'][0]
-	obj = model.HumanMadeObject(ident="urn:uuid:%s" % o['uuid'], label=o['label'])
+	obj = model.HumanMadeObject(ident=_uid_uri(o['uid']), label=o['label'])
 	what.used_specific_object = obj
 
 	buy = data['buyers'][0]
-	who = model.Group(ident="urn:uuid:%s" % buy['uuid'], label=buy['label'])
+	who = model.Group(ident=_uid_uri(buy['uid']), label=buy['label'])
 	what.carried_out_by = who
 
 	if data['year']:
@@ -523,7 +518,8 @@ def make_la_inventory(data: dict):
 		what.timespan = t
 
 	for s in data['sources']:
-		what.referred_to_by = model.LinguisticObject(ident="urn:uuid:%s" % s[1], label=_row_label(s[2], s[3], s[4]))
+		what.referred_to_by = model.LinguisticObject(ident=_row_uid(s[1], s[2], s[3]), \
+			label=_row_label(s[1], s[2], s[3]))
 
 	if data['note']:
 		n = vocab.Note()
@@ -534,13 +530,13 @@ def make_la_inventory(data: dict):
 
 def make_la_prev_post(data: dict):
 
-	what = model.Acquisition(ident="urn:uuid:%s" % data['uuid'])
+	what = model.Acquisition(ident=_uid_uri(data['uid']))
 	what._label = "%s of object by %s" % (data['acq_type'], data['owner_label'])
 
 	if data['owner_type'] in ["Person", "Actor"]:
-		who = model.Person(ident="urn:uuid:%s" % data['owner_uuid'], label=data['owner_label'])
+		who = model.Person(ident=_uid_uri(data['owner_uid']), label=data['owner_label'])
 	else:
-		who = model.Group(ident="urn:uuid:%s" % data['owner_uuid'], label=data['owner_label'])
+		who = model.Group(ident=_uid_uri(data['owner_uid']), label=data['owner_label'])
 
 	if data['acq_type'] == 'purchase':
 		what.transferred_title_to = who
@@ -548,12 +544,12 @@ def make_la_prev_post(data: dict):
 		what.transferred_title_from = who
 
 	# XXX Should we capture labels
-	obj = model.HumanMadeObject(ident="urn:uuid:%s" % data['object_uuid'])
+	obj = model.HumanMadeObject(ident=_uid_uri(data['object_uid']))
 	what.transferred_title_of = obj
 
-	if 'prev_uuid' in data and data['prev_uuid']:
-		prev = model.Acquisition(ident="urn:uuid:%s" % data['prev_uuid'])
+	if 'prev_uuid' in data and data['prev_uid']:
+		prev = model.Acquisition(ident=_uid_uri(data['prev_uid']))
+		# XXX p183
 		what.occurs_after = prev
 
 	return add_crom_data(data=data, what=what)
-

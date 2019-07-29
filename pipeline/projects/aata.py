@@ -43,7 +43,7 @@ variantTitleIdentifier = vocab.Identifier # TODO: aat for variant titles?
 
 # utility functions
 
-UID_TAG_PREFIX = 'tag:getty.edu,2019:digital:pipeline:provenance:REPLACE-WITH-UUID#'
+UID_TAG_PREFIX = 'tag:getty.edu,2019:digital:pipeline:aata:REPLACE-WITH-UUID#'
 
 def aata_uri(*values):
 	'''Convert a set of identifying `values` into a URI'''

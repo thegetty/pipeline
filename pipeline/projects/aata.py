@@ -640,7 +640,7 @@ class AATAPipeline:
 		return {
 			'trace_counter': itertools.count(),
 			'gpi': create_engine(settings.gpi_engine),
-			'aat': create_engine(settings.aat_engine),
+# 			'aat': create_engine(settings.aat_engine),
 			'uuid_cache': create_engine(settings.uuid_cache_engine),
 			'fs.data.aata': bonobo.open_fs(self.input_path)
 		}

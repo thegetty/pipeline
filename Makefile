@@ -2,12 +2,13 @@ LIMIT?=100
 DEBUG?=1
 DOT=dot
 QUIET?=1
+PYTHON?=python3
 
 SHELL := /bin/bash
 
 aata:
-	QUIET=$(QUIET) GETTY_PIPELINE_DEBUG=$(DEBUG) GETTY_PIPELINE_LIMIT=$(LIMIT) time ./aata.py
-	PYTHONPATH=`pwd` ./scripts/rewrite_uris_to_uuids.py 'tag:getty.edu,2019:digital:pipeline:aata:REPLACE-WITH-UUID#'
+	QUIET=$(QUIET) GETTY_PIPELINE_DEBUG=$(DEBUG) GETTY_PIPELINE_LIMIT=$(LIMIT) $(PYTHON) ./aata.py
+	PYTHONPATH=`pwd` $(PYTHON) ./scripts/rewrite_uris_to_uuids.py 'tag:getty.edu,2019:digital:pipeline:aata:REPLACE-WITH-UUID#'
 
 aatagraph: /tmp/aata.pdf
 	open -a Preview /tmp/aata.pdf
@@ -15,20 +16,20 @@ aatagraph: /tmp/aata.pdf
 nt:
 	curl -s 'https://linked.art/ns/v1/linked-art.json' > /tmp/linked-art.json
 	echo 'Transcoding JSON-LD to N-Triples...'
-	find output -name '*.json' | sort | xargs -n 128 -P 10 ./scripts/json2nt.py /tmp/linked-art.json
+	find output -name '*.json' | sort | xargs -n 128 -P 10 $(PYTHON) ./scripts/json2nt.py /tmp/linked-art.json
 
 pir:
 	mkdir -p /tmp/pipeline
-	QUIET=$(QUIET) GETTY_PIPELINE_DEBUG=$(DEBUG) GETTY_PIPELINE_LIMIT=$(LIMIT) time ./pir.py
-	PYTHONPATH=`pwd` ./scripts/rewrite_post_sales_uris.py "${GETTY_PIPELINE_TMP_PATH}/post_sale_rewrite_map.json"
-	PYTHONPATH=`pwd` ./scripts/rewrite_uris_to_uuids.py 'tag:getty.edu,2019:digital:pipeline:provenance:REPLACE-WITH-UUID#'
+	QUIET=$(QUIET) GETTY_PIPELINE_DEBUG=$(DEBUG) GETTY_PIPELINE_LIMIT=$(LIMIT) $(PYTHON) ./pir.py
+	PYTHONPATH=`pwd` $(PYTHON) ./scripts/rewrite_post_sales_uris.py "${GETTY_PIPELINE_TMP_PATH}/post_sale_rewrite_map.json"
+	PYTHONPATH=`pwd` $(PYTHON) ./scripts/rewrite_uris_to_uuids.py 'tag:getty.edu,2019:digital:pipeline:provenance:REPLACE-WITH-UUID#'
 
 pirgraph: /tmp/pir.pdf
 	open -a Preview /tmp/pir.pdf
 
 knoedler:
-	QUIET=$(QUIET) GETTY_PIPELINE_DEBUG=$(DEBUG) GETTY_PIPELINE_LIMIT=$(LIMIT) time ./knoedler.py
-	PYTHONPATH=`pwd` ./scripts/rewrite_uris_to_uuids.py 'tag:getty.edu,2019:digital:pipeline:knoedler:REPLACE-WITH-UUID#'
+	QUIET=$(QUIET) GETTY_PIPELINE_DEBUG=$(DEBUG) GETTY_PIPELINE_LIMIT=$(LIMIT) $(PYTHON) ./knoedler.py
+	PYTHONPATH=`pwd` $(PYTHON) ./scripts/rewrite_uris_to_uuids.py 'tag:getty.edu,2019:digital:pipeline:knoedler:REPLACE-WITH-UUID#'
 
 knoedlergraph: /tmp/knoedler.pdf
 	open -a Preview /tmp/knoedler.pdf

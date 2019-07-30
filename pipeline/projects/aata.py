@@ -54,7 +54,7 @@ def aata_uri(*values):
 		suffix = str(uuid.uuid4())
 		return UID_TAG_PREFIX + suffix
 
-def language_object_from_code(code):
+def language_object_from_code(code, language_code_map):
 	'''
 	Given a three-letter language code (which are mostly drawn from ISO639-2, with some
 	exceptions), return a model.Language object for the corresponding language.
@@ -62,53 +62,27 @@ def language_object_from_code(code):
 	For example, `language_object_from_code('eng')` returns an object representing
 	the English language.
 	'''
-	languages = {
-		# TODO: there must be a better way to do this than keep a static mapping of languages
-		'chi': {'ident': 'http://vocab.getty.edu/aat/300388113', 'label': 'Chinese'},
-		'cro': {'ident': 'http://vocab.getty.edu/aat/300388185', 'label': 'Croatian'},
-		'cze': {'ident': 'http://vocab.getty.edu/aat/300388191', 'label': 'Czech'},
-		'dan': {'ident': 'http://vocab.getty.edu/aat/300388204', 'label': 'Danish'},
-		'nld': {'ident': 'http://vocab.getty.edu/aat/300388256', 'label': 'Dutch'},
-		'dut': {'ident': 'http://vocab.getty.edu/aat/300388256', 'label': 'Dutch'},
-		'eng': {'ident': 'http://vocab.getty.edu/aat/300388277', 'label': 'English'},
-		'gre': {'ident': 'http://vocab.getty.edu/aat/300388361', 'label': 'Greek'},
-		'fra': {'ident': 'http://vocab.getty.edu/aat/300388306', 'label': 'French'},
-		'fre': {'ident': 'http://vocab.getty.edu/aat/300388306', 'label': 'French'},
-		'geo': {'ident': 'http://vocab.getty.edu/aat/300388343', 'label': 'Georgian'},
-		'ger': {'ident': 'http://vocab.getty.edu/aat/300388344', 'label': 'German'},
-		'deu': {'ident': 'http://vocab.getty.edu/aat/300388344', 'label': 'German'},
-		'heb': {'ident': 'http://vocab.getty.edu/aat/300388401', 'label': 'Hebrew'},
-		'hun': {'ident': 'http://vocab.getty.edu/aat/300388770', 'label': 'Magyar (Hungarian) '},
-		'ita': {'ident': 'http://vocab.getty.edu/aat/300388474', 'label': 'Italian'},
-		'jpn': {'ident': 'http://vocab.getty.edu/aat/300388486', 'label': 'Japanese'},
-		'lat': {'ident': 'http://vocab.getty.edu/aat/300388693', 'label': 'Latin'},
-		'nor': {'ident': 'http://vocab.getty.edu/aat/300388992', 'label': 'Norwegian'},
-		'pol': {'ident': 'http://vocab.getty.edu/aat/300389109', 'label': 'Polish'},
-		'por': {'ident': 'http://vocab.getty.edu/aat/300389115', 'label': 'Portuguese'},
-		'rom': {'ident': 'http://vocab.getty.edu/aat/300389157', 'label': 'Romanian'},
-		'rus': {'ident': 'http://vocab.getty.edu/aat/300389168', 'label': 'Russian'},
-		'scr': {'ident': 'http://vocab.getty.edu/aat/300389248', 'label': 'Serbo-Croatian'},
-		'slo': {'ident': 'http://vocab.getty.edu/aat/300389290', 'label': 'Slovak'},
-		'slv': {'ident': 'http://vocab.getty.edu/aat/300389291', 'label': 'Slovenian'},
-		'spa': {'ident': 'http://vocab.getty.edu/aat/300389311', 'label': 'Spanish'},
-		'swe': {'ident': 'http://vocab.getty.edu/aat/300389336', 'label': 'Swedish'},
-		'tur': {'ident': 'http://vocab.getty.edu/aat/300389470', 'label': 'Turkish'},
-	}
 	try:
 		if code == 'unk': # TODO: verify that 'unk' is 'unknown' and can be skipped
 			return None
-		kwargs = languages[code]
-		return model.Language(**kwargs)
-	except KeyError:
-		if settings.DEBUG:
-			sys.stderr.write(f'*** No AAT link for language {code}\n')
+		if code in language_code_map:
+			language_name = language_code_map[code]
+			try:
+				return vocab.instances[language_name]
+			except KeyError:
+				if settings.DEBUG:
+					sys.stderr.write(f'*** No AAT language instance found: {language_name!r}\n')
+		else:
+			if settings.DEBUG:
+				sys.stderr.write(f'*** No AAT link for language {code!r}\n')
 	except Exception as e:
 		sys.stderr.write(f'*** language_object_from_code: {e}\n')
 		raise e
 
 # main article chain
 
-def make_aata_article_dict(e):
+@use('language_code_map')
+def make_aata_article_dict(e, language_code_map):
 	'''
 	Given an XML element representing an AATA record, extract information about the
 	"article" (this might be a book, chapter, journal article, etc.) including:
@@ -123,7 +97,7 @@ def make_aata_article_dict(e):
 	This information is returned in a single `dict`.
 	'''
 
-	data = _xml_extract_article(e)
+	data = _xml_extract_article(e, language_code_map)
 	aata_id = data['_aata_record_id']
 	organizations = list(_xml_extract_organizations(e, aata_id))
 	authors = list(_xml_extract_authors(e, aata_id))
@@ -154,7 +128,7 @@ def _gaia_authority_type(code):
 	else:
 		raise LookupError
 
-def _xml_extract_article(e):
+def _xml_extract_article(e, language_code_map):
 	'''Extract information about an "article" record XML element'''
 	doc_type = e.findtext('./record_desc_group/doc_type')
 	title = e.findtext('./title_group[title_type = "Analytic"]/title')
@@ -196,10 +170,9 @@ def _xml_extract_article(e):
 		classification = model.Type(label=label)
 		classification.identified_by = name
 
-		code = model.Identifier()
+		code = model.Identifier(content=cid)
 
 		code.classified_as = code_type
-		code.content = cid
 		classification.identified_by = code
 		classifications.append(classification)
 
@@ -215,17 +188,16 @@ def _xml_extract_article(e):
 		index = itype(label=label)
 		index.identified_by = name
 
-		code = model.Identifier()
+		code = model.Identifier(content=aid)
 
 		code.classified_as = code_type
-		code.content = aid
 		index.identified_by = code
 		indexings.append(index)
 
 	if title is not None and len(doc_langs) == 1:
 		code = doc_langs.pop()
 		try:
-			language = language_object_from_code(code)
+			language = language_object_from_code(code, language_code_map)
 			if language is not None:
 				title = (title, language)
 		except:
@@ -348,7 +320,8 @@ def _xml_extract_authors(e, aata_id):
 # 					sys.stderr.write(lxml.etree.tostring(a).decode('utf-8'))
 # 					sys.stderr.write('\n')
 
-def add_aata_object_type(data):
+@use('document_types')
+def add_aata_object_type(data, document_types):
 	'''
 	Given an "article" `dict` containing a `_document_type` key which has a two-letter
 	document type string (e.g. 'JA' for journal article, 'BC' for book), add a new key
@@ -358,19 +331,9 @@ def add_aata_object_type(data):
 	For example, `add_aata_object_type({'_document_type': 'AV', ...})` returns the `dict`:
 	`{'_document_type': 'AV', 'document_type': vocab.AudioVisualContent, ...}`.
 	'''
-	doc_types = { # TODO: should this be in settings (or elsewhere)?
-		'AV': vocab.AudioVisualContent,
-		'BA': vocab.Chapter,
-		'BC': vocab.Monograph, # TODO: is this right for a "Book - Collective"?
-		'BM': vocab.Monograph,
-		'JA': vocab.Article,
-		'JW': vocab.Issue,
-		'PA': vocab.Patent,
-		'TH': vocab.Thesis,
-		'TR': vocab.TechnicalReport
-	}
 	atype = data['_document_type']
-	data['object_type'] = doc_types[atype]
+	clsname = document_types[atype]
+	data['object_type'] = getattr(vocab, clsname)
 	return data
 
 # imprint organizations chain (publishers, distributors)
@@ -526,7 +489,8 @@ def add_aata_authors(data):
 
 # article abstract chain
 
-def detect_title_language(data: dict):
+@use('language_code_map')
+def detect_title_language(data: dict, language_code_map):
 	'''
 	Given a `dict` representing a Linguistic Object, attempt to detect the language of
 	the value for the `label` key.  If the detected langauge is also one of the languages
@@ -547,7 +511,7 @@ def detect_title_language(data: dict):
 			detected = detect(title)
 			threealpha = iso639.to_iso639_2(detected)
 			if threealpha in languages:
-				language = language_object_from_code(threealpha)
+				language = language_object_from_code(threealpha, language_code_map)
 				if language is not None:
 					# we have confidence that we've matched the language of the title
 					# because it is one of the declared languages for the record
@@ -568,7 +532,8 @@ def detect_title_language(data: dict):
 		print('*** detect_title_language error: %r' % (e,))
 	return NOT_MODIFIED
 
-def make_aata_abstract(data):
+@use('language_code_map')
+def make_aata_abstract(data, language_code_map):
 	'''
 	Given a `dict` representing an "article," extract the abstract records.
 	yield a new `dict`s for each such record.
@@ -591,18 +556,14 @@ def make_aata_abstract(data):
 	'''
 	lod_object = data['_LOD_OBJECT']
 	for a in data.get('_abstracts', []):
-		abstract = model.LinguisticObject()
 		abstract_dict = {k: v for k, v in a.items() if k not in ('language',)}
 
-		abstract.content = a.get('content')
-		abstract.classified_as = model.Type( # TODO: change to vocab.Abstract()
-			ident='http://vocab.getty.edu/aat/300026032',
-			label='Abstract' # TODO: is this the right aat URI?
-		)
+		content = a.get('content')
+		abstract = vocab.Abstract(content=content)
 		abstract.refers_to = lod_object
 		langcode = a.get('language')
 		if langcode is not None:
-			language = language_object_from_code(langcode)
+			language = language_object_from_code(langcode, language_code_map)
 			if language is not None:
 				abstract.language = language
 				abstract_dict['language'] = language
@@ -631,13 +592,16 @@ def filter_abstract_authors(data: dict):
 class AATAPipeline(PipelineBase):
 	'''Bonobo-based pipeline for transforming AATA data from XML into JSON-LD.'''
 	def __init__(self, input_path, files_pattern, **kwargs):
-		self.project_name = 'knoedler'
+		self.project_name = 'aata'
 		self.graph = None
 		self.models = kwargs.get('models', {})
 		self.files_pattern = files_pattern
 		self.limit = kwargs.get('limit')
 		self.debug = kwargs.get('debug', False)
 		self.input_path = input_path
+		self.pipeline_project_service_files_path = kwargs.get('pipeline_project_service_files_path', settings.pipeline_project_service_files_path)
+		self.pipeline_common_service_files_path = kwargs.get('pipeline_common_service_files_path', settings.pipeline_common_service_files_path)
+
 		if self.debug:
 			self.serializer	= Serializer(compact=False)
 			self.writer		= None
@@ -651,10 +615,8 @@ class AATAPipeline(PipelineBase):
 	# Set up environment
 	def get_services(self):
 		'''Return a `dict` of named services available to the bonobo pipeline.'''
-		return {
-			'trace_counter': itertools.count(),
-			'fs.data.aata': bonobo.open_fs(self.input_path)
-		}
+		services = super().get_services()
+		return services
 
 	def add_serialization_chain(self, graph, input_node):
 		'''Add serialization of the passed transformer node to the bonobo graph.'''

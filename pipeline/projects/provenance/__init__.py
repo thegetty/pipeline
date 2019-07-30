@@ -303,6 +303,12 @@ class AddAuctionOfLot(Configurable):
 
 	def __call__(self, data, auction_houses, auction_locations, problematic_records):
 		'''Add modeling data for the auction of a lot of objects.'''
+		ask_price = data.get('ask_price', {}).get('ask_price')
+		if ask_price:
+			# if there is an asking price/currency, it's a direct sale, not an auction;
+			# filter these out from subsequent modeling of auction lots.
+			return
+		
 		auction_data = data['auction_of_lot']
 		lot_object_key = object_key(auction_data)
 		cno, lno, date = lot_object_key

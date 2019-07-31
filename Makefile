@@ -4,27 +4,33 @@ DOT=dot
 QUIET?=0
 PYTHON?=python3
 GETTY_PIPELINE_OUTPUT?=`pwd`/output
-GETTY_PIPELINE_DATA_PATH?=`pwd`/data
+GETTY_PIPELINE_INPUT?=`pwd`/data
 GETTY_PIPELINE_TMP_PATH?=/tmp
 
 SHELL := /bin/bash
 
 docker: dockerimage
-	docker run -t --env AWS_ACCESS_KEY_ID=$(AWS_ACCESS_KEY_ID) --env AWS_SECRET_ACCESS_KEY=$(AWS_SECRET_ACCESS_KEY) -v$(GETTY_PIPELINE_DATA_PATH):/data -v$(GETTY_PIPELINE_OUTPUT):/output pipeline make pir nt
+	docker run -t --env AWS_ACCESS_KEY_ID=$(AWS_ACCESS_KEY_ID) --env AWS_SECRET_ACCESS_KEY=$(AWS_SECRET_ACCESS_KEY) -v$(GETTY_PIPELINE_INPUT):/data -v$(GETTY_PIPELINE_OUTPUT):/output pipeline make pir nt
 
 dockertest: dockerimage
-	docker run -t -v$(GETTY_PIPELINE_DATA_PATH):/data -v$(GETTY_PIPELINE_OUTPUT):/output pipeline make test
+	docker run -t -v$(GETTY_PIPELINE_INPUT):/data -v$(GETTY_PIPELINE_OUTPUT):/output pipeline make test
 
 dockerimage: Dockerfile
 	docker build -t pipeline .
 
-fetch:
-	mkdir -p $(GETTY_PIPELINE_DATA_PATH)/aata
-	mkdir -p $(GETTY_PIPELINE_DATA_PATH)/pir
-	mkdir -p $(GETTY_PIPELINE_DATA_PATH)/knoedler
-	aws s3 sync s3://jpgt-or-provenance-01/provenance_batch/data/aata $(GETTY_PIPELINE_DATA_PATH)/aata
-	aws s3 sync s3://jpgt-or-provenance-01/provenance_batch/data/pir $(GETTY_PIPELINE_DATA_PATH)/pir
-	aws s3 sync s3://jpgt-or-provenance-01/provenance_batch/data/knoedler $(GETTY_PIPELINE_DATA_PATH)/knoedler
+fetch: fetchaata fetchpir fetchknoedler
+
+fetchaata:
+	mkdir -p $(GETTY_PIPELINE_INPUT)/aata
+	aws s3 sync s3://jpgt-or-provenance-01/provenance_batch/data/aata $(GETTY_PIPELINE_INPUT)/aata
+
+fetchpir:
+	mkdir -p $(GETTY_PIPELINE_INPUT)/pir
+	aws s3 sync s3://jpgt-or-provenance-01/provenance_batch/data/pir $(GETTY_PIPELINE_INPUT)/pir
+
+fetchknoedler:
+	mkdir -p $(GETTY_PIPELINE_INPUT)/knoedler
+	aws s3 sync s3://jpgt-or-provenance-01/provenance_batch/data/knoedler $(GETTY_PIPELINE_INPUT)/knoedler
 
 aata:
 	QUIET=$(QUIET) GETTY_PIPELINE_DEBUG=$(DEBUG) GETTY_PIPELINE_LIMIT=$(LIMIT) $(PYTHON) ./aata.py
@@ -89,4 +95,4 @@ clean:
 	rm -f $(GETTY_PIPELINE_TMP_PATH)/knoedler.dot
 	rm -f "${GETTY_PIPELINE_TMP_PATH}/post_sale_rewrite_map.json"
 
-.PHONY: aata aatagraph knoedler knoedlergraph pir pirgraph test upload nt docker dockerimage dockertest fetch
+.PHONY: aata aatagraph knoedler knoedlergraph pir pirgraph test upload nt docker dockerimage dockertest fetch fetchaata fetchpir fetchknoedler

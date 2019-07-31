@@ -12,6 +12,9 @@ SHELL := /bin/bash
 docker: dockerimage
 	docker run -t --env AWS_ACCESS_KEY_ID=$(AWS_ACCESS_KEY_ID) --env AWS_SECRET_ACCESS_KEY=$(AWS_SECRET_ACCESS_KEY) -v$(GETTY_PIPELINE_INPUT):/data -v$(GETTY_PIPELINE_OUTPUT):/output pipeline make pir nt
 
+cleandocker: dockerimage
+	docker run -t --env AWS_ACCESS_KEY_ID=$(AWS_ACCESS_KEY_ID) --env AWS_SECRET_ACCESS_KEY=$(AWS_SECRET_ACCESS_KEY) -v$(GETTY_PIPELINE_OUTPUT):/output pipeline make fetch aata nt
+
 dockertest: dockerimage
 	docker run -t -v$(GETTY_PIPELINE_INPUT):/data -v$(GETTY_PIPELINE_OUTPUT):/output pipeline make test
 
@@ -85,8 +88,8 @@ $(GETTY_PIPELINE_TMP_PATH)/knoedler.pdf: $(GETTY_PIPELINE_TMP_PATH)/knoedler.dot
 	$(DOT) -Tpdf -o $(GETTY_PIPELINE_TMP_PATH)/knoedler.pdf $(GETTY_PIPELINE_TMP_PATH)/knoedler.dot
 	
 clean:
-	rm -r $(GETTY_PIPELINE_OUTPUT)/*
-	rm -r $(GETTY_PIPELINE_TMP_PATH)/pipeline/*
+	rm -rf $(GETTY_PIPELINE_OUTPUT)/*
+	rm -rf $(GETTY_PIPELINE_TMP_PATH)/pipeline/*
 	rm -f $(GETTY_PIPELINE_TMP_PATH)/aata.pdf
 	rm -f $(GETTY_PIPELINE_TMP_PATH)/aata.dot
 	rm -f $(GETTY_PIPELINE_TMP_PATH)/pir.pdf

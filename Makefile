@@ -19,12 +19,12 @@ dockerimage: Dockerfile
 	docker build -t pipeline .
 
 fetch:
-	mkdir -p $(GETTY_PIPELINE_DATA_PATH)/data/aata
-	mkdir -p $(GETTY_PIPELINE_DATA_PATH)/data/pir
-	mkdir -p $(GETTY_PIPELINE_DATA_PATH)/data/knoedler
-	aws s3 sync s3://jpgt-or-provenance-01/provenance_batch/data/aata $(GETTY_PIPELINE_DATA_PATH)/data/aata
-	aws s3 sync s3://jpgt-or-provenance-01/provenance_batch/data/pir $(GETTY_PIPELINE_DATA_PATH)/data/pir
-	aws s3 sync s3://jpgt-or-provenance-01/provenance_batch/data/knoedler $(GETTY_PIPELINE_DATA_PATH)/data/knoedler
+	mkdir -p $(GETTY_PIPELINE_DATA_PATH)/aata
+	mkdir -p $(GETTY_PIPELINE_DATA_PATH)/pir
+	mkdir -p $(GETTY_PIPELINE_DATA_PATH)/knoedler
+	aws s3 sync s3://jpgt-or-provenance-01/provenance_batch/data/aata $(GETTY_PIPELINE_DATA_PATH)/aata
+	aws s3 sync s3://jpgt-or-provenance-01/provenance_batch/data/pir $(GETTY_PIPELINE_DATA_PATH)/pir
+	aws s3 sync s3://jpgt-or-provenance-01/provenance_batch/data/knoedler $(GETTY_PIPELINE_DATA_PATH)/knoedler
 
 aata:
 	QUIET=$(QUIET) GETTY_PIPELINE_DEBUG=$(DEBUG) GETTY_PIPELINE_LIMIT=$(LIMIT) $(PYTHON) ./aata.py

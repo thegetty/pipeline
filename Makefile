@@ -1,38 +1,58 @@
-LIMIT?=100
+LIMIT?=101
 DEBUG?=1
 DOT=dot
-QUIET?=1
+QUIET?=0
 PYTHON?=python3
+GETTY_PIPELINE_OUTPUT?=`pwd`/output
+GETTY_PIPELINE_DATA_PATH?=`pwd`/data
+GETTY_PIPELINE_TMP_PATH?=/tmp
 
 SHELL := /bin/bash
+
+docker: dockerimage
+	docker run -t --env AWS_ACCESS_KEY_ID=$(AWS_ACCESS_KEY_ID) --env AWS_SECRET_ACCESS_KEY=$(AWS_SECRET_ACCESS_KEY) -v$(GETTY_PIPELINE_DATA_PATH):/data -v$(GETTY_PIPELINE_OUTPUT):/output pipeline make pir nt
+
+dockertest: dockerimage
+	docker run -t -v$(GETTY_PIPELINE_DATA_PATH):/data -v$(GETTY_PIPELINE_OUTPUT):/output pipeline make test
+
+dockerimage: Dockerfile
+	docker build -t pipeline .
+
+fetch:
+	mkdir -p $(GETTY_PIPELINE_DATA_PATH)/data/aata
+	mkdir -p $(GETTY_PIPELINE_DATA_PATH)/data/pir
+	mkdir -p $(GETTY_PIPELINE_DATA_PATH)/data/knoedler
+	aws s3 sync s3://jpgt-or-provenance-01/provenance_batch/data/aata $(GETTY_PIPELINE_DATA_PATH)/data/aata
+	aws s3 sync s3://jpgt-or-provenance-01/provenance_batch/data/pir $(GETTY_PIPELINE_DATA_PATH)/data/pir
+	aws s3 sync s3://jpgt-or-provenance-01/provenance_batch/data/knoedler $(GETTY_PIPELINE_DATA_PATH)/data/knoedler
 
 aata:
 	QUIET=$(QUIET) GETTY_PIPELINE_DEBUG=$(DEBUG) GETTY_PIPELINE_LIMIT=$(LIMIT) $(PYTHON) ./aata.py
 	PYTHONPATH=`pwd` $(PYTHON) ./scripts/rewrite_uris_to_uuids.py 'tag:getty.edu,2019:digital:pipeline:aata:REPLACE-WITH-UUID#'
 
-aatagraph: /tmp/aata.pdf
-	open -a Preview /tmp/aata.pdf
+aatagraph: $(GETTY_PIPELINE_TMP_PATH)/aata.pdf
+	open -a Preview $(GETTY_PIPELINE_TMP_PATH)/aata.pdf
 
 nt:
-	curl -s 'https://linked.art/ns/v1/linked-art.json' > /tmp/linked-art.json
+	curl -s 'https://linked.art/ns/v1/linked-art.json' > $(GETTY_PIPELINE_TMP_PATH)/linked-art.json
 	echo 'Transcoding JSON-LD to N-Triples...'
-	find output -name '*.json' | sort | xargs -n 128 -P 10 $(PYTHON) ./scripts/json2nt.py /tmp/linked-art.json
+	find $(GETTY_PIPELINE_OUTPUT) -name '*.json' | sort | xargs -n 128 -P 10 $(PYTHON) ./scripts/json2nt.py $(GETTY_PIPELINE_TMP_PATH)/linked-art.json
 
 pir:
-	mkdir -p /tmp/pipeline
+	mkdir -p $(GETTY_PIPELINE_TMP_PATH)/pipeline
 	QUIET=$(QUIET) GETTY_PIPELINE_DEBUG=$(DEBUG) GETTY_PIPELINE_LIMIT=$(LIMIT) $(PYTHON) ./pir.py
 	PYTHONPATH=`pwd` $(PYTHON) ./scripts/rewrite_post_sales_uris.py "${GETTY_PIPELINE_TMP_PATH}/post_sale_rewrite_map.json"
 	PYTHONPATH=`pwd` $(PYTHON) ./scripts/rewrite_uris_to_uuids.py 'tag:getty.edu,2019:digital:pipeline:provenance:REPLACE-WITH-UUID#'
 
-pirgraph: /tmp/pir.pdf
-	open -a Preview /tmp/pir.pdf
+pirgraph: $(GETTY_PIPELINE_TMP_PATH)/pir.pdf
+	open -a Preview $(GETTY_PIPELINE_TMP_PATH)/pir.pdf
 
 knoedler:
 	QUIET=$(QUIET) GETTY_PIPELINE_DEBUG=$(DEBUG) GETTY_PIPELINE_LIMIT=$(LIMIT) $(PYTHON) ./knoedler.py
 	PYTHONPATH=`pwd` $(PYTHON) ./scripts/rewrite_uris_to_uuids.py 'tag:getty.edu,2019:digital:pipeline:knoedler:REPLACE-WITH-UUID#'
 
-knoedlergraph: /tmp/knoedler.pdf
-	open -a Preview /tmp/knoedler.pdf
+knoedlergraph: $(GETTY_PIPELINE_TMP_PATH)/knoedler.pdf
+	open -a Preview $(GETTY_PIPELINE_TMP_PATH)/knoedler.pdf
 
 upload:
 	./upload_to_arches.py
@@ -40,33 +60,33 @@ upload:
 test:
 	python3 -B setup.py test
 
-/tmp/aata.dot: aata.py
-	./aata.py dot > /tmp/aata.dot
+$(GETTY_PIPELINE_TMP_PATH)/aata.dot: aata.py
+	./aata.py dot > $(GETTY_PIPELINE_TMP_PATH)/aata.dot
 
-/tmp/aata.pdf: /tmp/aata.dot
-	$(DOT) -Tpdf -o /tmp/aata.pdf /tmp/aata.dot
+$(GETTY_PIPELINE_TMP_PATH)/aata.pdf: $(GETTY_PIPELINE_TMP_PATH)/aata.dot
+	$(DOT) -Tpdf -o $(GETTY_PIPELINE_TMP_PATH)/aata.pdf $(GETTY_PIPELINE_TMP_PATH)/aata.dot
 
-/tmp/pir.dot: pir.py
-	./pir.py dot > /tmp/pir.dot
+$(GETTY_PIPELINE_TMP_PATH)/pir.dot: pir.py
+	./pir.py dot > $(GETTY_PIPELINE_TMP_PATH)/pir.dot
 
-/tmp/knoedler.dot: knoedler.py
-	./knoedler.py dot > /tmp/knoedler.dot
+$(GETTY_PIPELINE_TMP_PATH)/knoedler.dot: knoedler.py
+	./knoedler.py dot > $(GETTY_PIPELINE_TMP_PATH)/knoedler.dot
 
-/tmp/pir.pdf: /tmp/pir.dot
-	$(DOT) -Tpdf -o /tmp/pir.pdf /tmp/pir.dot
+$(GETTY_PIPELINE_TMP_PATH)/pir.pdf: $(GETTY_PIPELINE_TMP_PATH)/pir.dot
+	$(DOT) -Tpdf -o $(GETTY_PIPELINE_TMP_PATH)/pir.pdf $(GETTY_PIPELINE_TMP_PATH)/pir.dot
 	
-/tmp/knoedler.pdf: /tmp/knoedler.dot
-	$(DOT) -Tpdf -o /tmp/knoedler.pdf /tmp/knoedler.dot
+$(GETTY_PIPELINE_TMP_PATH)/knoedler.pdf: $(GETTY_PIPELINE_TMP_PATH)/knoedler.dot
+	$(DOT) -Tpdf -o $(GETTY_PIPELINE_TMP_PATH)/knoedler.pdf $(GETTY_PIPELINE_TMP_PATH)/knoedler.dot
 	
 clean:
-	rm -rf output/*
-	rm -rf /tmp/pipeline/*
-	rm -f /tmp/aata.pdf
-	rm -f /tmp/aata.dot
-	rm -f /tmp/pir.pdf
-	rm -f /tmp/knoedler.pdf
-	rm -f /tmp/pir.dot
-	rm -f /tmp/knoedler.dot
+	rm -r $(GETTY_PIPELINE_OUTPUT)/*
+	rm -r $(GETTY_PIPELINE_TMP_PATH)/pipeline/*
+	rm -f $(GETTY_PIPELINE_TMP_PATH)/aata.pdf
+	rm -f $(GETTY_PIPELINE_TMP_PATH)/aata.dot
+	rm -f $(GETTY_PIPELINE_TMP_PATH)/pir.pdf
+	rm -f $(GETTY_PIPELINE_TMP_PATH)/knoedler.pdf
+	rm -f $(GETTY_PIPELINE_TMP_PATH)/pir.dot
+	rm -f $(GETTY_PIPELINE_TMP_PATH)/knoedler.dot
 	rm -f "${GETTY_PIPELINE_TMP_PATH}/post_sale_rewrite_map.json"
 
-.PHONY: aata aatagraph knoedler knoedlergraph pir pirgraph test upload nt
+.PHONY: aata aatagraph knoedler knoedlergraph pir pirgraph test upload nt docker dockerimage dockertest fetch

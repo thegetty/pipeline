@@ -49,6 +49,7 @@ def rewrite_output_files(r, update_filename=False, parallel=False, **kwargs):
 		_rewrite_output_files(files, r, update_filename, **kwargs)
 
 def _rewrite_output_files(files, r, update_filename=False, **kwargs):
+	i = 0
 	for i, f in enumerate(files):
 		# print(f'{i} {f}', end="\r", flush=True)
 		with open(f) as data_file:

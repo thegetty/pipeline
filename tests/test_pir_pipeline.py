@@ -47,6 +47,14 @@ class ProvenanceTestPipeline(ProvenancePipeline):
 		super().__init__(input_path, catalogs, auction_events, contents, **kwargs)
 		self.writer = writer
 
+	def get_services(self):
+		services = super().get_services()
+		services.update({
+			'problematic_records': {},
+			'location_codes': {}
+		})
+		return services
+
 
 class TestProvenancePipelineOutput(unittest.TestCase):
 	'''

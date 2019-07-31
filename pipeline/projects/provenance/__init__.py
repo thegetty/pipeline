@@ -314,7 +314,7 @@ class AddAuctionOfLot(Configurable):
 		lot = vocab.Auction(ident=data['uri'])
 		lot._label = f'Auction of Lot {cno} {shared_lot_number} ({date})'
 
-		for pcno, plno, pdate, problem in problematic_records['lots']:
+		for pcno, plno, pdate, problem in problematic_records.get('lots', []):
 			# TODO: this is inefficient, but will probably be OK so long as the number
 			#       of problematic records is small. We do it this way because we can't
 			#       represent a tuple directly as a JSON dict key, and we don't want to

@@ -48,6 +48,26 @@ class AATATestPipeline(AATAPipeline):
 	def __init__(self, writer, input_path, files_pattern, **kwargs):
 		super().__init__(input_path, files_pattern, **kwargs)
 		self.writer = writer
+	
+	def get_services(self):
+		services = super().get_services()
+		services.update({
+			'language_code_map': {
+				"eng": "english",
+			},
+			'document_types': {
+				"AV": "AudioVisualContent",
+				"BA": "Chapter",
+				"BC": "Monograph",
+				"BM": "Monograph",
+				"JA": "Article",
+				"JW": "Issue",
+				"PA": "Patent",
+				"TH": "Thesis",
+				"TR": "TechnicalReport"
+			}
+		})
+		return services
 
 
 class TestAATAPipelineOutput(unittest.TestCase):

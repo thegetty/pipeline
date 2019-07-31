@@ -1,4 +1,3 @@
-
 import os
 
 arches_models = {
@@ -23,15 +22,21 @@ arches_endpoint_password = os.environ.get('GETTY_PIPELINE_ARCHES_PASSWORD', 'adm
 arches_auth_endpoint = os.environ.get('GETTY_PIPELINE_ARCHES_AUTH_ENDPOINT', 'http://localhost:8001/o/token/')
 arches_client_id = os.environ.get('GETTY_PIPELINE_ARCHES_CLIENT_ID', 'OaGs0HfnBNd2VpI4Hnrc8nhOSTbnV1Q3O1CPjlX6')
 
+data_path = os.environ.get('GETTY_PIPELINE_INPUT', '/data')
 pipeline_tmp_path = os.environ.get('GETTY_PIPELINE_TMP_PATH', '/tmp')
-pir_data_path = os.environ.get('GETTY_PIPELINE_PIR_INPUT', '/data/input/pir')
-pipeline_project_service_files_path = os.environ.get('GETTY_PIPELINE_SERVICE_FILES_PATH', pir_data_path)
-pipeline_common_service_files_path = os.environ.get('GETTY_PIPELINE_COMMON_SERVICE_FILES_PATH', '/data/input/common')
-aata_data_path = os.environ.get('GETTY_PIPELINE_AATA_INPUT', '/data/input/aata')
-data_path = os.environ.get('GETTY_PIPELINE_INPUT', '/data/input/provenance/knoedler')
-output_file_path = os.environ.get('GETTY_PIPELINE_OUTPUT', '/data2/output/provenance/knoedler')
+pipeline_common_service_files_path = os.environ.get('GETTY_PIPELINE_COMMON_SERVICE_FILES_PATH', os.path.join(data_path, 'common'))
+output_file_path = os.environ.get('GETTY_PIPELINE_OUTPUT', '/data2/output')
 DEBUG = os.environ.get('GETTY_PIPELINE_DEBUG', True)
 SPAM = os.environ.get('GETTY_PIPELINE_VERBOSE', False)
 
 gpi_engine = 'sqlite:///%s/gpi.sqlite' % (data_path,)
 raw_engine = 'sqlite:///%s/raw_gpi.sqlite' % (data_path,)
+
+def project_data_path(project_name):
+	return os.path.join(data_path, project_name)
+
+def pipeline_project_service_files_path(project_name):
+	path = os.environ.get('GETTY_PIPELINE_SERVICE_FILES_PATH')
+	if not path:
+		path = os.path.join(data_path, project_name)
+	return path

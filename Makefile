@@ -1,7 +1,7 @@
-LIMIT?=101
+LIMIT?=100
 DEBUG?=1
 DOT=dot
-QUIET?=0
+QUIET?=1
 PYTHON?=python3
 GETTY_PIPELINE_OUTPUT?=`pwd`/output
 GETTY_PIPELINE_INPUT?=`pwd`/data
@@ -25,7 +25,8 @@ fetch: fetchaata fetchpir fetchknoedler
 
 fetchaata:
 	mkdir -p $(GETTY_PIPELINE_INPUT)/aata
-	aws s3 sync s3://jpgt-or-provenance-01/provenance_batch/data/aata $(GETTY_PIPELINE_INPUT)/aata
+	aws s3 cp s3://jpgt-or-provenance-01/provenance_batch/data/aata/AATA_140001-140684.xml $(GETTY_PIPELINE_INPUT)/aata/
+# 	aws s3 sync s3://jpgt-or-provenance-01/provenance_batch/data/aata $(GETTY_PIPELINE_INPUT)/aata
 
 fetchpir:
 	mkdir -p $(GETTY_PIPELINE_INPUT)/pir

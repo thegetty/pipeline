@@ -6,11 +6,12 @@ PYTHON?=python3
 GETTY_PIPELINE_OUTPUT?=`pwd`/output
 GETTY_PIPELINE_INPUT?=`pwd`/data
 GETTY_PIPELINE_TMP_PATH?=/tmp
+GETTY_PIPELINE_COMMON_SERVICE_FILES_PATH?=`pwd`/data/common
 
 SHELL := /bin/bash
 
 docker: dockerimage
-	docker run -t --env AWS_ACCESS_KEY_ID=$(AWS_ACCESS_KEY_ID) --env AWS_SECRET_ACCESS_KEY=$(AWS_SECRET_ACCESS_KEY) -v$(GETTY_PIPELINE_INPUT):/data -v$(GETTY_PIPELINE_OUTPUT):/output pipeline make pir nt
+	docker run -t --env GETTY_PIPELINE_COMMON_SERVICE_FILES_PATH=$(GETTY_PIPELINE_COMMON_SERVICE_FILES_PATH) --env AWS_ACCESS_KEY_ID=$(AWS_ACCESS_KEY_ID) --env AWS_SECRET_ACCESS_KEY=$(AWS_SECRET_ACCESS_KEY) -v$(GETTY_PIPELINE_INPUT):/data -v$(GETTY_PIPELINE_OUTPUT):/output pipeline make pir nt
 
 cleandocker: dockerimage
 	docker run -t --env AWS_ACCESS_KEY_ID=$(AWS_ACCESS_KEY_ID) --env AWS_SECRET_ACCESS_KEY=$(AWS_SECRET_ACCESS_KEY) -v$(GETTY_PIPELINE_OUTPUT):/output pipeline make fetch aata nt
@@ -25,8 +26,7 @@ fetch: fetchaata fetchpir fetchknoedler
 
 fetchaata:
 	mkdir -p $(GETTY_PIPELINE_INPUT)/aata
-	aws s3 cp s3://jpgt-or-provenance-01/provenance_batch/data/aata/AATA_140001-140684.xml $(GETTY_PIPELINE_INPUT)/aata/
-# 	aws s3 sync s3://jpgt-or-provenance-01/provenance_batch/data/aata $(GETTY_PIPELINE_INPUT)/aata
+	aws s3 sync s3://jpgt-or-provenance-01/provenance_batch/data/aata $(GETTY_PIPELINE_INPUT)/aata
 
 fetchpir:
 	mkdir -p $(GETTY_PIPELINE_INPUT)/pir

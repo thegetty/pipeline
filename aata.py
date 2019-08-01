@@ -18,7 +18,9 @@ if __name__ == '__main__':
 		LIMIT		= int(os.environ.get('GETTY_PIPELINE_LIMIT', 10))
 	else:
 		LIMIT		= int(os.environ.get('GETTY_PIPELINE_LIMIT', 10000000))
-	xml_files_pattern = '*.xml'
+	abstracts_pattern = 'AATA_[0-9]*.xml'
+	journals_pattern = 'AATA*Journal.xml'
+	series_pattern = 'AATA*Series.xml'
 	print_dot = False
 	if 'dot' in sys.argv[1:]:
 		print_dot = True
@@ -29,7 +31,9 @@ if __name__ == '__main__':
 			aata_data_path = project_data_path('aata')
 			pipeline = AATAFilePipeline(
 				aata_data_path,
-				xml_files_pattern,
+				abstracts_pattern,
+				journals_pattern,
+				series_pattern,
 				output_path=output_file_path,
 				models=arches_models,
 				limit=LIMIT,

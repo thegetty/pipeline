@@ -14,6 +14,8 @@ arches_models = {
 	'Event': 'a93a8a1b-383e-41d2-ac8b-2f18a85b3759',
 	'Procurement': '08ad7e74-da48-4720-9e3f-ad5577d0d57c',
 	'Destruction': '39ca28c0-643c-4b66-abb4-74b901a7d8fc',
+	'Series': 'd537c62e-720a-467f-ac88-9f0b53b14dd8',
+	'Journal': 'f6c52114-aca7-4e2b-a51a-5d61e4c7181c'
 }
 
 arches_endpoint = os.environ.get('GETTY_PIPELINE_ARCHES_ENDPOINT', 'http://localhost:8001/resources/')

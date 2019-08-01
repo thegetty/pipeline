@@ -45,8 +45,8 @@ class AATATestPipeline(AATAPipeline):
 	'''
 	Test AATA pipeline subclass that allows using a custom Writer.
 	'''
-	def __init__(self, writer, input_path, files_pattern, **kwargs):
-		super().__init__(input_path, files_pattern, **kwargs)
+	def __init__(self, writer, input_path, abstracts_pattern, journals_pattern, series_pattern, **kwargs):
+		super().__init__(input_path, abstracts_pattern, journals_pattern, series_pattern, **kwargs)
 		self.writer = writer
 	
 	def get_services(self):
@@ -76,7 +76,9 @@ class TestAATAPipelineOutput(unittest.TestCase):
 	Then verify that the serializations in the TestWriter object are what was expected.
 	'''
 	def setUp(self):
-		self.files_pattern = 'tests/data/aata-sample1.xml'
+		self.abstracts_pattern = 'tests/data/aata-sample1.xml'
+		self.journals_pattern = None
+		self.series_pattern = None
 		os.environ['QUIET'] = '1'
 
 	def tearDown(self):
@@ -87,7 +89,9 @@ class TestAATAPipelineOutput(unittest.TestCase):
 		pipeline = AATATestPipeline(
 			writer,
 			input_path,
-			self.files_pattern,
+			self.abstracts_pattern,
+			self.journals_pattern,
+			self.series_pattern,
 			models=models,
 			limit=1,
 			debug=True
@@ -224,7 +228,9 @@ class TestAATAPipelineOutput(unittest.TestCase):
 		models = {
 			'Person': '0b47366e-2e42-11e9-9018-a4d18cec433a',
 			'LinguisticObject': 'model-lo',
-			'Organization': 'model-org'
+			'Organization': 'model-org',
+			'Journal': 'model-journal',
+			'Series': 'model-series',
 		}
 		output = self.run_pipeline(models, input_path)
 		self.assertEqual(len(output), 3)

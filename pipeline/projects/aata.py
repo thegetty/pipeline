@@ -22,19 +22,23 @@ from bonobo.constants import NOT_MODIFIED
 import settings
 from cromulent import model, vocab
 from pipeline.projects import PipelineBase
-from pipeline.util import identity, ExtractKeyedValues, MatchingFiles
+from pipeline.util import identity, ExtractKeyedValues, MatchingFiles, timespan_from_outer_bounds
 from pipeline.io.file import MultiFileWriter, MergingFileWriter
 # from pipeline.io.arches import ArchesWriter
 from pipeline.linkedart import \
 			MakeLinkedArtAbstract, \
 			MakeLinkedArtLinguisticObject, \
 			MakeLinkedArtOrganization, \
-			make_la_person
+			make_la_person, \
+			get_crom_object, \
+			add_crom_data
 from pipeline.io.xml import CurriedXMLReader
 from pipeline.nodes.basic import \
 			AddArchesModel, \
 			CleanDateToSpan, \
-			Serializer
+			Serializer, \
+			Trace
+from pipeline.util.cleaners import ymd_to_datetime
 
 legacyIdentifier = None # TODO: aat:LegacyIdentifier?
 doiIdentifier = vocab.DoiIdentifier
@@ -79,6 +83,37 @@ def language_object_from_code(code, language_code_map):
 		raise e
 
 # main article chain
+
+def make_aata_journal_dict(e):
+	data = _xml_extract_journal(e)
+	data.update({
+		'object_type': vocab.Journal,
+	})
+	return data
+
+def make_aata_series_dict(e):
+	data = _xml_extract_series(e)
+	data.update({
+		'object_type': vocab.Series,
+	})
+# 	print(f'SERIES: {pprint.pformat(data)}')
+	return data
+
+def make_publishing_activity(data: dict):
+	lo = get_crom_object(data)
+	pubs = data.get('publishers', [])
+	title = data.get('label')
+	for pub in pubs:
+		start, end = data['years']
+		event = vocab.Publishing()
+		event._label = f'Publishing event for “{title}”'
+		event.timespan = timespan_from_outer_bounds(start, end)
+		lo.used_for = event
+# 		event.carried_out_by = org
+		if 'events' not in pub:
+			pub['events'] = []
+		pub['events'].append(event)
+	return data
 
 @use('language_code_map')
 def make_aata_article_dict(e, language_code_map):
@@ -126,6 +161,168 @@ def _gaia_authority_type(code):
 		return model.Type
 	else:
 		raise LookupError
+
+def _xml_extract_sponsor_group(e):
+	aata_id = e.findtext('./sponsor_id')
+	name = e.findtext('./sponsor_name')
+	geog_id = e.findtext('./auth_geog_id')
+	city = e.findtext('./sponsor_city')
+	country = e.findtext('./sponsor_country')
+	return {
+		'label': name,
+		'uri': aata_uri('AATA', 'Sponsor', aata_id),
+		'_aata_record_id': aata_id,
+		'identifiers': [(aata_id, vocab.LocalNumber(ident=''))],
+		'place': {
+			'label': city,
+			'identifiers': [(geog_id, vocab.LocalNumber(ident=''))],
+			'type': 'City',
+			'part_of': {
+				'label': country,
+				'type': 'Country',
+			}
+		}
+	}
+
+def _xml_extract_publisher_group(e):
+	aata_id = e.findtext('./auth_corp_id')
+	name = e.findtext('./publisher_name')
+	geog_id = e.findtext('./auth_geog_id')
+	city = e.findtext('./publisher_city')
+	country = e.findtext('./publisher_country')
+	return {
+		'label': name,
+		'uri': aata_uri('AATA', 'Publisher', aata_id),
+		'_aata_record_id': aata_id,
+		'identifiers': [(aata_id, vocab.LocalNumber(ident=''))],
+		'place': {
+			'label': city,
+			'identifiers': [(geog_id, vocab.LocalNumber(ident=''))],
+			'type': 'City',
+			'part_of': {
+				'label': country,
+				'type': 'Country',
+			}
+		}
+	}
+
+def _xml_extract_journal(e):
+	'''Extract information about a journal record XML element'''
+	aata_id = e.findtext('./record_desc_group/record_id')
+	title = e.findtext('./journal_group/title')
+	var_title = e.findtext('./journal_group/variant_title')
+	translations = list([t.text for t in
+		e.xpath('./journal_group/title_translated')])
+
+	lang_name = e.findtext('./journal_group/language/lang_name')
+	lang_scope = e.findtext('./journal_group/language/lang_scope')
+
+	start_year = e.findtext('./journal_group/start_year')
+	cease_year = e.findtext('./journal_group/cease_year')
+	
+	issn = [(t.text, vocab.IssnIdentifier(ident='')) for t in e.xpath('./journal_group/issn')]
+	journal_uri = aata_uri('AATA', 'Journal', aata_id)
+
+	publishers = [_xml_extract_publisher_group(p) for p in e.xpath('./publisher_group')]
+	sponsors = [_xml_extract_sponsor_group(p) for p in e.xpath('./sponsor_group')]
+
+	issues = []
+	volumes = {}
+	for ig in e.xpath('./issue_group'):
+		issue_id = ig.findtext('./issue_id')
+		issue_title = ig.findtext('./title')
+		issue_translations = list([t.text for t in
+			ig.xpath('./title_translated')])
+		volume_number = ig.findtext('./volume')
+		issue_number = ig.findtext('./number')
+		# TODO: date
+		# TODO: volume
+		# TODO: number
+		# TODO: note
+		# TODO: enum_chron
+		# TODO: display_form
+		
+		volumes[volume_number] = {
+			'uri': aata_uri('AATA', 'Journal', aata_id, 'Volume', volume_number),
+			'object_type': vocab.Volume,
+			'label': f'Volume {volume_number} of “{title}”',
+			'_aata_record_id': issue_id,
+			'identifiers': [(volume_number, vocab.VolumeNumber(ident=''))],
+		}
+		
+		if not issue_title:
+			issue_title = f'Issue {issue_number} of “{title}”'
+
+		issues.append({
+			'uri': aata_uri('AATA', 'Journal', aata_id, 'Issue', issue_number),
+			'object_type': vocab.Issue,
+			'label': issue_title,
+			'_aata_record_id': issue_id,
+			'translations': list(issue_translations),
+			'identifiers': [(issue_number, vocab.IssueNumber(ident=''))],
+			'volume': volume_number,
+		})
+
+	# TODO: journal_history
+	# TODO: publisher_group
+	# TODO: sponsor_group
+	
+	var_titles = [(var_title, variantTitleIdentifier(ident=''))] if var_title is not None else []
+
+	data = {
+		# TODO: lang_name
+		# TODO: lang_scope
+		'uri': journal_uri,
+		'label': title,
+		'_aata_record_id': aata_id,
+		'translations': list(translations),
+		'identifiers': issn + var_titles,
+		'issues': issues,
+		'years': [start_year, cease_year],
+		'volumes': volumes,
+		'publishers': publishers,
+		'sponsors': sponsors,
+	}
+	
+	return {k: v for k, v in data.items() if v is not None}
+
+def _xml_extract_series(e):
+	'''Extract information about a series record XML element'''
+	aata_id = e.findtext('./record_desc_group/record_id')
+	title = e.findtext('./series_group/title')
+	var_title = e.findtext('./series_group/variant_title')
+	translations = list([t.text for t in
+		e.xpath('./series_group/title_translated')])
+
+	lang_name = e.findtext('./series_group/language/lang_name')
+	lang_scope = e.findtext('./series_group/language/lang_scope')
+
+	start_year = e.findtext('./series_group/start_year')
+	cease_year = e.findtext('./series_group/cease_year')
+	
+	issn = [(t.text, vocab.IssnIdentifier(ident='')) for t in e.xpath('./series_group/issn')]
+	publishers = [_xml_extract_publisher_group(p) for p in e.xpath('./publisher_group')]
+	sponsors = [_xml_extract_sponsor_group(p) for p in e.xpath('./sponsor_group')]
+
+	# TODO: series_history
+	# TODO: sponsor_group
+	
+	var_titles = [(var_title, variantTitleIdentifier(ident=''))] if var_title is not None else []
+
+	data = {
+		# TODO: lang_name
+		# TODO: lang_scope
+		'uri': aata_uri('AATA', 'Series', aata_id),
+		'label': title,
+		'_aata_record_id': aata_id,
+		'translations': list(translations),
+		'identifiers': issn + var_titles,
+		'years': [start_year, cease_year],
+		'publishers': publishers,
+		'sponsors': sponsors,
+	}
+	
+	return {k: v for k, v in data.items() if v is not None}
 
 def _xml_extract_article(e, language_code_map):
 	'''Extract information about an "article" record XML element'''
@@ -360,14 +557,14 @@ def add_imprint_orgs(data):
 	* `uuid`: A unique UUID for this organization used in assigning it a URN
 
 	'''
-	lod_object = data['_LOD_OBJECT']
+	lod_object = get_crom_object(data)
 	organizations = []
 	for o in data.get('_organizations', []):
 		org = {k: v for k, v in o.items()}
 		org_obj = vocab.Group(ident=org['uri'])
-		org['_LOD_OBJECT'] = org_obj
+		add_crom_data(data=org, what=org_obj)
 
-		event = model.Activity()
+		event = model.Activity() # TODO: change to vocab.Publishing for publishing activities
 		lod_object.used_for = event
 		event.carried_out_by = org_obj
 
@@ -429,7 +626,7 @@ def make_aata_org_event(o: dict):
 	and also set the article object's `used_for` property to the new activity.
 	'''
 	event = model.Activity()
-	lod_object = o['parent_data']['_LOD_OBJECT']
+	lod_object = get_crom_object(o['parent_data'])
 	lod_object.used_for = event
 	event._label = o.get('event_label')
 	if 'publication_date_span' in o:
@@ -465,14 +662,14 @@ def add_aata_authors(data):
 	* `events`: A `list` of `model.Creation` objects representing the part played by
 	            the author in the article's creation event.
 	'''
-	lod_object = data['_LOD_OBJECT']
+	lod_object = get_crom_object(data)
 	event = model.Creation()
 	lod_object.created_by = event
 
 	authors = data.get('_authors', [])
 	for a in authors:
 		make_la_person(a)
-		person = a['_LOD_OBJECT']
+		person = get_crom_object(a)
 		subevent = model.Creation()
 		# TODO: The should really be asserted as object -created_by-> CreationEvent -part-> SubEvent
 		# however, right now that assertion would get lost as it's data that belongs to the object,
@@ -553,7 +750,7 @@ def make_aata_abstract(data, language_code_map):
 	* `parent`: The model object representing the corresponding article
 	* `parent_data`: The `dict` representing the corresponding article
 	'''
-	lod_object = data['_LOD_OBJECT']
+	lod_object = get_crom_object(data)
 	for a in data.get('_abstracts', []):
 		abstract_dict = {k: v for k, v in a.items() if k not in ('language',)}
 
@@ -574,11 +771,11 @@ def make_aata_abstract(data, language_code_map):
 		# in that record, and which author we're handling right now
 		uid = 'AATA-Abstract-%s-%d' % (data['_aata_record_id'], a['_aata_record_abstract_seq'])
 		abstract_dict.update({
-			'_LOD_OBJECT': abstract,
 			'parent_data': data,
 			'uid': uid,
 			'uri': aata_uri(uid),
 		})
+		add_crom_data(data=abstract_dict, what=abstract)
 		yield abstract_dict
 
 def filter_abstract_authors(data: dict):
@@ -590,11 +787,16 @@ def filter_abstract_authors(data: dict):
 
 class AATAPipeline(PipelineBase):
 	'''Bonobo-based pipeline for transforming AATA data from XML into JSON-LD.'''
-	def __init__(self, input_path, abstracts_file_pattern, **kwargs):
+	def __init__(self, input_path, abstracts_pattern, journals_pattern, series_pattern, **kwargs):
+		vocab.register_vocab_class("VolumeNumber", {"parent":model.Identifier, "id":"300265632", "label": "Volume"})
+		vocab.register_vocab_class("IssueNumber", {"parent":model.Identifier, "id":"300312349", "label": "Issue"})
+		
 		self.project_name = 'aata'
 		self.graph = None
 		self.models = kwargs.get('models', {})
-		self.abstracts_file_pattern = abstracts_file_pattern
+		self.abstracts_pattern = abstracts_pattern
+		self.journals_pattern = journals_pattern
+		self.series_pattern = series_pattern
 		self.limit = kwargs.get('limit')
 		self.debug = kwargs.get('debug', False)
 		self.input_path = input_path
@@ -690,13 +892,12 @@ class AATAPipeline(PipelineBase):
 			self.add_serialization_chain(graph, abstracts.output)
 		return abstracts
 
-	def add_organizations_chain(self, graph, articles, serialize=True):
+	def add_organizations_chain(self, graph, articles, key='organizations', serialize=True):
 		'''Add transformation of organization records to the bonobo pipeline.'''
 		model_id = self.models.get('Organization', 'XXX-Organization-Model')
 		organizations = graph.add_chain(
-			ExtractKeyedValues(key='organizations'),
+			ExtractKeyedValues(key=key),
 			AddArchesModel(model=model_id),
-# 			add_uuid,
 			MakeLinkedArtOrganization(),
 			_input=articles.output
 		)
@@ -705,16 +906,58 @@ class AATAPipeline(PipelineBase):
 			self.add_serialization_chain(graph, organizations.output)
 		return organizations
 
-	def _construct_graph(self):
-		graph = bonobo.Graph()
-		records = graph.add_chain(
-			MatchingFiles(path='/', pattern=self.abstracts_file_pattern, fs='fs.data.aata'),
+	def _add_abstracts_graph(self, graph):
+		abstract_records = graph.add_chain(
+			MatchingFiles(path='/', pattern=self.abstracts_pattern, fs='fs.data.aata'),
 			CurriedXMLReader(xpath='/AATA_XML/record', fs='fs.data.aata', limit=self.limit)
 		)
-		articles = self.add_articles_chain(graph, records)
+		articles = self.add_articles_chain(graph, abstract_records)
 		self.add_people_chain(graph, articles)
 		self.add_abstracts_chain(graph, articles)
-		self.add_organizations_chain(graph, articles)
+		self.add_organizations_chain(graph, articles, key='organizations')
+		return articles
+
+	def _add_journals_graph(self, graph, serialize=True):
+		journals = graph.add_chain(
+			MatchingFiles(path='/', pattern=self.journals_pattern, fs='fs.data.aata'),
+			CurriedXMLReader(xpath='/journal_XML/record', fs='fs.data.aata', limit=self.limit),
+			make_aata_journal_dict,
+			MakeLinkedArtLinguisticObject(),
+			make_publishing_activity,
+			AddArchesModel(model=self.models['Journal']),
+			Trace(name='journal', ordinals=list((2,)))
+		)
+		
+		publishers = self.add_organizations_chain(graph, journals, key='publishers', serialize=serialize)
+		sponsors = self.add_organizations_chain(graph, journals, key='sponsors', serialize=serialize)
+		
+		if serialize:
+			# write ARTICLES data
+			self.add_serialization_chain(graph, journals.output)
+		return journals
+
+	def _add_series_graph(self, graph, serialize=True):
+		series = graph.add_chain(
+			MatchingFiles(path='/', pattern=self.series_pattern, fs='fs.data.aata'),
+			CurriedXMLReader(xpath='/series_XML/record', fs='fs.data.aata', limit=self.limit),
+			make_aata_series_dict,
+			MakeLinkedArtLinguisticObject(),
+			make_publishing_activity,
+			AddArchesModel(model=self.models['Series']),
+# 			Trace(name='series')
+		)
+		if serialize:
+			# write ARTICLES data
+			self.add_serialization_chain(graph, series.output)
+		return series
+
+	def _construct_graph(self):
+		graph = bonobo.Graph()
+		articles = self._add_abstracts_graph(graph)
+		journals = self._add_journals_graph(graph)
+		
+		print('### TODO: skipping series sub-graph')
+# 		series = self._add_series_graph(graph)
 
 		self.graph = graph
 		return graph
@@ -744,8 +987,8 @@ class AATAFilePipeline(AATAPipeline):
 	If in `debug` mode, JSON serialization will use pretty-printing. Otherwise,
 	serialization will be compact.
 	'''
-	def __init__(self, input_path, abstracts_file_pattern, **kwargs):
-		super().__init__(input_path, abstracts_file_pattern, **kwargs)
+	def __init__(self, input_path, abstracts_pattern, journals_pattern, series_pattern, **kwargs):
+		super().__init__(input_path, abstracts_pattern, journals_pattern, series_pattern, **kwargs)
 		self.use_single_serializer = False
 		self.output_chain = None
 		debug = kwargs.get('debug', False)

@@ -34,7 +34,7 @@ from pipeline.projects import PipelineBase
 from pipeline.projects.provenance.util import *
 from pipeline.util import RecursiveExtractKeyedValue, ExtractKeyedValue, ExtractKeyedValues, \
 			MatchingFiles, identity, implode_date, timespan_before, timespan_after, \
-			replace_key_pattern, strip_key_prefix
+			replace_key_pattern, strip_key_prefix, timespan_from_outer_bounds
 from cromulent.extract import extract_physical_dimensions, extract_monetary_amount
 from pipeline.util.cleaners import \
 			parse_location, \

@@ -30,7 +30,7 @@ fetchaata:
 
 fetchpir:
 	mkdir -p $(GETTY_PIPELINE_INPUT)/provenance
-	aws s3 sync s3://jpgt-or-provenance-01/provenance_batch/data/pir $(GETTY_PIPELINE_INPUT)/provenance
+	aws s3 sync s3://jpgt-or-provenance-01/provenance_batch/data/provenance $(GETTY_PIPELINE_INPUT)/provenance
 
 fetchknoedler:
 	mkdir -p $(GETTY_PIPELINE_INPUT)/knoedler

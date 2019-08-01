@@ -600,9 +600,7 @@ def genre_instance(value, vocab_instance_map):
 	instance_name = vocab_instance_map.get(value)
 	if instance_name:
 		instance = vocab.instances.get(instance_name)
-		if instance:
-			print(f'GENRE: {value}')
-		else:
+		if not instance:
 			print(f'*** No genre instance available for {instance_name!r} in vocab_instance_map')
 		return instance
 	return None

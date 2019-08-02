@@ -10,6 +10,7 @@ import bonobo
 
 from pipeline.projects.aata import AATAFilePipeline
 from settings import project_data_path, output_file_path, arches_models, DEBUG
+from cromulent import vocab
 
 ### Pipeline
 
@@ -21,6 +22,9 @@ if __name__ == '__main__':
 	abstracts_pattern = 'AATA_[0-9]*.xml'
 	journals_pattern = 'AATA*Journal.xml'
 	series_pattern = 'AATA*Series.xml'
+
+	vocab.add_linked_art_boundary_check()
+
 	print_dot = False
 	if 'dot' in sys.argv[1:]:
 		print_dot = True

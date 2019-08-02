@@ -135,6 +135,11 @@ class MakeLinkedArtLinguisticObject(MakeLinkedArtRecord):
 			else:
 				indexing = c
 			thing.about = indexing
+		
+		parents = data.get('part_of', [])
+		for parent_data in parents:
+			parent = get_crom_object(parent_data)
+			thing.part_of = parent
 
 
 class MakeLinkedArtHumanMadeObject(MakeLinkedArtRecord):

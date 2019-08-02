@@ -5,9 +5,11 @@ import os.path
 import hashlib
 import json
 import uuid
+import pprint
 
 from tests import merge
 from pipeline.projects.provenance import ProvenancePipeline
+from pipeline.nodes.basic import Serializer, AddArchesModel
 
 class TestWriter():
 	'''
@@ -46,6 +48,14 @@ class ProvenanceTestPipeline(ProvenancePipeline):
 	def __init__(self, writer, input_path, catalogs, auction_events, contents, **kwargs):
 		super().__init__(input_path, catalogs, auction_events, contents, **kwargs)
 		self.writer = writer
+
+	def serializer_nodes_for_model(self, model=None):
+		nodes = []
+		if model:
+			nodes.append(AddArchesModel(model=model))
+		nodes.append(Serializer(compact=False))
+		nodes.append(self.writer)
+		return nodes
 
 	def get_services(self):
 		services = super().get_services()

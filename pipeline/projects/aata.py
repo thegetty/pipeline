@@ -994,13 +994,13 @@ class AATAFilePipeline(AATAPipeline):
 		debug = kwargs.get('debug', False)
 		output_path = kwargs.get('output_path')
 		if debug:
-			self.serializer	= Serializer(compact=False)
-			self.writer		= MergingFileWriter(directory=output_path, partition_directories=True)
+			self.writer		= MergingFileWriter(directory=output_path, partition_directories=True, serialize=True, compact=False)
+# 			self.serializer	= Serializer(compact=False)
 			# self.writer	= MultiFileWriter(directory=output_path)
 			# self.writer	= ArchesWriter()
 		else:
-			self.serializer	= Serializer(compact=True)
-			self.writer		= MergingFileWriter(directory=output_path, partition_directories=True)
+			self.writer		= MergingFileWriter(directory=output_path, partition_directories=True, serialize=True, compact=True)
+# 			self.serializer	= Serializer(compact=True)
 			# self.writer	= MultiFileWriter(directory=output_path)
 			# self.writer	= ArchesWriter()
 
@@ -1009,8 +1009,9 @@ class AATAFilePipeline(AATAPipeline):
 		'''Add serialization of the passed transformer node to the bonobo graph.'''
 		if self.use_single_serializer:
 			if self.output_chain is None:
-				self.output_chain = graph.add_chain(self.serializer, self.writer, _input=None)
+				self.output_chain = graph.add_chain(self.writer, _input=None)
+# 				self.output_chain = graph.add_chain(self.serializer, self.writer, _input=None)
 
 			graph.add_chain(identity, _input=input_node, _output=self.output_chain.input)
 		else:
-			super().add_serialization_chain(graph, input_node)
+			graph.add_chain(self.writer, _input=input_node)

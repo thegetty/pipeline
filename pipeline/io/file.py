@@ -66,8 +66,14 @@ class MultiFileWriter(Configurable):
 class MergingFileWriter(Configurable):
 	directory = Option(default="output")
 	partition_directories = Option(default=False)
+	serialize = Option(default=False)
+	compact = Option(default=True)
 
 	def __call__(self, data: dict):
+		if self.serialize:
+			factory = data['_CROM_FACTORY']
+			js = factory.toString(data['_LOD_OBJECT'], self.compact)
+			data['_OUTPUT'] = js
 		d = data['_OUTPUT']
 		filename, partition = filename_for(data)
 		dr = os.path.join(self.directory, data['_ARCHES_MODEL'])

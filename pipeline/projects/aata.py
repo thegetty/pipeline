@@ -236,8 +236,6 @@ def _xml_extract_journal(e):
 		volume_number = ig.findtext('./volume')
 		issue_number = ig.findtext('./number')
 		# TODO: date
-		# TODO: volume
-		# TODO: number
 		# TODO: note
 		# TODO: enum_chron
 		# TODO: display_form
@@ -262,6 +260,10 @@ def _xml_extract_journal(e):
 			'identifiers': [(issue_number, vocab.IssueNumber(ident=''))],
 			'volume': volume_number,
 		})
+
+	make_la_lo = MakeLinkedArtLinguisticObject()
+	for v in volumes.values():
+		make_la_lo(v)
 
 	# TODO: journal_history
 	# TODO: publisher_group
@@ -778,6 +780,20 @@ def make_aata_abstract(data, language_code_map):
 		add_crom_data(data=abstract_dict, what=abstract)
 		yield abstract_dict
 
+def make_issue(data: dict):
+	parent_data = data['parent_data']
+	data['part_of'] = [parent_data] # the issue is a part of the journal
+
+	volume_number = data.get('volume')
+	if volume_number is not None:
+		volume_data = parent_data.get('volumes', {}).get(volume_number)
+		volume = get_crom_object(volume_data)
+		if volume:
+			data['part_of'].append(volume_data) # the issue is a part of the volume
+			
+
+	return data
+
 def filter_abstract_authors(data: dict):
 	'''Yield only those passed `dict` values for which the `'author_abstract_flag'` key is True.'''
 	if 'author_abstract_flag' in data and data['author_abstract_flag']:
@@ -890,6 +906,18 @@ class AATAPipeline(PipelineBase):
 		self.add_organizations_chain(graph, articles, key='organizations')
 		return articles
 
+	def _add_issues_chain(self, graph, journals, key='issues', serialize=True):
+		issues = graph.add_chain(
+			ExtractKeyedValues(key='issues'),
+			make_issue,
+			MakeLinkedArtLinguisticObject(),
+			_input=journals.output
+		)
+		if serialize:
+			# write ISSUES data
+			self.add_serialization_chain(graph, issues.output, model=self.models['LinguisticObject'])
+		return issues
+
 	def _add_journals_graph(self, graph, serialize=True):
 		journals = graph.add_chain(
 			MatchingFiles(path='/', pattern=self.journals_pattern, fs='fs.data.aata'),
@@ -897,11 +925,12 @@ class AATAPipeline(PipelineBase):
 			make_aata_journal_dict,
 			MakeLinkedArtLinguisticObject(),
 			make_publishing_activity,
-			Trace(name='journal', ordinals=list((2,)))
+			# Trace(name='journal', ordinals=list(range(100)))
 		)
 		
 		publishers = self.add_organizations_chain(graph, journals, key='publishers', serialize=serialize)
 		sponsors = self.add_organizations_chain(graph, journals, key='sponsors', serialize=serialize)
+		issues = self._add_issues_chain(graph, journals, serialize=serialize)
 		
 		if serialize:
 			# write ARTICLES data
@@ -917,6 +946,10 @@ class AATAPipeline(PipelineBase):
 			make_publishing_activity,
 # 			Trace(name='series')
 		)
+
+		publishers = self.add_organizations_chain(graph, series, key='publishers', serialize=serialize)
+		sponsors = self.add_organizations_chain(graph, series, key='sponsors', serialize=serialize)
+
 		if serialize:
 			# write ARTICLES data
 			self.add_serialization_chain(graph, series.output, model=self.models['Series'])
@@ -925,10 +958,12 @@ class AATAPipeline(PipelineBase):
 	def _construct_graph(self):
 		graph = bonobo.Graph()
 		articles = self._add_abstracts_graph(graph)
+
+# 		print('### TODO: skipping journal sub-graph')
 		journals = self._add_journals_graph(graph)
 		
-		print('### TODO: skipping series sub-graph')
-# 		series = self._add_series_graph(graph)
+# 		print('### TODO: skipping series sub-graph')
+		series = self._add_series_graph(graph)
 
 		self.graph = graph
 		return graph

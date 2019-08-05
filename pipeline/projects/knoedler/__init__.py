@@ -30,8 +30,6 @@ class Pipeline(PipelineBase):
 		self.pack_size = kwargs.get('pack_size')
 		self.limit = kwargs.get('limit')
 		self.debug = kwargs.get('debug', False)
-		self.pipeline_project_service_files_path = kwargs.get('pipeline_project_service_files_path', settings.pipeline_project_service_files_path)
-		self.pipeline_common_service_files_path = kwargs.get('pipeline_common_service_files_path', settings.pipeline_common_service_files_path)
 
 		if self.debug:
 			self.SRLZ = Serializer(compact=False)

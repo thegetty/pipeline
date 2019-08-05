@@ -2,6 +2,7 @@ import pathlib
 import itertools
 import json
 import bonobo
+import settings
 
 class PipelineBase:
 	def get_services(self):
@@ -11,12 +12,12 @@ class PipelineBase:
 			f'fs.data.{self.project_name}': bonobo.open_fs(self.input_path)
 		}
 
-		common_path = pathlib.Path(self.pipeline_common_service_files_path)
+		common_path = pathlib.Path(settings.pipeline_common_service_files_path)
 		for file in common_path.rglob('*.json'):
 			with open(file, 'r') as f:
 				services[file.stem] = json.load(f)
 
-		proj_path = pathlib.Path(self.pipeline_project_service_files_path)
+		proj_path = pathlib.Path(settings.pipeline_project_service_files_path(self.project_name))
 		for file in proj_path.rglob('*.json'):
 			with open(file, 'r') as f:
 				if file.stem in services:

@@ -40,14 +40,29 @@ class CurriedXMLReader(Configurable):
 		default='utf-8',
 		__doc__='''Encoding.''',
 	)  # type: str
+	limit = Option(
+		int,
+		__doc__='''Limit the number of rows read (to allow early pipeline termination).''',
+	)
+
+	def __init__(self, *args, **kwargs):
+		super().__init__(*args, **kwargs)
+		self.count = 0
 
 	def read(self, path, *, fs):
-		sys.stderr.write('============================== %s\n' % (path,))
-		file = fs.open(path, self.mode, encoding=self.encoding)
-		root = lxml.etree.parse(file)
-		for e in root.xpath(self.xpath):
-			yield e
-		file.close()
+		limit = self.limit
+		count = self.count
+		if limit and count < limit:
+			sys.stderr.write('============================== %s\n' % (path,))
+			file = fs.open(path, self.mode, encoding=self.encoding)
+			root = lxml.etree.parse(file)
+			for e in root.xpath(self.xpath):
+				if limit and count >= limit:
+					break
+				count += 1
+				yield e
+			self.count = count
+			file.close()
 
 	__call__ = read
 

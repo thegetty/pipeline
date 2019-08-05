@@ -1,0 +1,8 @@
+cromulent==0.14.0
+python-dateutil==2.8.0
+bonobo==0.6.4
+bonobo-sqlalchemy==0.6.1
+lxml==4.3.3
+PyLD==1.0.5
+iso639==0.1.4
+langdetect==1.0.7

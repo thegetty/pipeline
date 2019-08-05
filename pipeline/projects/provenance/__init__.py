@@ -34,7 +34,7 @@ from pipeline.projects import PipelineBase
 from pipeline.projects.provenance.util import *
 from pipeline.util import RecursiveExtractKeyedValue, ExtractKeyedValue, ExtractKeyedValues, \
 			MatchingFiles, identity, implode_date, timespan_before, timespan_after, \
-			replace_key_pattern, strip_key_prefix
+			replace_key_pattern, strip_key_prefix, timespan_from_outer_bounds
 from cromulent.extract import extract_physical_dimensions, extract_monetary_amount
 from pipeline.util.cleaners import \
 			parse_location, \
@@ -320,7 +320,7 @@ class AddAuctionOfLot(Configurable):
 		lot = vocab.Auction(ident=data['uri'])
 		lot._label = f'Auction of Lot {cno} {shared_lot_number} ({date})'
 
-		for pcno, plno, pdate, problem in problematic_records['lots']:
+		for pcno, plno, pdate, problem in problematic_records.get('lots', []):
 			# TODO: this is inefficient, but will probably be OK so long as the number
 			#       of problematic records is small. We do it this way because we can't
 			#       represent a tuple directly as a JSON dict key, and we don't want to
@@ -603,9 +603,7 @@ def genre_instance(value, vocab_instance_map):
 	instance_name = vocab_instance_map.get(value)
 	if instance_name:
 		instance = vocab.instances.get(instance_name)
-		if instance:
-			print(f'GENRE: {value}')
-		else:
+		if not instance:
 			print(f'*** No genre instance available for {instance_name!r} in vocab_instance_map')
 		return instance
 	return None
@@ -934,8 +932,6 @@ class ProvenancePipeline(PipelineBase):
 		self.limit = kwargs.get('limit')
 		self.debug = kwargs.get('debug', False)
 		self.input_path = input_path
-		self.pipeline_project_service_files_path = kwargs.get('pipeline_project_service_files_path', settings.pipeline_project_service_files_path)
-		self.pipeline_common_service_files_path = kwargs.get('pipeline_common_service_files_path', settings.pipeline_common_service_files_path)
 
 		fs = bonobo.open_fs(input_path)
 		with fs.open(self.catalogs_header_file, newline='') as csvfile:

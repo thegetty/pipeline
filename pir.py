@@ -7,7 +7,7 @@ import bonobo
 from cromulent import vocab
 
 from pipeline.projects.provenance import ProvenanceFilePipeline, ProvenancePipeline
-from settings import pir_data_path, output_file_path, arches_models, DEBUG
+from settings import project_data_path, output_file_path, arches_models, DEBUG
 
 ### Pipeline
 
@@ -23,7 +23,7 @@ if __name__ == '__main__':
 	}
 	contents = {
 		'header_file': 'sales_contents_0.csv',
-		'files_pattern': 'sales_contents_[!0].csv',
+		'files_pattern': 'sales_contents_[!0]*.csv',
 	}
 	auction_events = {
 		'header_file': 'sales_descriptions_0.csv',
@@ -39,6 +39,7 @@ if __name__ == '__main__':
 	parser = bonobo.get_argument_parser()
 	with bonobo.parse_args(parser) as options:
 		try:
+			pir_data_path = project_data_path('provenance')
 			pipeline = ProvenanceFilePipeline( # ProvenancePipeline
 				pir_data_path,
 				catalogs=catalogs,

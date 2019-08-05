@@ -803,38 +803,16 @@ class AATAPipeline(PipelineBase):
 		self.pipeline_project_service_files_path = kwargs.get('pipeline_project_service_files_path', settings.pipeline_project_service_files_path)
 		self.pipeline_common_service_files_path = kwargs.get('pipeline_common_service_files_path', settings.pipeline_common_service_files_path)
 
-		if self.debug:
-			self.serializer	= Serializer(compact=False)
-			self.writer		= None
-			# self.writer	= ArchesWriter()
-			sys.stderr.write("In DEBUGGING mode\n")
-		else:
-			self.serializer	= Serializer(compact=True)
-			self.writer		= None
-			# self.writer	= ArchesWriter()
-
 	# Set up environment
 	def get_services(self):
 		'''Return a `dict` of named services available to the bonobo pipeline.'''
 		services = super().get_services()
 		return services
 
-	def add_serialization_chain(self, graph, input_node):
-		'''Add serialization of the passed transformer node to the bonobo graph.'''
-		if self.writer is not None:
-			graph.add_chain(
-				self.serializer,
-				self.writer,
-				_input=input_node
-			)
-		else:
-			sys.stderr.write('*** No serialization chain defined\n')
-
 	def add_articles_chain(self, graph, records, serialize=True):
 		'''Add transformation of article records to the bonobo pipeline.'''
 		articles = graph.add_chain(
 			make_aata_article_dict,
-# 			add_uuid,
 			add_aata_object_type,
 			detect_title_language,
 			MakeLinkedArtLinguisticObject(),
@@ -849,7 +827,6 @@ class AATAPipeline(PipelineBase):
 
 	def add_people_chain(self, graph, articles, serialize=True):
 		'''Add transformation of author records to the bonobo pipeline.'''
-		model_id = self.models.get('Person', 'XXX-Person-Model')
 		articles_with_authors = graph.add_chain(
 			add_aata_authors,
 			_input=articles.output
@@ -861,12 +838,11 @@ class AATAPipeline(PipelineBase):
 
 		people = graph.add_chain(
 			ExtractKeyedValues(key='_authors'),
-			AddArchesModel(model=model_id),
 			_input=articles_with_authors.output
 		)
 		if serialize:
 			# write PEOPLE data
-			self.add_serialization_chain(graph, people.output)
+			self.add_serialization_chain(graph, people.output, model=self.models['Person'])
 		return people
 
 	def add_abstracts_chain(self, graph, articles, serialize=True):
@@ -874,8 +850,7 @@ class AATAPipeline(PipelineBase):
 		model_id = self.models.get('LinguisticObject', 'XXX-LinguisticObject-Model')
 		abstracts = graph.add_chain(
 			make_aata_abstract,
-			AddArchesModel(model=model_id),
-# 			add_uuid,
+			AddArchesModel(model=self.models['LinguisticObject']),
 			MakeLinkedArtAbstract(),
 			_input=articles.output
 		)
@@ -894,16 +869,14 @@ class AATAPipeline(PipelineBase):
 
 	def add_organizations_chain(self, graph, articles, key='organizations', serialize=True):
 		'''Add transformation of organization records to the bonobo pipeline.'''
-		model_id = self.models.get('Organization', 'XXX-Organization-Model')
 		organizations = graph.add_chain(
 			ExtractKeyedValues(key=key),
-			AddArchesModel(model=model_id),
 			MakeLinkedArtOrganization(),
 			_input=articles.output
 		)
 		if serialize:
 			# write ORGANIZATIONS data
-			self.add_serialization_chain(graph, organizations.output)
+			self.add_serialization_chain(graph, organizations.output, model=self.models['Organization'])
 		return organizations
 
 	def _add_abstracts_graph(self, graph):
@@ -924,7 +897,6 @@ class AATAPipeline(PipelineBase):
 			make_aata_journal_dict,
 			MakeLinkedArtLinguisticObject(),
 			make_publishing_activity,
-			AddArchesModel(model=self.models['Journal']),
 			Trace(name='journal', ordinals=list((2,)))
 		)
 		
@@ -933,7 +905,7 @@ class AATAPipeline(PipelineBase):
 		
 		if serialize:
 			# write ARTICLES data
-			self.add_serialization_chain(graph, journals.output)
+			self.add_serialization_chain(graph, journals.output, model=self.models['Journal'])
 		return journals
 
 	def _add_series_graph(self, graph, serialize=True):
@@ -943,12 +915,11 @@ class AATAPipeline(PipelineBase):
 			make_aata_series_dict,
 			MakeLinkedArtLinguisticObject(),
 			make_publishing_activity,
-			AddArchesModel(model=self.models['Series']),
 # 			Trace(name='series')
 		)
 		if serialize:
 			# write ARTICLES data
-			self.add_serialization_chain(graph, series.output)
+			self.add_serialization_chain(graph, series.output, model=self.models['Series'])
 		return series
 
 	def _construct_graph(self):
@@ -971,8 +942,6 @@ class AATAPipeline(PipelineBase):
 	def run(self, **options):
 		'''Run the AATA bonobo pipeline.'''
 		sys.stderr.write("- Limiting to %d records per file\n" % (self.limit,))
-		sys.stderr.write("- Using serializer: %r\n" % (self.serializer,))
-		sys.stderr.write("- Using writer: %r\n" % (self.writer,))
 		graph = self.get_graph(**options)
 		services = self.get_services(**options)
 		bonobo.run(
@@ -990,28 +959,12 @@ class AATAFilePipeline(AATAPipeline):
 	def __init__(self, input_path, abstracts_pattern, journals_pattern, series_pattern, **kwargs):
 		super().__init__(input_path, abstracts_pattern, journals_pattern, series_pattern, **kwargs)
 		self.use_single_serializer = False
-		self.output_chain = None
-		debug = kwargs.get('debug', False)
-		output_path = kwargs.get('output_path')
-		if debug:
-			self.writer		= MergingFileWriter(directory=output_path, partition_directories=True, serialize=True, compact=False)
-# 			self.serializer	= Serializer(compact=False)
-			# self.writer	= MultiFileWriter(directory=output_path)
-			# self.writer	= ArchesWriter()
+		self.output_path = kwargs.get('output_path')
+
+	def serializer_nodes_for_model(self, model=None):
+		nodes = []
+		if self.debug:
+			nodes.append(MergingFileWriter(directory=self.output_path, partition_directories=True, serialize=True, compact=False, model=model))
 		else:
-			self.writer		= MergingFileWriter(directory=output_path, partition_directories=True, serialize=True, compact=True)
-# 			self.serializer	= Serializer(compact=True)
-			# self.writer	= MultiFileWriter(directory=output_path)
-			# self.writer	= ArchesWriter()
-
-
-	def add_serialization_chain(self, graph, input_node):
-		'''Add serialization of the passed transformer node to the bonobo graph.'''
-		if self.use_single_serializer:
-			if self.output_chain is None:
-				self.output_chain = graph.add_chain(self.writer, _input=None)
-# 				self.output_chain = graph.add_chain(self.serializer, self.writer, _input=None)
-
-			graph.add_chain(identity, _input=input_node, _output=self.output_chain.input)
-		else:
-			graph.add_chain(self.writer, _input=input_node)
+			nodes.append(MergingFileWriter(directory=self.output_path, partition_directories=True, serialize=True, compact=True, model=model))
+		return nodes

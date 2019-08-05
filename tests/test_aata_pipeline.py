@@ -10,6 +10,7 @@ import uuid
 
 from tests import merge
 from pipeline.projects.aata import AATAPipeline
+from pipeline.nodes.basic import Serializer, AddArchesModel
 
 class TestWriter():
 	'''
@@ -49,6 +50,14 @@ class AATATestPipeline(AATAPipeline):
 		super().__init__(input_path, abstracts_pattern, journals_pattern, series_pattern, **kwargs)
 		self.writer = writer
 	
+	def serializer_nodes_for_model(self, model=None):
+		nodes = []
+		if model:
+			nodes.append(AddArchesModel(model=model))
+		nodes.append(Serializer(compact=False))
+		nodes.append(self.writer)
+		return nodes
+
 	def get_services(self):
 		services = super().get_services()
 		services.update({

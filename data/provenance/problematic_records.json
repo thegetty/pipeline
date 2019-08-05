@@ -1,0 +1,27 @@
+{
+	"lots": [
+		["F-A791", "0069", "1784-06-21", "multiple values may have been used in present_loc_inst: F-A791 0069 (1784-06-21)"],
+		["F-1556", "0043", "1826-05-05", "multiple values may have been used in present_loc_inst: F-1556 0043 (1826-05-05)"],
+		["F-A34", "[0033]", "1747-05-00", "multiple values may have been used in present_loc_inst: F-A34 [0033] (1747-05-00)"],
+		["F-A233", "0038", "1770-05-02", "multiple values may have been used in present_loc_inst: F-A233 0038 (1770-05-02)"],
+		["F-A131", "0070", "1763-05-16", "multiple values may have been used in present_loc_inst: F-A131 0070 (1763-05-16)"],
+		["F-A191", "0289", "1767-03-30", "multiple values may have been used in present_loc_inst: F-A191 0289 (1767-03-30)"],
+		["F-A191", "0288", "1767-03-30", "multiple values may have been used in present_loc_inst: F-A191 0288 (1767-03-30)"],
+		["F-988", "0081", "1819-11-22", "multiple values may have been used in present_loc_inst: F-988 0081 (1819-11-22)"],
+		["F-A377", "0031", "1775-04-03", "multiple values may have been used in present_loc_inst: F-A377 0031 (1775-04-03)"],
+		["F-A336", "0033", "1773-12-20", "multiple values may have been used in present_loc_inst: F-A336 0033 (1773-12-20)"],
+		["F-A559", "0137", "1779-03-15", "multiple values may have been used in present_loc_inst: F-A559 0137 (1779-03-15)"],
+		["F-179", "0028", "1809-02-17", "multiple values may have been used in present_loc_inst: F-179 0028 (1809-02-17)"],
+		["Br-5799", "0073", "1850-04-23", "multiple values may have been used in present_loc_inst: Br-5799 0073 (1850-04-23)"],
+		["F-A277", "0077", "1772-04-06", "multiple values may have been used in present_loc_inst: F-A277 0077 (1772-04-06)"],
+		["F-A500", "0107", "1778-03-17", "multiple values may have been used in present_loc_inst: F-A500 0107 (1778-03-17)"],
+		["F-A457", "0665", "1777-05-05", "multiple values may have been used in present_loc_inst: F-A457 0665 (1777-05-05)"],
+		["F-A848", "0079", "1785-12-20", "multiple values may have been used in present_loc_inst: F-A848 0079 (1785-12-20)"],
+		["F-81", "0121", "1804-11-21", "multiple values may have been used in present_loc_inst: F-81 0121 (1804-11-21)"],
+		["F-613", "0034", "1816-01-29", "multiple values may have been used in present_loc_inst: F-613 0034 (1816-01-29)"],
+		["F-A1036", "0007", "1792-05-08", "multiple values may have been used in present_loc_inst: F-A1036 0007 (1792-05-08)"],
+		["B-577", "0017", "1837-05-01", "multiple values may have been used in present_loc_inst: B-577 0017 (1837-05-01)"],
+		["N-272", "0022", "1813-04-12", "multiple values may have been used in present_loc_inst: N-272 0022 (1813-04-12)"],
+		["F-723", "0026", "1817-02-25", "multiple values may have been used in present_loc_inst: F-723 0026 (1817-02-25)"]
+	]
+}

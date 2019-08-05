@@ -18,7 +18,6 @@ import urllib.parse
 import bonobo
 from bonobo.config import Configurable, Option, use
 from bonobo.constants import NOT_MODIFIED
-from bonobo.nodes import Limit
 
 import settings
 from cromulent import model, vocab
@@ -591,11 +590,11 @@ def filter_abstract_authors(data: dict):
 
 class AATAPipeline(PipelineBase):
 	'''Bonobo-based pipeline for transforming AATA data from XML into JSON-LD.'''
-	def __init__(self, input_path, files_pattern, **kwargs):
+	def __init__(self, input_path, abstracts_file_pattern, **kwargs):
 		self.project_name = 'aata'
 		self.graph = None
 		self.models = kwargs.get('models', {})
-		self.files_pattern = files_pattern
+		self.abstracts_file_pattern = abstracts_file_pattern
 		self.limit = kwargs.get('limit')
 		self.debug = kwargs.get('debug', False)
 		self.input_path = input_path
@@ -631,11 +630,6 @@ class AATAPipeline(PipelineBase):
 
 	def add_articles_chain(self, graph, records, serialize=True):
 		'''Add transformation of article records to the bonobo pipeline.'''
-		if self.limit is not None:
-			records = graph.add_chain(
-				Limit(self.limit),
-				_input=records.output
-			)
 		articles = graph.add_chain(
 			make_aata_article_dict,
 # 			add_uuid,
@@ -714,8 +708,8 @@ class AATAPipeline(PipelineBase):
 	def _construct_graph(self):
 		graph = bonobo.Graph()
 		records = graph.add_chain(
-			MatchingFiles(path='/', pattern=self.files_pattern, fs='fs.data.aata'),
-			CurriedXMLReader(xpath='/AATA_XML/record', fs='fs.data.aata')
+			MatchingFiles(path='/', pattern=self.abstracts_file_pattern, fs='fs.data.aata'),
+			CurriedXMLReader(xpath='/AATA_XML/record', fs='fs.data.aata', limit=self.limit)
 		)
 		articles = self.add_articles_chain(graph, records)
 		self.add_people_chain(graph, articles)
@@ -750,20 +744,20 @@ class AATAFilePipeline(AATAPipeline):
 	If in `debug` mode, JSON serialization will use pretty-printing. Otherwise,
 	serialization will be compact.
 	'''
-	def __init__(self, input_path, files_pattern, **kwargs):
-		super().__init__(input_path, files_pattern, **kwargs)
-		self.use_single_serializer = True
+	def __init__(self, input_path, abstracts_file_pattern, **kwargs):
+		super().__init__(input_path, abstracts_file_pattern, **kwargs)
+		self.use_single_serializer = False
 		self.output_chain = None
 		debug = kwargs.get('debug', False)
 		output_path = kwargs.get('output_path')
 		if debug:
 			self.serializer	= Serializer(compact=False)
-			self.writer		= MergingFileWriter(directory=output_path)
+			self.writer		= MergingFileWriter(directory=output_path, partition_directories=True)
 			# self.writer	= MultiFileWriter(directory=output_path)
 			# self.writer	= ArchesWriter()
 		else:
 			self.serializer	= Serializer(compact=True)
-			self.writer		= MergingFileWriter(directory=output_path)
+			self.writer		= MergingFileWriter(directory=output_path, partition_directories=True)
 			# self.writer	= MultiFileWriter(directory=output_path)
 			# self.writer	= ArchesWriter()
 

@@ -316,14 +316,14 @@ def ymd_to_datetime(year, month, day, which="begin"):
 		try:
 			year = int(year)
 		except:
-			print("DATE CLEAN: year is %r; returning None" % year)
+			# print("DATE CLEAN: year is %r; returning None" % year)
 			return None
 
 	if not isinstance(month, int):
 		try:
 			month = int(month)
 		except:
-			print("DATE CLEAN: month is %r; continuing with %s" % (month, "earliest" if which=="begin" else "latest"))
+			# print("DATE CLEAN: month is %r; continuing with %s" % (month, "earliest" if which=="begin" else "latest"))
 			month = None
 
 	if not isinstance(day, int):

@@ -18,6 +18,22 @@ def get_crom_object(data: dict):
 
 class MakeLinkedArtRecord:
 	def set_properties(self, data, thing):
+		for notedata in data.get('referred_to_by', []):
+			if isinstance(notedata, tuple):
+				content, itype = notedata
+				if itype is not None:
+					if isinstance(itype, type):
+						note = itype(content=content)
+					elif isinstance(itype, object):
+						note = itype
+						note.content = content
+					else:
+						note = vocab.Note(content=content)
+						note.classified_as = itype
+			else:
+				note = vocab.Note(content=notedata)
+			thing.referred_to_by = note
+
 		for identifier in data.get('identifiers', []):
 			if isinstance(identifier, tuple):
 				content, itype = identifier

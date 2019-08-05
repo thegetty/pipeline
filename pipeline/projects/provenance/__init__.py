@@ -940,16 +940,6 @@ class ProvenancePipeline(PipelineBase):
 			r = csv.reader(csvfile)
 			self.contents_headers = next(r)
 
-	def serializer_nodes_for_model(self, model=None):
-		nodes = []
-		if model:
-			nodes.append(AddArchesModel(model=model))
-		if self.debug:
-			nodes.append(Serializer(compact=False))
-		else:
-			nodes.append(Serializer(compact=True))
-		return nodes
-
 	# Set up environment
 	def get_services(self):
 		'''Return a `dict` of named services available to the bonobo pipeline.'''
@@ -962,14 +952,6 @@ class ProvenancePipeline(PipelineBase):
 			'auction_locations': {},
 		})
 		return services
-
-	def add_serialization_chain(self, graph, input_node, model=None):
-		'''Add serialization of the passed transformer node to the bonobo graph.'''
-		nodes = self.serializer_nodes_for_model(model=model)
-		if nodes:
-			graph.add_chain(*nodes, _input=input_node)
-		else:
-			sys.stderr.write('*** No serialization chain defined\n')
 
 	def add_physical_catalog_owners_chain(self, graph, catalogs, serialize=True):
 		'''Add modeling of physical copies of auction catalogs.'''
@@ -1441,11 +1423,6 @@ class ProvenanceFilePipeline(ProvenancePipeline):
 		else:
 			nodes.append(MergingFileWriter(directory=self.output_path, partition_directories=True, serialize=True, compact=True, model=model))
 		return nodes
-
-	def add_serialization_chain(self, graph, input_node, model=None):
-		'''Add serialization of the passed transformer node to the bonobo graph.'''
-		nodes = self.serializer_nodes_for_model(model=model)
-		graph.add_chain(*nodes, _input=input_node)
 
 	def merge_post_sale_objects(self, counter, post_map):
 		singles = {k for k in counter if counter[k] == 1}

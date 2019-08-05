@@ -101,15 +101,23 @@ def make_aata_series_dict(e):
 
 def make_publishing_activity(data: dict):
 	lo = get_crom_object(data)
+	components = data['uri_components']
 	pubs = data.get('publishers', [])
 	title = data.get('label')
+	
+	previous_components = data.get('previous', {}).get('uri_components')
 	for pub in pubs:
 		start, end = data['years']
-		event = vocab.Publishing()
-		event._label = f'Publishing event for “{title}”'
+		uri = aata_uri('AATA', *components, 'Publishing')
+		event = vocab.Publishing(ident=uri, label=f'Publishing event for “{title}”')
 		event.timespan = timespan_from_outer_bounds(start, end)
 		lo.used_for = event
-# 		event.carried_out_by = org
+		if previous_components:
+			# TODO: handle modeling of history_reason field
+			previous_uri = aata_uri('AATA', *previous_components, 'Publishing')
+# 			print(f'*** {uri} ===[continued]==> {previous_uri}')
+			event.continued = vocab.Publishing(ident=previous_uri)
+
 		if 'events' not in pub:
 			pub['events'] = []
 		pub['events'].append(event)
@@ -235,10 +243,37 @@ def _xml_extract_journal(e):
 			ig.xpath('./title_translated')])
 		volume_number = ig.findtext('./volume')
 		issue_number = ig.findtext('./number')
-		# TODO: date
-		# TODO: note
-		# TODO: enum_chron
-		# TODO: display_form
+		
+		dates = ig.xpath('./date')
+		notes = []
+		if dates:
+			datenode = dates[0]
+			season = datenode.findtext('./month_season')
+			month = datenode.findtext('./sort_month')
+			year = datenode.findtext('./sort_year')
+			
+			if year:
+				ts = model.TimeSpan(ident='')
+				ts.begin_of_the_begin = ymd_to_datetime(year, month, None, which='begin')
+				ts.end_of_the_end = ymd_to_datetime(year, month, None, which='end')
+				# TODO: attach ts to the issue somehow
+			elif month:
+				print(f'*** Found an issue with sort_month but not sort_year (!?) in record {aata_id}')
+
+			if season:
+				# TODO: should the PublicationPeriodNote be attached to the issue, or the
+				#       publication date?
+				notes.append((season, vocab.PublicationPeriodNote))
+
+		note = ig.findtext('./note')
+		if note:
+			# TODO: is there a more specific Note type we can use for this?
+			notes.append(note)
+
+		chron = ig.findtext('./enum_chron')
+		if chron:
+			# TODO: is there a more specific Note type we can use for this?
+			notes.append(chron)
 		
 		volumes[volume_number] = {
 			'uri': aata_uri('AATA', 'Journal', aata_id, 'Volume', volume_number),
@@ -259,22 +294,34 @@ def _xml_extract_journal(e):
 			'translations': list(issue_translations),
 			'identifiers': [(issue_number, vocab.IssueNumber(ident=''))],
 			'volume': volume_number,
+			'referred_to_by': notes,
 		})
 
 	make_la_lo = MakeLinkedArtLinguisticObject()
 	for v in volumes.values():
 		make_la_lo(v)
 
-	# TODO: journal_history
-	# TODO: publisher_group
-	# TODO: sponsor_group
-	
+	previous = None
+	for jh in e.xpath('./journal_group/journal_history'):
+		history_id = jh.findtext('./linked_journal_id')
+		history_name = jh.findtext('./linked_journal_name')
+		history_reason = jh.findtext('./change_reason')
+		huri = aata_uri('AATA', 'Journal', history_id)
+		previous = {
+			'uri': huri,
+			'uri_components': ('Journal', history_id),
+			'label': history_name,
+			'_aata_record_id': history_id,
+			'reason': history_reason
+		}
+
 	var_titles = [(var_title, variantTitleIdentifier(ident=''))] if var_title is not None else []
 
 	data = {
 		# TODO: lang_name
 		# TODO: lang_scope
 		'uri': journal_uri,
+		'uri_components': ('Journal', aata_id),
 		'label': title,
 		'_aata_record_id': aata_id,
 		'translations': list(translations),
@@ -284,6 +331,7 @@ def _xml_extract_journal(e):
 		'volumes': volumes,
 		'publishers': publishers,
 		'sponsors': sponsors,
+		'previous': previous,
 	}
 	
 	return {k: v for k, v in data.items() if v is not None}
@@ -306,15 +354,27 @@ def _xml_extract_series(e):
 	publishers = [_xml_extract_publisher_group(p) for p in e.xpath('./publisher_group')]
 	sponsors = [_xml_extract_sponsor_group(p) for p in e.xpath('./sponsor_group')]
 
-	# TODO: series_history
-	# TODO: sponsor_group
-	
+	previous = None
+	for jh in e.xpath('./series_group/series_history'):
+		history_id = jh.findtext('./linked_series_id')
+		history_name = jh.findtext('./linked_series_name')
+		history_reason = jh.findtext('./change_reason')
+		huri = aata_uri('AATA', 'Series', history_id)
+		previous = {
+			'uri': huri,
+			'uri_components': ('Series', history_id),
+			'label': history_name,
+			'_aata_record_id': history_id,
+			'reason': history_reason
+		}
+
 	var_titles = [(var_title, variantTitleIdentifier(ident=''))] if var_title is not None else []
 
 	data = {
 		# TODO: lang_name
 		# TODO: lang_scope
 		'uri': aata_uri('AATA', 'Series', aata_id),
+		'uri_components': ('Series', aata_id),
 		'label': title,
 		'_aata_record_id': aata_id,
 		'translations': list(translations),
@@ -322,6 +382,7 @@ def _xml_extract_series(e):
 		'years': [start_year, cease_year],
 		'publishers': publishers,
 		'sponsors': sponsors,
+		'previous': previous,
 	}
 	
 	return {k: v for k, v in data.items() if v is not None}
@@ -804,8 +865,9 @@ def filter_abstract_authors(data: dict):
 class AATAPipeline(PipelineBase):
 	'''Bonobo-based pipeline for transforming AATA data from XML into JSON-LD.'''
 	def __init__(self, input_path, abstracts_pattern, journals_pattern, series_pattern, **kwargs):
-		vocab.register_vocab_class("VolumeNumber", {"parent":model.Identifier, "id":"300265632", "label": "Volume"})
-		vocab.register_vocab_class("IssueNumber", {"parent":model.Identifier, "id":"300312349", "label": "Issue"})
+		vocab.register_vocab_class('VolumeNumber', {'parent': model.Identifier, 'id': '300265632', 'label': 'Volume'})
+		vocab.register_vocab_class('IssueNumber', {'parent': model.Identifier, 'id': '300312349', 'label': 'Issue'})
+		vocab.register_vocab_class('PublicationPeriodNote', {'parent': model.LinguisticObject, 'id': '300081446', 'label': 'Publication Period Note', 'brief': True})
 		
 		self.project_name = 'aata'
 		self.graph = None

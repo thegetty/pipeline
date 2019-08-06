@@ -253,9 +253,9 @@ def _xml_extract_journal(e):
 			year = datenode.findtext('./sort_year')
 			
 			if year:
-				ts = model.TimeSpan(ident='')
-				ts.begin_of_the_begin = ymd_to_datetime(year, month, None, which='begin')
-				ts.end_of_the_end = ymd_to_datetime(year, month, None, which='end')
+				begin = ymd_to_datetime(year, month, None, which='begin')
+				end = ymd_to_datetime(year, month, None, which='end')
+				ts = timespan_from_outer_bounds(begin, end)
 				# TODO: attach ts to the issue somehow
 			elif month:
 				print(f'*** Found an issue with sort_month but not sort_year (!?) in record {aata_id}')

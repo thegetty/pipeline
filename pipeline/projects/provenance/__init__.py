@@ -61,7 +61,7 @@ from pipeline.nodes.basic import \
 			Trace
 from pipeline.util.rewriting import rewrite_output_files, JSONValueRewriter
 
-PROBLEMATIC_RECORD_URI = 'tag:getty.edu,2019:digital:pipeline:ProblematicRecord'
+PROBLEMATIC_RECORD_URI = 'tag:getty.edu,2019:digital:pipeline:provenance:ProblematicRecord'
 
 #mark - utility functions and classes
 
@@ -320,13 +320,12 @@ class AddAuctionOfLot(Configurable):
 		lot = vocab.Auction(ident=data['uri'])
 		lot._label = f'Auction of Lot {cno} {shared_lot_number} ({date})'
 
-		for pcno, plno, pdate, problem in problematic_records.get('lots', []):
+		for problem_key, problem in problematic_records.get('lots', []):
 			# TODO: this is inefficient, but will probably be OK so long as the number
 			#       of problematic records is small. We do it this way because we can't
 			#       represent a tuple directly as a JSON dict key, and we don't want to
 			#       have to do post-processing on the services JSON files after loading.
-			problem_key = (pcno, plno, pdate)
-			if problem_key == lot_object_key:
+			if tuple(problem_key) == lot_object_key:
 				note = model.LinguisticObject(content=problem)
 				note.classified_as = vocab.instances["brief text"]
 				note.classified_as = model.Type(

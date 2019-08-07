@@ -52,7 +52,7 @@ class CurriedXMLReader(Configurable):
 	def read(self, path, *, fs):
 		limit = self.limit
 		count = self.count
-		if limit and count < limit:
+		if not(limit) or (limit and count < limit):
 			sys.stderr.write('============================== %s\n' % (path,))
 			file = fs.open(path, self.mode, encoding=self.encoding)
 			root = lxml.etree.parse(file)

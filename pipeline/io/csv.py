@@ -36,16 +36,17 @@ class CurriedCSVReader(Configurable):
 		self.count = 0
 
 	def read(self, path, *, fs):
-		sys.stderr.write('============================== %s\n' % (path,))
 		limit = self.limit
 		count = self.count
-		with fs.open(path, newline='') as csvfile:
-			r = csv.reader(csvfile)
-			for row in r:
-				if limit and count >= limit:
-					break
-				count += 1
-				yield row
-		self.count = count
+		if not(limit) or (limit and count < limit):
+			sys.stderr.write('============================== %s\n' % (path,))
+			with fs.open(path, newline='') as csvfile:
+				r = csv.reader(csvfile)
+				for row in r:
+					if limit and count >= limit:
+						break
+					count += 1
+					yield row
+			self.count = count
 
 	__call__ = read

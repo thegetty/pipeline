@@ -149,6 +149,7 @@ class TestAATAPipelineOutput(unittest.TestCase):
 		self.assertEqual(dict(identifiers), {
 			'Title': {'Secrets of the Forbidden City'},
 			'ISBN Identifier': {'1531703461', '9781531703462'},
+			'Local Number': {'AATA140375'},
 		})
 
 		about = defaultdict(set)
@@ -224,9 +225,9 @@ class TestAATAPipelineOutput(unittest.TestCase):
 				print('*** error while handling creation event: %s' % (e,))
 				pprint.pprint(c)
 		self.assertEqual(creation_labels, {
-			'Creation sub-event for Producer',
-			'Creation sub-event for Narrator',
-			'Creation sub-event for Director'
+			'Creation sub-event for Producer by “Bremner, Ian”',
+			'Creation sub-event for Narrator by “Meyers, Eric”',
+			'Creation sub-event for Director by “Bremner, Ian”'
 		})
 		types = sorted(article_types.values())
 		self.assertEqual(types, ['A/V Content', 'Abstract'])

@@ -228,8 +228,8 @@ def _xml_extract_journal(e):
 	start_year = e.findtext('./journal_group/start_year')
 	cease_year = e.findtext('./journal_group/cease_year')
 	
-	issn = [(t.text, vocab.IssnIdentifier(ident='')) for t in e.xpath('./journal_group/issn')]
 	journal_uri = aata_uri('AATA', 'Journal', aata_id)
+	issn = [(t.text, vocab.IssnIdentifier(ident='')) for t in e.xpath('./journal_group/issn')]
 
 	publishers = [_xml_extract_publisher_group(p) for p in e.xpath('./publisher_group')]
 	sponsors = [_xml_extract_sponsor_group(p) for p in e.xpath('./sponsor_group')]
@@ -298,8 +298,8 @@ def _xml_extract_journal(e):
 		})
 
 	make_la_lo = MakeLinkedArtLinguisticObject()
-	for v in volumes.values():
-		make_la_lo(v)
+	for volume in volumes.values():
+		make_la_lo(volume)
 
 	previous = None
 	for jh in e.xpath('./journal_group/journal_history'):
@@ -350,6 +350,7 @@ def _xml_extract_series(e):
 	start_year = e.findtext('./series_group/start_year')
 	cease_year = e.findtext('./series_group/cease_year')
 	
+	series_uri = aata_uri('AATA', 'Series', aata_id)
 	issn = [(t.text, vocab.IssnIdentifier(ident='')) for t in e.xpath('./series_group/issn')]
 	publishers = [_xml_extract_publisher_group(p) for p in e.xpath('./publisher_group')]
 	sponsors = [_xml_extract_sponsor_group(p) for p in e.xpath('./sponsor_group')]
@@ -373,7 +374,7 @@ def _xml_extract_series(e):
 	data = {
 		# TODO: lang_name
 		# TODO: lang_scope
-		'uri': aata_uri('AATA', 'Series', aata_id),
+		'uri': series_uri,
 		'uri_components': ('Series', aata_id),
 		'label': title,
 		'_aata_record_id': aata_id,
@@ -416,7 +417,7 @@ def _xml_extract_article(e, language_code_map):
 				qualified_identifiers.append((t.text, vocab.IsbnIdentifier, notes))
 
 	aata_id = e.findtext('./record_id_group/record_id')
-	uid = 'AATA-%s-%s-%s' % (doc_type, aata_id, title)
+	localIds = [vocab.LocalNumber(content=aata_id)]
 
 	classifications = []
 	code_type = None # TODO: is there a model.Type value for this sort of code?
@@ -434,6 +435,16 @@ def _xml_extract_article(e, language_code_map):
 		code.classified_as = code_type
 		classification.identified_by = code
 		classifications.append(classification)
+
+	part_of = []
+	make_la_lo = MakeLinkedArtLinguisticObject()
+	for c in e.xpath('./record_id_group/collective_rec_id'):
+		# this is the upward pointing relation between, e.g., chapters and books
+		cid = c.text
+		collective = make_la_lo({
+			'uri': aata_uri('AATA', 'LinguisticObject', cid)
+		})
+		part_of.append(collective)
 
 	indexings = []
 	for ig in e.xpath('./index_group/index/index_id'):
@@ -464,6 +475,7 @@ def _xml_extract_article(e, language_code_map):
 
 	var_titles = [(var_title, variantTitleIdentifier(ident=''))] if var_title is not None else []
 
+	id_components = ['AATA', 'LinguisticObject', aata_id]
 	return {
 		'label': title,
 		'document_languages': doc_langs,
@@ -471,12 +483,12 @@ def _xml_extract_article(e, language_code_map):
 		'_document_type': e.findtext('./record_desc_group/doc_type'),
 		'_aata_record_id': aata_id,
 		'translations': list(translations),
-		'identifiers': isbn + issn + var_titles,
+		'identifiers': localIds + isbn + issn + var_titles,
 		'qualified_identifiers': qualified_identifiers,
 		'classifications': classifications,
 		'indexing': indexings,
-		'uid': uid,
-		'uri': aata_uri(uid),
+		'part_of': part_of,
+		'uri': aata_uri(*id_components),
 	}
 
 def _xml_extract_abstracts(e, aata_id):
@@ -518,7 +530,6 @@ def _xml_extract_organizations(e, aata_id):
 				name = aid.findtext('display_term')
 				auth_id = aid.findtext('gaia_auth_id')
 				auth_type = aid.findtext('gaia_auth_type')
-				uid = 'AATA-Org-%s-%s-%s' % (auth_type, auth_id, name)
 				yield {
 					'_aata_record_id': aata_id,
 					'_aata_record_organization_seq': i,
@@ -528,8 +539,7 @@ def _xml_extract_organizations(e, aata_id):
 					'names': [(name,)],
 					'object_type': _gaia_authority_type(auth_type),
 					'identifiers': [vocab.LocalNumber(ident='', content=auth_id)],
-					'uid': uid,
-					'uri': aata_uri(uid),
+					'uri': aata_uri('AATA', 'Organization', auth_type, auth_id, name),
 				}
 			else:
 				print('*** No organization_id found for record %s:' % (o,))
@@ -550,11 +560,13 @@ def _xml_extract_authors(e, aata_id):
 					auth_type = aid.findtext('gaia_auth_type')
 # 					if auth_type != 'PN':
 # 						print(f'*** Unexpected gaia_auth_type {auth_type} used for author when PN was expected')
+
+					id_components = tuple()
 					if auth_id is None:
 						print('*** no gaia auth id for author in record %r' % (aata_id,))
-						uid = 'AATA-P-Internal-%s-%d' % (aata_id, i)
+						id_components = ('AATA' 'P', 'Internal', aata_id, i)
 					else:
-						uid = 'AATA-P-%s-%s-%s' % (auth_type, auth_id, name)
+						id_components = ('AATA' 'P', auth_type, auth_id, name)
 
 					author = {
 						'_aata_record_id': aata_id,
@@ -563,8 +575,7 @@ def _xml_extract_authors(e, aata_id):
 						'names': [(name,)],
 						'object_type': _gaia_authority_type(auth_type),
 						'identifiers': [vocab.LocalNumber(ident='', content=auth_id)],
-						'uid': uid,
-						'uri': aata_uri(uid),
+						'uri': aata_uri(*id_components),
 					}
 
 					if role is not None:
@@ -732,6 +743,7 @@ def add_aata_authors(data):
 	authors = data.get('_authors', [])
 	for a in authors:
 		make_la_person(a)
+		person_name = a['label']
 		person = get_crom_object(a)
 		subevent = model.Creation()
 		# TODO: The should really be asserted as object -created_by-> CreationEvent -part-> SubEvent
@@ -742,7 +754,7 @@ def add_aata_authors(data):
 		event.part = subevent
 		role = a.get('creation_role')
 		if role is not None:
-			subevent._label = 'Creation sub-event for %s' % (role,)
+			subevent._label = f'Creation sub-event for {role} by “{person_name}”'
 		subevent.carried_out_by = person
 	yield data
 
@@ -776,6 +788,7 @@ def detect_title_language(data: dict, language_code_map):
 					# because it is one of the declared languages for the record
 					# document/summary
 					data['label'] = (title, language)
+					return data
 			else:
 				# the detected language of the title was not declared in the record data,
 				# so we lack confidence to proceed
@@ -816,9 +829,9 @@ def make_aata_abstract(data, language_code_map):
 	lod_object = get_crom_object(data)
 	for a in data.get('_abstracts', []):
 		abstract_dict = {k: v for k, v in a.items() if k not in ('language',)}
-
+		abstract_uri = aata_uri('AATA', 'Abstract', data['_aata_record_id'], a['_aata_record_abstract_seq'])
 		content = a.get('content')
-		abstract = vocab.Abstract(content=content)
+		abstract = vocab.Abstract(ident=abstract_uri, content=content)
 		abstract.refers_to = lod_object
 		langcode = a.get('language')
 		if langcode is not None:
@@ -832,11 +845,9 @@ def make_aata_abstract(data, language_code_map):
 
 		# create a uid based on the AATA record id, the sequence number of the abstract
 		# in that record, and which author we're handling right now
-		uid = 'AATA-Abstract-%s-%d' % (data['_aata_record_id'], a['_aata_record_abstract_seq'])
 		abstract_dict.update({
 			'parent_data': data,
-			'uid': uid,
-			'uri': aata_uri(uid),
+			'uri': abstract_uri,
 		})
 		add_crom_data(data=abstract_dict, what=abstract)
 		yield abstract_dict

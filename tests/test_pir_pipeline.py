@@ -40,6 +40,17 @@ class TestWriter():
 		else:
 			self.output[dr][fn] = data
 
+	def process_model(self, model):
+		data = {v['id']: v for v in model.values()}
+		return data
+
+	def process_output(self, output):
+		data = {k: self.process_model(v) for k, v in output.items()}
+		return data
+
+	def processed_output(self):
+		return self.process_output(self.output)
+
 
 class ProvenanceTestPipeline(ProvenancePipeline):
 	'''
@@ -102,8 +113,7 @@ class TestProvenancePipelineOutput(unittest.TestCase):
 				debug=True
 		)
 		pipeline.run()
-		output = writer.output
-		return output
+		return writer.processed_output()
 
 	def verify_auction(self, a, event, idents):
 		got_events = {c['_label'] for c in a.get('part_of', [])}
@@ -151,7 +161,8 @@ class TestProvenancePipelineOutput(unittest.TestCase):
 		people_names = {o['_label'] for o in people.values()}
 		self.assertEqual(people_names, {'[Anonymous]', 'Gillemans', 'Vinckebooms'})
 
-		key_120, key_119 = sorted(auctions.keys())
+		key_119 = 'tag:getty.edu,2019:digital:pipeline:provenance:REPLACE-WITH-UUID#AUCTION,B-A139,LOT,0119,DATE,1774-05-31'
+		key_120 = 'tag:getty.edu,2019:digital:pipeline:provenance:REPLACE-WITH-UUID#AUCTION,B-A139,LOT,0120,DATE,1774-05-31'
 
 		auction_B_A139_0119 = auctions[key_119]
 		self.verify_auction(auction_B_A139_0119, event='B-A139', idents={'0119[a]', '0119[b]'})

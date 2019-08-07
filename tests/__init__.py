@@ -1,4 +1,50 @@
+import os
+import os.path
+import hashlib
+import json
+import uuid
 import pprint
+
+class TestWriter():
+	'''
+	Deserialize the output of each resource and store in memory.
+	Merge data for multiple serializations of the same resource.
+	'''
+	def __init__(self):
+		self.output = {}
+		super().__init__()
+
+	def __call__(self, data: dict, *args, **kwargs):
+		d = data['_OUTPUT']
+		dr = data['_ARCHES_MODEL']
+		if dr not in self.output:
+			self.output[dr] = {}
+		uu = data.get('uuid')
+		if not uu and 'uri' in data:
+			uu = hashlib.sha256(data['uri'].encode('utf-8')).hexdigest()
+			print(f'*** No UUID in top-level resource. Using a hash of top-level URI: {uu}')
+		if not uu:
+			uu = str(uuid.uuid4())
+			print(f'*** No UUID in top-level resource;')
+			print(f'*** Using an assigned UUID filename for the content: {uu}')
+		fn = '%s.json' % uu
+		data = json.loads(d)
+		if fn in self.output[dr]:
+			self.output[dr][fn] = merge(self.output[dr][fn], data)
+		else:
+			self.output[dr][fn] = data
+
+	def process_model(self, model):
+		data = {v['id']: v for v in model.values()}
+		return data
+
+	def process_output(self, output):
+		data = {k: self.process_model(v) for k, v in output.items()}
+		return data
+
+	def processed_output(self):
+		return self.process_output(self.output)
+
 
 def merge_lists(l, r):
 	'''

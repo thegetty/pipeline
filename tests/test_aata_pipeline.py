@@ -8,39 +8,9 @@ import hashlib
 import json
 import uuid
 
-from tests import merge
+from tests import TestWriter, merge
 from pipeline.projects.aata import AATAPipeline
 from pipeline.nodes.basic import Serializer, AddArchesModel
-
-class TestWriter():
-	'''
-	Deserialize the output of each resource and store in memory.
-	Merge data for multiple serializations of the same resource.
-	'''
-	def __init__(self):
-		self.output = {}
-		super().__init__()
-
-	def __call__(self, data: dict, *args, **kwargs):
-		d = data['_OUTPUT']
-		dr = data['_ARCHES_MODEL']
-		if dr not in self.output:
-			self.output[dr] = {}
-		uu = data.get('uuid')
-		if not uu and 'uri' in data:
-			uu = hashlib.sha256(data['uri'].encode('utf-8')).hexdigest()
-			print(f'*** No UUID in top-level resource. Using a hash of top-level URI: {uu}')
-		if not uu:
-			uu = str(uuid.uuid4())
-			print(f'*** No UUID in top-level resource;')
-			print(f'*** Using an assigned UUID filename for the content: {uu}')
-		fn = '%s.json' % uu
-		data = json.loads(d)
-		if fn in self.output[dr]:
-			self.output[dr][fn] = merge(self.output[dr][fn], data)
-		else:
-			self.output[dr][fn] = data
-
 
 class AATATestPipeline(AATAPipeline):
 	'''
@@ -106,8 +76,7 @@ class TestAATAPipelineOutput(unittest.TestCase):
 			debug=True
 		)
 		pipeline.run()
-		output = writer.output
-		return output
+		return writer.processed_output()
 
 	def verify_people_for_AATA140375(self, output, people_model):
 		people = output[people_model].values()
@@ -236,7 +205,7 @@ class TestAATAPipelineOutput(unittest.TestCase):
 	def test_pipeline_with_AATA140375(self):
 		input_path = os.getcwd()
 		models = {
-			'Person': '0b47366e-2e42-11e9-9018-a4d18cec433a',
+			'Person': 'model-person',
 			'LinguisticObject': 'model-lo',
 			'Organization': 'model-org',
 			'Journal': 'model-journal',

@@ -4,6 +4,7 @@ import unittest
 import os
 import pprint
 from collections import defaultdict
+from contextlib import suppress
 import hashlib
 import json
 import uuid
@@ -48,20 +49,20 @@ class AATATestPipeline(AATAPipeline):
 		})
 		return services
 
+	def run(self):
+		super().run()
+		return self.writer.processed_output()
 
-class TestAATAPipelineOutput(unittest.TestCase):
+class TestAATAPipelineOutput_Abstracts(unittest.TestCase):
 	'''
 	Parse test XML data and run the AATA pipeline with the in-memory TestWriter.
 	Then verify that the serializations in the TestWriter object are what was expected.
 	'''
 	def setUp(self):
-		self.abstracts_pattern = 'tests/data/aata-sample1.xml'
+		self.abstracts_pattern = 'tests/data/aata-sample1-abstracts.xml'
 		self.journals_pattern = None
 		self.series_pattern = None
 		os.environ['QUIET'] = '1'
-
-	def tearDown(self):
-		pass
 
 	def run_pipeline(self, models, input_path):
 		writer = TestWriter()
@@ -73,10 +74,8 @@ class TestAATAPipelineOutput(unittest.TestCase):
 			self.series_pattern,
 			models=models,
 			limit=1,
-			debug=True
 		)
-		pipeline.run()
-		return writer.processed_output()
+		return pipeline.run()
 
 	def verify_people_for_AATA140375(self, output, people_model):
 		people = output[people_model].values()
@@ -222,6 +221,238 @@ class TestAATAPipelineOutput(unittest.TestCase):
 		people_creation_events = self.verify_people_for_AATA140375(output, people_model)
 		self.verify_organizations_for_AATA140375(output, orgs_model)
 		self.verify_data_for_AATA140375(output, lo_model)
+
+class TestAATAPipelineOutput_Journals(unittest.TestCase):
+	def setUp(self):
+		self.maxDiff = None
+		self.abstracts_pattern = None
+		self.journals_pattern = 'tests/data/aata-sample1-journals.xml'
+		self.series_pattern = None
+		os.environ['QUIET'] = '1'
+
+	def run_pipeline(self, models, input_path):
+		writer = TestWriter()
+		pipeline = AATATestPipeline(
+			writer,
+			input_path,
+			self.abstracts_pattern,
+			self.journals_pattern,
+			self.series_pattern,
+			models=models,
+			limit=1,
+		)
+		return pipeline.run()
+
+	def test_pipeline_with_AATA140375(self):
+		input_path = os.getcwd()
+		models = {
+			'Person': 'model-person',
+			'LinguisticObject': 'model-lo',
+			'Organization': 'model-org',
+			'Journal': 'model-journal',
+			'Series': 'model-series',
+		}
+		output = self.run_pipeline(models, input_path)
+		self.assertEqual(len(output), 2)
+
+		lo_model = models['LinguisticObject']
+		journal_model = models['Journal']
+		
+		TAG_PREFIX = 'tag:getty.edu,2019:digital:pipeline:aata:REPLACE-WITH-UUID#'
+		
+		journal = output[journal_model].get(f'{TAG_PREFIX}AATA,Journal,2')
+		issue = output[lo_model].get(f'{TAG_PREFIX}AATA,Journal,2,Issue,9')
+		
+		self.assertIsNotNone(journal)
+		self.assertIsNotNone(issue)
+		
+		for i in journal['identified_by']:
+			with suppress(KeyError):
+				del i['id'] # remove UUIDs that will not be stable across runs
+		
+		journal_expected = {
+			'@context': 'https://linked.art/ns/v1/linked-art.json',
+			'_label': 'Green chemistry',
+			'classified_as': [
+				{
+					'_label': 'Journal',
+					'id': 'http://vocab.getty.edu/aat/300215390',
+					'type': 'Type'
+				}
+			],
+			'id': 'tag:getty.edu,2019:digital:pipeline:aata:REPLACE-WITH-UUID#AATA,Journal,2',
+			'identified_by': [
+				{
+					'classified_as': [
+						{
+							'_label': 'ISSN Identifier',
+							'id': 'http://vocab.getty.edu/aat/300417443',
+							'type': 'Type'
+						}
+					],
+					'content': '1463-9262',
+					'type': 'Identifier'
+				},
+				{
+					'content': 'Green chemistry: an international journal and green chemistry resource',
+					'type': 'Identifier'
+				},
+				{
+					'classified_as': [
+						{
+							'_label': 'Title',
+						'id': 'http://vocab.getty.edu/aat/300055726',
+						'type': 'Type'
+						}
+					],
+					'content': 'Green chemistry',
+					'type': 'Name'
+				}
+			],
+			'type': 'LinguisticObject'
+		}
+		self.assertEqual(journal, journal_expected)
+		
+		for i in [i for p in issue['part_of'] for i in p['identified_by']]:
+			with suppress(KeyError):
+				del i['id'] # remove UUIDs that will not be stable across runs
+		for i in issue['identified_by'] + issue['referred_to_by']:
+			with suppress(KeyError):
+				del i['id'] # remove UUIDs that will not be stable across runs
+		issue_expected = {
+			'@context': 'https://linked.art/ns/v1/linked-art.json',
+			'_label': 'Issue 9 of “Green chemistry”',
+			'classified_as': [
+				{
+					'_label': 'Issue',
+					'id': 'http://vocab.getty.edu/aat/300312349',
+					'type': 'Type'
+				}
+			],
+			'id': 'tag:getty.edu,2019:digital:pipeline:aata:REPLACE-WITH-UUID#AATA,Journal,2,Issue,9',
+			'identified_by': [
+				{
+					'classified_as': [
+						{
+						'_label': 'Issue',
+						'id': 'http://vocab.getty.edu/aat/300312349',
+						'type': 'Type'
+						}
+					],
+					'content': '9',
+					'type': 'Identifier'
+				},
+				{
+					'classified_as': [
+						{
+							'_label': 'Title',
+							'id': 'http://vocab.getty.edu/aat/300055726',
+							'type': 'Type'
+						}
+					],
+					'content': 'Issue 9 of “Green chemistry”',
+					'type': 'Name'
+				}
+			],
+			'part_of': [
+				{
+					'_label': 'Green chemistry',
+					'classified_as': [
+						{
+							'_label': 'Journal',
+							'id': 'http://vocab.getty.edu/aat/300215390',
+							'type': 'Type'
+						}
+					],
+					'id': 'tag:getty.edu,2019:digital:pipeline:aata:REPLACE-WITH-UUID#AATA,Journal,2',
+					'identified_by': [
+						{
+							'classified_as': [
+								{
+								'_label': 'ISSN Identifier',
+								'id': 'http://vocab.getty.edu/aat/300417443',
+								'type': 'Type'
+								}
+							],
+							'content': '1463-9262',
+							'type': 'Identifier'
+						},
+						{
+							'content': 'Green chemistry: an international journal and green chemistry resource',
+							'type': 'Identifier'
+						},
+						{
+							'classified_as': [
+								{
+									'_label': 'Title',
+									'id': 'http://vocab.getty.edu/aat/300055726',
+									'type': 'Type'
+								}
+							],
+							'content': 'Green chemistry',
+							'type': 'Name'
+						}
+					],
+					'type': 'LinguisticObject'
+				},
+				{
+					'_label': 'Volume 9 of “Green chemistry”',
+					'classified_as': [
+						{
+							'_label': 'Volume',
+							'id': 'http://vocab.getty.edu/aat/300265632',
+							'type': 'Type'
+						}
+					],
+					'id': 'tag:getty.edu,2019:digital:pipeline:aata:REPLACE-WITH-UUID#AATA,Journal,2,Volume,9',
+					'identified_by': [
+						{
+							'classified_as': [
+								{
+									'_label': 'Volume',
+									'id': 'http://vocab.getty.edu/aat/300265632',
+									'type': 'Type'
+								}
+							],
+							'content': '9',
+							'type': 'Identifier'
+						},
+						{
+							'classified_as': [
+								{
+									'_label': 'Title',
+									'id': 'http://vocab.getty.edu/aat/300055726',
+									'type': 'Type'
+								}
+							],
+							'content': 'Volume 9 of “Green chemistry”',
+							'type': 'Name'
+						}
+					],
+					'type': 'LinguisticObject'
+				}
+			],
+			'referred_to_by': [
+				{
+					'classified_as': [
+						{
+							'_label': 'Note',
+							'id': 'http://vocab.getty.edu/aat/300027200',
+							'type': 'Type'
+						},
+						{
+							'_label': 'Brief Text',
+							'id': 'http://vocab.getty.edu/aat/300418049',
+							'type': 'Type'
+						}
+					],
+					'content': 'v. 24 (2005)',
+					'type': 'LinguisticObject'
+				}
+			],
+			'type': 'LinguisticObject'
+ 		}
+		self.assertEqual(issue, issue_expected)
 
 
 if __name__ == '__main__':

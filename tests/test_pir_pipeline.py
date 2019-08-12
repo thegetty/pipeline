@@ -5,39 +5,11 @@ import os.path
 import hashlib
 import json
 import uuid
+import pprint
 
-from tests import merge
+from tests import TestWriter
 from pipeline.projects.provenance import ProvenancePipeline
-
-class TestWriter():
-	'''
-	Deserialize the output of each resource and store in memory.
-	Merge data for multiple serializations of the same resource.
-	'''
-	def __init__(self):
-		self.output = {}
-		super().__init__()
-
-	def __call__(self, data: dict, *args, **kwargs):
-		d = data['_OUTPUT']
-		dr = data['_ARCHES_MODEL']
-		if dr not in self.output:
-			self.output[dr] = {}
-		uu = data.get('uuid')
-		if not uu and 'uri' in data:
-			uu = hashlib.sha256(data['uri'].encode('utf-8')).hexdigest()
-			print(f'*** No UUID in top-level resource. Using a hash of top-level URI: {uu}')
-		if not uu:
-			uu = str(uuid.uuid4())
-			print(f'*** No UUID in top-level resource;')
-			print(f'*** Using an assigned UUID filename for the content: {uu}')
-		fn = '%s.json' % uu
-		data = json.loads(d)
-		if fn in self.output[dr]:
-			self.output[dr][fn] = merge(self.output[dr][fn], data)
-		else:
-			self.output[dr][fn] = data
-
+from pipeline.nodes.basic import Serializer, AddArchesModel
 
 class ProvenanceTestPipeline(ProvenancePipeline):
 	'''
@@ -46,6 +18,14 @@ class ProvenanceTestPipeline(ProvenancePipeline):
 	def __init__(self, writer, input_path, catalogs, auction_events, contents, **kwargs):
 		super().__init__(input_path, catalogs, auction_events, contents, **kwargs)
 		self.writer = writer
+
+	def serializer_nodes_for_model(self, model=None):
+		nodes = []
+		if model:
+			nodes.append(AddArchesModel(model=model))
+		nodes.append(Serializer(compact=False))
+		nodes.append(self.writer)
+		return nodes
 
 	def get_services(self):
 		services = super().get_services()
@@ -92,8 +72,7 @@ class TestProvenancePipelineOutput(unittest.TestCase):
 				debug=True
 		)
 		pipeline.run()
-		output = writer.output
-		return output
+		return writer.processed_output()
 
 	def verify_auction(self, a, event, idents):
 		got_events = {c['_label'] for c in a.get('part_of', [])}
@@ -141,7 +120,8 @@ class TestProvenancePipelineOutput(unittest.TestCase):
 		people_names = {o['_label'] for o in people.values()}
 		self.assertEqual(people_names, {'[Anonymous]', 'Gillemans', 'Vinckebooms'})
 
-		key_120, key_119 = sorted(auctions.keys())
+		key_119 = 'tag:getty.edu,2019:digital:pipeline:provenance:REPLACE-WITH-UUID#AUCTION,B-A139,LOT,0119,DATE,1774-05-31'
+		key_120 = 'tag:getty.edu,2019:digital:pipeline:provenance:REPLACE-WITH-UUID#AUCTION,B-A139,LOT,0120,DATE,1774-05-31'
 
 		auction_B_A139_0119 = auctions[key_119]
 		self.verify_auction(auction_B_A139_0119, event='B-A139', idents={'0119[a]', '0119[b]'})

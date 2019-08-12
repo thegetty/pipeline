@@ -10,6 +10,7 @@ import bonobo_sqlalchemy
 PROJECT_NAME = "knoedler"
 UID_TAG_PREFIX = f'tag:getty.edu,2019:digital:pipeline:{PROJECT_NAME}:REPLACE-WITH-UUID#'
 
+from pipeline.projects import PipelineBase
 from pipeline.nodes.basic import AddArchesModel, AddFieldNamesService, Serializer, deep_copy, Offset, Trace
 from pipeline.projects.knoedler.data import *
 from pipeline.projects.knoedler.linkedart import *
@@ -19,16 +20,15 @@ from pipeline.linkedart import make_la_person
 from settings import *
 import settings
 
-class Pipeline:
+class Pipeline(PipelineBase):
 	'''Bonobo-based pipeline for transforming Knoedler data into JSON-LD.'''
 	def __init__(self, output_path, **kwargs):
-		self.output_chain = None
+		self.project_name = 'knoedler'
 		self.graph = None
 		self.models = kwargs.get('models', settings.arches_models)
 		self.pack_size = kwargs.get('pack_size')
 		self.limit = kwargs.get('limit')
 		self.debug = kwargs.get('debug', False)
-		self.pipeline_service_files_path = kwargs.get('pipeline_service_files_path', settings.pipeline_service_files_path)
 
 		if self.debug:
 			self.SRLZ = Serializer(compact=False)
@@ -43,16 +43,11 @@ class Pipeline:
 	# Set up environment
 	def get_services(self):
 		'''Return a `dict` of named services available to the bonobo pipeline.'''
-		services = {
-			'trace_counter': itertools.count(),
+		services = super().get_services()
+		services.update({
 			'gpi': create_engine(gpi_engine),
 			'raw': create_engine(raw_engine)
-		}
-		
-		p = pathlib.Path(self.pipeline_service_files_path)
-		for file in p.rglob('*.json'):
-			with open(file, 'r') as f:
-				services[file.stem] = json.load(f)
+		})
 		return services
 
 	def add_sales(self, graph):

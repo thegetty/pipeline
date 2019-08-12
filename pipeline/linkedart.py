@@ -21,6 +21,22 @@ def get_crom_object(data: dict):
 
 class MakeLinkedArtRecord:
 	def set_properties(self, data, thing):
+		for notedata in data.get('referred_to_by', []):
+			if isinstance(notedata, tuple):
+				content, itype = notedata
+				if itype is not None:
+					if isinstance(itype, type):
+						note = itype(content=content)
+					elif isinstance(itype, object):
+						note = itype
+						note.content = content
+					else:
+						note = vocab.Note(content=content)
+						note.classified_as = itype
+			else:
+				note = vocab.Note(content=notedata)
+			thing.referred_to_by = note
+
 		for identifier in data.get('identifiers', []):
 			if isinstance(identifier, tuple):
 				content, itype = identifier
@@ -138,6 +154,11 @@ class MakeLinkedArtLinguisticObject(MakeLinkedArtRecord):
 			else:
 				indexing = c
 			thing.about = indexing
+
+		parents = data.get('part_of', [])
+		for parent_data in parents:
+			parent = get_crom_object(parent_data)
+			thing.part_of = parent
 
 
 class MakeLinkedArtHumanMadeObject(MakeLinkedArtRecord):
@@ -414,7 +435,7 @@ def make_la_place(data: dict):
 		parent_data = make_la_place(parent_data)
 		parent = get_crom_object(parent_data)
 		label = f'{label}, {parent._label}'
-		
+
 	placeargs = {'label': label}
 	if data.get('uri'):
 		placeargs['ident'] = data['uri']

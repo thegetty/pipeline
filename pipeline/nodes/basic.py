@@ -10,6 +10,7 @@ import functools
 import itertools
 from contextlib import suppress
 from pipeline.util.cleaners import date_cleaner
+from cromulent import model
 
 # ~~~~ Core Functions ~~~~
 
@@ -209,36 +210,6 @@ class Trace(Configurable):
 			thing['__trace_%d_%d' % (id, seq)] = formatted
 		return thing
 
-
-### UUID Cache to be factored out
-
-@use('uuid_cache')
-def add_uuid(thing: dict, uuid_cache=None):
-	if 'uuid' not in thing:
-		# Need access to select from the uuid_cache
-		uid = thing['uid']
-		uuid = get_or_set_uuid(uid, uuid_cache)
-		thing['uuid'] = uuid
-	return thing
-
-@functools.lru_cache(maxsize=128000)
-def get_or_set_uuid(uid, uuid_cache):
-	with Exclusive(uuid_cache):
-		s = 'SELECT uuid FROM mapping WHERE key = :uid'
-		res = uuid_cache.execute(s, uid=uid)
-		row = res.fetchone()
-		if row is None:
-			uu = str(uuid.uuid4())
-			c = 'INSERT OR IGNORE INTO mapping (key, uuid) VALUES (:uid, :uuid)'
-			uuid_cache.execute(c, uid, uu)
-			res = uuid_cache.execute(s, uid=uid)
-			row = res.fetchone()
-			if row is None:
-				raise Exception('Failed to add and access a new UUID for key %r' % (uid,))
-			return uu
-		else:
-			uu = row[0]
-		return uu	
 
 ### Linked Art related functions
 

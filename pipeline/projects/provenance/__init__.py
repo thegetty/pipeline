@@ -21,7 +21,6 @@ from contextlib import suppress
 import inspect
 
 import timeit
-import urllib.parse
 from sqlalchemy import create_engine
 
 import graphviz
@@ -31,9 +30,11 @@ from bonobo.nodes import Limit
 
 import settings
 from cromulent import model, vocab
+from pipeline.projects import PipelineBase
+from pipeline.projects.provenance.util import *
 from pipeline.util import RecursiveExtractKeyedValue, ExtractKeyedValue, ExtractKeyedValues, \
 			MatchingFiles, identity, implode_date, timespan_before, timespan_after, \
-			replace_key_pattern, strip_key_prefix
+			replace_key_pattern, strip_key_prefix, timespan_from_outer_bounds
 from cromulent.extract import extract_physical_dimensions, extract_monetary_amount
 from pipeline.util.cleaners import \
 			parse_location, \
@@ -60,63 +61,9 @@ from pipeline.nodes.basic import \
 			Trace
 from pipeline.util.rewriting import rewrite_output_files, JSONValueRewriter
 
-UID_TAG_PREFIX = 'tag:getty.edu,2019:digital:pipeline:REPLACE-WITH-UUID#'
-PROBLEMATIC_RECORD_URI = 'tag:getty.edu,2019:digital:pipeline:ProblematicRecord'
+PROBLEMATIC_RECORD_URI = 'tag:getty.edu,2019:digital:pipeline:provenance:ProblematicRecord'
 
 #mark - utility functions and classes
-
-def pir_uri(*values):
-	'''Convert a set of identifying `values` into a URI'''
-	if values:
-		suffix = ','.join([urllib.parse.quote(str(v)) for v in values])
-		return UID_TAG_PREFIX + suffix
-	else:
-		suffix = str(uuid.uuid4())
-		return UID_TAG_PREFIX + suffix
-
-def filter_empty_people(*people):
-	'''Yield only the `people` dicts that have relevant properties set'''
-	for p in people:
-		keys = set(p.keys())
-		data_keys = keys - {
-			'_CROM_FACTORY',
-			'_LOD_OBJECT',
-			'pi_record_no',
-			'star_rec_no',
-			'persistent_puid',
-			'parent_data'
-		}
-		d = {k: p[k] for k in data_keys if p[k] and p[k] != '0'}
-		if d:
-			yield p
-
-def add_pir_record_ids(data, parent):
-	'''Copy identifying key-value pairs from `parent` to `data`, returning `data`'''
-	for p in ('pi_record_no', 'persistent_puid'):
-		data[p] = parent.get(p)
-	return data
-
-def object_key(data):
-	'''
-	Returns a 3-tuple of (catalog number, lot number, sale date) that identify an object
-	from a sales record, extracted from properties of the supplied `data` dict.
-	'''
-	cno = data['catalog_number']
-	lno = data['lot_number']
-	date = implode_date(data, 'lot_sale_')
-	return (cno, lno, date)
-
-def object_uri(data):
-	key = object_key(data)
-	return pir_uri('OBJECT', *key)
-
-def add_pir_object_uri(data, parent):
-	'''
-	Set 'uri' keys in `data` based on its identifying properties, returning `data`.
-	'''
-	add_pir_record_ids(data, parent)
-	data['uri'] = object_uri(parent)
-	return data
 
 def auction_event_for_catalog_number(catalog_number):
 	'''
@@ -137,34 +84,6 @@ def add_auction_event(data):
 	data['uri'] = uri
 	add_crom_data(data=data, what=auction)
 	yield data
-
-def timespan_from_outer_bounds(begin=None, end=None):
-	'''
-	Return a `TimeSpan` based on the (optional) `begin` and `end` date strings.
-
-	If both `begin` and `end` are `None`, returns `None`.
-	'''
-	if begin or end:
-		ts = model.TimeSpan(ident='')
-		if begin is not None:
-			try:
-				if not isinstance(begin, datetime.datetime):
-					begin = dateutil.parser.parse(begin)
-				begin = begin.strftime("%Y-%m-%dT%H:%M:%SZ")
-				ts.begin_of_the_begin = begin
-			except ValueError:
-				print(f'*** failed to parse begin date: {begin}')
-				raise
-		if end is not None:
-			try:
-				if not isinstance(end, datetime.datetime):
-					end = dateutil.parser.parse(end)
-				end = end.strftime("%Y-%m-%dT%H:%M:%SZ")
-				ts.end_of_the_end = end
-			except ValueError:
-				print(f'*** failed to parse end date: {end}')
-		return ts
-	return None
 
 #mark - Places
 
@@ -329,7 +248,11 @@ class AddAuctionOfLot(Configurable):
 	def set_lot_date(lot, auction_data):
 		'''Associate a timespan with the auction lot.'''
 		date = implode_date(auction_data, 'lot_sale_')
-		bounds = map(lambda v: v.strftime("%Y-%m-%dT%H:%M:%SZ"), date_parse(date, delim='-'))
+		dates = date_parse(date, delim='-')
+		if dates:
+			bounds = map(lambda v: v.strftime("%Y-%m-%dT%H:%M:%SZ"), dates)
+		else:
+			bounds = []
 		if bounds:
 			ts = timespan_from_outer_bounds(*bounds)
 			ts.identified_by = model.Name(ident='', content=date)
@@ -380,6 +303,12 @@ class AddAuctionOfLot(Configurable):
 
 	def __call__(self, data, auction_houses, auction_locations, problematic_records):
 		'''Add modeling data for the auction of a lot of objects.'''
+		ask_price = data.get('ask_price', {}).get('ask_price')
+		if ask_price:
+			# if there is an asking price/currency, it's a direct sale, not an auction;
+			# filter these out from subsequent modeling of auction lots.
+			return
+		
 		auction_data = data['auction_of_lot']
 		lot_object_key = object_key(auction_data)
 		cno, lno, date = lot_object_key
@@ -391,13 +320,12 @@ class AddAuctionOfLot(Configurable):
 		lot = vocab.Auction(ident=data['uri'])
 		lot._label = f'Auction of Lot {cno} {shared_lot_number} ({date})'
 
-		for pcno, plno, pdate, problem in problematic_records['lots']:
+		for problem_key, problem in problematic_records.get('lots', []):
 			# TODO: this is inefficient, but will probably be OK so long as the number
 			#       of problematic records is small. We do it this way because we can't
 			#       represent a tuple directly as a JSON dict key, and we don't want to
 			#       have to do post-processing on the services JSON files after loading.
-			problem_key = (pcno, plno, pdate)
-			if problem_key == lot_object_key:
+			if tuple(problem_key) == lot_object_key:
 				note = model.LinguisticObject(content=problem)
 				note.classified_as = vocab.instances["brief text"]
 				note.classified_as = model.Type(
@@ -415,7 +343,9 @@ class AddAuctionOfLot(Configurable):
 		tx_uri = AddAuctionOfLot.transaction_uri_for_lot(auction_data, data.get('price', []))
 		tx = vocab.Procurement(ident=tx_uri)
 		lot.caused = tx
-		tx_data = {'_date': lot.timespan}
+		tx_data = {}
+		with suppress(AttributeError):
+			tx_data['_date'] = lot.timespan
 		data['_procurement_data'] = add_crom_data(data=tx_data, what=tx)
 
 		add_crom_data(data=data, what=lot)
@@ -663,35 +593,24 @@ class TrackLotSizes(Configurable):
 
 #mark - Auction of Lot - Physical Object
 
-def genre_instance(value):
+def genre_instance(value, vocab_instance_map):
 	'''Return the appropriate type instance for the supplied genre name'''
 	if value is None:
 		return None
 	value = value.lower()
 
-	# TODO: are these OK AAT instances for these genres?
-	ANIMALS = model.Type(ident='http://vocab.getty.edu/aat/300249395', label='Animals')
-	HISTORY = model.Type(ident='http://vocab.getty.edu/aat/300033898', label='History')
-	MAPPING = { # TODO: can this be refactored somewhere?
-		'animals': ANIMALS,
-		'tiere': ANIMALS,
-		'stilleben': vocab.instances['style still life'],
-		'still life': vocab.instances['style still life'],
-		'portraits': vocab.instances['style portrait'],
-		'porträt': vocab.instances['style portrait'],
-		'historie': HISTORY,
-		'history': HISTORY,
-		'landscape': vocab.instances['style landscape'],
-		'landschaft': vocab.instances['style landscape'],
-	}
-	return MAPPING.get(value)
+	instance_name = vocab_instance_map.get(value)
+	if instance_name:
+		instance = vocab.instances.get(instance_name)
+		if not instance:
+			print(f'*** No genre instance available for {instance_name!r} in vocab_instance_map')
+		return instance
+	return None
 
-def populate_destruction_events(data, note):
+def populate_destruction_events(data, note, destruction_types_map):
 	hmo = get_crom_object(data)
 	title = data.get('title')
-	DESTRUCTION_METHODS = { # TODO: can this be refactored somewhere?
-		'fire': model.Type(ident='http://vocab.getty.edu/aat/300068986', label='Fire'),
-	}
+
 	r = re.compile(r'Destroyed(?: (?:by|during) (\w+))?(?: in (\d{4})[.]?)?')
 	m = r.search(note)
 	if m:
@@ -707,14 +626,17 @@ def populate_destruction_events(data, note):
 
 		if method:
 			with suppress(KeyError, AttributeError):
-				type = DESTRUCTION_METHODS[method.lower()]
+				type_name = destruction_types_map[method.lower()]
+				type = vocab.instances[type_name]
 				event = model.Event(label=f'{method.capitalize()} event causing the destruction of “{title}”')
 				event.classified_as = type
 				d.caused_by = event
 	
 @use('post_sale_map')
 @use('unique_catalogs')
-def populate_object(data, post_sale_map, unique_catalogs):
+@use('vocab_instance_map')
+@use('destruction_types_map')
+def populate_object(data, post_sale_map, unique_catalogs, vocab_instance_map, destruction_types_map):
 	'''Add modeling for an object described by a sales record'''
 	hmo = get_crom_object(data)
 	parent = data['parent_data']
@@ -740,7 +662,7 @@ def populate_object(data, post_sale_map, unique_catalogs):
 	vi = model.VisualItem()
 	if title:
 		vi._label = f'Visual work of “{title}”'
-	genre = genre_instance(data.get('genre'))
+	genre = genre_instance(data.get('genre'), vocab_instance_map)
 	if genre:
 		vi.classified_as = genre
 	hmo.shows = vi
@@ -750,7 +672,7 @@ def populate_object(data, post_sale_map, unique_catalogs):
 		loc = location.get('geog')
 		if loc:
 			if 'Destroyed ' in loc:
-				populate_destruction_events(data, loc)
+				populate_destruction_events(data, loc, destruction_types_map)
 			else:
 				current = parse_location_name(loc, uri_base=UID_TAG_PREFIX)
 				place_data = make_la_place(current)
@@ -789,7 +711,7 @@ def populate_object(data, post_sale_map, unique_catalogs):
 
 	notes = parent.get('auction_of_lot', {}).get('lot_notes')
 	if notes and notes.startswith('Destroyed'):
-		populate_destruction_events(data, notes)
+		populate_destruction_events(data, notes, destruction_types_map)
 
 	notes = data.get('hand_note', [])
 	for note in notes:
@@ -834,28 +756,13 @@ def populate_object(data, post_sale_map, unique_catalogs):
 # 			print(f'No dimension data was parsed from the dimension statement: {dimstr}')
 	return data
 
-def add_object_type(data):
+@use('vocab_type_map')
+def add_object_type(data, vocab_type_map):
 	'''Add appropriate type information for an object based on its 'object_type' name'''
-	TYPES = { # TODO: can this be refactored somewhere?
-		'dessin': vocab.Drawing,
-		'drawing': vocab.Drawing,
-		'émail': vocab.Enamel,
-		'enamel': vocab.Enamel,
-		'gemälde': vocab.Painting,
-		'miniatur': vocab.Miniature,
-		'miniature': vocab.Miniature,
-		'painting': vocab.Painting,
-		'peinture': vocab.Painting,
-		'sculpture': vocab.Sculpture,
-		'skulptur': vocab.Sculpture,
-		'tapestry': vocab.Tapestry,
-		'tapisserie': vocab.Tapestry,
-		'zeichnung': vocab.Drawing,
-		# TODO: these are the most common, but more should be added
-	}
-	typestring = data.get('object_type', '').lower()
-	if typestring in TYPES:
-		otype = TYPES[typestring]
+	typestring = data.get('object_type', '')
+	if typestring in vocab_type_map:
+		clsname = vocab_type_map.get(typestring, None)
+		otype = getattr(vocab, clsname)
 		add_crom_data(data=data, what=otype(ident=data['uri']))
 	else:
 		print(f'*** No object type for {typestring!r}')
@@ -950,9 +857,6 @@ def add_physical_catalog_objects(data):
 @use('unique_catalogs')
 def add_physical_catalog_owners(data, location_codes, unique_catalogs):
 	'''Add information about the ownership of a physical copy of an auction catalog'''
-	# TODO: Add information about the current owner of the physical catalog copy
-	# TODO: are the values of data['owner_code'] mapped somewhere?
-	
 	# Add the URI of this physical catalog to `unique_catalogs`. This data will be used
 	# later to figure out which catalogs can be uniquely identified by a catalog number
 	# and owner code (e.g. for owners who do not have multiple copies of a catalog).
@@ -1002,10 +906,14 @@ def populate_auction_catalog(data):
 
 #mark - Provenance Pipeline class
 
-class ProvenancePipeline:
+class ProvenancePipeline(PipelineBase):
 	'''Bonobo-based pipeline for transforming Provenance data from CSV into JSON-LD.'''
 	def __init__(self, input_path, catalogs, auction_events, contents, **kwargs):
-		self.output_chain = None
+		vocab.register_instance('fire', {'parent': model.Type, 'id': '300068986', 'label': 'Fire'})
+		vocab.register_instance('animal', {'parent': model.Type, 'id': '300249395', 'label': 'Animal'})
+		vocab.register_instance('history', {'parent': model.Type, 'id': '300033898', 'label': 'History'})
+		
+		self.project_name = 'provenance'
 		self.graph_0 = None
 		self.graph_1 = None
 		self.graph_2 = None
@@ -1019,7 +927,6 @@ class ProvenancePipeline:
 		self.limit = kwargs.get('limit')
 		self.debug = kwargs.get('debug', False)
 		self.input_path = input_path
-		self.pipeline_service_files_path = kwargs.get('pipeline_service_files_path', settings.pipeline_service_files_path)
 
 		fs = bonobo.open_fs(input_path)
 		with fs.open(self.catalogs_header_file, newline='') as csvfile:
@@ -1032,60 +939,29 @@ class ProvenancePipeline:
 			r = csv.reader(csvfile)
 			self.contents_headers = next(r)
 
-		if self.debug:
-			self.serializer	= Serializer(compact=False)
-			self.writer		= None
-			# self.writer	= ArchesWriter()
-			sys.stderr.write("In DEBUGGING mode\n")
-		else:
-			self.serializer	= Serializer(compact=True)
-			self.writer		= None
-			# self.writer	= ArchesWriter()
-
 	# Set up environment
 	def get_services(self):
 		'''Return a `dict` of named services available to the bonobo pipeline.'''
-		services = {
+		services = super().get_services()
+		services.update({
 			'lot_counter': Counter(),
 			'unique_catalogs': {},
 			'post_sale_map': {},
 			'auction_houses': {},
 			'auction_locations': {},
-			'trace_counter': itertools.count(),
-			'gpi': create_engine(settings.gpi_engine),
-			'aat': create_engine(settings.aat_engine),
-			'uuid_cache': create_engine(settings.uuid_cache_engine),
-			'fs.data.pir': bonobo.open_fs(self.input_path)
-		}
-		
-		p = pathlib.Path(self.pipeline_service_files_path)
-		for file in p.rglob('*.json'):
-			with open(file, 'r') as f:
-				services[file.stem] = json.load(f)
+		})
 		return services
-
-	def add_serialization_chain(self, graph, input_node):
-		'''Add serialization of the passed transformer node to the bonobo graph.'''
-		if self.writer is not None:
-			graph.add_chain(
-				self.serializer,
-				self.writer,
-				_input=input_node
-			)
-		else:
-			sys.stderr.write('*** No serialization chain defined\n')
 
 	def add_physical_catalog_owners_chain(self, graph, catalogs, serialize=True):
 		'''Add modeling of physical copies of auction catalogs.'''
 		groups = graph.add_chain(
 			ExtractKeyedValue(key='_owner'),
 			MakeLinkedArtOrganization(),
-			AddArchesModel(model=self.models['Group']),
 			_input=catalogs.output
 		)
 		if serialize:
 			# write SALES data
-			self.add_serialization_chain(graph, groups.output)
+			self.add_serialization_chain(graph, groups.output, model=self.models['Group'])
 		return groups
 
 	def add_physical_catalogs_chain(self, graph, records, serialize=True):
@@ -1095,12 +971,11 @@ class ProvenancePipeline:
 			add_auction_catalog,
 			add_physical_catalog_objects,
 			add_physical_catalog_owners,
-			AddArchesModel(model=self.models['HumanMadeObject']),
 			_input=records.output
 		)
 		if serialize:
 			# write SALES data
-			self.add_serialization_chain(graph, catalogs.output)
+			self.add_serialization_chain(graph, catalogs.output, model=self.models['HumanMadeObject'])
 		return catalogs
 
 	def add_catalog_linguistic_objects(self, graph, events, serialize=True):
@@ -1108,12 +983,11 @@ class ProvenancePipeline:
 		los = graph.add_chain(
 			ExtractKeyedValue(key='_catalog'),
 			populate_auction_catalog,
-			AddArchesModel(model=self.models['LinguisticObject']),
 			_input=events.output
 		)
 		if serialize:
 			# write SALES data
-			self.add_serialization_chain(graph, los.output)
+			self.add_serialization_chain(graph, los.output, model=self.models['LinguisticObject'])
 		return los
 
 	def add_auction_events_chain(self, graph, records, serialize=True):
@@ -1152,36 +1026,33 @@ class ProvenancePipeline:
 			add_auction_event,
 			add_auction_houses,
 			populate_auction_event,
-			AddArchesModel(model=self.models['Event']),
 			_input=records.output
 		)
 		if serialize:
 			# write SALES data
-			self.add_serialization_chain(graph, auction_events.output)
+			self.add_serialization_chain(graph, auction_events.output, model=self.models['Event'])
 		return auction_events
 
 	def add_procurement_chain(self, graph, acquisitions, serialize=True):
 		'''Add modeling of the procurement event of an auction of a lot.'''
 		p = graph.add_chain(
 			ExtractKeyedValues(key='_procurements'),
-			AddArchesModel(model=self.models['Procurement']),
 			_input=acquisitions.output
 		)
 		if serialize:
 			# write SALES data
-			self.add_serialization_chain(graph, p.output)
+			self.add_serialization_chain(graph, p.output, model=self.models['Procurement'])
 	
 	def add_buyers_sellers_chain(self, graph, acquisitions, serialize=True):
 		'''Add modeling of the buyers, bidders, and sellers involved in an auction.'''
 		for role in ('buyer', 'seller'):
 			p = graph.add_chain(
 				ExtractKeyedValues(key=role),
-				AddArchesModel(model=self.models['Person']),
 				_input=acquisitions.output
 			)
 			if serialize:
 				# write SALES data
-				self.add_serialization_chain(graph, p.output)
+				self.add_serialization_chain(graph, p.output, model=self.models['Person'])
 
 	def add_acquisitions_chain(self, graph, sales, serialize=True):
 		'''Add modeling of the acquisitions and bidding on lots being auctioned.'''
@@ -1189,20 +1060,15 @@ class ProvenancePipeline:
 			add_acquisition_or_bidding,
 			_input=sales.output
 		)
-		_acqs1 = graph.add_chain(
-			AddArchesModel(model=self.models['Activity']),
-			_input=acqs.output
-		)
 		orgs = graph.add_chain(
 			ExtractKeyedValue(key='_final_org'),
-			AddArchesModel(model=self.models['Group']),
 			_input=acqs.output
 		)
 		
 		if serialize:
 			# write SALES data
-			self.add_serialization_chain(graph, _acqs1.output)
-			self.add_serialization_chain(graph, orgs.output)
+			self.add_serialization_chain(graph, acqs.output, model=self.models['Activity'])
+			self.add_serialization_chain(graph, orgs.output, model=self.models['Group'])
 		return acqs
 
 	def add_sales_chain(self, graph, records, serialize=True):
@@ -1378,12 +1244,11 @@ class ProvenancePipeline:
 						'ask_price_so')},
 			}),
 			AddAuctionOfLot(),
-			AddArchesModel(model=self.models['Activity']),
 			_input=records.output
 		)
 		if serialize:
 			# write SALES data
-			self.add_serialization_chain(graph, sales.output)
+			self.add_serialization_chain(graph, sales.output, model=self.models['Activity'])
 		return sales
 
 	def add_single_object_lot_tracking_chain(self, graph, sales):
@@ -1400,14 +1265,13 @@ class ProvenancePipeline:
 			add_object_type,
 			populate_object,
 			MakeLinkedArtHumanMadeObject(),
-			AddArchesModel(model=self.models['HumanMadeObject']),
 			add_pir_artists,
 			_input=sales.output
 		)
 		
 		if serialize:
 			# write OBJECTS data
-			self.add_serialization_chain(graph, objects.output)
+			self.add_serialization_chain(graph, objects.output, model=self.models['HumanMadeObject'])
 
 		return objects
 
@@ -1416,12 +1280,11 @@ class ProvenancePipeline:
 		places = graph.add_chain(
 			ExtractKeyedValues(key='_locations'),
 			RecursiveExtractKeyedValue(key='part_of'),
-			AddArchesModel(model=self.models['Place']),
 			_input=auction_events.output
 		)
 		if serialize:
 			# write OBJECTS data
-			self.add_serialization_chain(graph, places.output)
+			self.add_serialization_chain(graph, places.output, model=self.models['Place'])
 		return places
 
 	def add_auction_houses_chain(self, graph, auction_events, serialize=True):
@@ -1429,25 +1292,22 @@ class ProvenancePipeline:
 		houses = graph.add_chain(
 			ExtractKeyedValues(key='auction_house'),
 			MakeLinkedArtAuctionHouseOrganization(),
-			AddArchesModel(model=self.models['Group']),
 			_input=auction_events.output
 		)
 		if serialize:
 			# write OBJECTS data
-			self.add_serialization_chain(graph, houses.output)
+			self.add_serialization_chain(graph, houses.output, model=self.models['Group'])
 		return houses
 
 	def add_people_chain(self, graph, objects, serialize=True):
 		'''Add transformation of artists records to the bonobo pipeline.'''
-		model_id = self.models.get('Person', 'XXX-Person-Model')
 		people = graph.add_chain(
 			ExtractKeyedValues(key='_artists'),
-			AddArchesModel(model=model_id),
 			_input=objects.output
 		)
 		if serialize:
 			# write PEOPLE data
-			self.add_serialization_chain(graph, people.output)
+			self.add_serialization_chain(graph, people.output, model=self.models['Person'])
 		return people
 
 	def _construct_graph(self, single_graph=False):
@@ -1470,13 +1330,13 @@ class ProvenancePipeline:
 		component2 = [graph0] if single_graph else [graph2]
 		for g in component1:
 			physical_catalog_records = g.add_chain(
-				MatchingFiles(path='/', pattern=self.catalogs_files_pattern, fs='fs.data.pir'),
-				CurriedCSVReader(fs='fs.data.pir', limit=self.limit),
+				MatchingFiles(path='/', pattern=self.catalogs_files_pattern, fs='fs.data.provenance'),
+				CurriedCSVReader(fs='fs.data.provenance', limit=self.limit),
 			)
 
 			auction_events_records = g.add_chain(
-				MatchingFiles(path='/', pattern=self.auction_events_files_pattern, fs='fs.data.pir'),
-				CurriedCSVReader(fs='fs.data.pir', limit=self.limit),
+				MatchingFiles(path='/', pattern=self.auction_events_files_pattern, fs='fs.data.provenance'),
+				CurriedCSVReader(fs='fs.data.provenance', limit=self.limit),
 			)
 
 			catalogs = self.add_physical_catalogs_chain(g, physical_catalog_records, serialize=True)
@@ -1486,13 +1346,10 @@ class ProvenancePipeline:
 			_ = self.add_auction_houses_chain(g, auction_events, serialize=True)
 			_ = self.add_places_chain(g, auction_events, serialize=True)
 
-		if not single_graph:
-			self.output_chain = None
-
 		for g in component2:
 			contents_records = g.add_chain(
-				MatchingFiles(path='/', pattern=self.contents_files_pattern, fs='fs.data.pir'),
-				CurriedCSVReader(fs='fs.data.pir', limit=self.limit)
+				MatchingFiles(path='/', pattern=self.contents_files_pattern, fs='fs.data.provenance'),
+				CurriedCSVReader(fs='fs.data.provenance', limit=self.limit)
 			)
 			sales = self.add_sales_chain(g, contents_records, serialize=True)
 			_ = self.add_single_object_lot_tracking_chain(g, sales)
@@ -1531,8 +1388,6 @@ class ProvenancePipeline:
 	def run(self, services=None, **options):
 		'''Run the Provenance bonobo pipeline.'''
 		sys.stderr.write("- Limiting to %d records per file\n" % (self.limit,))
-		sys.stderr.write("- Using serializer: %r\n" % (self.serializer,))
-		sys.stderr.write("- Using writer: %r\n" % (self.writer,))
 		if not services:
 			services = self.get_services(**options)
 
@@ -1557,29 +1412,16 @@ class ProvenanceFilePipeline(ProvenancePipeline):
 	'''
 	def __init__(self, input_path, catalogs, auction_events, contents, **kwargs):
 		super().__init__(input_path, catalogs, auction_events, contents, **kwargs)
-		self.use_single_serializer = False
-		self.output_chain = None
 		debug = kwargs.get('debug', False)
-		output_path = kwargs.get('output_path')
+		self.output_path = kwargs.get('output_path')
 
-		if debug:
-			self.serializer	= Serializer(compact=False)
-			self.writer		= MergingFileWriter(directory=output_path, partition_directories=True)
-			# self.writer	= ArchesWriter()
+	def serializer_nodes_for_model(self, model=None):
+		nodes = []
+		if self.debug:
+			nodes.append(MergingFileWriter(directory=self.output_path, partition_directories=True, serialize=True, compact=False, model=model))
 		else:
-			self.serializer	= Serializer(compact=True)
-			self.writer		= MergingFileWriter(directory=output_path, partition_directories=True)
-			# self.writer	= ArchesWriter()
-
-	def add_serialization_chain(self, graph, input_node):
-		'''Add serialization of the passed transformer node to the bonobo graph.'''
-		if self.use_single_serializer:
-			if self.output_chain is None:
-				self.output_chain = graph.add_chain(self.serializer, self.writer, _input=None)
-
-			graph.add_chain(identity, _input=input_node, _output=self.output_chain.input)
-		else:
-			super().add_serialization_chain(graph, input_node)
+			nodes.append(MergingFileWriter(directory=self.output_path, partition_directories=True, serialize=True, compact=True, model=model))
+		return nodes
 
 	def merge_post_sale_objects(self, counter, post_map):
 		singles = {k for k in counter if counter[k] == 1}
@@ -1659,109 +1501,3 @@ class ProvenanceFilePipeline(ProvenancePipeline):
 		self.merge_post_sale_objects(counter, post_map)
 		print(f'>>> {len(post_map)} post sales records')
 		print('Total runtime: ', timeit.default_timer() - start)  
-		
-
-class SalesTree:
-	'''
-	This class is used to represent the repeated sales of objects in provenance data.
-	It stores a graph of trees where each node is a lot sale, and edges connect sales
-	of the same object over time.
-	
-	The `post_sale_map` data that is generated during the pipeline run is used to identify
-	lots which contain just a single object. When this data indicates that a single object
-	was sold multiple times, links are added to this `SalesTree` by a call to `add_edge`
-	using the lot keys.
-	
-	Subsequently, `canonical_key` is used to return a single key for each sales record
-	that belongs to a connected component in the `SalesTree` graph. This canonical key
-	is used in a post-processing phase (based on the `post_sale_rewrite_map` file) that
-	rewrites many URLs in the output data which all identify a single object to a single
-	URL.
-	'''
-	def __init__(self):
-		self.counter = itertools.count()
-		self.nodes = {}
-		self.nodes_rev = {}
-		self.outgoing_edges = {}
-		self.incoming_edges = {}
-
-	def add_node(self, node):
-		if node not in self.nodes:
-			i = next(self.counter)
-			self.nodes[node] = i
-			self.nodes_rev[i] = node
-		i = self.nodes[node]
-		return i
-
-	def largest_component_canonical_keys(self, limit=None):
-		components = Counter()
-		for src in self.nodes.keys():
-			key, _ = self.canonical_key(src)
-			components[key] += 1
-		print(f'Post sales records connected component sizes (top {limit}):')
-		for key, count in components.most_common(limit):
-			uri = pir_uri('OBJECT', *key)
-			print(f'{count}\t{key!s:>40}\t\t{uri}')
-			yield key
-
-	def add_edge(self, src, dst):
-		i = self.add_node(src)
-		j = self.add_node(dst)
-		if i in self.outgoing_edges:
-			if self.outgoing_edges[i] == j:
-				print(f'*** re-asserted sale edge: {src!s:<40} -> {dst}')
-			else:
-				print(f'*** {src} already has an outgoing edge: {self.outgoing_edges[i]}')
-		self.outgoing_edges[i] = j
-		self.incoming_edges[j] = i
-
-	def __iter__(self):
-		for i in self.outgoing_edges.keys():
-			j = self.outgoing_edges[i]
-			src = self.nodes_rev[i]
-			dst = self.nodes_rev[j]
-			yield (src, dst)
-
-	@staticmethod
-	def load(f):
-		d = json.load(f)
-		g = SalesTree()
-		g.counter = itertools.count(d['next'])
-		g.nodes_rev = {int(i): tuple(n) for i, n in d['nodes'].items()}
-		g.nodes = {n: i for i, n in g.nodes_rev.items()}
-		g.outgoing_edges = {int(k): int(v) for k, v in d['outgoing'].items()}
-		g.incoming_edges = {v: k for k, v in g.outgoing_edges.items()}
-		return g
-
-	def dump(self, f):
-		nodes = {i: list(n) for n, i in self.nodes.items()}
-		d = {
-			'next': next(self.counter),
-			'nodes': nodes,
-			'outgoing': self.outgoing_edges,
-		}
-		json.dump(d, f)
-
-	def canonical_key(self, src):
-		key = src
-		steps = 0
-		seen = {key}
-		while True:
-			if key not in self.nodes:
-				break
-			i = self.nodes[key]
-			if i not in self.outgoing_edges:
-				break
-			j = self.outgoing_edges[i]
-			
-			parent = self.nodes_rev[j]
-			if parent == key:
-				print(f'*** Self-loop found in post sale data: {key!s:<40}')
-				break
-			if parent in seen:
-				print(f'*** Loop found in post sale data: {key!s:<40} -> {parent!s:<40}')
-				break
-			seen.add(parent)
-			key = parent
-			steps += 1
-		return key, steps

@@ -1,4 +1,3 @@
-import pprint
 import locale
 import re
 import calendar
@@ -6,7 +5,6 @@ from contextlib import contextmanager, suppress
 from datetime import datetime, timedelta
 # from pipeline.util import Dimension
 import urllib.parse
-from cromulent import model, vocab
 
 CIRCA = 5 # years
 CIRCA_D = timedelta(days=365*CIRCA)
@@ -168,20 +166,20 @@ def _parse_us_location(parts, *, uri_base):
 		# Not a recognized state, so fall back to just a general place
 		state_type = 'Place'
 		city_type = 'Place'
-	
+
 	country = {
 		'type': 'Country',
 		'name': country_name,
 		'uri': f'{uri_base}PLACE-COUNTRY-' + urllib.parse.quote(country_name),
 	}
-	
+
 	state = {
 		'type': state_type,
 		'name': state_name,
 		'uri': state_uri,
 		'part_of': country
 	}
-	
+
 	city = {
 		'type': city_type,
 		'name': city_name,
@@ -192,7 +190,7 @@ def _parse_us_location(parts, *, uri_base):
 	for current in (city, state, country):
 		for p in ('part_of', 'uri'):
 			if p in current and not current[p]:
-				del(current[p])
+				del current[p]
 
 	return city
 
@@ -231,7 +229,7 @@ def parse_location(*parts, uri_base=None, types=None):
 	'''
 	Takes a list of hierarchical place names, and returns a structure that can be passed
 	to `pipeline.linkedart.make_la_place`.
-	
+
 	If the iterable `types` is given, it supplies the type names of the associated names
 	(e.g. `('City', 'Country')`). Otherwise, heuristics are used to guide the parsing,
 	with the caveat that the final 
@@ -239,7 +237,7 @@ def parse_location(*parts, uri_base=None, types=None):
 	value = ', '.join(parts)
 	if uri_base is None:
 		uri_base = 'tag:getty.edu,2019:digital:pipeline:REPLACE-WITH-UUID#'
-	
+
 	if types:
 		current = None
 		uri_parts = []
@@ -257,7 +255,7 @@ def parse_location(*parts, uri_base=None, types=None):
 			}
 			for p in ('part_of', 'uri'):
 				if not current[p]:
-					del(current[p])
+					del current[p]
 		return current
 
 	current = None
@@ -317,14 +315,14 @@ def ymd_to_datetime(year, month, day, which="begin"):
 		try:
 			year = int(year)
 		except:
-			print("DATE CLEAN: year is %r; returning None" % year)
+			# print("DATE CLEAN: year is %r; returning None" % year)
 			return None
 
 	if not isinstance(month, int):
 		try:
 			month = int(month)
 		except:
-			print("DATE CLEAN: month is %r; continuing with %s" % (month, "earliest" if which=="begin" else "latest"))
+			# print("DATE CLEAN: month is %r; continuing with %s" % (month, "earliest" if which=="begin" else "latest"))
 			month = None
 
 	if not isinstance(day, int):

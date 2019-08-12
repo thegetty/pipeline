@@ -504,8 +504,6 @@ def make_la_sale(data: dict):
 	return add_crom_data(data=data, what=what)
 
 def make_la_inventory(data: dict):
-
-
 	what = vocab.Inventorying(ident=_uid_uri(data['uid']))
 	date = ymd_to_label(data['year'], data['month'], data['day'])
 	what._label = "Inventory taking for %s on %s" % (data['objects'][0]['label'], date)

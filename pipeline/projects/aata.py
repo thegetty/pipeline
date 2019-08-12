@@ -13,14 +13,15 @@ import iso639
 import lxml.etree
 from sqlalchemy import create_engine
 from langdetect import detect
+import urllib.parse
 
 import bonobo
 from bonobo.config import Configurable, Option, use
 from bonobo.constants import NOT_MODIFIED
-from bonobo.nodes import Limit
 
 import settings
 from cromulent import model, vocab
+from pipeline.projects import PipelineBase
 from pipeline.util import identity, ExtractKeyedValues, MatchingFiles
 from pipeline.io.file import MultiFileWriter, MergingFileWriter
 # from pipeline.io.arches import ArchesWriter
@@ -31,7 +32,6 @@ from pipeline.linkedart import \
 			make_la_person
 from pipeline.io.xml import CurriedXMLReader
 from pipeline.nodes.basic import \
-			add_uuid, \
 			AddArchesModel, \
 			CleanDateToSpan, \
 			Serializer
@@ -42,7 +42,18 @@ variantTitleIdentifier = vocab.Identifier # TODO: aat for variant titles?
 
 # utility functions
 
-def language_object_from_code(code):
+UID_TAG_PREFIX = 'tag:getty.edu,2019:digital:pipeline:aata:REPLACE-WITH-UUID#'
+
+def aata_uri(*values):
+	'''Convert a set of identifying `values` into a URI'''
+	if values:
+		suffix = ','.join([urllib.parse.quote(str(v)) for v in values])
+		return UID_TAG_PREFIX + suffix
+	else:
+		suffix = str(uuid.uuid4())
+		return UID_TAG_PREFIX + suffix
+
+def language_object_from_code(code, language_code_map):
 	'''
 	Given a three-letter language code (which are mostly drawn from ISO639-2, with some
 	exceptions), return a model.Language object for the corresponding language.
@@ -50,53 +61,27 @@ def language_object_from_code(code):
 	For example, `language_object_from_code('eng')` returns an object representing
 	the English language.
 	'''
-	languages = {
-		# TODO: there must be a better way to do this than keep a static mapping of languages
-		'chi': {'ident': 'http://vocab.getty.edu/aat/300388113', 'label': 'Chinese'},
-		'cro': {'ident': 'http://vocab.getty.edu/aat/300388185', 'label': 'Croatian'},
-		'cze': {'ident': 'http://vocab.getty.edu/aat/300388191', 'label': 'Czech'},
-		'dan': {'ident': 'http://vocab.getty.edu/aat/300388204', 'label': 'Danish'},
-		'nld': {'ident': 'http://vocab.getty.edu/aat/300388256', 'label': 'Dutch'},
-		'dut': {'ident': 'http://vocab.getty.edu/aat/300388256', 'label': 'Dutch'},
-		'eng': {'ident': 'http://vocab.getty.edu/aat/300388277', 'label': 'English'},
-		'gre': {'ident': 'http://vocab.getty.edu/aat/300388361', 'label': 'Greek'},
-		'fra': {'ident': 'http://vocab.getty.edu/aat/300388306', 'label': 'French'},
-		'fre': {'ident': 'http://vocab.getty.edu/aat/300388306', 'label': 'French'},
-		'geo': {'ident': 'http://vocab.getty.edu/aat/300388343', 'label': 'Georgian'},
-		'ger': {'ident': 'http://vocab.getty.edu/aat/300388344', 'label': 'German'},
-		'deu': {'ident': 'http://vocab.getty.edu/aat/300388344', 'label': 'German'},
-		'heb': {'ident': 'http://vocab.getty.edu/aat/300388401', 'label': 'Hebrew'},
-		'hun': {'ident': 'http://vocab.getty.edu/aat/300388770', 'label': 'Magyar (Hungarian) '},
-		'ita': {'ident': 'http://vocab.getty.edu/aat/300388474', 'label': 'Italian'},
-		'jpn': {'ident': 'http://vocab.getty.edu/aat/300388486', 'label': 'Japanese'},
-		'lat': {'ident': 'http://vocab.getty.edu/aat/300388693', 'label': 'Latin'},
-		'nor': {'ident': 'http://vocab.getty.edu/aat/300388992', 'label': 'Norwegian'},
-		'pol': {'ident': 'http://vocab.getty.edu/aat/300389109', 'label': 'Polish'},
-		'por': {'ident': 'http://vocab.getty.edu/aat/300389115', 'label': 'Portuguese'},
-		'rom': {'ident': 'http://vocab.getty.edu/aat/300389157', 'label': 'Romanian'},
-		'rus': {'ident': 'http://vocab.getty.edu/aat/300389168', 'label': 'Russian'},
-		'scr': {'ident': 'http://vocab.getty.edu/aat/300389248', 'label': 'Serbo-Croatian'},
-		'slo': {'ident': 'http://vocab.getty.edu/aat/300389290', 'label': 'Slovak'},
-		'slv': {'ident': 'http://vocab.getty.edu/aat/300389291', 'label': 'Slovenian'},
-		'spa': {'ident': 'http://vocab.getty.edu/aat/300389311', 'label': 'Spanish'},
-		'swe': {'ident': 'http://vocab.getty.edu/aat/300389336', 'label': 'Swedish'},
-		'tur': {'ident': 'http://vocab.getty.edu/aat/300389470', 'label': 'Turkish'},
-	}
 	try:
 		if code == 'unk': # TODO: verify that 'unk' is 'unknown' and can be skipped
 			return None
-		kwargs = languages[code]
-		return model.Language(**kwargs)
-	except KeyError:
-		if settings.DEBUG:
-			sys.stderr.write(f'*** No AAT link for language {code}\n')
+		if code in language_code_map:
+			language_name = language_code_map[code]
+			try:
+				return vocab.instances[language_name]
+			except KeyError:
+				if settings.DEBUG:
+					sys.stderr.write(f'*** No AAT language instance found: {language_name!r}\n')
+		else:
+			if settings.DEBUG:
+				sys.stderr.write(f'*** No AAT link for language {code!r}\n')
 	except Exception as e:
 		sys.stderr.write(f'*** language_object_from_code: {e}\n')
 		raise e
 
 # main article chain
 
-def make_aata_article_dict(e):
+@use('language_code_map')
+def make_aata_article_dict(e, language_code_map):
 	'''
 	Given an XML element representing an AATA record, extract information about the
 	"article" (this might be a book, chapter, journal article, etc.) including:
@@ -111,7 +96,7 @@ def make_aata_article_dict(e):
 	This information is returned in a single `dict`.
 	'''
 
-	data = _xml_extract_article(e)
+	data = _xml_extract_article(e, language_code_map)
 	aata_id = data['_aata_record_id']
 	organizations = list(_xml_extract_organizations(e, aata_id))
 	authors = list(_xml_extract_authors(e, aata_id))
@@ -142,7 +127,7 @@ def _gaia_authority_type(code):
 	else:
 		raise LookupError
 
-def _xml_extract_article(e):
+def _xml_extract_article(e, language_code_map):
 	'''Extract information about an "article" record XML element'''
 	doc_type = e.findtext('./record_desc_group/doc_type')
 	title = e.findtext('./title_group[title_type = "Analytic"]/title')
@@ -184,10 +169,9 @@ def _xml_extract_article(e):
 		classification = model.Type(label=label)
 		classification.identified_by = name
 
-		code = model.Identifier()
+		code = model.Identifier(content=cid)
 
 		code.classified_as = code_type
-		code.content = cid
 		classification.identified_by = code
 		classifications.append(classification)
 
@@ -203,17 +187,16 @@ def _xml_extract_article(e):
 		index = itype(label=label)
 		index.identified_by = name
 
-		code = model.Identifier()
+		code = model.Identifier(content=aid)
 
 		code.classified_as = code_type
-		code.content = aid
 		index.identified_by = code
 		indexings.append(index)
 
 	if title is not None and len(doc_langs) == 1:
 		code = doc_langs.pop()
 		try:
-			language = language_object_from_code(code)
+			language = language_object_from_code(code, language_code_map)
 			if language is not None:
 				title = (title, language)
 		except:
@@ -232,7 +215,8 @@ def _xml_extract_article(e):
 		'qualified_identifiers': qualified_identifiers,
 		'classifications': classifications,
 		'indexing': indexings,
-		'uid': uid
+		'uid': uid,
+		'uri': aata_uri(uid),
 	}
 
 def _xml_extract_abstracts(e, aata_id):
@@ -274,6 +258,7 @@ def _xml_extract_organizations(e, aata_id):
 				name = aid.findtext('display_term')
 				auth_id = aid.findtext('gaia_auth_id')
 				auth_type = aid.findtext('gaia_auth_type')
+				uid = 'AATA-Org-%s-%s-%s' % (auth_type, auth_id, name)
 				yield {
 					'_aata_record_id': aata_id,
 					'_aata_record_organization_seq': i,
@@ -283,7 +268,8 @@ def _xml_extract_organizations(e, aata_id):
 					'names': [(name,)],
 					'object_type': _gaia_authority_type(auth_type),
 					'identifiers': [vocab.LocalNumber(ident='', content=auth_id)],
-					'uid': 'AATA-Org-%s-%s-%s' % (auth_type, auth_id, name)
+					'uid': uid,
+					'uri': aata_uri(uid),
 				}
 			else:
 				print('*** No organization_id found for record %s:' % (o,))
@@ -317,7 +303,8 @@ def _xml_extract_authors(e, aata_id):
 						'names': [(name,)],
 						'object_type': _gaia_authority_type(auth_type),
 						'identifiers': [vocab.LocalNumber(ident='', content=auth_id)],
-						'uid': uid
+						'uid': uid,
+						'uri': aata_uri(uid),
 					}
 
 					if role is not None:
@@ -332,7 +319,8 @@ def _xml_extract_authors(e, aata_id):
 # 					sys.stderr.write(lxml.etree.tostring(a).decode('utf-8'))
 # 					sys.stderr.write('\n')
 
-def add_aata_object_type(data):
+@use('document_types')
+def add_aata_object_type(data, document_types):
 	'''
 	Given an "article" `dict` containing a `_document_type` key which has a two-letter
 	document type string (e.g. 'JA' for journal article, 'BC' for book), add a new key
@@ -342,25 +330,14 @@ def add_aata_object_type(data):
 	For example, `add_aata_object_type({'_document_type': 'AV', ...})` returns the `dict`:
 	`{'_document_type': 'AV', 'document_type': vocab.AudioVisualContent, ...}`.
 	'''
-	doc_types = { # TODO: should this be in settings (or elsewhere)?
-		'AV': vocab.AudioVisualContent,
-		'BA': vocab.Chapter,
-		'BC': vocab.Monograph, # TODO: is this right for a "Book - Collective"?
-		'BM': vocab.Monograph,
-		'JA': vocab.Article,
-		'JW': vocab.Issue,
-		'PA': vocab.Patent,
-		'TH': vocab.Thesis,
-		'TR': vocab.TechnicalReport
-	}
 	atype = data['_document_type']
-	data['object_type'] = doc_types[atype]
+	clsname = document_types[atype]
+	data['object_type'] = getattr(vocab, clsname)
 	return data
 
 # imprint organizations chain (publishers, distributors)
 
-@use('uuid_cache')
-def add_imprint_orgs(data, uuid_cache=None):
+def add_imprint_orgs(data):
 	'''
 	Given a `dict` representing an "article," extract the "imprint organization" records
 	and their role (e.g. publisher, distributor), and add add a new 'organizations' key
@@ -387,8 +364,7 @@ def add_imprint_orgs(data, uuid_cache=None):
 	organizations = []
 	for o in data.get('_organizations', []):
 		org = {k: v for k, v in o.items()}
-		add_uuid(org, uuid_cache)
-		org_obj = vocab.Group(ident="urn:uuid:%s" % org['uuid'])
+		org_obj = vocab.Group(ident=org['uri'])
 		org['_LOD_OBJECT'] = org_obj
 
 		event = model.Activity()
@@ -409,7 +385,7 @@ def add_imprint_orgs(data, uuid_cache=None):
 			else:
 				print('*** No/unknown organization role (%r) found for imprint_group in %s:' % (
 					role, lod_object,))
-				pprint.pprint(o)
+# 				pprint.pprint(o)
 
 			if role == 'Publisher' and 'DatesOfPublication' in properties:
 				pubdate = properties['DatesOfPublication']
@@ -467,8 +443,7 @@ def make_aata_org_event(o: dict):
 
 # article authors chain
 
-@use('uuid_cache')
-def add_aata_authors(data, uuid_cache=None):
+def add_aata_authors(data):
 	'''
 	Given a `dict` representing an "article," extract the authorship records
 	and their role (e.g. author, editor). yield a new `dict`s for each such
@@ -496,7 +471,6 @@ def add_aata_authors(data, uuid_cache=None):
 
 	authors = data.get('_authors', [])
 	for a in authors:
-		add_uuid(a, uuid_cache)
 		make_la_person(a)
 		person = a['_LOD_OBJECT']
 		subevent = model.Creation()
@@ -514,7 +488,8 @@ def add_aata_authors(data, uuid_cache=None):
 
 # article abstract chain
 
-def detect_title_language(data: dict):
+@use('language_code_map')
+def detect_title_language(data: dict, language_code_map):
 	'''
 	Given a `dict` representing a Linguistic Object, attempt to detect the language of
 	the value for the `label` key.  If the detected langauge is also one of the languages
@@ -535,7 +510,7 @@ def detect_title_language(data: dict):
 			detected = detect(title)
 			threealpha = iso639.to_iso639_2(detected)
 			if threealpha in languages:
-				language = language_object_from_code(threealpha)
+				language = language_object_from_code(threealpha, language_code_map)
 				if language is not None:
 					# we have confidence that we've matched the language of the title
 					# because it is one of the declared languages for the record
@@ -556,7 +531,8 @@ def detect_title_language(data: dict):
 		print('*** detect_title_language error: %r' % (e,))
 	return NOT_MODIFIED
 
-def make_aata_abstract(data):
+@use('language_code_map')
+def make_aata_abstract(data, language_code_map):
 	'''
 	Given a `dict` representing an "article," extract the abstract records.
 	yield a new `dict`s for each such record.
@@ -579,18 +555,14 @@ def make_aata_abstract(data):
 	'''
 	lod_object = data['_LOD_OBJECT']
 	for a in data.get('_abstracts', []):
-		abstract = model.LinguisticObject()
 		abstract_dict = {k: v for k, v in a.items() if k not in ('language',)}
 
-		abstract.content = a.get('content')
-		abstract.classified_as = model.Type( # TODO: change to vocab.Abstract()
-			ident='http://vocab.getty.edu/aat/300026032',
-			label='Abstract' # TODO: is this the right aat URI?
-		)
+		content = a.get('content')
+		abstract = vocab.Abstract(content=content)
 		abstract.refers_to = lod_object
 		langcode = a.get('language')
 		if langcode is not None:
-			language = language_object_from_code(langcode)
+			language = language_object_from_code(langcode, language_code_map)
 			if language is not None:
 				abstract.language = language
 				abstract_dict['language'] = language
@@ -604,7 +576,8 @@ def make_aata_abstract(data):
 		abstract_dict.update({
 			'_LOD_OBJECT': abstract,
 			'parent_data': data,
-			'uid': uid
+			'uid': uid,
+			'uri': aata_uri(uid),
 		})
 		yield abstract_dict
 
@@ -615,15 +588,19 @@ def filter_abstract_authors(data: dict):
 
 # AATA Pipeline class
 
-class AATAPipeline:
+class AATAPipeline(PipelineBase):
 	'''Bonobo-based pipeline for transforming AATA data from XML into JSON-LD.'''
-	def __init__(self, input_path, files_pattern, **kwargs):
+	def __init__(self, input_path, abstracts_file_pattern, **kwargs):
+		self.project_name = 'aata'
 		self.graph = None
 		self.models = kwargs.get('models', {})
-		self.files_pattern = files_pattern
+		self.abstracts_file_pattern = abstracts_file_pattern
 		self.limit = kwargs.get('limit')
 		self.debug = kwargs.get('debug', False)
 		self.input_path = input_path
+		self.pipeline_project_service_files_path = kwargs.get('pipeline_project_service_files_path', settings.pipeline_project_service_files_path)
+		self.pipeline_common_service_files_path = kwargs.get('pipeline_common_service_files_path', settings.pipeline_common_service_files_path)
+
 		if self.debug:
 			self.serializer	= Serializer(compact=False)
 			self.writer		= None
@@ -637,13 +614,8 @@ class AATAPipeline:
 	# Set up environment
 	def get_services(self):
 		'''Return a `dict` of named services available to the bonobo pipeline.'''
-		return {
-			'trace_counter': itertools.count(),
-			'gpi': create_engine(settings.gpi_engine),
-			'aat': create_engine(settings.aat_engine),
-			'uuid_cache': create_engine(settings.uuid_cache_engine),
-			'fs.data.aata': bonobo.open_fs(self.input_path)
-		}
+		services = super().get_services()
+		return services
 
 	def add_serialization_chain(self, graph, input_node):
 		'''Add serialization of the passed transformer node to the bonobo graph.'''
@@ -658,14 +630,9 @@ class AATAPipeline:
 
 	def add_articles_chain(self, graph, records, serialize=True):
 		'''Add transformation of article records to the bonobo pipeline.'''
-		if self.limit is not None:
-			records = graph.add_chain(
-				Limit(self.limit),
-				_input=records.output
-			)
 		articles = graph.add_chain(
 			make_aata_article_dict,
-			add_uuid,
+# 			add_uuid,
 			add_aata_object_type,
 			detect_title_language,
 			MakeLinkedArtLinguisticObject(),
@@ -706,7 +673,7 @@ class AATAPipeline:
 		abstracts = graph.add_chain(
 			make_aata_abstract,
 			AddArchesModel(model=model_id),
-			add_uuid,
+# 			add_uuid,
 			MakeLinkedArtAbstract(),
 			_input=articles.output
 		)
@@ -729,7 +696,7 @@ class AATAPipeline:
 		organizations = graph.add_chain(
 			ExtractKeyedValues(key='organizations'),
 			AddArchesModel(model=model_id),
-			add_uuid,
+# 			add_uuid,
 			MakeLinkedArtOrganization(),
 			_input=articles.output
 		)
@@ -741,8 +708,8 @@ class AATAPipeline:
 	def _construct_graph(self):
 		graph = bonobo.Graph()
 		records = graph.add_chain(
-			MatchingFiles(path='/', pattern=self.files_pattern, fs='fs.data.aata'),
-			CurriedXMLReader(xpath='/AATA_XML/record', fs='fs.data.aata')
+			MatchingFiles(path='/', pattern=self.abstracts_file_pattern, fs='fs.data.aata'),
+			CurriedXMLReader(xpath='/AATA_XML/record', fs='fs.data.aata', limit=self.limit)
 		)
 		articles = self.add_articles_chain(graph, records)
 		self.add_people_chain(graph, articles)
@@ -777,20 +744,20 @@ class AATAFilePipeline(AATAPipeline):
 	If in `debug` mode, JSON serialization will use pretty-printing. Otherwise,
 	serialization will be compact.
 	'''
-	def __init__(self, input_path, files_pattern, **kwargs):
-		super().__init__(input_path, files_pattern, **kwargs)
-		self.use_single_serializer = True
+	def __init__(self, input_path, abstracts_file_pattern, **kwargs):
+		super().__init__(input_path, abstracts_file_pattern, **kwargs)
+		self.use_single_serializer = False
 		self.output_chain = None
 		debug = kwargs.get('debug', False)
 		output_path = kwargs.get('output_path')
 		if debug:
 			self.serializer	= Serializer(compact=False)
-			self.writer		= MergingFileWriter(directory=output_path)
+			self.writer		= MergingFileWriter(directory=output_path, partition_directories=True)
 			# self.writer	= MultiFileWriter(directory=output_path)
 			# self.writer	= ArchesWriter()
 		else:
 			self.serializer	= Serializer(compact=True)
-			self.writer		= MergingFileWriter(directory=output_path)
+			self.writer		= MergingFileWriter(directory=output_path, partition_directories=True)
 			# self.writer	= MultiFileWriter(directory=output_path)
 			# self.writer	= ArchesWriter()
 

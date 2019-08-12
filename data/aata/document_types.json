@@ -1,0 +1,11 @@
+{
+	"AV": "AudioVisualContent",
+	"BA": "Chapter",
+	"BC": "Monograph",
+	"BM": "Monograph",
+	"JA": "Article",
+	"JW": "Issue",
+	"PA": "Patent",
+	"TH": "Thesis",
+	"TR": "TechnicalReport"
+}

@@ -214,10 +214,14 @@ class Pipeline(PipelineBase):
 			make_stock_books,
 			AddArchesModel(model=arches_models['LinguisticObject']),
 			make_la_book,
+			AddArchesModel(model=arches_models['HumanMadeObject']),
+			make_la_phys_book,
 
 			fan_pages,
 			AddArchesModel(model=arches_models['LinguisticObject']),
 			make_la_page,
+			AddArchesModel(model=arches_models['HumanMadeObject']),
+			make_la_phys_page,
 
 			fan_rows,
 			AddArchesModel(model=arches_models['LinguisticObject']),
@@ -225,7 +229,7 @@ class Pipeline(PipelineBase):
 		)
 
 		# create subsequent branches
-		for xin in [make_la_book, make_la_page, make_la_row]:
+		for xin in [make_la_book, make_la_phys_book, make_la_page, make_la_phys_page, make_la_row]:
 			out = graph.add_chain(
 				self.SRLZ,
 				self.WRITER,
@@ -238,27 +242,27 @@ class Pipeline(PipelineBase):
 		graph = bonobo.Graph()
 
 		# Sales
-		if not self.debug or 1:
+		if not self.debug or 0:
 			self.add_sales(graph)
 
 		# Here we do both missing purchases and inventory events
-		if not self.debug or 1:
+		if not self.debug or 0:
 			self.add_missing(graph)
 
 		# Pre/Post owners
-		if not self.debug or 1:
+		if not self.debug or 0:
 			self.add_pre_post(graph)
 
 		# Objects
-		if not self.debug or 1:
+		if not self.debug or 0:
 			self.add_objects(graph)
 
 		# People
-		if not self.debug or 1:
+		if not self.debug or 0:
 			self.add_people(graph)
 
 		# Documents
-		if not self.debug or 0:
+		if not self.debug or 1:
 			self.add_documents(graph)
 
 		return graph

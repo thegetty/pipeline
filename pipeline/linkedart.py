@@ -152,7 +152,7 @@ class MakeLinkedArtLinguisticObject(MakeLinkedArtRecord):
 			else:
 				indexing = c
 			thing.about = indexing
-		
+
 		parents = data.get('part_of', [])
 		for parent_data in parents:
 			parent = get_crom_object(parent_data)
@@ -394,7 +394,7 @@ def make_la_place(data: dict):
 		parent_data = make_la_place(parent_data)
 		parent = get_crom_object(parent_data)
 		label = f'{label}, {parent._label}'
-		
+
 	placeargs = {'label': label}
 	if data.get('uri'):
 		placeargs['ident'] = data['uri']

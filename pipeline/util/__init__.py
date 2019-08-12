@@ -4,13 +4,16 @@ import sys
 import fnmatch
 import pprint
 import calendar
+import datetime
 from threading import Lock
 from contextlib import ContextDecorator, suppress
 from collections import defaultdict, namedtuple
 
+import dateutil.parser
+from bonobo.config import Configurable, Option, Service
+
 import settings
 import pipeline.io.arches
-from bonobo.config import Configurable, Option, Service
 from cromulent import model
 from cromulent.model import factory, BaseResource
 
@@ -19,7 +22,7 @@ from cromulent.model import factory, BaseResource
 # 	'unit',		# unit
 # 	'which'		# e.g. width, height, ...
 # ])
-# 
+#
 def identity(d):
 	'''
 	Simply yield the value that is passed as an argument.
@@ -42,11 +45,11 @@ def implode_date(data: dict, prefix: str, clamp:str=None):
 	from `data` (e.g. '{prefix}year', '{prefix}month', and '{prefix}day'), and return
 	an ISO 8601 date string ('YYYY-MM-DD'). If the day, or day and month elements are
 	missing, may also return a year-month ('YYYY-MM') or year ('YYYY') string.
-	
+
 	If `clamp='begin'` and a year value is found, the resulting date string will use
 	the earliest valid value for any field (month or day) that is not present or false.
 	For example, '1800-02' would become '1800-02-01'.
-	
+
 	If `clamp='end'`, clamping occurs using the latest valid values. For example,
 	'1800-02' would become '1800-02-28'.
 	'''
@@ -75,7 +78,7 @@ def implode_date(data: dict, prefix: str, clamp:str=None):
 		if clamp == 'begin':
 			day = 1
 		elif clamp == 'end':
-			day = calendar.monthrange(year, month)[1]	
+			day = calendar.monthrange(year, month)[1]
 
 	if year and month and day:
 		return '%04d-%02d-%02d' % (int(year), month, day)
@@ -314,3 +317,30 @@ def strip_key_prefix(prefix, value):
 			d[k] = v
 	return d
 
+def timespan_from_outer_bounds(begin=None, end=None):
+	'''
+	Return a `TimeSpan` based on the (optional) `begin` and `end` date strings.
+
+	If both `begin` and `end` are `None`, returns `None`.
+	'''
+	if begin or end:
+		ts = model.TimeSpan(ident='')
+		if begin is not None:
+			try:
+				if not isinstance(begin, datetime.datetime):
+					begin = dateutil.parser.parse(begin)
+				begin = begin.strftime("%Y-%m-%dT%H:%M:%SZ")
+				ts.begin_of_the_begin = begin
+			except ValueError:
+				print(f'*** failed to parse begin date: {begin}')
+				raise
+		if end is not None:
+			try:
+				if not isinstance(end, datetime.datetime):
+					end = dateutil.parser.parse(end)
+				end = end.strftime("%Y-%m-%dT%H:%M:%SZ")
+				ts.end_of_the_end = end
+			except ValueError:
+				print(f'*** failed to parse end date: {end}')
+		return ts
+	return None

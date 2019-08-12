@@ -1,9 +1,6 @@
 import os
 import sys
 import json
-import uuid
-import pprint
-import itertools
 import multiprocessing
 from pathlib import Path
 from contextlib import suppress
@@ -39,7 +36,7 @@ def rewrite_output_files(r, update_filename=False, parallel=False, **kwargs):
 	print(f'Rewriting JSON output files')
 	p = Path(output_file_path)
 	files = sorted(p.rglob('*.json'))
-	
+
 	if parallel:
 		j = 8
 		pool = multiprocessing.Pool(j)
@@ -118,4 +115,3 @@ class JSONValueRewriter:
 		else:
 			print(f'failed to rewrite JSON value: {d!r}')
 			raise Exception(f'failed to rewrite JSON value: {d!r}')
-

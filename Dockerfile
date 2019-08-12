@@ -27,5 +27,5 @@ COPY Makefile setup.py aata.py pir.py knoedler.py settings.py ./
 EXPOSE 8080
 VOLUME ["/data"]
 VOLUME ["/output"]
-
+VOLUME ["/services"]
 CMD [ "make", "pir", "LIMIT=100" ]

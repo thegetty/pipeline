@@ -9,6 +9,7 @@ factory.auto_id_type = 'uuid'
 vocab.add_art_setter()
 
 from pipeline.projects.knoedler import UID_TAG_PREFIX
+import urllib.parse
 
 vocab.register_aat_class("Clock", {"parent": model.HumanMadeObject, "id": "300041575", "label": "Clock"})
 vocab.register_aat_class("Cards", {"parent": model.HumanMadeObject, "id":"300211294", "label": "Playing Cards"})
@@ -346,7 +347,7 @@ def make_la_purchase(data: dict):
 	for o in data['objects']:
 		what.transferred_title_of = model.HumanMadeObject(ident=_uid_uri(o["uid"]), label=o['label'])
 		if 'phase_info' in o:
-			what.initiated = model.Phase(ident=_uid_uri(['phase_info']+'-phase'))
+			what.initiated = model.Phase(ident=_uid_uri(o['phase_info']+'-phase'))
 	for b in data['buyers']:
 		# XXX Could [indeed very very likely to] be Group
 		if b['type'] in ["Person", "Actor"]:
@@ -401,8 +402,7 @@ def make_la_purchase(data: dict):
 	return add_crom_data(data=data, what=what)
 
 def make_la_phase(data: dict):
-
-	phase = vocab.OwnershipPhase(ident=_uid_uri({data['uid']}+"-phase"))
+	phase = vocab.OwnershipPhase(ident=_uid_uri(data['uid']+"-phase"))
 	try:
 		phase._label = "Ownership Phase of %s" % data['object_label']
 	except:

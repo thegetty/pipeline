@@ -87,14 +87,14 @@ def language_object_from_code(code, language_code_map):
 def make_aata_journal_dict(e):
 	data = _xml_extract_journal(e)
 	data.update({
-		'object_type': vocab.Journal,
+		'object_type': vocab.JournalText,
 	})
 	return data
 
 def make_aata_series_dict(e):
 	data = _xml_extract_series(e)
 	data.update({
-		'object_type': vocab.Series,
+		'object_type': vocab.SeriesText,
 	})
 # 	print(f'SERIES: {pprint.pformat(data)}')
 	return data
@@ -277,7 +277,7 @@ def _xml_extract_journal(e):
 		
 		volumes[volume_number] = {
 			'uri': aata_uri('AATA', 'Journal', aata_id, 'Volume', volume_number),
-			'object_type': vocab.Volume,
+			'object_type': vocab.VolumeText,
 			'label': f'Volume {volume_number} of “{title}”',
 			'_aata_record_id': issue_id,
 			'identifiers': [(volume_number, vocab.VolumeNumber(ident=''))],
@@ -288,7 +288,7 @@ def _xml_extract_journal(e):
 
 		issues.append({
 			'uri': aata_uri('AATA', 'Journal', aata_id, 'Issue', issue_number),
-			'object_type': vocab.Issue,
+			'object_type': vocab.IssueText,
 			'label': issue_title,
 			'_aata_record_id': issue_id,
 			'translations': list(issue_translations),

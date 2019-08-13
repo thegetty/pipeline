@@ -9,6 +9,7 @@ factory.auto_id_type = 'uuid'
 vocab.add_art_setter()
 
 from pipeline.projects.knoedler import UID_TAG_PREFIX
+import urllib.parse
 
 vocab.register_aat_class("Clock", {"parent": model.HumanMadeObject, "id": "300041575", "label": "Clock"})
 vocab.register_aat_class("Cards", {"parent": model.HumanMadeObject, "id":"300211294", "label": "Playing Cards"})
@@ -25,6 +26,10 @@ def _page_label(book, page, which="LinguisticObject"):
 	return "Knoedler Stock Book %s, Page %s" % (book, page)
 def _row_label(book, page, row, which="LinguisticObject"):
 	return "Knoedler Stock Book %s, Page %s, Row %s" % (book, page, row)
+
+def _uid_uri(uid):
+	uid = urllib.parse.quote(uid)
+	return f'{UID_TAG_PREFIX}{uid}'
 
 def _row_uid(book, page, row, which="LinguisticObject"):
 	if which == "LinguisticObject":
@@ -45,7 +50,7 @@ def _book_uid(book, which="LinguisticObject"):
 		return f'{UID_TAG_PREFIX}K-BOOK-PHYS-{book}'
 
 def make_la_book(data: dict):
-	book = vocab.AccountBook(ident=_book_uid(data['identifier']))
+	book = vocab.AccountBookText(ident=_book_uid(data['identifier']))
 	book._label = _book_label(data['identifier'])
 	ident = vocab.LocalNumber()
 	ident.content = str(data['identifier'])
@@ -58,7 +63,7 @@ def make_la_book(data: dict):
 	return add_crom_data(data=data, what=book)
 
 def make_la_phys_book(data: dict):
-	book = vocab.BookThing(ident=_book_uid(data['identifier'], "HumanMadeObject"))
+	book = vocab.Book(ident=_book_uid(data['identifier'], "HumanMadeObject"))
 	book._label = _book_label(data['identifier'])
 	book.identified_by = vocab.LocalNumber(content=data['identifier'])	
 	book.carries = model.LinguisticObject(ident=_book_uid(data['identifier']))
@@ -66,7 +71,7 @@ def make_la_phys_book(data: dict):
 	return add_crom_data(data=data, what=book)
 
 def make_la_page(data: dict):
-	page = vocab.Page(ident=_page_uid(data['parent']['identifier'], data['identifier']))
+	page = vocab.PageText(ident=_page_uid(data['parent']['identifier'], data['identifier']))
 	page._label = _page_label(data['parent']['identifier'], data['identifier'])
 	ident = vocab.LocalNumber()
 	ident.content = str(data['identifier'])
@@ -96,7 +101,7 @@ def make_la_page(data: dict):
 	return add_crom_data(data=data, what=page)
 
 def make_la_phys_page(data: dict):
-	page = vocab.PageThing(ident=_page_uid(data['parent']['identifier'], data['identifier'], "HumanMadeObject"))
+	page = vocab.Page(ident=_page_uid(data['parent']['identifier'], data['identifier'], "HumanMadeObject"))
 	page._label = _page_label(data['parent']['identifier'], data['identifier'], "HumanMadeObject")
 	page.identified_by = vocab.LocalNumber(content=data['identifier'])	
 	page.part_of = vocab.HumanMadeObject(ident=_book_uid(data['parent']['identifier'], "HumanMadeObject"))
@@ -342,7 +347,7 @@ def make_la_purchase(data: dict):
 	for o in data['objects']:
 		what.transferred_title_of = model.HumanMadeObject(ident=_uid_uri(o["uid"]), label=o['label'])
 		if 'phase_info' in o:
-			what.initiated = model.Phase(ident=_uid_uri(['phase_info']+'-phase'))
+			what.initiated = model.Phase(ident=_uid_uri(o['phase_info']+'-phase'))
 	for b in data['buyers']:
 		# XXX Could [indeed very very likely to] be Group
 		if b['type'] in ["Person", "Actor"]:
@@ -397,8 +402,7 @@ def make_la_purchase(data: dict):
 	return add_crom_data(data=data, what=what)
 
 def make_la_phase(data: dict):
-
-	phase = vocab.OwnershipPhase(ident=_uid_uri({data['uid']}+"-phase"))
+	phase = vocab.OwnershipPhase(ident=_uid_uri(data['uid']+"-phase"))
 	try:
 		phase._label = "Ownership Phase of %s" % data['object_label']
 	except:
@@ -500,8 +504,7 @@ def make_la_sale(data: dict):
 	return add_crom_data(data=data, what=what)
 
 def make_la_inventory(data: dict):
-
-	what = vocab.Inventorying(ident=f"{UID_TAG_PREFIX}{data['uid']}")
+	what = vocab.Inventorying(ident=_uid_uri(data['uid']))
 	date = ymd_to_label(data['year'], data['month'], data['day'])
 	what._label = "Inventory taking for %s on %s" % (data['objects'][0]['label'], date)
 

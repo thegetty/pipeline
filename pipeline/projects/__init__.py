@@ -4,12 +4,25 @@ import itertools
 import json
 import bonobo
 import settings
+from sqlalchemy import create_engine
 
 from pipeline.nodes.basic import \
 			AddArchesModel, \
 			Serializer
 
 class PipelineBase:
+	def __init__(self):
+		self.project_name = None
+		self.input_path = None
+
+	def _service_from_path(self, file):
+		if file.suffix == '.json':
+			with open(file, 'r') as f:
+				return json.load(f)
+		elif file.suffix == '.sqlite':
+			print(f'SQLITE SERVICE: {file.stem}')
+			return create_engine(f'sqlite://%s' % (file.absolute(),))
+
 	def get_services(self):
 		'''Return a `dict` of named services available to the bonobo pipeline.'''
 		services = {
@@ -18,16 +31,18 @@ class PipelineBase:
 		}
 
 		common_path = pathlib.Path(settings.pipeline_common_service_files_path)
-		for file in common_path.rglob('*.json'):
-			with open(file, 'r') as f:
-				services[file.stem] = json.load(f)
+		for file in common_path.rglob('*'):
+			service = self._service_from_path(file)
+			if service:
+				services[file.stem] = service
 
 		proj_path = pathlib.Path(settings.pipeline_project_service_files_path(self.project_name))
-		for file in proj_path.rglob('*.json'):
-			with open(file, 'r') as f:
-				if file.stem in services:
-					print(f'*** Project is overloading a shared service JSON file: {file.stem}')
-				services[file.stem] = json.load(f)
+		for file in proj_path.rglob('*'):
+			if file.stem in services:
+				print(f'*** Project is overloading a shared service JSON file: {file.stem}')
+			service = self._service_from_path(file)
+			if service:
+				services[file.stem] = service
 
 		return services
 

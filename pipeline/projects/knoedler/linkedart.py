@@ -49,7 +49,7 @@ def _book_uid(book, which="LinguisticObject"):
 		return f'{UID_TAG_PREFIX}K-BOOK-PHYS-{book}'
 
 def make_la_book(data: dict):
-	book = vocab.AccountBook(ident=_book_uid(data['identifier']))
+	book = vocab.AccountBookText(ident=_book_uid(data['identifier']))
 	book._label = _book_label(data['identifier'])
 	ident = vocab.LocalNumber()
 	ident.content = str(data['identifier'])
@@ -62,7 +62,7 @@ def make_la_book(data: dict):
 	return add_crom_data(data=data, what=book)
 
 def make_la_phys_book(data: dict):
-	book = vocab.BookThing(ident=_book_uid(data['identifier'], "HumanMadeObject"))
+	book = vocab.Book(ident=_book_uid(data['identifier'], "HumanMadeObject"))
 	book._label = _book_label(data['identifier'])
 	book.identified_by = vocab.LocalNumber(content=data['identifier'])	
 	book.carries = model.LinguisticObject(ident=_book_uid(data['identifier']))
@@ -70,7 +70,7 @@ def make_la_phys_book(data: dict):
 	return add_crom_data(data=data, what=book)
 
 def make_la_page(data: dict):
-	page = vocab.Page(ident=_page_uid(data['parent']['identifier'], data['identifier']))
+	page = vocab.PageText(ident=_page_uid(data['parent']['identifier'], data['identifier']))
 	page._label = _page_label(data['parent']['identifier'], data['identifier'])
 	ident = vocab.LocalNumber()
 	ident.content = str(data['identifier'])
@@ -100,7 +100,7 @@ def make_la_page(data: dict):
 	return add_crom_data(data=data, what=page)
 
 def make_la_phys_page(data: dict):
-	page = vocab.PageThing(ident=_page_uid(data['parent']['identifier'], data['identifier'], "HumanMadeObject"))
+	page = vocab.Page(ident=_page_uid(data['parent']['identifier'], data['identifier'], "HumanMadeObject"))
 	page._label = _page_label(data['parent']['identifier'], data['identifier'], "HumanMadeObject")
 	page.identified_by = vocab.LocalNumber(content=data['identifier'])	
 	page.part_of = vocab.HumanMadeObject(ident=_book_uid(data['parent']['identifier'], "HumanMadeObject"))

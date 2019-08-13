@@ -4,51 +4,31 @@ import unittest
 import os
 import pprint
 from collections import defaultdict
+from contextlib import suppress
 import hashlib
 import json
 import uuid
 
-from tests import merge
+from tests import TestWriter, merge
 from pipeline.projects.aata import AATAPipeline
-
-class TestWriter():
-	'''
-	Deserialize the output of each resource and store in memory.
-	Merge data for multiple serializations of the same resource.
-	'''
-	def __init__(self):
-		self.output = {}
-		super().__init__()
-
-	def __call__(self, data: dict, *args, **kwargs):
-		d = data['_OUTPUT']
-		dr = data['_ARCHES_MODEL']
-		if dr not in self.output:
-			self.output[dr] = {}
-		uu = data.get('uuid')
-		if not uu and 'uri' in data:
-			uu = hashlib.sha256(data['uri'].encode('utf-8')).hexdigest()
-			print(f'*** No UUID in top-level resource. Using a hash of top-level URI: {uu}')
-		if not uu:
-			uu = str(uuid.uuid4())
-			print(f'*** No UUID in top-level resource;')
-			print(f'*** Using an assigned UUID filename for the content: {uu}')
-		fn = '%s.json' % uu
-		data = json.loads(d)
-		if fn in self.output[dr]:
-			self.output[dr][fn] = merge(self.output[dr][fn], data)
-		else:
-			self.output[dr][fn] = data
-
+from pipeline.nodes.basic import Serializer, AddArchesModel
 
 class AATATestPipeline(AATAPipeline):
 	'''
 	Test AATA pipeline subclass that allows using a custom Writer.
 	'''
-	def __init__(self, writer, input_path, files_pattern, **kwargs):
-		super().__init__(input_path, files_pattern, **kwargs)
+	def __init__(self, writer, input_path, abstracts_pattern, journals_pattern, series_pattern, **kwargs):
+		super().__init__(input_path, abstracts_pattern, journals_pattern, series_pattern, **kwargs)
 		self.writer = writer
 	
+	def serializer_nodes_for_model(self, model=None):
+		nodes = []
+		if model:
+			nodes.append(AddArchesModel(model=model))
+		nodes.append(Serializer(compact=False))
+		nodes.append(self.writer)
+		return nodes
+
 	def get_services(self):
 		services = super().get_services()
 		services.update({
@@ -69,32 +49,33 @@ class AATATestPipeline(AATAPipeline):
 		})
 		return services
 
+	def run(self):
+		super().run()
+		return self.writer.processed_output()
 
-class TestAATAPipelineOutput(unittest.TestCase):
+class TestAATAPipelineOutput_Abstracts(unittest.TestCase):
 	'''
 	Parse test XML data and run the AATA pipeline with the in-memory TestWriter.
 	Then verify that the serializations in the TestWriter object are what was expected.
 	'''
 	def setUp(self):
-		self.files_pattern = 'tests/data/aata-sample1.xml'
+		self.abstracts_pattern = 'tests/data/aata-sample1-abstracts.xml'
+		self.journals_pattern = None
+		self.series_pattern = None
 		os.environ['QUIET'] = '1'
-
-	def tearDown(self):
-		pass
 
 	def run_pipeline(self, models, input_path):
 		writer = TestWriter()
 		pipeline = AATATestPipeline(
 			writer,
 			input_path,
-			self.files_pattern,
+			self.abstracts_pattern,
+			self.journals_pattern,
+			self.series_pattern,
 			models=models,
 			limit=1,
-			debug=True
 		)
-		pipeline.run()
-		output = writer.output
-		return output
+		return pipeline.run()
 
 	def verify_people_for_AATA140375(self, output, people_model):
 		people = output[people_model].values()
@@ -136,6 +117,7 @@ class TestAATAPipelineOutput(unittest.TestCase):
 		self.assertEqual(dict(identifiers), {
 			'Title': {'Secrets of the Forbidden City'},
 			'ISBN Identifier': {'1531703461', '9781531703462'},
+			'Local Number': {'AATA140375'},
 		})
 
 		about = defaultdict(set)
@@ -211,9 +193,9 @@ class TestAATAPipelineOutput(unittest.TestCase):
 				print('*** error while handling creation event: %s' % (e,))
 				pprint.pprint(c)
 		self.assertEqual(creation_labels, {
-			'Creation sub-event for Producer',
-			'Creation sub-event for Narrator',
-			'Creation sub-event for Director'
+			'Creation sub-event for Producer by “Bremner, Ian”',
+			'Creation sub-event for Narrator by “Meyers, Eric”',
+			'Creation sub-event for Director by “Bremner, Ian”'
 		})
 		types = sorted(article_types.values())
 		self.assertEqual(types, ['A/V Content', 'Abstract'])
@@ -222,9 +204,11 @@ class TestAATAPipelineOutput(unittest.TestCase):
 	def test_pipeline_with_AATA140375(self):
 		input_path = os.getcwd()
 		models = {
-			'Person': '0b47366e-2e42-11e9-9018-a4d18cec433a',
+			'Person': 'model-person',
 			'LinguisticObject': 'model-lo',
-			'Organization': 'model-org'
+			'Organization': 'model-org',
+			'Journal': 'model-journal',
+			'Series': 'model-series',
 		}
 		output = self.run_pipeline(models, input_path)
 		self.assertEqual(len(output), 3)
@@ -237,6 +221,238 @@ class TestAATAPipelineOutput(unittest.TestCase):
 		people_creation_events = self.verify_people_for_AATA140375(output, people_model)
 		self.verify_organizations_for_AATA140375(output, orgs_model)
 		self.verify_data_for_AATA140375(output, lo_model)
+
+class TestAATAPipelineOutput_Journals(unittest.TestCase):
+	def setUp(self):
+		self.maxDiff = None
+		self.abstracts_pattern = None
+		self.journals_pattern = 'tests/data/aata-sample1-journals.xml'
+		self.series_pattern = None
+		os.environ['QUIET'] = '1'
+
+	def run_pipeline(self, models, input_path):
+		writer = TestWriter()
+		pipeline = AATATestPipeline(
+			writer,
+			input_path,
+			self.abstracts_pattern,
+			self.journals_pattern,
+			self.series_pattern,
+			models=models,
+			limit=1,
+		)
+		return pipeline.run()
+
+	def test_pipeline_with_AATA140375(self):
+		input_path = os.getcwd()
+		models = {
+			'Person': 'model-person',
+			'LinguisticObject': 'model-lo',
+			'Organization': 'model-org',
+			'Journal': 'model-journal',
+			'Series': 'model-series',
+		}
+		output = self.run_pipeline(models, input_path)
+		self.assertEqual(len(output), 2)
+
+		lo_model = models['LinguisticObject']
+		journal_model = models['Journal']
+		
+		TAG_PREFIX = 'tag:getty.edu,2019:digital:pipeline:aata:REPLACE-WITH-UUID#'
+		
+		journal = output[journal_model].get(f'{TAG_PREFIX}AATA,Journal,2')
+		issue = output[lo_model].get(f'{TAG_PREFIX}AATA,Journal,2,Issue,9')
+		
+		self.assertIsNotNone(journal)
+		self.assertIsNotNone(issue)
+		
+		for i in journal['identified_by']:
+			with suppress(KeyError):
+				del i['id'] # remove UUIDs that will not be stable across runs
+		
+		journal_expected = {
+			'@context': 'https://linked.art/ns/v1/linked-art.json',
+			'_label': 'Green chemistry',
+			'classified_as': [
+				{
+					'_label': 'Journal',
+					'id': 'http://vocab.getty.edu/aat/300215390',
+					'type': 'Type'
+				}
+			],
+			'id': 'tag:getty.edu,2019:digital:pipeline:aata:REPLACE-WITH-UUID#AATA,Journal,2',
+			'identified_by': [
+				{
+					'classified_as': [
+						{
+							'_label': 'ISSN Identifier',
+							'id': 'http://vocab.getty.edu/aat/300417443',
+							'type': 'Type'
+						}
+					],
+					'content': '1463-9262',
+					'type': 'Identifier'
+				},
+				{
+					'content': 'Green chemistry: an international journal and green chemistry resource',
+					'type': 'Identifier'
+				},
+				{
+					'classified_as': [
+						{
+							'_label': 'Title',
+						'id': 'http://vocab.getty.edu/aat/300055726',
+						'type': 'Type'
+						}
+					],
+					'content': 'Green chemistry',
+					'type': 'Name'
+				}
+			],
+			'type': 'LinguisticObject'
+		}
+		self.assertEqual(journal, journal_expected)
+		
+		for i in [i for p in issue['part_of'] for i in p['identified_by']]:
+			with suppress(KeyError):
+				del i['id'] # remove UUIDs that will not be stable across runs
+		for i in issue['identified_by'] + issue['referred_to_by']:
+			with suppress(KeyError):
+				del i['id'] # remove UUIDs that will not be stable across runs
+		issue_expected = {
+			'@context': 'https://linked.art/ns/v1/linked-art.json',
+			'_label': 'Issue 9 of “Green chemistry”',
+			'classified_as': [
+				{
+					'_label': 'Issue',
+					'id': 'http://vocab.getty.edu/aat/300312349',
+					'type': 'Type'
+				}
+			],
+			'id': 'tag:getty.edu,2019:digital:pipeline:aata:REPLACE-WITH-UUID#AATA,Journal,2,Issue,9',
+			'identified_by': [
+				{
+					'classified_as': [
+						{
+						'_label': 'Issue',
+						'id': 'http://vocab.getty.edu/aat/300312349',
+						'type': 'Type'
+						}
+					],
+					'content': '9',
+					'type': 'Identifier'
+				},
+				{
+					'classified_as': [
+						{
+							'_label': 'Title',
+							'id': 'http://vocab.getty.edu/aat/300055726',
+							'type': 'Type'
+						}
+					],
+					'content': 'Issue 9 of “Green chemistry”',
+					'type': 'Name'
+				}
+			],
+			'part_of': [
+				{
+					'_label': 'Green chemistry',
+					'classified_as': [
+						{
+							'_label': 'Journal',
+							'id': 'http://vocab.getty.edu/aat/300215390',
+							'type': 'Type'
+						}
+					],
+					'id': 'tag:getty.edu,2019:digital:pipeline:aata:REPLACE-WITH-UUID#AATA,Journal,2',
+					'identified_by': [
+						{
+							'classified_as': [
+								{
+								'_label': 'ISSN Identifier',
+								'id': 'http://vocab.getty.edu/aat/300417443',
+								'type': 'Type'
+								}
+							],
+							'content': '1463-9262',
+							'type': 'Identifier'
+						},
+						{
+							'content': 'Green chemistry: an international journal and green chemistry resource',
+							'type': 'Identifier'
+						},
+						{
+							'classified_as': [
+								{
+									'_label': 'Title',
+									'id': 'http://vocab.getty.edu/aat/300055726',
+									'type': 'Type'
+								}
+							],
+							'content': 'Green chemistry',
+							'type': 'Name'
+						}
+					],
+					'type': 'LinguisticObject'
+				},
+				{
+					'_label': 'Volume 9 of “Green chemistry”',
+					'classified_as': [
+						{
+							'_label': 'Volume',
+							'id': 'http://vocab.getty.edu/aat/300265632',
+							'type': 'Type'
+						}
+					],
+					'id': 'tag:getty.edu,2019:digital:pipeline:aata:REPLACE-WITH-UUID#AATA,Journal,2,Volume,9',
+					'identified_by': [
+						{
+							'classified_as': [
+								{
+									'_label': 'Volume',
+									'id': 'http://vocab.getty.edu/aat/300265632',
+									'type': 'Type'
+								}
+							],
+							'content': '9',
+							'type': 'Identifier'
+						},
+						{
+							'classified_as': [
+								{
+									'_label': 'Title',
+									'id': 'http://vocab.getty.edu/aat/300055726',
+									'type': 'Type'
+								}
+							],
+							'content': 'Volume 9 of “Green chemistry”',
+							'type': 'Name'
+						}
+					],
+					'type': 'LinguisticObject'
+				}
+			],
+			'referred_to_by': [
+				{
+					'classified_as': [
+						{
+							'_label': 'Note',
+							'id': 'http://vocab.getty.edu/aat/300027200',
+							'type': 'Type'
+						},
+						{
+							'_label': 'Brief Text',
+							'id': 'http://vocab.getty.edu/aat/300418049',
+							'type': 'Type'
+						}
+					],
+					'content': 'v. 24 (2005)',
+					'type': 'LinguisticObject'
+				}
+			],
+			'type': 'LinguisticObject'
+ 		}
+		self.assertEqual(issue, issue_expected)
 
 
 if __name__ == '__main__':

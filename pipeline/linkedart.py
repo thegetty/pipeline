@@ -95,6 +95,7 @@ class MakeLinkedArtLinguisticObject(MakeLinkedArtRecord):
 	# TODO: document the expected format of data['names']
 	def set_properties(self, data, thing):
 		super().set_properties(data, thing)
+
 		title_type = model.Type(ident='http://vocab.getty.edu/aat/300055726', label='Title') # TODO: is this the right aat URI?
 		name = None
 		if 'label' in data:
@@ -159,6 +160,11 @@ class MakeLinkedArtLinguisticObject(MakeLinkedArtRecord):
 		for parent_data in parents:
 			parent = get_crom_object(parent_data)
 			thing.part_of = parent
+
+	def __call__(self, data: dict):
+		if 'object_type' not in data:
+			data['object_type'] = model.LinguisticObject
+		return super().__call__(data)
 
 
 class MakeLinkedArtHumanMadeObject(MakeLinkedArtRecord):

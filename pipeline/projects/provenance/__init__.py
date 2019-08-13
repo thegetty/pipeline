@@ -822,7 +822,7 @@ def add_auction_catalog(data):
 	cno = data['catalog_number']
 	key = f'CATALOG-{cno}'
 	cdata = {'uid': key, 'uri': pir_uri('CATALOG', cno)}
-	catalog = vocab.AuctionCatalog(ident=cdata['uri'])
+	catalog = vocab.AuctionCatalogText(ident=cdata['uri'])
 	catalog._label = f'Sale Catalog {cno}'
 	data['_catalog'] = cdata
 
@@ -913,6 +913,7 @@ class ProvenancePipeline(PipelineBase):
 		vocab.register_instance('animal', {'parent': model.Type, 'id': '300249395', 'label': 'Animal'})
 		vocab.register_instance('history', {'parent': model.Type, 'id': '300033898', 'label': 'History'})
 		
+		super().__init__()
 		self.project_name = 'provenance'
 		self.graph_0 = None
 		self.graph_1 = None

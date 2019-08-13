@@ -6,6 +6,9 @@ from cromulent.model import factory
 factory.auto_id_type = 'uuid'
 vocab.add_art_setter()
 
+from pipeline.util.cleaners import ymd_to_datetime
+import calendar
+
 def add_crom_data(data: dict, what=None):
 	data['_CROM_FACTORY'] = factory
 	data['_LOD_OBJECT'] = what
@@ -244,6 +247,50 @@ class MakeLinkedArtAuctionHouseOrganization(MakeLinkedArtOrganization):
 		if 'object_type' not in data:
 			data['object_type'] = vocab.AuctionHouseOrg
 		return super().__call__(data)
+
+
+# XXX Reconcile with provenance.timespan_from_outer_bounds
+def make_ymd_timespan(data: dict, start_prefix="", end_prefix="", label=""):
+	y = f'{start_prefix}year'
+	m = f'{start_prefix}month'
+	d = f'{start_prefix}day'
+	y2 = f'{end_prefix}year'
+	m2 = f'{end_prefix}month'
+	d2 = f'{end_prefix}day'	
+
+	t = model.TimeSpan()
+	if not label:
+		label = ymd_to_label(data[y], data[m], data[d])
+		if y != y2:
+			lbl2 = ymd_to_label(data[y2], data[m2], data[d2])
+			label = f'{label} to {lbl2}'
+	t._label = label
+	t.identified_by = model.Name(content=label)
+	t.begin_of_the_begin = ymd_to_datetime(data[y], data[m], data[d])
+	t.end_of_the_end = ymd_to_datetime(data[y2], data[m2], data[d2], which="end")
+	return t
+
+def ymd_to_label(year, month, day):
+	# Return monthname day year
+	if not year:
+		return "Unknown"
+	if not month:
+		return str(year)
+	if not isinstance(month, int):
+		try:
+			month = int(month)
+			month_name = calendar.month_name[month]
+		except:
+			# Assume it's already a name of a month
+			month_name = month
+	else:
+		month_name = calendar.month_name[month]
+	if day:
+		return f'{month_name} {day}, {year}'
+	else:
+		return f'{month_name} {year}'
+
+
 
 def make_la_person(data: dict):
 	uri = data.get('uri')

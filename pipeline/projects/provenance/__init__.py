@@ -822,7 +822,7 @@ def add_auction_catalog(data):
 	cno = data['catalog_number']
 	key = f'CATALOG-{cno}'
 	cdata = {'uid': key, 'uri': pir_uri('CATALOG', cno)}
-	catalog = vocab.AuctionCatalog(ident=cdata['uri'])
+	catalog = vocab.AuctionCatalogText(ident=cdata['uri'])
 	catalog._label = f'Sale Catalog {cno}'
 	data['_catalog'] = cdata
 

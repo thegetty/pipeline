@@ -8,7 +8,7 @@ import bonobo
 # and then passed in to the appropriate project
 # then UID_TAG_PREFIX could be managed in the main code
 
-from pipeline.projects.knoedler import KnoedlerFilePipeline
+from pipeline.projects.knoedler import Pipeline
 import settings
 from cromulent import vocab
 
@@ -31,7 +31,7 @@ if __name__ == '__main__':
 	parser = bonobo.get_argument_parser()
 	with bonobo.parse_args(parser) as options:
 		try:
-			pipeline = KnoedlerFilePipeline(
+			pipeline = Pipeline(
 				output_path=settings.output_file_path,
 				models=settings.arches_models,
 				pack_size=PACK_SIZE,

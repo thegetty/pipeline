@@ -913,6 +913,7 @@ class ProvenancePipeline(PipelineBase):
 		vocab.register_instance('animal', {'parent': model.Type, 'id': '300249395', 'label': 'Animal'})
 		vocab.register_instance('history', {'parent': model.Type, 'id': '300033898', 'label': 'History'})
 		
+		super().__init__()
 		self.project_name = 'provenance'
 		self.graph_0 = None
 		self.graph_1 = None

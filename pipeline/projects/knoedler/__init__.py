@@ -35,7 +35,7 @@ class Pipeline(PipelineBase):
 			self.SRLZ = Serializer(compact=False)
 			self.WRITER = FileWriter(directory=output_path)
 			# self.WRITER	= ArchesWriter()
-			sys.stderr.write("In self.debugGING mode\n")
+			sys.stderr.write("In DEBUGGING mode\n")
 		else:
 			self.SRLZ = Serializer(compact=True)
 			self.WRITER = FileWriter(directory=output_path)
@@ -259,11 +259,11 @@ class Pipeline(PipelineBase):
 			self.add_objects(graph)
 
 		# People
-		if not self.debug or 0:
+		if not self.debug or 1:
 			self.add_people(graph)
 
 		# Documents
-		if not self.debug or 1:
+		if not self.debug or 0:
 			self.add_documents(graph)
 
 		return graph

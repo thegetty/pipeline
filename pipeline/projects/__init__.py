@@ -20,7 +20,6 @@ class PipelineBase:
 			with open(file, 'r') as f:
 				return json.load(f)
 		elif file.suffix == '.sqlite':
-			print(f'SQLITE SERVICE: {file.stem}')
 			return create_engine(f'sqlite://%s' % (file.absolute(),))
 
 	def get_services(self):
@@ -38,10 +37,10 @@ class PipelineBase:
 
 		proj_path = pathlib.Path(settings.pipeline_project_service_files_path(self.project_name))
 		for file in proj_path.rglob('*'):
-			if file.stem in services:
-				print(f'*** Project is overloading a shared service JSON file: {file.stem}')
 			service = self._service_from_path(file)
 			if service:
+				if file.stem in services:
+					print(f'*** Project is overloading a shared service file: {file}')
 				services[file.stem] = service
 
 		return services

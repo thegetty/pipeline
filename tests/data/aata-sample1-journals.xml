@@ -1,0 +1,105 @@
+<?xml version="1.0" encoding="utf-8"?>
+<journal_XML p1:noNamespaceSchemaLocation="http://aata2-stage.getty.edu:8080/AATA_Pub_journal_XML_Schema_v1.0.xsd" xmlns:p1="http://www.w3.org/2001/XMLSchema-instance">
+  <record>
+    <record_desc_group>
+      <record_id>2</record_id>
+      <record_status>approved</record_status>
+      <record_create_date>n.a.</record_create_date>
+      <priority>C</priority>
+      <editor_info>
+        <user_id>36</user_id>
+        <user_type>record_originator</user_type>
+        <first_name>Alison L.</first_name>
+        <last_name>Luxner</last_name>
+        <user_initials>ALL</user_initials>
+      </editor_info>
+      <editor_info>
+        <user_id>527</user_id>
+        <user_type>last_updated_by</user_type>
+        <first_name>Kari E.</first_name>
+        <last_name>Johnson</last_name>
+        <user_initials>KEJ</user_initials>
+      </editor_info>
+      <source_note>
+        <note>OCLC 40966731</note>
+      </source_note>
+    </record_desc_group>
+    <journal_group>
+      <title>Green chemistry</title>
+      <variant_title>Green chemistry: an international journal and green chemistry resource</variant_title>
+      <variant_title>Green chemistry: cutting-edge research for a greener sustainable future</variant_title>
+      <language>
+        <lang_name>English</lang_name>
+        <lang_scope>Document</lang_scope>
+      </language>
+      <language>
+        <lang_name>English</lang_name>
+        <lang_scope>Summary</lang_scope>
+      </language>
+      <frequency>12/year</frequency>
+      <start_year>1999</start_year>
+      <author_abstracts>yes</author_abstracts>
+      <issn>1463-9262</issn>
+    </journal_group>
+    <issue_group>
+      <issue_id>38548</issue_id>
+      <date>
+        <display_date>9 9 2007</display_date>
+        <sort_year>2007</sort_year>
+      </date>
+      <volume>9</volume>
+      <number>9</number>
+      <enum_chron>v. 24 (2005)</enum_chron>
+    </issue_group>
+  </record>
+  <record>
+    <record_desc_group>
+      <record_id>6</record_id>
+      <record_status>approved</record_status>
+      <record_create_date>n.a.</record_create_date>
+      <priority>F</priority>
+      <editor_info>
+        <user_id>36</user_id>
+        <user_type>record_originator</user_type>
+        <first_name>Alison L.</first_name>
+        <last_name>Luxner</last_name>
+        <user_initials>ALL</user_initials>
+      </editor_info>
+      <editor_info>
+        <user_id>527</user_id>
+        <user_type>last_updated_by</user_type>
+        <first_name>Kari E.</first_name>
+        <last_name>Johnson</last_name>
+        <user_initials>KEJ</user_initials>
+      </editor_info>
+    </record_desc_group>
+    <journal_group>
+      <title>Rock art quarterly</title>
+      <language>
+        <lang_name>English</lang_name>
+        <lang_scope>Document</lang_scope>
+      </language>
+      <frequency>12/year</frequency>
+      <start_year>1990</start_year>
+      <cease_year>1993</cease_year>
+      <author_abstracts>yes</author_abstracts>
+    </journal_group>
+    <issue_group>
+      <issue_id>38574</issue_id>
+      <date>
+        <display_date>1 3-4 1990</display_date>
+        <sort_year>1990</sort_year>
+      </date>
+      <volume>1</volume>
+      <number>3-4</number>
+      <enum_chron>v. 1, n. 3-4 (1990)</enum_chron>
+    </issue_group>
+    <publisher_group>
+      <auth_corp_id>142407</auth_corp_id>
+      <publisher_name>Rock Art Association of Canada</publisher_name>
+      <auth_geog_id>541</auth_geog_id>
+      <publisher_city>Winnipeg</publisher_city>
+      <publisher_country>Canada</publisher_country>
+    </publisher_group>
+  </record>
+</journal_XML>

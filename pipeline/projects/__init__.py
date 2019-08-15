@@ -5,6 +5,7 @@ import json
 import bonobo
 import settings
 from sqlalchemy import create_engine
+from sqlalchemy.engine.url import URL
 
 from pipeline.nodes.basic import \
 			AddArchesModel, \
@@ -20,7 +21,9 @@ class PipelineBase:
 			with open(file, 'r') as f:
 				return json.load(f)
 		elif file.suffix == '.sqlite':
-			return create_engine(f'sqlite://%s' % (file.absolute(),))
+			s = URL(drivername='sqlite', database=file.absolute())
+			e = create_engine(s)
+			return e
 
 	def get_services(self):
 		'''Return a `dict` of named services available to the bonobo pipeline.'''

@@ -292,123 +292,104 @@ def ymd_to_label(year, month, day):
 
 
 
-def make_la_person(data: dict):
-	uri = data.get('uri')
-	if not uri:
-		if 'uuid' not in data:
-			print('No UUID for person:')
-			pprint.pprint(data)
-		uri = "urn:uuid:%s" % data['uuid']
-	who = model.Person(ident=uri)
-	who._label = str(data['label'])
+class MakeLinkedArtPerson(MakeLinkedArtRecord):
+	def set_properties(self, data, who):
+		super().set_properties(data, who)
+		who._label = str(data['label'])
 
-	ulan = data.get('ulan')
-	if ulan:
-		who.exact_match = model.BaseResource(ident=f'http://vocab.getty.edu/ulan/{ulan}')
+		ulan = data.get('ulan')
+		if ulan:
+			who.exact_match = model.BaseResource(ident=f'http://vocab.getty.edu/ulan/{ulan}')
 
-	for ns in ['aat_nationality_1', 'aat_nationality_2','aat_nationality_3']:
-		# add nationality
-		n = data.get(ns)
-		# XXX Strip out antique / modern anonymous as a nationality
-		if n:
-			if int(n) in [300310546,300264736]:
+		for ns in ['aat_nationality_1', 'aat_nationality_2','aat_nationality_3']:
+			# add nationality
+			n = data.get(ns)
+			# XXX Strip out antique / modern anonymous as a nationality
+			if n:
+				if int(n) in [300310546,300264736]:
+					break
+				natl = vocab.Nationality(ident="http://vocab.getty.edu/aat/%s" % n)
+				who.classified_as = natl
+				natl._label = str(data[ns+'_label'])
+			else:
 				break
-			natl = vocab.Nationality(ident="http://vocab.getty.edu/aat/%s" % n)
-			who.classified_as = natl
-			natl._label = str(data[ns+'_label'])
-		else:
-			break
 
-	# nationality field can contain other information, but not useful.
-	# XXX Intentionally ignored but validate with GRI
+		# nationality field can contain other information, but not useful.
+		# XXX Intentionally ignored but validate with GRI
 
-	if data.get('active_early') or data.get('active_late'):
-		act = vocab.Active()
-		ts = model.TimeSpan()
-		if data['active_early']:
-			ts.begin_of_the_begin = "%s-01-01:00:00:00Z" % (data['active_early'],)
-			ts.end_of_the_begin = "%s-01-01:00:00:00Z" % (data['active_early']+1,)
-		if data['active_late']:
-			ts.begin_of_the_end = "%s-01-01:00:00:00Z" % (data['active_late'],)
-			ts.end_of_the_end = "%s-01-01:00:00:00Z" % (data['active_late']+1,)
-		ts._label = "%s-%s" % (data['active_early'], data['active_late'])
-		act.timespan = ts
-		who.carried_out = act
+		if data.get('active_early') or data.get('active_late'):
+			act = vocab.Active()
+			ts = model.TimeSpan()
+			if data['active_early']:
+				ts.begin_of_the_begin = "%s-01-01:00:00:00Z" % (data['active_early'],)
+				ts.end_of_the_begin = "%s-01-01:00:00:00Z" % (data['active_early']+1,)
+			if data['active_late']:
+				ts.begin_of_the_end = "%s-01-01:00:00:00Z" % (data['active_late'],)
+				ts.end_of_the_end = "%s-01-01:00:00:00Z" % (data['active_late']+1,)
+			ts._label = "%s-%s" % (data['active_early'], data['active_late'])
+			act.timespan = ts
+			who.carried_out = act
 
-	for event in data.get('events', []):
-		who.carried_out = event
+		for event in data.get('events', []):
+			who.carried_out = event
 
-	if data.get('birth'):
-		b = model.Birth()
-		ts = model.TimeSpan()
-		if 'birth_clean' in data and data['birth_clean']:
-			if data['birth_clean'][0]:
-				ts.begin_of_the_begin = data['birth_clean'][0].strftime("%Y-%m-%dT%H:%M:%SZ")
-			if data['birth_clean'][1]:
-				ts.end_of_the_end = data['birth_clean'][1].strftime("%Y-%m-%dT%H:%M:%SZ")
-		ts._label = data['birth']
-		b.timespan = ts
-		b._label = "Birth of %s" % who._label
-		who.born = b
+		if data.get('birth'):
+			b = model.Birth()
+			ts = model.TimeSpan()
+			if 'birth_clean' in data and data['birth_clean']:
+				if data['birth_clean'][0]:
+					ts.begin_of_the_begin = data['birth_clean'][0].strftime("%Y-%m-%dT%H:%M:%SZ")
+				if data['birth_clean'][1]:
+					ts.end_of_the_end = data['birth_clean'][1].strftime("%Y-%m-%dT%H:%M:%SZ")
+			ts._label = data['birth']
+			b.timespan = ts
+			b._label = "Birth of %s" % who._label
+			who.born = b
 
-	if data.get('death'):
-		d = model.Death()
-		ts = model.TimeSpan()
-		if 'death_clean' in data and data['death_clean']:
-			if data['death_clean'][0]:
-				ts.begin_of_the_begin = data['death_clean'][0].strftime("%Y-%m-%dT%H:%M:%SZ")
-			if data['death_clean'][1]:
-				ts.end_of_the_end = data['death_clean'][1].strftime("%Y-%m-%dT%H:%M:%SZ")
-		ts._label = data['death']
-		d.timespan = ts
-		d._label = "Death of %s" % who._label
-		who.died = d
+		if data.get('death'):
+			d = model.Death()
+			ts = model.TimeSpan()
+			if 'death_clean' in data and data['death_clean']:
+				if data['death_clean'][0]:
+					ts.begin_of_the_begin = data['death_clean'][0].strftime("%Y-%m-%dT%H:%M:%SZ")
+				if data['death_clean'][1]:
+					ts.end_of_the_end = data['death_clean'][1].strftime("%Y-%m-%dT%H:%M:%SZ")
+			ts._label = data['death']
+			d.timespan = ts
+			d._label = "Death of %s" % who._label
+			who.died = d
 
-	# Add names
-	for name in data.get('names', []):
-		n = model.Name(ident='', content=name[0])
-		for ref in name[1:]:
-			l = model.LinguisticObject(ident="urn:uuid:%s" % ref[1])
-			# l._label = _row_label(ref[2][0], ref[2][1], ref[2][2])
-			n.referred_to_by = l
-		who.identified_by = n
+		# Add names
+		for name in data.get('names', []):
+			n = model.Name(ident='', content=name[0])
+			for ref in name[1:]:
+				l = model.LinguisticObject(ident="urn:uuid:%s" % ref[1])
+				# l._label = _row_label(ref[2][0], ref[2][1], ref[2][2])
+				n.referred_to_by = l
+			who.identified_by = n
 
-	for identifier in data.get('identifiers', []):
-		if isinstance(identifier, tuple):
-			content, itype = identifier
-			if itype is not None:
-				if isinstance(itype, type):
-					ident = itype(content=content)
-				elif isinstance(itype, object):
-					ident = itype
-					ident.content = content
-				else:
-					ident = model.Identifier()
-					ident.content = content
-					ident.classified_as = itype
-		else:
-			ident = identifier
-		who.identified_by = ident
+		# Locations are names of residence places (P74 -> E53)
+		# XXX FIXME: Places are their own model
+		if 'places' in data:
+			for p in data['places']:
+				pl = model.Place()
+				#pl._label = p['label']
+				#nm = model.Name()
+				#nm.content = p['label']
+				#pl.identified_by = nm
+				#for s in p['sources']:
+				#		l = model.LinguisticObject(ident="urn:uuid:%s" % s[1])
+					# l._label = _row_label(s[2], s[3], s[4])
+				#	pl.referred_to_by = l
+				who.residence = pl
 
-	# Locations are names of residence places (P74 -> E53)
-	# XXX FIXME: Places are their own model
-	if 'places' in data:
-		for p in data['places']:
-			pl = model.Place()
-			#pl._label = p['label']
-			#nm = model.Name()
-			#nm.content = p['label']
-			#pl.identified_by = nm
-			#for s in p['sources']:
-			#		l = model.LinguisticObject(ident="urn:uuid:%s" % s[1])
-				# l._label = _row_label(s[2], s[3], s[4])
-			#	pl.referred_to_by = l
-			who.residence = pl
+		for uri in data.get('exact_match', []):
+			who.exact_match = uri
 
-	for uri in data.get('exact_match', []):
-		who.exact_match = uri
-
-	return add_crom_data(data=data, what=who)
+	def __call__(self, data: dict):
+		if 'object_type' not in data:
+			data['object_type'] = model.Person
+		return super().__call__(data)
 
 def make_la_place(data: dict):
 	'''

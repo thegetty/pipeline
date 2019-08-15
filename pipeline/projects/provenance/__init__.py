@@ -49,7 +49,7 @@ from pipeline.linkedart import \
 			MakeLinkedArtHumanMadeObject, \
 			MakeLinkedArtAuctionHouseOrganization, \
 			MakeLinkedArtOrganization, \
-			make_la_person, \
+			MakeLinkedArtPerson, \
 			make_la_place
 from pipeline.io.csv import CurriedCSVReader
 from pipeline.nodes.basic import \
@@ -366,7 +366,7 @@ def add_person(data: dict):
 	Add modeling data for people, based on properties of the supplied `data` dict.
 
 	This function adds properties to `data` before calling
-	`pipeline.linkedart.make_la_person` to construct the model objects.
+	`pipeline.linkedart.MakeLinkedArtPerson` to construct the model objects.
 	'''
 	ulan = None
 	with suppress(ValueError, TypeError):
@@ -391,6 +391,7 @@ def add_person(data: dict):
 	else:
 		data['label'] = '(Anonymous person)'
 
+	make_la_person = MakeLinkedArtPerson()
 	make_la_person(data)
 	return data
 
@@ -454,6 +455,7 @@ def add_acquisition(data, hmo, buyers, sellers):
 	post_own = data.get('post_owner', [])
 	prev_own = data.get('prev_owner', [])
 	prev_post_owner_records = [(post_own, False), (prev_own, True)]
+	make_la_person = MakeLinkedArtPerson()
 	for owner_data, rev in prev_post_owner_records:
 		for owner_record in owner_data:
 			name = owner_record.get('own_auth', owner_record.get('own'))
@@ -786,6 +788,7 @@ def add_pir_artists(data):
 	# TODO: filtering empty people should be moved much earlier in the pipeline
 	artists = list(filter_empty_people(*artists))
 	data['_artists'] = artists
+	make_la_person = MakeLinkedArtPerson()
 	for a in artists:
 		star_rec_no = a.get('star_rec_no')
 		ulan = a.get('artist_ulan')

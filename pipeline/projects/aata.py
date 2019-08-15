@@ -29,7 +29,7 @@ from pipeline.linkedart import \
 			MakeLinkedArtAbstract, \
 			MakeLinkedArtLinguisticObject, \
 			MakeLinkedArtOrganization, \
-			make_la_person, \
+			MakeLinkedArtPerson, \
 			get_crom_object, \
 			add_crom_data
 from pipeline.io.xml import CurriedXMLReader
@@ -741,6 +741,7 @@ def add_aata_authors(data):
 	lod_object.created_by = event
 
 	authors = data.get('_authors', [])
+	make_la_person = MakeLinkedArtPerson()
 	for a in authors:
 		make_la_person(a)
 		person_name = a['label']

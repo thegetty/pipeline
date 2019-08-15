@@ -16,7 +16,7 @@ from pipeline.projects.knoedler.data import *
 from pipeline.projects.knoedler.linkedart import *
 from pipeline.io.file import FileWriter
 from pipeline.io.arches import ArchesWriter
-from pipeline.linkedart import make_la_person
+from pipeline.linkedart import MakeLinkedArtPerson
 from settings import *
 import settings
 
@@ -201,7 +201,7 @@ class Pipeline(PipelineBase):
 			add_person_names,
 			add_person_aat_labels,
 			clean_dates,
-			make_la_person,	
+			MakeLinkedArtPerson,	
 			self.SRLZ,
 			self.WRITER
 		)

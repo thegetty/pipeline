@@ -201,7 +201,7 @@ class Pipeline(PipelineBase):
 			add_person_names,
 			add_person_aat_labels,
 			clean_dates,
-			MakeLinkedArtPerson,	
+			MakeLinkedArtPerson(),	
 			self.SRLZ,
 			self.WRITER
 		)

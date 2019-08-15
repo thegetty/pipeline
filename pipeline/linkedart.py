@@ -21,6 +21,35 @@ def get_crom_object(data: dict):
 
 class MakeLinkedArtRecord:
 	def set_properties(self, data, thing):
+		'''
+		The following keys in `data` are handled to set properties on `thing`:
+		
+		`referred_to_by`
+		`identifiers`
+		`names` -	An array of arrays of one or two elements. The first element of each
+					array is a name string, and is set as the value of a `model.Name` for
+					`thing`. If there is a `dict` second element, its contents are used to
+					assert properties of the name. An array associated with the key
+					`'referred_to_by'` will be used to assert that the `LinguisticObject`s
+					(or `dict`s representing a `LinguisticObject`) refer to the name.
+
+		Example data:
+		
+		{
+			'names': [
+				['J. Paul Getty'],
+				[
+					'Getty',
+					{
+						'referred_to_by': [
+							{'uri': 'tag:getty.edu,2019:digital:pipeline:knoedler:REPLACE-WITH-UUID#K-ROW-1-2-3'},
+							model.LinguisticObject(ident='tag:getty.edu,2019:digital:pipeline:knoedler:REPLACE-WITH-UUID#K-ROW-1-7-10'),
+						]
+					}
+				]
+			]
+		}
+		'''
 		for notedata in data.get('referred_to_by', []):
 			if isinstance(notedata, tuple):
 				content, itype = notedata
@@ -53,6 +82,28 @@ class MakeLinkedArtRecord:
 			else:
 				ident = identifier
 			thing.identified_by = ident
+
+		for namedata in data.get('names', []):
+			# namedata should take the form of:
+			# ["A. Name"]
+			# ["A. Name", {'referred_to_by': [{'uri': 'URI-OF-LINGUISTIC_OBJECT'}, model.LinguisticObject()]}]
+			name, *properties = namedata
+			n = set_la_name(thing, name)
+			for props in properties:
+				assert(isinstance(props, dict))
+				for ref in props.get('referred_to_by', []):
+					if isinstance(ref, dict):
+						if 'uri' in ref:
+							l = model.LinguisticObject(ident=ref['uri'])
+						elif 'uuid' in data:
+							l = model.LinguisticObject(ident="urn:uuid:%s" % ref['uuid'])
+						else:
+							raise Exception(f'MakeLinkedArtRecord call attempt to set name {name} with a non-identified reference: {ref}')
+					elif isinstance(ref, object):
+						l = ref
+					else:
+						raise Exception(f'MakeLinkedArtRecord call attempt to set name {name} with an unrecognized reference type: {ref}')
+					n.referred_to_by = l
 
 	def __call__(self, data: dict):
 		if '_LOD_OBJECT' in data:
@@ -92,7 +143,6 @@ def set_la_name(thing, value, title_type=None, set_label=False):
 class MakeLinkedArtLinguisticObject(MakeLinkedArtRecord):
 	# TODO: document the expected format of data['translations']
 	# TODO: document the expected format of data['identifiers']
-	# TODO: document the expected format of data['names']
 	def set_properties(self, data, thing):
 		super().set_properties(data, thing)
 
@@ -111,13 +161,6 @@ class MakeLinkedArtLinguisticObject(MakeLinkedArtRecord):
 			thing.identified_by = ident
 			for n in notes:
 				ident.referred_to_by = n
-
-		for name in data.get('names', []):
-			n = set_la_name(thing, name[0])
-			for ref in name[1:]:
-				l = model.LinguisticObject(ident="urn:uuid:%s" % ref[1])
-				# l._label = _row_label(ref[2][0], ref[2][1], ref[2][2])
-				n.referred_to_by = l
 
 		code_type = None # TODO: is there a model.Type value for this sort of code?
 		for c in data.get('classifications', []):
@@ -198,13 +241,6 @@ class MakeLinkedArtHumanMadeObject(MakeLinkedArtRecord):
 				ident = identifier
 			thing.identified_by = ident
 
-		for name in data.get('names', []):
-			n = set_la_name(thing, name[0])
-			for ref in name[1:]:
-				l = model.LinguisticObject(ident="urn:uuid:%s" % ref[1])
-				# l._label = _row_label(ref[2][0], ref[2][1], ref[2][2])
-				n.referred_to_by = l
-
 		for annotation in data.get('annotations', []):
 			a = model.Annotation()
 			a.content = content
@@ -215,7 +251,6 @@ class MakeLinkedArtAbstract(MakeLinkedArtLinguisticObject):
 	pass
 
 class MakeLinkedArtOrganization(MakeLinkedArtRecord):
-	# TODO: document the expected format of data['names']
 	def set_properties(self, data, thing):
 		super().set_properties(data, thing)
 		with suppress(KeyError):
@@ -228,14 +263,6 @@ class MakeLinkedArtOrganization(MakeLinkedArtRecord):
 		if 'events' in data:
 			for event in data['events']:
 				thing.carried_out = event
-
-		for name in data.get('names', []):
-			n = set_la_name(thing, name[0])
-			for ref in name[1:]:
-				l = model.LinguisticObject(ident="urn:uuid:%s" % ref[1])
-				# l._label = _row_label(ref[2][0], ref[2][1], ref[2][2])
-				n.referred_to_by = l
-# 			thing.identified_by = n
 
 	def __call__(self, data: dict):
 		if 'object_type' not in data:
@@ -289,7 +316,6 @@ def ymd_to_label(year, month, day):
 		return f'{month_name} {day}, {year}'
 	else:
 		return f'{month_name} {year}'
-
 
 
 class MakeLinkedArtPerson(MakeLinkedArtRecord):
@@ -358,15 +384,6 @@ class MakeLinkedArtPerson(MakeLinkedArtRecord):
 			d.timespan = ts
 			d._label = "Death of %s" % who._label
 			who.died = d
-
-		# Add names
-		for name in data.get('names', []):
-			n = model.Name(ident='', content=name[0])
-			for ref in name[1:]:
-				l = model.LinguisticObject(ident="urn:uuid:%s" % ref[1])
-				# l._label = _row_label(ref[2][0], ref[2][1], ref[2][2])
-				n.referred_to_by = l
-			who.identified_by = n
 
 		# Locations are names of residence places (P74 -> E53)
 		# XXX FIXME: Places are their own model

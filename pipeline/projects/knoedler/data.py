@@ -5,6 +5,7 @@ from pipeline.util.cleaners import date_cleaner, share_parse
 import copy
 import collections
 
+from .linkedart import _row_uid
 from pipeline.projects.knoedler import UID_TAG_PREFIX
 
 # ~~~~ Object Tables ~~~~
@@ -687,11 +688,14 @@ def add_person_names(thing: dict, gpi, gpi_alignment):
 			WHERE
 				ref.person_name_id = :name_id
 			'''
-		record = []
+		record = {'referred_to_by': []}
 		for star_record_no, stock_book_no, page_number, row_number in gpi.execute(s2, name_id=nid):
-			val = [star_record_no, [stock_book_no, page_number, row_number]]
-			record.append(val)
-		thing['names'].append([name] + sorted(record))
+			uri = _row_uid(stock_book_no, page_number, row_number)
+			record['referred_to_by'].append({
+				'star_record_no': star_record_no,
+				'uri': uri,
+			})
+		thing['names'].append([name, record])
 	return thing
 
 def aligned_person_names(person_uid, gpi, gpi_alignment):
@@ -701,12 +705,15 @@ def aligned_person_names(person_uid, gpi, gpi_alignment):
 
 	aligned_records = []
 	for name, refs in name_references.items():
-		record = []
+		record = {'referred_to_by': []}
 		for ref in refs:
 			for star_record_no, stock_book_no, page_number, row_number in gpi.execute('SELECT k.star_record_no, k.stock_book_no, k.page_number, k.row_number FROM knoedler k WHERE pi_record_no = :ref', ref=ref):
-				val = [star_record_no, [stock_book_no, page_number, row_number]]
-				record.append(val)
-		aligned_records.append([name] + sorted(record))
+				uri = _row_uid(stock_book_no, page_number, row_number)
+				record['referred_to_by'].append({
+					'star_record_no': star_record_no,
+					'uri': uri,
+				})
+		aligned_records.append([name, record])
 	aligned_records = sorted(aligned_records)
 	return aligned_records
 

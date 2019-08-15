@@ -35,7 +35,7 @@ class Pipeline(PipelineBase):
 			self.SRLZ = Serializer(compact=False)
 			self.WRITER = FileWriter(directory=output_path)
 			# self.WRITER	= ArchesWriter()
-			sys.stderr.write("In DEBUGGING mode\n")
+			print("In DEBUGGING mode\n", file=sys.stderr)
 		else:
 			self.SRLZ = Serializer(compact=True)
 			self.WRITER = FileWriter(directory=output_path)
@@ -270,9 +270,9 @@ class Pipeline(PipelineBase):
 
 	def run(self, services=None, **options):
 		'''Run the Knoedler bonobo pipeline.'''
-		sys.stderr.write("- Limiting to %d records per file\n" % (self.limit,))
-		sys.stderr.write("- Using serializer: %r\n" % (self.SRLZ,))
-		sys.stderr.write("- Using writer: %r\n" % (self.WRITER,))
+		print("- Limiting to %d records per file\n" % (self.limit,), file=sys.stderr)
+		print("- Using serializer: %r\n" % (self.SRLZ,), file=sys.stderr)
+		print("- Using writer: %r\n" % (self.WRITER,), file=sys.stderr)
 		if not services:
 			services = self.get_services(**options)
 
@@ -280,5 +280,5 @@ class Pipeline(PipelineBase):
 		graph = self.get_graph(**options)
 		bonobo.run(graph, services=services)
 		
-		print('Pipeline runtime: ', timeit.default_timer() - start)  
+		print(f'Pipeline runtime: {timeit.default_timer() - start}', file=sys.stderr)
 

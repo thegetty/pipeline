@@ -1,5 +1,7 @@
 output*
 data/*.sqlite
-data/pir
+data/provenance
 data/aata/*.xml
+data/knoedler/*.csv
 endpoint
+tmp

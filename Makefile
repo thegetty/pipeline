@@ -59,7 +59,7 @@ pirgraph: $(GETTY_PIPELINE_TMP_PATH)/pir.pdf
 
 knoedler:
 	QUIET=$(QUIET) GETTY_PIPELINE_DEBUG=$(DEBUG) GETTY_PIPELINE_LIMIT=$(LIMIT) $(PYTHON) ./knoedler.py
-	PYTHONPATH=`pwd` $(PYTHON) ./scripts/rewrite_uris_to_uuids.py 'tag:getty.edu,2019:digital:pipeline:knoedler:REPLACE-WITH-UUID#'
+# 	PYTHONPATH=`pwd` $(PYTHON) ./scripts/rewrite_uris_to_uuids.py 'tag:getty.edu,2019:digital:pipeline:knoedler:REPLACE-WITH-UUID#'
 
 knoedlergraph: $(GETTY_PIPELINE_TMP_PATH)/knoedler.pdf
 	open -a Preview $(GETTY_PIPELINE_TMP_PATH)/knoedler.pdf

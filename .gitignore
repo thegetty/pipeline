@@ -102,3 +102,13 @@ venv.bak/
 
 # mypy
 .mypy_cache/
+
+
+### PIPELINE
+
+data/aata/*.xml
+data/provenance/*.csv
+data/provenance/*.sql*
+data/*.sqlite
+output
+endpoint

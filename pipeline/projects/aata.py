@@ -74,12 +74,12 @@ def language_object_from_code(code, language_code_map):
 				return vocab.instances[language_name]
 			except KeyError:
 				if settings.DEBUG:
-					sys.stderr.write(f'*** No AAT language instance found: {language_name!r}\n')
+					print(f'*** No AAT language instance found: {language_name!r}', file=sys.stderr)
 		else:
 			if settings.DEBUG:
-				sys.stderr.write(f'*** No AAT link for language {code!r}\n')
+				print(f'*** No AAT link for language {code!r}', file=sys.stderr)
 	except Exception as e:
-		sys.stderr.write(f'*** language_object_from_code: {e}\n')
+		print(f'*** language_object_from_code: {e}', file=sys.stderr)
 		raise e
 
 # main article chain
@@ -586,9 +586,8 @@ def _xml_extract_authors(e, aata_id):
 
 					yield author
 				else:
-					sys.stderr.write('*** No author_id found for record %s\n' % (aata_id,))
-# 					sys.stderr.write(lxml.etree.tostring(a).decode('utf-8'))
-# 					sys.stderr.write('\n')
+					print('*** No author_id found for record %s' % (aata_id,), file=sys.stderr)
+# 					print(lxml.etree.tostring(a).decode('utf-8'), file=sys.stderr)
 
 @use('document_types')
 def add_aata_object_type(data, document_types):
@@ -795,11 +794,12 @@ def detect_title_language(data: dict, language_code_map):
 				# so we lack confidence to proceed
 				pass
 	except iso639.NonExistentLanguageError as e:
-		sys.stderr.write('*** Unrecognized language code detected: %r\n' % (detected,))
+		print('*** Unrecognized language code detected: %r' % (detected,), file=sys.stderr)
 	except KeyError as e:
-		sys.stderr.write(
+		print(
 			'*** LANGUAGE: detected but unrecognized title language %r '
-			'(cf. declared in metadata: %r): %s\n' % (e.args[0], languages, title)
+			'(cf. declared in metadata: %r): %s' % (e.args[0], languages, title),
+			file=sys.stderr
 		)
 	except Exception as e:
 		print('*** detect_title_language error: %r' % (e,))
@@ -1052,7 +1052,7 @@ class AATAPipeline(PipelineBase):
 
 	def run(self, **options):
 		'''Run the AATA bonobo pipeline.'''
-		sys.stderr.write("- Limiting to %d records per file\n" % (self.limit,))
+		print("- Limiting to %d records per file" % (self.limit,), file=sys.stderr)
 		graph = self.get_graph(**options)
 		services = self.get_services(**options)
 		bonobo.run(

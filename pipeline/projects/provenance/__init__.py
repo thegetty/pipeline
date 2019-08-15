@@ -1391,20 +1391,20 @@ class ProvenancePipeline(PipelineBase):
 
 	def run(self, services=None, **options):
 		'''Run the Provenance bonobo pipeline.'''
-		sys.stderr.write("- Limiting to %d records per file\n" % (self.limit,))
+		print(f'- Limiting to {self.limit} records per file', file=sys.stderr)
 		if not services:
 			services = self.get_services(**options)
 
 		start = timeit.default_timer()
-		print('Running graph component 1...')
+		print('Running graph component 1...', file=sys.stderr)
 		graph1 = self.get_graph_1(**options)
 		bonobo.run(graph1, services=services)
 
-		print('Running graph component 2...')
+		print('Running graph component 2...', file=sys.stderr)
 		graph2 = self.get_graph_2(**options)
 		bonobo.run(graph2, services=services)
 		
-		print('Pipeline runtime: ', timeit.default_timer() - start)  
+		print(f'Pipeline runtime: {timeit.default_timer() - start}', file=sys.stderr)
 
 
 class ProvenanceFilePipeline(ProvenancePipeline):
@@ -1453,7 +1453,7 @@ class ProvenanceFilePipeline(ProvenancePipeline):
 				print(f'  {src} maps to a MULTI-OBJECT lot')
 			else:
 				print(f'  {src} maps to an UNKNOWN lot')
-		print(f'mapped {mapped}/{total} objects to a previous sale')
+		print(f'mapped {mapped}/{total} objects to a previous sale', file=sys.stderr)
 
 		large_components = set(g.largest_component_canonical_keys(10))
 		dot = graphviz.Digraph()

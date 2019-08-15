@@ -5,6 +5,9 @@
 version: 2
 jobs:
   build:
+    environment:
+      GETTY_PIPELINE_INPUT: ~/repo/data
+
     docker:
       - image: circleci/python:3.6.1
 

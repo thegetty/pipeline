@@ -159,6 +159,16 @@ class AddFieldNamesService(Configurable):
 	key = Option(required=False) # This is passed into __init__ as a kwarg but not into __call__
 	field_names = Service('header_names')   # This is passed into __call__ as a kwarg not at __init__  
 	# ... go figure
+
+	def __init__(self, *args, **kwargs):
+		'''
+		Sets the __name__ property to include the relevant options so that when the
+		bonobo graph is serialized as a GraphViz document, different objects can be
+		visually differentiated.
+		'''
+		super().__init__(self, *args, **kwargs)
+		self.__name__ = f'{type(self).__name__} ({self.key})'
+
 	def __call__(self, *data, field_names={}):
 		if len(data) == 1 and type(data[0]) in (tuple, list):
 			data = data[0]

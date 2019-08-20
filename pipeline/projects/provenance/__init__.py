@@ -382,9 +382,8 @@ def add_person(data: dict):
 		data['uuid'] = str(uuid.uuid4())
 
 	names = []
-	for k in ('auth_name', 'name'):
-		if k in data:
-			names.append((data[k],))
+	for name_string in set([data[k] for k in ('auth_name', 'name') if k in data]):
+		names.append((name_string,))
 	if names:
 		data['names'] = names
 		data['label'] = names[0][0]

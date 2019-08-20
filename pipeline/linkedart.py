@@ -1,5 +1,6 @@
 import pprint
 from contextlib import suppress
+import warnings
 
 from cromulent import model, vocab
 from cromulent.model import factory
@@ -124,6 +125,8 @@ class MakeLinkedArtRecord:
 def set_la_name(thing, value, title_type=None, set_label=False):
 	if value is None:
 		return None
+	if value == '':
+		warnings.warn(f'Setting empty name on {thing.id}')
 	if isinstance(value, tuple):
 		label, language = value
 	else:

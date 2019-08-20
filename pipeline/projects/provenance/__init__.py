@@ -382,9 +382,8 @@ def add_person(data: dict):
 		data['uuid'] = str(uuid.uuid4())
 
 	names = []
-	for k in ('auth_name', 'name'):
-		if k in data:
-			names.append((data[k],))
+	for name_string in set([data[k] for k in ('auth_name', 'name') if k in data]):
+		names.append((name_string,))
 	if names:
 		data['names'] = names
 		data['label'] = names[0][0]
@@ -686,7 +685,9 @@ def populate_object(data, post_sale_map, unique_catalogs, vocab_instance_map, de
 						'name': inst,
 						'label': f'{inst} ({loc})',
 					}
-					ulan = location.get('insi')
+					ulan = None
+					with suppress(ValueError, TypeError):
+						ulan = int(location.get('insi'))
 					if ulan:
 						owner_data['ulan'] = ulan
 						owner_data['uri'] = pir_uri('ORGANIZATION', 'ULAN', ulan)
@@ -791,7 +792,9 @@ def add_pir_artists(data):
 	make_la_person = MakeLinkedArtPerson()
 	for a in artists:
 		star_rec_no = a.get('star_rec_no')
-		ulan = a.get('artist_ulan')
+		ulan = None
+		with suppress(ValueError, TypeError):
+			ulan = int(a.get('artist_ulan'))
 		if ulan:
 			key = f'PERSON-ULAN-{ulan}'
 			a['uri'] = pir_uri('PERSON', 'ULAN', ulan)

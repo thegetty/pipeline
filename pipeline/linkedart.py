@@ -221,9 +221,10 @@ class MakeLinkedArtOrganization(MakeLinkedArtRecord):
 		with suppress(KeyError):
 			thing._label = str(data['label'])
 
-		ulan = data.get('ulan')
-		if ulan:
-			thing.exact_match = model.BaseResource(ident=f'http://vocab.getty.edu/ulan/{ulan}')
+		with suppress(ValueError, TypeError):
+			ulan = int(data.get('ulan'))
+			if ulan:
+				thing.exact_match = model.BaseResource(ident=f'http://vocab.getty.edu/ulan/{ulan}')
 
 		if 'events' in data:
 			for event in data['events']:
@@ -301,10 +302,10 @@ def make_la_person(data: dict):
 		uri = "urn:uuid:%s" % data['uuid']
 	who = model.Person(ident=uri)
 	who._label = str(data['label'])
-
-	ulan = data.get('ulan')
-	if ulan:
-		who.exact_match = model.BaseResource(ident=f'http://vocab.getty.edu/ulan/{ulan}')
+	with suppress(ValueError, TypeError):
+		ulan = int(data.get('ulan'))
+		if ulan:
+			who.exact_match = model.BaseResource(ident=f'http://vocab.getty.edu/ulan/{ulan}')
 
 	for ns in ['aat_nationality_1', 'aat_nationality_2','aat_nationality_3']:
 		# add nationality

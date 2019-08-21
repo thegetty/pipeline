@@ -73,15 +73,22 @@ class MakeLinkedArtRecord:
 				if itype is not None:
 					if isinstance(itype, type):
 						ident = itype(content=content)
+						if not content:
+							warnings.warn(f'Setting empty identifier on {thing.id}')
 					elif isinstance(itype, object):
 						ident = itype
 						ident.content = content
+						if not content:
+							warnings.warn(f'Setting empty identifier on {thing.id}')
 					else:
 						ident = model.Identifier()
+						if not content:
+							warnings.warn(f'Setting empty identifier on {thing.id}')
 						ident.content = content
 						ident.classified_as = itype
 			else:
 				ident = identifier
+				c = ident.content
 			thing.identified_by = ident
 
 		for namedata in data.get('names', []):
@@ -125,8 +132,6 @@ class MakeLinkedArtRecord:
 def set_la_name(thing, value, title_type=None, set_label=False):
 	if value is None:
 		return None
-	if value == '':
-		warnings.warn(f'Setting empty name on {thing.id}')
 	if isinstance(value, tuple):
 		label, language = value
 	else:
@@ -137,6 +142,8 @@ def set_la_name(thing, value, title_type=None, set_label=False):
 	name = model.Name()
 	if title_type is not None:
 		name.classified_as = title_type
+	if not label:
+		warnings.warn(f'Setting empty name on {thing.id}')
 	name.content = label
 	thing.identified_by = name
 	if language is not None:
@@ -161,6 +168,8 @@ class MakeLinkedArtLinguisticObject(MakeLinkedArtRecord):
 
 		for content, itype, notes in data.get('qualified_identifiers', []):
 			ident = itype(content=content)
+			if not content:
+				warnings.warn(f'Setting empty identifier on {thing.id}')
 			thing.identified_by = ident
 			for n in notes:
 				ident.referred_to_by = n
@@ -176,10 +185,14 @@ class MakeLinkedArtLinguisticObject(MakeLinkedArtRecord):
 				name.content = label
 
 				classification = model.Type(label=label)
+				if not label:
+					warnings.warn(f'Setting empty name on {classification.id}')
 				classification.identified_by = name
 
 				code = model.Identifier()
 				code.classified_as = code_type
+				if not cid:
+					warnings.warn(f'Setting empty identifier on {code.id}')
 				code.content = cid
 				classification.identified_by = code
 			thing.about = classification
@@ -192,11 +205,15 @@ class MakeLinkedArtLinguisticObject(MakeLinkedArtRecord):
 				name.content = label
 
 				indexing = model.Type(label=label)
+				if not label:
+					warnings.warn(f'Setting empty name on {indexing.id}')
 				indexing.identified_by = name
 
 				code = model.Identifier()
 				code.classified_as = code_type
 				code.content = cid
+				if not cid:
+					warnings.warn(f'Setting empty identifier on {code.id}')
 				indexing.identified_by = code
 			else:
 				indexing = c
@@ -226,23 +243,6 @@ class MakeLinkedArtHumanMadeObject(MakeLinkedArtRecord):
 
 		for coll in data.get('member_of', []):
 			thing.member_of = coll
-
-		for identifier in data.get('identifiers', []):
-			if isinstance(identifier, tuple):
-				content, itype = identifier
-				if itype is not None:
-					if isinstance(itype, type):
-						ident = itype(content=content)
-					elif isinstance(itype, object):
-						ident = itype
-						ident.content = content
-					else:
-						ident = model.Identifier()
-						ident.content = content
-						ident.classified_as = itype
-			else:
-				ident = identifier
-			thing.identified_by = ident
 
 		for annotation in data.get('annotations', []):
 			a = model.Annotation()
@@ -296,6 +296,8 @@ def make_ymd_timespan(data: dict, start_prefix="", end_prefix="", label=""):
 			lbl2 = ymd_to_label(data[y2], data[m2], data[d2])
 			label = f'{label} to {lbl2}'
 	t._label = label
+	if not label:
+		warnings.warn(f'Setting empty name on {t.id}')
 	t.identified_by = model.Name(content=label)
 	t.begin_of_the_begin = ymd_to_datetime(data[y], data[m], data[d])
 	t.end_of_the_end = ymd_to_datetime(data[y2], data[m2], data[d2], which="end")
@@ -451,6 +453,8 @@ def make_la_place(data: dict):
 	p = model.Place(**placeargs)
 	if type:
 		p.classified_as = type
+	if not name:
+		warnings.warn(f'Setting empty name on {p.id}')
 	p.identified_by = model.Name(ident='', content=name)
 	if parent:
 		p.part_of = parent

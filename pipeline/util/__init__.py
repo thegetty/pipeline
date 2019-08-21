@@ -121,6 +121,14 @@ def configured_arches_writer():
 class CromObjectMerger:
 	def __init__(self):
 		self.attribute_based_identity = {
+			# NOTE: It's important that these attribute-based identity rules are
+			#       based on crom classes that will not be top-level resources in Arches.
+			#       That is, they must only be referenced from within a top-level
+			#       resource, and not across resource boundaries. This is because during a
+			#       merge, only one value will be presersved for non-multiple properties
+			#       that differ between input objects such as `id` (and so anything
+			#       referencing an `id` value that is dropped will be left with a dangling
+			#       pointer).
 			'content': (model.Name, model.Identifier),
 		}
 
@@ -135,7 +143,6 @@ class CromObjectMerger:
 				with suppress(AttributeError):
 					value = getattr(m, p)
 				if value is not None:
-# 					print(f'{p}: {value}')
 					if isinstance(value, list):
 						self.set_or_merge(obj, p, *value)
 					else:
@@ -159,16 +166,19 @@ class CromObjectMerger:
 		identified = defaultdict(list)
 		unidentified = []
 		for v in existing + list(values):
+			handled = False
 			for attr, classes in self.attribute_based_identity.items():
 				if isinstance(v, classes):
 					if hasattr(v, 'content'):
 						identified[getattr(v, attr)].append(v)
-					continue
-			if hasattr(v, 'id'):
-				identified[v.id].append(v)
-			else:
-				unidentified.append(v)
-# 			print(f'- {v}')
+					handled = True
+					break
+			if not handled:
+				if hasattr(v, 'id'):
+					identified[v.id].append(v)
+				else:
+					unidentified.append(v)
+	# 			print(f'- {v}')
 
 		if p == 'type':
 			# print('*** TODO: calling setattr(_, "type") on crom objects throws; skipping')
@@ -179,6 +189,8 @@ class CromObjectMerger:
 				setattr(obj, p, None)
 			setattr(obj, p, self.merge(*v))
 		for v in unidentified:
+			if not obj.allows_multiple(p):
+				setattr(obj, p, None)
 			setattr(obj, p, v)
 
 class ExtractKeyedValues(Configurable):

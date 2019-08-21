@@ -171,8 +171,8 @@ class CromObjectMerger:
 				if isinstance(v, classes):
 					if hasattr(v, 'content'):
 						identified[getattr(v, attr)].append(v)
-					handled = True
-					break
+						handled = True
+						break
 			if not handled:
 				if hasattr(v, 'id'):
 					identified[v.id].append(v)

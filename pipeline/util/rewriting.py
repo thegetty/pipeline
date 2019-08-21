@@ -88,7 +88,7 @@ def _rewrite_output_files(files, r, update_filename=False, **kwargs):
 					data = factory.toString(m, False)
 					d = json.loads(data)
 		with open(newfile, 'w') as data_file:
-			json.dump(d, data_file, indent=2)
+			json.dump(d, data_file, indent=2, ensure_ascii=False)
 		if newfile != f:
 			os.remove(f)
 	if i:

@@ -197,7 +197,7 @@ def make_objects_tags_ids(data, gpi=None, aat_labels=None):
 	res = gpi.execute(s, id=object_id)
 	tags = []
 	for tag in res:
-		lbl = aat_labels.get(tag[1], "")
+		lbl = aat_labels.get(str(tag[1]), "")
 		tags.append({"type": tagMap[tag[0]], "aat": str(tag[1]), "label": lbl})
 	data['tags'] = tags
 
@@ -719,12 +719,12 @@ def aligned_person_names(person_uid, gpi, gpi_alignment):
 
 @use('aat_labels')
 def add_person_aat_labels(data: dict, aat_labels=None):
-	if data.get('aat_nationality_1'):
-		data['aat_nationality_1_label'] = aat_labels.get(data['aat_nationality_1'])
-	if data.get('aat_nationality_2'):
-		data['aat_nationality_2_label'] = aat_labels.get(data['aat_nationality_2'])
-	if data.get('aat_nationality_3'):
-		data['aat_nationality_4_label'] = aat_labels.get(data['aat_nationality_3'])
+	for i in range(3):
+		key = f'aat_nationality_{i+1}'
+		if data.get(key):
+			aat_id = data[key]
+			aat_label = aat_labels.get(str(aat_id))
+			data[f'{key}_label'] = aat_label
 	return data
 
 @use('gpi')

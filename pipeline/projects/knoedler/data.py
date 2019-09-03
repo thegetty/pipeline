@@ -645,11 +645,7 @@ def add_prev_prev(data: dict, gpi=None):
 def fan_prev_post_purchase_sale(data: dict, ulan_type=None):
 	# One owner = two acquisitions... transfer to, transfer from
 
-	data['owner_uid'] = data['owner_uid']
 	data['owner_type'] = ulan_type.get(str(data['owner_ulan']), "Person")
-	data['object_uid'] = data['object_uid']
-	if 'prev_uid' in data and data['prev_uid']:
-		data['prev_uid'] = data['prev_uid']
 
 	for t in ['purchase', 'sale']:
 		data = data.copy()

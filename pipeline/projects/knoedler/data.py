@@ -81,7 +81,7 @@ def make_objects_artists(data, gpi=None, ulan_type=None):
 			if attr['pref']:
 				artistById[attr['artist']]['pref'] = 1
 		else:
-			atype = ulan_type.get(attr['ulan'], "Person")
+			atype = ulan_type.get(str(attr['ulan']), "Person")
 			who = {'uid': attr['artist'], 'ulan': attr['ulan'], 'type': atype, 'mod': attr['mod'], \
 					'label': attr['label'], 'pref': attr['pref'], \
 					'sources': [ [attr['star_id'], attr['book'], attr['page'], attr['row']] ]}
@@ -646,7 +646,7 @@ def fan_prev_post_purchase_sale(data: dict, ulan_type=None):
 	# One owner = two acquisitions... transfer to, transfer from
 
 	data['owner_uid'] = data['owner_uid']
-	data['owner_type'] = ulan_type.get(data['owner_ulan'], "Person")
+	data['owner_type'] = ulan_type.get(str(data['owner_ulan']), "Person")
 	data['object_uid'] = data['object_uid']
 	if 'prev_uid' in data and data['prev_uid']:
 		data['prev_uid'] = data['prev_uid']

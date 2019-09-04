@@ -16,7 +16,7 @@ from pipeline.projects.knoedler.data import *
 from pipeline.projects.knoedler.linkedart import *
 from pipeline.io.file import FileWriter
 from pipeline.io.arches import ArchesWriter
-from pipeline.linkedart import make_la_person
+from pipeline.linkedart import MakeLinkedArtPerson
 from settings import *
 import settings
 
@@ -35,7 +35,7 @@ class Pipeline(PipelineBase):
 			self.SRLZ = Serializer(compact=False)
 			self.WRITER = FileWriter(directory=output_path)
 			# self.WRITER	= ArchesWriter()
-			sys.stderr.write("In self.debugGING mode\n")
+			print("In DEBUGGING mode\n", file=sys.stderr)
 		else:
 			self.SRLZ = Serializer(compact=True)
 			self.WRITER = FileWriter(directory=output_path)
@@ -201,7 +201,7 @@ class Pipeline(PipelineBase):
 			add_person_names,
 			add_person_aat_labels,
 			clean_dates,
-			make_la_person,	
+			MakeLinkedArtPerson(),	
 			self.SRLZ,
 			self.WRITER
 		)
@@ -259,20 +259,20 @@ class Pipeline(PipelineBase):
 			self.add_objects(graph)
 
 		# People
-		if not self.debug or 0:
+		if not self.debug or 1:
 			self.add_people(graph)
 
 		# Documents
-		if not self.debug or 1:
+		if not self.debug or 0:
 			self.add_documents(graph)
 
 		return graph
 
 	def run(self, services=None, **options):
 		'''Run the Knoedler bonobo pipeline.'''
-		sys.stderr.write("- Limiting to %d records per file\n" % (self.limit,))
-		sys.stderr.write("- Using serializer: %r\n" % (self.SRLZ,))
-		sys.stderr.write("- Using writer: %r\n" % (self.WRITER,))
+		print("- Limiting to %d records per file\n" % (self.limit,), file=sys.stderr)
+		print("- Using serializer: %r\n" % (self.SRLZ,), file=sys.stderr)
+		print("- Using writer: %r\n" % (self.WRITER,), file=sys.stderr)
 		if not services:
 			services = self.get_services(**options)
 
@@ -280,5 +280,5 @@ class Pipeline(PipelineBase):
 		graph = self.get_graph(**options)
 		bonobo.run(graph, services=services)
 		
-		print('Pipeline runtime: ', timeit.default_timer() - start)  
+		print(f'Pipeline runtime: {timeit.default_timer() - start}', file=sys.stderr)
 

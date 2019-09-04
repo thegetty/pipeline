@@ -268,18 +268,26 @@ class MatchingFiles(Configurable):
 	Given a path and a pattern, yield the names of all files in the path that match the pattern.
 	'''
 	path = Option(str)
-	pattern = Option(str, default='*')
+	pattern = Option(default='*')
 	fs = Service(
 		'fs',
 		__doc__='''The filesystem instance to use.''',
 	)  # type: str
 
 	def __init__(self, *args, **kwargs):
+		'''
+		Sets the __name__ property to include the relevant options so that when the
+		bonobo graph is serialized as a GraphViz document, different objects can be
+		visually differentiated.
+		'''
 		super().__init__(self, *args, **kwargs)
 		self.__name__ = f'{type(self).__name__} ({self.pattern})'
 
 	def __call__(self, *, fs, **kwargs):
 		count = 0
+		if not self.pattern:
+			return
+		print(repr(self.pattern))
 		subpath, pattern = os.path.split(self.pattern)
 		fullpath = os.path.join(self.path, subpath)
 		for f in sorted(fs.listdir(fullpath)):

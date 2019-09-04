@@ -3,7 +3,9 @@
 from bonobo.config import use
 from pipeline.util.cleaners import date_cleaner, share_parse
 import copy
+import collections
 
+from .linkedart import _row_uid
 from pipeline.projects.knoedler import UID_TAG_PREFIX
 
 # ~~~~ Object Tables ~~~~
@@ -79,7 +81,7 @@ def make_objects_artists(data, gpi=None, ulan_type=None):
 			if attr['pref']:
 				artistById[attr['artist']]['pref'] = 1
 		else:
-			atype = ulan_type.get(attr['ulan'], "Person")
+			atype = ulan_type.get(str(attr['ulan']), "Person")
 			who = {'uid': attr['artist'], 'ulan': attr['ulan'], 'type': atype, 'mod': attr['mod'], \
 					'label': attr['label'], 'pref': attr['pref'], \
 					'sources': [ [attr['star_id'], attr['book'], attr['page'], attr['row']] ]}
@@ -195,7 +197,7 @@ def make_objects_tags_ids(data, gpi=None, aat_labels=None):
 	res = gpi.execute(s, id=object_id)
 	tags = []
 	for tag in res:
-		lbl = aat_labels.get(tag[1], "")
+		lbl = aat_labels.get(str(tag[1]), "")
 		tags.append({"type": tagMap[tag[0]], "aat": str(tag[1]), "label": lbl})
 	data['tags'] = tags
 
@@ -643,11 +645,7 @@ def add_prev_prev(data: dict, gpi=None):
 def fan_prev_post_purchase_sale(data: dict, ulan_type=None):
 	# One owner = two acquisitions... transfer to, transfer from
 
-	data['owner_uid'] = data['owner_uid']
-	data['owner_type'] = ulan_type.get(data['owner_ulan'], "Person")
-	data['object_uid'] = data['object_uid']
-	if 'prev_uid' in data and data['prev_uid']:
-		data['prev_uid'] = data['prev_uid']
+	data['owner_type'] = ulan_type.get(str(data['owner_ulan']), "Person")
 
 	for t in ['purchase', 'sale']:
 		data = data.copy()
@@ -662,40 +660,67 @@ def fan_prev_post_purchase_sale(data: dict, ulan_type=None):
 # ~~~~ People Tables ~~~~
 
 @use('gpi')
-def add_person_names(thing: dict, gpi=None):
-	s = 'SELECT * FROM gpi_people_names WHERE person_uid = :id'
+@use('gpi_alignment')
+def add_person_names(thing: dict, gpi, gpi_alignment):
+	person_uid = thing['uid']
+	thing['uri'] = f"{UID_TAG_PREFIX}{person_uid}"
+	aligned_records = aligned_person_names(person_uid, gpi, gpi_alignment)
+	if aligned_records:
+		thing['names'] = aligned_records
+# 		print(f'ALIGNED: {person_uid}')
+		return thing
+	else:
+		print(f'********* FALLING BACK: {person_uid}')
+
+	s = 'SELECT person_name, person_name_id FROM gpi_people_names WHERE person_uid = :uid'
 	thing['names'] = []
-	thing['uri'] = f"{UID_TAG_PREFIX}{thing['uid']}"
-	for r in gpi.execute(s, id=thing['uid']):
-		name = [r[0]]
-		nid = r[2]
-		# s2 = 'SELECT source_record_id from gpi_people_names_references WHERE
-		#    person_name_id=%r' % (nid,)
+	for name, nid in gpi.execute(s, uid=person_uid):
 		s2 = '''
 			SELECT
 				k.star_record_no, k.stock_book_no, k.page_number, k.row_number
 			FROM
-				knoedler AS k
-				JOIN gpi_people_names_references AS ref ON (k.star_record_no = ref.source_record_id)
+				gpi_people_names_references AS ref
+				JOIN knoedler AS k ON (ref.source_record_id = k.star_record_no)
 			WHERE
-				ref.person_name_id = :id
+				ref.person_name_id = :name_id
 			'''
-		for r2 in gpi.execute(s2, id=nid):
-			# uid, book, page, row
-			val = [r2[0]]
-			val.append([r2[1], r2[2], r2[3]])
-			name.append(val)
-		thing['names'].append(name)
+		record = {'referred_to_by': []}
+		for star_record_no, stock_book_no, page_number, row_number in gpi.execute(s2, name_id=nid):
+			uri = _row_uid(stock_book_no, page_number, row_number)
+			record['referred_to_by'].append({
+				'star_record_no': star_record_no,
+				'uri': uri,
+			})
+		thing['names'].append([name, record])
 	return thing
+
+def aligned_person_names(person_uid, gpi, gpi_alignment):
+	name_references = collections.defaultdict(set)
+	for variant_name, source_document in gpi_alignment.execute('SELECT variant_name, source_document FROM gpi_people WHERE knoedler_person_uid = :id', id=person_uid):
+		name_references[variant_name].add(source_document)
+
+	aligned_records = []
+	for name, refs in name_references.items():
+		record = {'referred_to_by': []}
+		for ref in refs:
+			for star_record_no, stock_book_no, page_number, row_number in gpi.execute('SELECT k.star_record_no, k.stock_book_no, k.page_number, k.row_number FROM knoedler k WHERE pi_record_no = :ref', ref=ref):
+				uri = _row_uid(stock_book_no, page_number, row_number)
+				record['referred_to_by'].append({
+					'star_record_no': star_record_no,
+					'uri': uri,
+				})
+		aligned_records.append([name, record])
+	aligned_records = sorted(aligned_records)
+	return aligned_records
 
 @use('aat_labels')
 def add_person_aat_labels(data: dict, aat_labels=None):
-	if data.get('aat_nationality_1'):
-		data['aat_nationality_1_label'] = aat_labels.get(data['aat_nationality_1'])
-	if data.get('aat_nationality_2'):
-		data['aat_nationality_2_label'] = aat_labels.get(data['aat_nationality_2'])
-	if data.get('aat_nationality_3'):
-		data['aat_nationality_4_label'] = aat_labels.get(data['aat_nationality_3'])
+	for i in range(3):
+		key = f'aat_nationality_{i+1}'
+		if data.get(key):
+			aat_id = data[key]
+			aat_label = aat_labels.get(str(aat_id))
+			data[f'{key}_label'] = aat_label
 	return data
 
 @use('gpi')

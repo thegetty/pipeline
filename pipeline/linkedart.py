@@ -1,5 +1,6 @@
 import pprint
 from contextlib import suppress
+import warnings
 
 from cromulent import model, vocab
 from cromulent.model import factory
@@ -21,6 +22,35 @@ def get_crom_object(data: dict):
 
 class MakeLinkedArtRecord:
 	def set_properties(self, data, thing):
+		'''
+		The following keys in `data` are handled to set properties on `thing`:
+		
+		`referred_to_by`
+		`identifiers`
+		`names` -	An array of arrays of one or two elements. The first element of each
+					array is a name string, and is set as the value of a `model.Name` for
+					`thing`. If there is a `dict` second element, its contents are used to
+					assert properties of the name. An array associated with the key
+					`'referred_to_by'` will be used to assert that the `LinguisticObject`s
+					(or `dict`s representing a `LinguisticObject`) refer to the name.
+
+		Example data:
+		
+		{
+			'names': [
+				['J. Paul Getty'],
+				[
+					'Getty',
+					{
+						'referred_to_by': [
+							{'uri': 'tag:getty.edu,2019:digital:pipeline:knoedler:REPLACE-WITH-UUID#K-ROW-1-2-3'},
+							model.LinguisticObject(ident='tag:getty.edu,2019:digital:pipeline:knoedler:REPLACE-WITH-UUID#K-ROW-1-7-10'),
+						]
+					}
+				]
+			]
+		}
+		'''
 		for notedata in data.get('referred_to_by', []):
 			if isinstance(notedata, tuple):
 				content, itype = notedata
@@ -43,16 +73,45 @@ class MakeLinkedArtRecord:
 				if itype is not None:
 					if isinstance(itype, type):
 						ident = itype(content=content)
+						if not content:
+							warnings.warn(f'Setting empty identifier on {thing.id}')
 					elif isinstance(itype, object):
 						ident = itype
 						ident.content = content
+						if not content:
+							warnings.warn(f'Setting empty identifier on {thing.id}')
 					else:
 						ident = model.Identifier()
+						if not content:
+							warnings.warn(f'Setting empty identifier on {thing.id}')
 						ident.content = content
 						ident.classified_as = itype
 			else:
 				ident = identifier
+				c = ident.content
 			thing.identified_by = ident
+
+		for namedata in data.get('names', []):
+			# namedata should take the form of:
+			# ["A. Name"]
+			# ["A. Name", {'referred_to_by': [{'uri': 'URI-OF-LINGUISTIC_OBJECT'}, model.LinguisticObject()]}]
+			name, *properties = namedata
+			n = set_la_name(thing, name)
+			for props in properties:
+				assert(isinstance(props, dict))
+				for ref in props.get('referred_to_by', []):
+					if isinstance(ref, dict):
+						if 'uri' in ref:
+							l = model.LinguisticObject(ident=ref['uri'])
+						elif 'uuid' in data:
+							l = model.LinguisticObject(ident="urn:uuid:%s" % ref['uuid'])
+						else:
+							raise Exception(f'MakeLinkedArtRecord call attempt to set name {name} with a non-identified reference: {ref}')
+					elif isinstance(ref, object):
+						l = ref
+					else:
+						raise Exception(f'MakeLinkedArtRecord call attempt to set name {name} with an unrecognized reference type: {ref}')
+					n.referred_to_by = l
 
 	def __call__(self, data: dict):
 		if '_LOD_OBJECT' in data:
@@ -83,6 +142,8 @@ def set_la_name(thing, value, title_type=None, set_label=False):
 	name = model.Name()
 	if title_type is not None:
 		name.classified_as = title_type
+	if not label:
+		warnings.warn(f'Setting empty name on {thing.id}')
 	name.content = label
 	thing.identified_by = name
 	if language is not None:
@@ -92,7 +153,6 @@ def set_la_name(thing, value, title_type=None, set_label=False):
 class MakeLinkedArtLinguisticObject(MakeLinkedArtRecord):
 	# TODO: document the expected format of data['translations']
 	# TODO: document the expected format of data['identifiers']
-	# TODO: document the expected format of data['names']
 	def set_properties(self, data, thing):
 		super().set_properties(data, thing)
 
@@ -108,16 +168,11 @@ class MakeLinkedArtLinguisticObject(MakeLinkedArtRecord):
 
 		for content, itype, notes in data.get('qualified_identifiers', []):
 			ident = itype(content=content)
+			if not content:
+				warnings.warn(f'Setting empty identifier on {thing.id}')
 			thing.identified_by = ident
 			for n in notes:
 				ident.referred_to_by = n
-
-		for name in data.get('names', []):
-			n = set_la_name(thing, name[0])
-			for ref in name[1:]:
-				l = model.LinguisticObject(ident="urn:uuid:%s" % ref[1])
-				# l._label = _row_label(ref[2][0], ref[2][1], ref[2][2])
-				n.referred_to_by = l
 
 		code_type = None # TODO: is there a model.Type value for this sort of code?
 		for c in data.get('classifications', []):
@@ -130,10 +185,14 @@ class MakeLinkedArtLinguisticObject(MakeLinkedArtRecord):
 				name.content = label
 
 				classification = model.Type(label=label)
+				if not label:
+					warnings.warn(f'Setting empty name on {classification.id}')
 				classification.identified_by = name
 
 				code = model.Identifier()
 				code.classified_as = code_type
+				if not cid:
+					warnings.warn(f'Setting empty identifier on {code.id}')
 				code.content = cid
 				classification.identified_by = code
 			thing.about = classification
@@ -146,11 +205,15 @@ class MakeLinkedArtLinguisticObject(MakeLinkedArtRecord):
 				name.content = label
 
 				indexing = model.Type(label=label)
+				if not label:
+					warnings.warn(f'Setting empty name on {indexing.id}')
 				indexing.identified_by = name
 
 				code = model.Identifier()
 				code.classified_as = code_type
 				code.content = cid
+				if not cid:
+					warnings.warn(f'Setting empty identifier on {code.id}')
 				indexing.identified_by = code
 			else:
 				indexing = c
@@ -181,30 +244,6 @@ class MakeLinkedArtHumanMadeObject(MakeLinkedArtRecord):
 		for coll in data.get('member_of', []):
 			thing.member_of = coll
 
-		for identifier in data.get('identifiers', []):
-			if isinstance(identifier, tuple):
-				content, itype = identifier
-				if itype is not None:
-					if isinstance(itype, type):
-						ident = itype(content=content)
-					elif isinstance(itype, object):
-						ident = itype
-						ident.content = content
-					else:
-						ident = model.Identifier()
-						ident.content = content
-						ident.classified_as = itype
-			else:
-				ident = identifier
-			thing.identified_by = ident
-
-		for name in data.get('names', []):
-			n = set_la_name(thing, name[0])
-			for ref in name[1:]:
-				l = model.LinguisticObject(ident="urn:uuid:%s" % ref[1])
-				# l._label = _row_label(ref[2][0], ref[2][1], ref[2][2])
-				n.referred_to_by = l
-
 		for annotation in data.get('annotations', []):
 			a = model.Annotation()
 			a.content = content
@@ -215,7 +254,6 @@ class MakeLinkedArtAbstract(MakeLinkedArtLinguisticObject):
 	pass
 
 class MakeLinkedArtOrganization(MakeLinkedArtRecord):
-	# TODO: document the expected format of data['names']
 	def set_properties(self, data, thing):
 		super().set_properties(data, thing)
 		with suppress(KeyError):
@@ -229,14 +267,6 @@ class MakeLinkedArtOrganization(MakeLinkedArtRecord):
 		if 'events' in data:
 			for event in data['events']:
 				thing.carried_out = event
-
-		for name in data.get('names', []):
-			n = set_la_name(thing, name[0])
-			for ref in name[1:]:
-				l = model.LinguisticObject(ident="urn:uuid:%s" % ref[1])
-				# l._label = _row_label(ref[2][0], ref[2][1], ref[2][2])
-				n.referred_to_by = l
-# 			thing.identified_by = n
 
 	def __call__(self, data: dict):
 		if 'object_type' not in data:
@@ -266,6 +296,8 @@ def make_ymd_timespan(data: dict, start_prefix="", end_prefix="", label=""):
 			lbl2 = ymd_to_label(data[y2], data[m2], data[d2])
 			label = f'{label} to {lbl2}'
 	t._label = label
+	if not label:
+		warnings.warn(f'Setting empty name on {t.id}')
 	t.identified_by = model.Name(content=label)
 	t.begin_of_the_begin = ymd_to_datetime(data[y], data[m], data[d])
 	t.end_of_the_end = ymd_to_datetime(data[y2], data[m2], data[d2], which="end")
@@ -292,124 +324,96 @@ def ymd_to_label(year, month, day):
 		return f'{month_name} {year}'
 
 
+class MakeLinkedArtPerson(MakeLinkedArtRecord):
+	def set_properties(self, data, who):
+		super().set_properties(data, who)
+		who._label = str(data['label'])
 
-def make_la_person(data: dict):
-	uri = data.get('uri')
-	if not uri:
-		if 'uuid' not in data:
-			print('No UUID for person:')
-			pprint.pprint(data)
-		uri = "urn:uuid:%s" % data['uuid']
-	who = model.Person(ident=uri)
-	who._label = str(data['label'])
-	with suppress(ValueError, TypeError):
-		ulan = int(data.get('ulan'))
-		if ulan:
-			who.exact_match = model.BaseResource(ident=f'http://vocab.getty.edu/ulan/{ulan}')
+		with suppress(ValueError, TypeError):
+			ulan = int(data.get('ulan'))
+			if ulan:
+				who.exact_match = model.BaseResource(ident=f'http://vocab.getty.edu/ulan/{ulan}')
 
-	for ns in ['aat_nationality_1', 'aat_nationality_2','aat_nationality_3']:
-		# add nationality
-		n = data.get(ns)
-		# XXX Strip out antique / modern anonymous as a nationality
-		if n:
-			if int(n) in [300310546,300264736]:
+		for ns in ['aat_nationality_1', 'aat_nationality_2','aat_nationality_3']:
+			# add nationality
+			n = data.get(ns)
+			# XXX Strip out antique / modern anonymous as a nationality
+			if n:
+				if int(n) in [300310546,300264736]:
+					break
+				natl = vocab.Nationality(ident="http://vocab.getty.edu/aat/%s" % n)
+				who.classified_as = natl
+				natl._label = str(data[ns+'_label'])
+			else:
 				break
-			natl = vocab.Nationality(ident="http://vocab.getty.edu/aat/%s" % n)
-			who.classified_as = natl
-			natl._label = str(data[ns+'_label'])
-		else:
-			break
 
-	# nationality field can contain other information, but not useful.
-	# XXX Intentionally ignored but validate with GRI
+		# nationality field can contain other information, but not useful.
+		# XXX Intentionally ignored but validate with GRI
 
-	if data.get('active_early') or data.get('active_late'):
-		act = vocab.Active()
-		ts = model.TimeSpan()
-		if data['active_early']:
-			ts.begin_of_the_begin = "%s-01-01:00:00:00Z" % (data['active_early'],)
-			ts.end_of_the_begin = "%s-01-01:00:00:00Z" % (data['active_early']+1,)
-		if data['active_late']:
-			ts.begin_of_the_end = "%s-01-01:00:00:00Z" % (data['active_late'],)
-			ts.end_of_the_end = "%s-01-01:00:00:00Z" % (data['active_late']+1,)
-		ts._label = "%s-%s" % (data['active_early'], data['active_late'])
-		act.timespan = ts
-		who.carried_out = act
+		if data.get('active_early') or data.get('active_late'):
+			act = vocab.Active()
+			ts = model.TimeSpan()
+			if data['active_early']:
+				ts.begin_of_the_begin = "%s-01-01:00:00:00Z" % (data['active_early'],)
+				ts.end_of_the_begin = "%s-01-01:00:00:00Z" % (data['active_early']+1,)
+			if data['active_late']:
+				ts.begin_of_the_end = "%s-01-01:00:00:00Z" % (data['active_late'],)
+				ts.end_of_the_end = "%s-01-01:00:00:00Z" % (data['active_late']+1,)
+			ts._label = "%s-%s" % (data['active_early'], data['active_late'])
+			act.timespan = ts
+			who.carried_out = act
 
-	for event in data.get('events', []):
-		who.carried_out = event
+		for event in data.get('events', []):
+			who.carried_out = event
 
-	if data.get('birth'):
-		b = model.Birth()
-		ts = model.TimeSpan()
-		if 'birth_clean' in data and data['birth_clean']:
-			if data['birth_clean'][0]:
-				ts.begin_of_the_begin = data['birth_clean'][0].strftime("%Y-%m-%dT%H:%M:%SZ")
-			if data['birth_clean'][1]:
-				ts.end_of_the_end = data['birth_clean'][1].strftime("%Y-%m-%dT%H:%M:%SZ")
-		ts._label = data['birth']
-		b.timespan = ts
-		b._label = "Birth of %s" % who._label
-		who.born = b
+		if data.get('birth'):
+			b = model.Birth()
+			ts = model.TimeSpan()
+			if 'birth_clean' in data and data['birth_clean']:
+				if data['birth_clean'][0]:
+					ts.begin_of_the_begin = data['birth_clean'][0].strftime("%Y-%m-%dT%H:%M:%SZ")
+				if data['birth_clean'][1]:
+					ts.end_of_the_end = data['birth_clean'][1].strftime("%Y-%m-%dT%H:%M:%SZ")
+			ts._label = data['birth']
+			b.timespan = ts
+			b._label = "Birth of %s" % who._label
+			who.born = b
 
-	if data.get('death'):
-		d = model.Death()
-		ts = model.TimeSpan()
-		if 'death_clean' in data and data['death_clean']:
-			if data['death_clean'][0]:
-				ts.begin_of_the_begin = data['death_clean'][0].strftime("%Y-%m-%dT%H:%M:%SZ")
-			if data['death_clean'][1]:
-				ts.end_of_the_end = data['death_clean'][1].strftime("%Y-%m-%dT%H:%M:%SZ")
-		ts._label = data['death']
-		d.timespan = ts
-		d._label = "Death of %s" % who._label
-		who.died = d
+		if data.get('death'):
+			d = model.Death()
+			ts = model.TimeSpan()
+			if 'death_clean' in data and data['death_clean']:
+				if data['death_clean'][0]:
+					ts.begin_of_the_begin = data['death_clean'][0].strftime("%Y-%m-%dT%H:%M:%SZ")
+				if data['death_clean'][1]:
+					ts.end_of_the_end = data['death_clean'][1].strftime("%Y-%m-%dT%H:%M:%SZ")
+			ts._label = data['death']
+			d.timespan = ts
+			d._label = "Death of %s" % who._label
+			who.died = d
 
-	# Add names
-	for name in data.get('names', []):
-		n = model.Name(ident='', content=name[0])
-		for ref in name[1:]:
-			l = model.LinguisticObject(ident="urn:uuid:%s" % ref[1])
-			# l._label = _row_label(ref[2][0], ref[2][1], ref[2][2])
-			n.referred_to_by = l
-		who.identified_by = n
+		# Locations are names of residence places (P74 -> E53)
+		# XXX FIXME: Places are their own model
+		if 'places' in data:
+			for p in data['places']:
+				pl = model.Place()
+				#pl._label = p['label']
+				#nm = model.Name()
+				#nm.content = p['label']
+				#pl.identified_by = nm
+				#for s in p['sources']:
+				#		l = model.LinguisticObject(ident="urn:uuid:%s" % s[1])
+					# l._label = _row_label(s[2], s[3], s[4])
+				#	pl.referred_to_by = l
+				who.residence = pl
 
-	for identifier in data.get('identifiers', []):
-		if isinstance(identifier, tuple):
-			content, itype = identifier
-			if itype is not None:
-				if isinstance(itype, type):
-					ident = itype(content=content)
-				elif isinstance(itype, object):
-					ident = itype
-					ident.content = content
-				else:
-					ident = model.Identifier()
-					ident.content = content
-					ident.classified_as = itype
-		else:
-			ident = identifier
-		who.identified_by = ident
+		for uri in data.get('exact_match', []):
+			who.exact_match = uri
 
-	# Locations are names of residence places (P74 -> E53)
-	# XXX FIXME: Places are their own model
-	if 'places' in data:
-		for p in data['places']:
-			pl = model.Place()
-			#pl._label = p['label']
-			#nm = model.Name()
-			#nm.content = p['label']
-			#pl.identified_by = nm
-			#for s in p['sources']:
-			#		l = model.LinguisticObject(ident="urn:uuid:%s" % s[1])
-				# l._label = _row_label(s[2], s[3], s[4])
-			#	pl.referred_to_by = l
-			who.residence = pl
-
-	for uri in data.get('exact_match', []):
-		who.exact_match = uri
-
-	return add_crom_data(data=data, what=who)
+	def __call__(self, data: dict):
+		if 'object_type' not in data:
+			data['object_type'] = model.Person
+		return super().__call__(data)
 
 def make_la_place(data: dict):
 	'''
@@ -449,6 +453,8 @@ def make_la_place(data: dict):
 	p = model.Place(**placeargs)
 	if type:
 		p.classified_as = type
+	if not name:
+		warnings.warn(f'Setting empty name on {p.id}')
 	p.identified_by = model.Name(ident='', content=name)
 	if parent:
 		p.part_of = parent

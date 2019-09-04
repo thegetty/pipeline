@@ -9,6 +9,7 @@ import re
 import os
 import json
 import sys
+import warnings
 import uuid
 import csv
 import pprint
@@ -49,7 +50,7 @@ from pipeline.linkedart import \
 			MakeLinkedArtHumanMadeObject, \
 			MakeLinkedArtAuctionHouseOrganization, \
 			MakeLinkedArtOrganization, \
-			make_la_person, \
+			MakeLinkedArtPerson, \
 			make_la_place
 from pipeline.io.csv import CurriedCSVReader
 from pipeline.nodes.basic import \
@@ -147,7 +148,7 @@ def add_auction_house_data(a):
 		key = f'AUCTION-HOUSE-ULAN-{ulan}'
 		a['uid'] = key
 		a['uri'] = pir_uri('AUCTION-HOUSE', 'ULAN', ulan)
-		a['identifiers'] = [model.Identifier(content=ulan)]
+		a['identifiers'] = [model.Identifier(content=str(ulan))]
 		a['ulan'] = ulan
 		house = vocab.AuctionHouseOrg(ident=a['uri'])
 	else:
@@ -283,7 +284,9 @@ class AddAuctionOfLot(Configurable):
 		notes = auction_data.get('lot_notes')
 		if notes:
 			lot.referred_to_by = vocab.Note(content=notes)
-		lot.identified_by = model.Identifier(content=lno)
+		if not lno:
+			warnings.warn(f'Setting empty identifier on {lot.id}')
+		lot.identified_by = model.Identifier(content=str(lno))
 		lot.part_of = auction
 
 	def set_lot_objects(self, lot, lno, data):
@@ -366,7 +369,7 @@ def add_person(data: dict):
 	Add modeling data for people, based on properties of the supplied `data` dict.
 
 	This function adds properties to `data` before calling
-	`pipeline.linkedart.make_la_person` to construct the model objects.
+	`pipeline.linkedart.MakeLinkedArtPerson` to construct the model objects.
 	'''
 	ulan = None
 	with suppress(ValueError, TypeError):
@@ -375,14 +378,14 @@ def add_person(data: dict):
 		key = f'PERSON-ULAN-{ulan}'
 		data['uid'] = key
 		data['uri'] = pir_uri('PERSON', 'ULAN', ulan)
-		data['identifiers'] = [model.Identifier(content=ulan)]
+		data['identifiers'] = [model.Identifier(content=str(ulan))]
 		data['ulan'] = ulan
 	else:
 		# not enough information to identify this person uniquely, so they get a UUID
 		data['uuid'] = str(uuid.uuid4())
 
 	names = []
-	for name_string in set([data[k] for k in ('auth_name', 'name') if k in data]):
+	for name_string in set([data[k] for k in ('auth_name', 'name') if k in data and data[k]]):
 		names.append((name_string,))
 	if names:
 		data['names'] = names
@@ -390,6 +393,7 @@ def add_person(data: dict):
 	else:
 		data['label'] = '(Anonymous person)'
 
+	make_la_person = MakeLinkedArtPerson()
 	make_la_person(data)
 	return data
 
@@ -453,6 +457,7 @@ def add_acquisition(data, hmo, buyers, sellers):
 	post_own = data.get('post_owner', [])
 	prev_own = data.get('prev_owner', [])
 	prev_post_owner_records = [(post_own, False), (prev_own, True)]
+	make_la_person = MakeLinkedArtPerson()
 	for owner_data, rev in prev_post_owner_records:
 		for owner_record in owner_data:
 			name = owner_record.get('own_auth', owner_record.get('own'))
@@ -554,7 +559,7 @@ def add_bidding(data, buyers):
 		yield data
 	else:
 		pass
-# 			print(f'*** No price data found for {parent['transaction']!r} transaction')
+		warnings.warn(f'*** No price data found for {parent["transaction"]!r} transaction')
 
 def add_acquisition_or_bidding(data):
 	'''Determine if this record has an acquisition or bidding, and add appropriate modeling'''
@@ -576,7 +581,7 @@ def add_acquisition_or_bidding(data):
 	elif transaction in ('Unknown', 'Unbekannt', 'Inconnue', 'Withdrawn', 'Non Vendu', ''):
 		yield from add_bidding(data, buyers)
 	else:
-		print(f'Cannot create acquisition data for unknown transaction type: {transaction!r}')
+		warnings.warn(f'Cannot create acquisition data for unknown transaction type: {transaction!r}')
 
 #mark - Single Object Lot Tracking
 
@@ -644,7 +649,9 @@ def populate_object(data, post_sale_map, unique_catalogs, vocab_instance_map, de
 		lno = auction_data['lot_number']
 		if 'identifiers' not in data:
 			data['identifiers'] = []
-		data['identifiers'].append(model.Identifier(content=lno))
+		if not lno:
+			warnings.warn(f'Setting empty identifier on {hmo.id}')
+		data['identifiers'].append(model.Identifier(content=str(lno)))
 	m = data.get('materials')
 	if m:
 		matstmt = vocab.MaterialStatement()
@@ -787,6 +794,7 @@ def add_pir_artists(data):
 	# TODO: filtering empty people should be moved much earlier in the pipeline
 	artists = list(filter_empty_people(*artists))
 	data['_artists'] = artists
+	make_la_person = MakeLinkedArtPerson()
 	for a in artists:
 		star_rec_no = a.get('star_rec_no')
 		ulan = None
@@ -872,9 +880,11 @@ def add_physical_catalog_owners(data, location_codes, unique_catalogs):
 			'name': owner_name,
 			'label': owner_name,
 			'uri': pir_uri('ORGANIZATION', 'LOCATION-CODE', owner_code),
-			'identifiers': [model.Identifier(ident='', content=owner_code)],
+			'identifiers': [model.Identifier(ident='', content=str(owner_code))],
 		}
 		owner = model.Group(ident=data['_owner']['uri'])
+		if not owner_code:
+			warnings.warn(f'Setting empty identifier on {owner.id}')
 		owner_data = add_crom_data(data=data['_owner'], what=owner)
 		catalog = get_crom_object(data)
 		catalog.current_owner = owner
@@ -898,8 +908,14 @@ def populate_auction_catalog(data):
 	sno = parent['star_record_no']
 	catalog = get_crom_object(d)
 	for lno in parent.get('lugt', {}).values():
-		catalog.identified_by = model.Identifier(label=f"Lugt Number: {lno}", content=lno)
-	catalog.identified_by = model.Identifier(content=cno)
+		if not lno:
+			warnings.warn(f'Setting empty identifier on {catalog.id}')
+		catalog.identified_by = model.Identifier(label=f"Lugt Number: {lno}", content=str(lno))
+	if not cno:
+		warnings.warn(f'Setting empty identifier on {catalog.id}')
+	catalog.identified_by = model.Identifier(content=str(cno))
+	if not sno:
+		warnings.warn(f'Setting empty identifier on {catalog.id}')
 	catalog.identified_by = vocab.LocalNumber(content=sno)
 	notes = data.get('notes')
 	if notes:
@@ -1049,14 +1065,20 @@ class ProvenancePipeline(PipelineBase):
 	
 	def add_buyers_sellers_chain(self, graph, acquisitions, serialize=True):
 		'''Add modeling of the buyers, bidders, and sellers involved in an auction.'''
-		for role in ('buyer', 'seller'):
-			p = graph.add_chain(
-				ExtractKeyedValues(key=role),
-				_input=acquisitions.output
-			)
-			if serialize:
-				# write SALES data
-				self.add_serialization_chain(graph, p.output, model=self.models['Person'])
+		buyers = graph.add_chain(
+			ExtractKeyedValues(key='buyer'),
+			_input=acquisitions.output
+		)
+
+		sellers = graph.add_chain(
+			ExtractKeyedValues(key='seller'),
+			_input=acquisitions.output
+		)
+
+		if serialize:
+			# write SALES data
+			self.add_serialization_chain(graph, buyers.output, model=self.models['Person'])
+			self.add_serialization_chain(graph, sellers.output, model=self.models['Person'])
 
 	def add_acquisitions_chain(self, graph, sales, serialize=True):
 		'''Add modeling of the acquisitions and bidding on lots being auctioned.'''
@@ -1391,20 +1413,20 @@ class ProvenancePipeline(PipelineBase):
 
 	def run(self, services=None, **options):
 		'''Run the Provenance bonobo pipeline.'''
-		sys.stderr.write("- Limiting to %d records per file\n" % (self.limit,))
+		print(f'- Limiting to {self.limit} records per file', file=sys.stderr)
 		if not services:
 			services = self.get_services(**options)
 
 		start = timeit.default_timer()
-		print('Running graph component 1...')
+		print('Running graph component 1...', file=sys.stderr)
 		graph1 = self.get_graph_1(**options)
 		bonobo.run(graph1, services=services)
 
-		print('Running graph component 2...')
+		print('Running graph component 2...', file=sys.stderr)
 		graph2 = self.get_graph_2(**options)
 		bonobo.run(graph2, services=services)
 		
-		print('Pipeline runtime: ', timeit.default_timer() - start)  
+		print(f'Pipeline runtime: {timeit.default_timer() - start}', file=sys.stderr)
 
 
 class ProvenanceFilePipeline(ProvenancePipeline):
@@ -1453,7 +1475,7 @@ class ProvenanceFilePipeline(ProvenancePipeline):
 				print(f'  {src} maps to a MULTI-OBJECT lot')
 			else:
 				print(f'  {src} maps to an UNKNOWN lot')
-		print(f'mapped {mapped}/{total} objects to a previous sale')
+		print(f'mapped {mapped}/{total} objects to a previous sale', file=sys.stderr)
 
 		large_components = set(g.largest_component_canonical_keys(10))
 		dot = graphviz.Digraph()

@@ -93,11 +93,13 @@ class profile(object):
 
 class PrintCounters(Configurable):
 	every = Option(int, default=500)
+	filename = Option(str)
 
 	def __init__(self, *v, **kw):
 		super().__init__(*v, **kw)
 		self.counter = 0
-		self.file = open('/tmp/pipeline.counters', 'wt', buffering=1)
+		self.file = open(self.filename, 'wt', buffering=1)
+		print(f'***** {self.filename}')
 
 	def __call__(self, data):
 		self.counter += 1
@@ -1361,7 +1363,7 @@ class ProvenancePipeline(PipelineBase):
 			ExtractKeyedValue(key='_object'),
 			add_object_type,
 			populate_object,
-			PrintCounters(every=10000),
+			PrintCounters(every=10000, filename=os.path.join(settings.output_file_path, 'pipeline.counters')),
 			MakeLinkedArtHumanMadeObject(),
 			add_pir_artists,
 			_input=sales.output
@@ -1599,3 +1601,6 @@ class ProvenanceFilePipeline(ProvenancePipeline):
 		self.merge_post_sale_objects(counter, post_map)
 		print(f'>>> {len(post_map)} post sales records')
 		print('Total runtime: ', timeit.default_timer() - start)  
+		keys = sorted(PROFILE_DATA.keys(), key=lambda k: PROFILE_DATA[k], reverse=True)
+		for k in keys:
+			print(f'%7.2f\t{k}' % (PROFILE_DATA[k],))

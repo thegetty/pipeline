@@ -21,13 +21,15 @@ from collections import Counter, defaultdict, namedtuple
 from contextlib import suppress
 import inspect
 
+import time
 import timeit
 from sqlalchemy import create_engine
 
 import graphviz
 import bonobo
-from bonobo.config import use, Service, Configurable
+from bonobo.config import use, Option, Service, Configurable
 from bonobo.nodes import Limit
+from bonobo.constants import NOT_MODIFIED
 
 import settings
 from cromulent import model, vocab
@@ -66,6 +68,47 @@ PROBLEMATIC_RECORD_URI = 'tag:getty.edu,2019:digital:pipeline:provenance:Problem
 
 #mark - utility functions and classes
 
+PROFILE_DATA = defaultdict(float)
+
+class profile(object):
+	def __init__(self, name=None):
+		self.name = name
+		if name:
+			self.__name__ = name
+
+	def __call__(self, f):
+		def wrapped_f(*args, **kwargs):
+			start = time.time()
+			r = f(*args, **kwargs)
+			end = time.time()
+			elapsed = end - start
+		
+			name = self.name
+			if name is None:
+				name = f.__name__
+			PROFILE_DATA[name] += elapsed
+			return r
+		wrapped_f.__name__ = f.__name__
+		return wrapped_f
+
+class PrintCounters(Configurable):
+	every = Option(int, default=500)
+
+	def __init__(self, *v, **kw):
+		super().__init__(*v, **kw)
+		self.counter = 0
+		self.file = open('/tmp/pipeline.counters', 'wt', buffering=1)
+
+	def __call__(self, data):
+		self.counter += 1
+		if (self.counter % self.every) == 0:
+			keys = sorted(PROFILE_DATA.keys(), key=lambda k: PROFILE_DATA[k], reverse=True)
+			print(f'============= {self.counter}', file=self.file)
+			for k in keys:
+				print(f'%7.2f\t{k}' % (PROFILE_DATA[k],), file=self.file)
+		return NOT_MODIFIED
+
+@profile()
 def auction_event_for_catalog_number(catalog_number):
 	'''
 	Return a `vocab.AuctionEvent` object and its associated 'uid' key and URI, based on
@@ -77,6 +120,7 @@ def auction_event_for_catalog_number(catalog_number):
 	auction._label = f"Auction Event for {catalog_number}"
 	return auction, uid, uri
 
+@profile()
 def add_auction_event(data):
 	'''Add modeling for an auction event based on properties of the supplied `data` dict.'''
 	cno = data['catalog_number']
@@ -88,6 +132,7 @@ def add_auction_event(data):
 
 #mark - Places
 
+@profile()
 def auction_event_location(data):
 	'''
 	Based on location data in the supplied `data` dict, construct a data structure
@@ -107,6 +152,7 @@ def auction_event_location(data):
 #mark - Auction Events
 
 @use('auction_locations')
+@profile()
 def populate_auction_event(data, auction_locations):
 	'''Add modeling data for an auction event'''
 	cno = data['catalog_number']
@@ -137,6 +183,7 @@ def populate_auction_event(data, auction_locations):
 	auction.subject_of = catalog
 	yield data
 
+@profile()
 def add_auction_house_data(a):
 	'''Add modeling data for an auction house organization.'''
 	catalog = a.get('_catalog')
@@ -177,6 +224,7 @@ def add_auction_house_data(a):
 	return a
 
 @use('auction_houses')
+@profile()
 def add_auction_houses(data, auction_houses):
 	'''
 	Add modeling data for the auction house organization(s) associated with an auction
@@ -304,6 +352,7 @@ class AddAuctionOfLot(Configurable):
 		lot.used_specific_object = coll
 		data['_lot_object_set'] = coll
 
+	@profile('AddAuctionOfLot')
 	def __call__(self, data, auction_houses, auction_locations, problematic_records):
 		'''Add modeling data for the auction of a lot of objects.'''
 		ask_price = data.get('ask_price', {}).get('ask_price')
@@ -354,6 +403,7 @@ class AddAuctionOfLot(Configurable):
 		add_crom_data(data=data, what=lot)
 		yield data
 
+@profile()
 def add_crom_price(data, _):
 	'''
 	Add modeling data for `MonetaryAmount`, `StartingPrice`, or `EstimatedPrice`,
@@ -364,7 +414,9 @@ def add_crom_price(data, _):
 		add_crom_data(data=data, what=amnt)
 	return data
 
-def add_person(data: dict):
+@use('make_la_person')
+@profile()
+def add_person(data: dict, *, make_la_person=None):
 	'''
 	Add modeling data for people, based on properties of the supplied `data` dict.
 
@@ -397,6 +449,7 @@ def add_person(data: dict):
 	make_la_person(data)
 	return data
 
+@profile()
 def final_owner_procurement(final_owner, current_tx, hmo, current_ts):
 	tx = related_procurement(current_tx, hmo, current_ts, buyer=final_owner)
 	try:
@@ -406,7 +459,9 @@ def final_owner_procurement(final_owner, current_tx, hmo, current_ts):
 		tx._label = f'Procurement leading to the currently known location of object'
 	return tx
 
-def add_acquisition(data, hmo, buyers, sellers):
+@use('make_la_person')
+@profile()
+def add_acquisition(data, hmo, buyers, sellers, make_la_person=None):
 	'''Add modeling of an acquisition as a transfer of title from the seller to the buyer'''
 	parent = data['parent_data']
 	transaction = parent['transaction']
@@ -477,6 +532,7 @@ def add_acquisition(data, hmo, buyers, sellers):
 			data['_procurements'].append(add_crom_data(data=ptx_data, what=tx))
 	yield data
 
+@profile()
 def related_procurement(current_tx, hmo, current_ts=None, buyer=None, seller=None, previous=False):
 	'''
 	Returns a new `vocab.Procurement` object (and related acquisition) that is temporally
@@ -512,6 +568,7 @@ def related_procurement(current_tx, hmo, current_ts=None, buyer=None, seller=Non
 			pacq.timespan = timespan_after(current_ts)
 	return tx
 
+@profile()
 def add_bidding(data, buyers):
 	'''Add modeling of bids that did not lead to an acquisition'''
 	parent = data['parent_data']
@@ -561,7 +618,9 @@ def add_bidding(data, buyers):
 		pass
 		warnings.warn(f'*** No price data found for {parent["transaction"]!r} transaction')
 
-def add_acquisition_or_bidding(data):
+@use('make_la_person')
+@profile()
+def add_acquisition_or_bidding(data, *, make_la_person):
 	'''Determine if this record has an acquisition or bidding, and add appropriate modeling'''
 	parent = data['parent_data']
 	transaction = parent['transaction']
@@ -572,12 +631,12 @@ def add_acquisition_or_bidding(data):
 	hmo = get_crom_object(data)
 
 	# TODO: filtering empty people should be moved much earlier in the pipeline
-	buyers = [add_person(p) for p in filter_empty_people(*parent['buyer'])]
-	sellers = [add_person(p) for p in filter_empty_people(*parent['seller'])]
+	buyers = [add_person(p, make_la_person=make_la_person) for p in filter_empty_people(*parent['buyer'])]
+	sellers = [add_person(p, make_la_person=make_la_person) for p in filter_empty_people(*parent['seller'])]
 
 	# TODO: is this the right set of transaction types to represent acquisition?
 	if transaction in ('Sold', 'Vendu', 'Verkauft', 'Bought In'):
-		yield from add_acquisition(data, hmo, buyers, sellers)
+		yield from add_acquisition(data, hmo, buyers, sellers, make_la_person)
 	elif transaction in ('Unknown', 'Unbekannt', 'Inconnue', 'Withdrawn', 'Non Vendu', ''):
 		yield from add_bidding(data, buyers)
 	else:
@@ -588,6 +647,7 @@ def add_acquisition_or_bidding(data):
 class TrackLotSizes(Configurable):
 	lot_counter = Service('lot_counter')
 
+	@profile('TrackLotSizes')
 	def __call__(self, data, lot_counter):
 		auction_data = data['auction_of_lot']
 		cno, lno, date = object_key(auction_data)
@@ -597,6 +657,7 @@ class TrackLotSizes(Configurable):
 
 #mark - Auction of Lot - Physical Object
 
+@profile()
 def genre_instance(value, vocab_instance_map):
 	'''Return the appropriate type instance for the supplied genre name'''
 	if value is None:
@@ -611,6 +672,7 @@ def genre_instance(value, vocab_instance_map):
 		return instance
 	return None
 
+@profile()
 def populate_destruction_events(data, note, destruction_types_map):
 	hmo = get_crom_object(data)
 	title = data.get('title')
@@ -640,6 +702,7 @@ def populate_destruction_events(data, note, destruction_types_map):
 @use('unique_catalogs')
 @use('vocab_instance_map')
 @use('destruction_types_map')
+@profile()
 def populate_object(data, post_sale_map, unique_catalogs, vocab_instance_map, destruction_types_map):
 	'''Add modeling for an object described by a sales record'''
 	hmo = get_crom_object(data)
@@ -765,6 +828,7 @@ def populate_object(data, post_sale_map, unique_catalogs, vocab_instance_map, de
 	return data
 
 @use('vocab_type_map')
+@profile()
 def add_object_type(data, vocab_type_map):
 	'''Add appropriate type information for an object based on its 'object_type' name'''
 	typestring = data.get('object_type', '')
@@ -783,7 +847,9 @@ def add_object_type(data, vocab_type_map):
 
 	return data
 
-def add_pir_artists(data):
+@use('make_la_person')
+@profile()
+def add_pir_artists(data, *, make_la_person):
 	'''Add modeling for artists as people involved in the production of an object'''
 	lod_object = get_crom_object(data)
 	event = model.Production()
@@ -828,6 +894,7 @@ def add_pir_artists(data):
 
 #mark - Physical Catalogs
 
+@profile()
 def add_auction_catalog(data):
 	'''Add modeling for auction catalogs as linguistic objects'''
 	cno = data['catalog_number']
@@ -840,6 +907,7 @@ def add_auction_catalog(data):
 	add_crom_data(data=cdata, what=catalog)
 	yield data
 
+@profile()
 def add_physical_catalog_objects(data):
 	'''Add modeling for physical copies of an auction catalog'''
 	catalog = data['_catalog']['_LOD_OBJECT']
@@ -866,6 +934,7 @@ def add_physical_catalog_objects(data):
 
 @use('location_codes')
 @use('unique_catalogs')
+@profile()
 def add_physical_catalog_owners(data, location_codes, unique_catalogs):
 	'''Add information about the ownership of a physical copy of an auction catalog'''
 	# Add the URI of this physical catalog to `unique_catalogs`. This data will be used
@@ -900,6 +969,7 @@ def add_physical_catalog_owners(data, location_codes, unique_catalogs):
 
 #mark - Physical Catalogs - Informational Catalogs
 
+@profile()
 def populate_auction_catalog(data):
 	'''Add modeling data for an auction catalog'''
 	d = {k: v for k, v in data.items()}
@@ -964,6 +1034,7 @@ class ProvenancePipeline(PipelineBase):
 		'''Return a `dict` of named services available to the bonobo pipeline.'''
 		services = super().get_services()
 		services.update({
+			'make_la_person': MakeLinkedArtPerson(),
 			'lot_counter': Counter(),
 			'unique_catalogs': {},
 			'post_sale_map': {},
@@ -1290,6 +1361,7 @@ class ProvenancePipeline(PipelineBase):
 			ExtractKeyedValue(key='_object'),
 			add_object_type,
 			populate_object,
+			PrintCounters(every=10000),
 			MakeLinkedArtHumanMadeObject(),
 			add_pir_artists,
 			_input=sales.output
@@ -1357,7 +1429,7 @@ class ProvenancePipeline(PipelineBase):
 		for g in component1:
 			physical_catalog_records = g.add_chain(
 				MatchingFiles(path='/', pattern=self.catalogs_files_pattern, fs='fs.data.provenance'),
-				CurriedCSVReader(fs='fs.data.provenance', limit=self.limit),
+				CurriedCSVReader(fs='fs.data.provenance', limit=self.limit)
 			)
 
 			auction_events_records = g.add_chain(
@@ -1375,7 +1447,7 @@ class ProvenancePipeline(PipelineBase):
 		for g in component2:
 			contents_records = g.add_chain(
 				MatchingFiles(path='/', pattern=self.contents_files_pattern, fs='fs.data.provenance'),
-				CurriedCSVReader(fs='fs.data.provenance', limit=self.limit)
+				CurriedCSVReader(fs='fs.data.provenance', limit=self.limit),
 			)
 			sales = self.add_sales_chain(g, contents_records, serialize=True)
 			_ = self.add_single_object_lot_tracking_chain(g, sales)

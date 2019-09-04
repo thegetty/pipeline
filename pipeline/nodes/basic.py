@@ -82,7 +82,7 @@ class GroupRepeatingKeys(Configurable):
 						values_unset = list(map(lambda v: not bool(v), subd.values()))
 						if all(values_unset):
 							continue
-					if postprocess:
+					if postprocess and subd:
 						if callable(postprocess):
 							postprocess = [postprocess]
 						for p in postprocess:

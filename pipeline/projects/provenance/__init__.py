@@ -131,6 +131,10 @@ def populate_auction_event(data, auction_locations):
 		end=implode_date(data, 'sale_end_', clamp='end'),
 	)
 
+	for p in data.get('portal', []):
+		url = p['portal_url']
+		auction.referred_to_by = vocab.WebPage(ident=url)
+
 	if ts:
 		auction.timespan = ts
 
@@ -1019,6 +1023,7 @@ class ProvenancePipeline(PipelineBase):
 				'expert': {'prefixes': ('expert', 'expert_auth', 'expert_ulan')},
 				'commissaire': {'prefixes': ('comm_pr', 'comm_pr_auth', 'comm_pr_ulan')},
 				'auction_house': {'prefixes': ('auc_house_name', 'auc_house_auth', 'auc_house_ulan')},
+				'portal': {'prefixes': ('portal_url',)},
 			}),
 			GroupKeys(mapping={
 				'lugt': {'properties': ('lugt_number_1', 'lugt_number_2', 'lugt_number_3')},

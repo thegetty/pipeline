@@ -741,7 +741,7 @@ def populate_object(data, post_sale_map, unique_catalogs, vocab_instance_map, de
 	_populate_object_statements(data)
 	_populate_object_present_location(data, now_key, destruction_types_map)
 	_populate_object_notes(data, parent, unique_catalogs)
-	_populate_object_prev_post_sales(data, post_sale_map)
+	_populate_object_prev_post_sales(data, now_key, post_sale_map)
 
 	return data
 
@@ -831,7 +831,7 @@ def _populate_object_notes(data, parent, unique_catalogs):
 		hmo.carries = vocab.Note(content=inscription)
 
 @profile()
-def _populate_object_prev_post_sales(data, post_sale_map):
+def _populate_object_prev_post_sales(data, now_key, post_sale_map):
 	post_sales = data.get('post_sale', [])
 	prev_sales = data.get('prev_sale', [])
 	prev_post_sales_records = [(post_sales, False), (prev_sales, True)]

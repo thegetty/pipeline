@@ -110,7 +110,6 @@ class PrintCounters(Configurable):
 				print(f'%7.2f\t{k}' % (PROFILE_DATA[k],), file=self.file)
 		return NOT_MODIFIED
 
-@profile()
 def auction_event_for_catalog_number(catalog_number):
 	'''
 	Return a `vocab.AuctionEvent` object and its associated 'uid' key and URI, based on
@@ -185,7 +184,6 @@ def populate_auction_event(data, auction_locations):
 	auction.subject_of = catalog
 	yield data
 
-@profile()
 def add_auction_house_data(a):
 	'''Add modeling data for an auction house organization.'''
 	catalog = a.get('_catalog')
@@ -264,6 +262,7 @@ class AddAuctionOfLot(Configurable):
 		super().__init__(*args, **kwargs)
 
 	@staticmethod
+	@profile()
 	def shared_lot_number_from_lno(lno):
 		'''
 		Given a `lot_number` value which identifies an object in a group, strip out the
@@ -405,7 +404,6 @@ class AddAuctionOfLot(Configurable):
 		add_crom_data(data=data, what=lot)
 		yield data
 
-@profile()
 def add_crom_price(data, _):
 	'''
 	Add modeling data for `MonetaryAmount`, `StartingPrice`, or `EstimatedPrice`,
@@ -717,6 +715,8 @@ def populate_object(data, post_sale_map, unique_catalogs, vocab_instance_map, de
 		if not lno:
 			warnings.warn(f'Setting empty identifier on {hmo.id}')
 		data['identifiers'].append(model.Identifier(content=str(lno)))
+	else:
+		print(f'***** NO AUCTION DATA FOUND IN populate_object')
 
 
 	cno = auction_data['catalog_number']
@@ -851,7 +851,6 @@ def _populate_object_prev_post_sales(data, now_key, post_sale_map):
 
 
 @use('vocab_type_map')
-@profile()
 def add_object_type(data, vocab_type_map):
 	'''Add appropriate type information for an object based on its 'object_type' name'''
 	typestring = data.get('object_type', '')
@@ -930,7 +929,6 @@ def add_auction_catalog(data):
 	add_crom_data(data=cdata, what=catalog)
 	yield data
 
-@profile()
 def add_physical_catalog_objects(data):
 	'''Add modeling for physical copies of an auction catalog'''
 	catalog = data['_catalog']['_LOD_OBJECT']

@@ -121,7 +121,6 @@ def auction_event_for_catalog_number(catalog_number):
 	auction._label = f"Auction Event for {catalog_number}"
 	return auction, uid, uri
 
-@profile()
 def add_auction_event(data):
 	'''Add modeling for an auction event based on properties of the supplied `data` dict.'''
 	cno = data['catalog_number']
@@ -153,7 +152,6 @@ def auction_event_location(data):
 #mark - Auction Events
 
 @use('auction_locations')
-@profile()
 def populate_auction_event(data, auction_locations):
 	'''Add modeling data for an auction event'''
 	cno = data['catalog_number']
@@ -224,7 +222,6 @@ def add_auction_house_data(a):
 	return a
 
 @use('auction_houses')
-@profile()
 def add_auction_houses(data, auction_houses):
 	'''
 	Add modeling data for the auction house organization(s) associated with an auction
@@ -254,6 +251,9 @@ def add_auction_houses(data, auction_houses):
 class AddAuctionOfLot(Configurable):
 	'''Add modeling data for the auction of a lot of objects.'''
 	
+	# TODO: does this handle all the cases of data packed into the lot_number string that need to be stripped?
+	shared_lot_number_re = re.compile(r'(\[[a-z]\])')
+	
 	problematic_records = Service('problematic_records')
 	auction_locations = Service('auction_locations')
 	auction_houses = Service('auction_houses')
@@ -272,8 +272,7 @@ class AddAuctionOfLot(Configurable):
 
 		'0001[a]' -> '0001'
 		'''
-		# TODO: does this handle all the cases of data packed into the lot_number string that need to be stripped?
-		r = re.compile(r'(\[[a-z]\])')
+		r = AddAuctionOfLot.shared_lot_number_re
 		m = r.search(lno)
 		if m:
 			return lno.replace(m.group(1), '')
@@ -353,7 +352,6 @@ class AddAuctionOfLot(Configurable):
 		lot.used_specific_object = coll
 		data['_lot_object_set'] = coll
 
-	@profile('AddAuctionOfLot')
 	def __call__(self, data, auction_houses, auction_locations, problematic_records):
 		'''Add modeling data for the auction of a lot of objects.'''
 		ask_price = data.get('ask_price', {}).get('ask_price')
@@ -445,7 +443,8 @@ def add_person(data: dict, *, make_la_person=None):
 	else:
 		data['label'] = '(Anonymous person)'
 
-	make_la_person = MakeLinkedArtPerson()
+	if not make_la_person:
+		make_la_person = MakeLinkedArtPerson()
 	make_la_person(data)
 	return data
 
@@ -460,7 +459,6 @@ def final_owner_procurement(final_owner, current_tx, hmo, current_ts):
 	return tx
 
 @use('make_la_person')
-@profile()
 def add_acquisition(data, hmo, buyers, sellers, make_la_person=None):
 	'''Add modeling of an acquisition as a transfer of title from the seller to the buyer'''
 	parent = data['parent_data']
@@ -568,7 +566,6 @@ def related_procurement(current_tx, hmo, current_ts=None, buyer=None, seller=Non
 			pacq.timespan = timespan_after(current_ts)
 	return tx
 
-@profile()
 def add_bidding(data, buyers):
 	'''Add modeling of bids that did not lead to an acquisition'''
 	parent = data['parent_data']
@@ -619,7 +616,6 @@ def add_bidding(data, buyers):
 		warnings.warn(f'*** No price data found for {parent["transaction"]!r} transaction')
 
 @use('make_la_person')
-@profile()
 def add_acquisition_or_bidding(data, *, make_la_person):
 	'''Determine if this record has an acquisition or bidding, and add appropriate modeling'''
 	parent = data['parent_data']
@@ -657,7 +653,6 @@ class TrackLotSizes(Configurable):
 
 #mark - Auction of Lot - Physical Object
 
-@profile()
 def genre_instance(value, vocab_instance_map):
 	'''Return the appropriate type instance for the supplied genre name'''
 	if value is None:
@@ -725,6 +720,24 @@ def populate_object(data, post_sale_map, unique_catalogs, vocab_instance_map, de
 	lot = AddAuctionOfLot.shared_lot_number_from_lno(lno)
 	now_key = (cno, lot, date) # the current key for this object; may be associated later with prev and post object keys
 
+	_populate_object_visual_item(data, vocab_instance_map)
+	_populate_object_destruction(data, parent, destruction_types_map)
+	_populate_object_statements(data)
+	_populate_object_present_location(data, now_key, destruction_types_map)
+	_populate_object_notes(data, parent, unique_catalogs)
+	_populate_object_prev_post_sales(data, now_key, post_sale_map)
+
+	return data
+
+@profile()
+def _populate_object_destruction(data, parent, destruction_types_map):
+	notes = parent.get('auction_of_lot', {}).get('lot_notes')
+	if notes and notes.startswith('Destroyed'):
+		populate_destruction_events(data, notes, destruction_types_map)
+
+@profile()
+def _populate_object_visual_item(data, vocab_instance_map):
+	hmo = get_crom_object(data)
 	title = data.get('title')
 	vi = model.VisualItem()
 	if title:
@@ -733,17 +746,6 @@ def populate_object(data, post_sale_map, unique_catalogs, vocab_instance_map, de
 	if genre:
 		vi.classified_as = genre
 	hmo.shows = vi
-
-	notes = parent.get('auction_of_lot', {}).get('lot_notes')
-	if notes and notes.startswith('Destroyed'):
-		populate_destruction_events(data, notes, destruction_types_map)
-
-	_populate_object_statements(data)
-	_populate_object_present_location(data, now_key, destruction_types_map)
-	_populate_object_notes(data, parent, unique_catalogs)
-	_populate_object_prev_post_sales(data, now_key, post_sale_map)
-
-	return data
 
 @profile()
 def _populate_object_statements(data):
@@ -870,7 +872,6 @@ def add_object_type(data, vocab_type_map):
 	return data
 
 @use('make_la_person')
-@profile()
 def add_pir_artists(data, *, make_la_person):
 	'''Add modeling for artists as people involved in the production of an object'''
 	lod_object = get_crom_object(data)
@@ -916,7 +917,6 @@ def add_pir_artists(data, *, make_la_person):
 
 #mark - Physical Catalogs
 
-@profile()
 def add_auction_catalog(data):
 	'''Add modeling for auction catalogs as linguistic objects'''
 	cno = data['catalog_number']
@@ -990,7 +990,6 @@ def add_physical_catalog_owners(data, location_codes, unique_catalogs):
 
 #mark - Physical Catalogs - Informational Catalogs
 
-@profile()
 def populate_auction_catalog(data):
 	'''Add modeling data for an auction catalog'''
 	d = {k: v for k, v in data.items()}

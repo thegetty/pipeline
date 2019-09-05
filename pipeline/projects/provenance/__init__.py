@@ -717,11 +717,7 @@ def populate_object(data, post_sale_map, unique_catalogs, vocab_instance_map, de
 		if not lno:
 			warnings.warn(f'Setting empty identifier on {hmo.id}')
 		data['identifiers'].append(model.Identifier(content=str(lno)))
-	m = data.get('materials')
-	if m:
-		matstmt = vocab.MaterialStatement()
-		matstmt.content = m
-		hmo.referred_to_by = matstmt
+
 
 	cno = auction_data['catalog_number']
 	lno = auction_data['lot_number']
@@ -738,6 +734,39 @@ def populate_object(data, post_sale_map, unique_catalogs, vocab_instance_map, de
 		vi.classified_as = genre
 	hmo.shows = vi
 
+	notes = parent.get('auction_of_lot', {}).get('lot_notes')
+	if notes and notes.startswith('Destroyed'):
+		populate_destruction_events(data, notes, destruction_types_map)
+
+	_populate_object_statements(data)
+	_populate_object_present_location(data, now_key, destruction_types_map)
+	_populate_object_notes(data, parent, unique_catalogs)
+	_populate_object_prev_post_sales(data, post_sale_map)
+
+	return data
+
+@profile()
+def _populate_object_statements(data):
+	hmo = get_crom_object(data)
+	m = data.get('materials')
+	if m:
+		matstmt = vocab.MaterialStatement()
+		matstmt.content = m
+		hmo.referred_to_by = matstmt
+
+	dimstr = data.get('dimensions')
+	if dimstr:
+		dimstmt = vocab.DimensionStatement()
+		dimstmt.content = dimstr
+		hmo.referred_to_by = dimstmt
+		for dim in extract_physical_dimensions(dimstr):
+			hmo.dimension = dim
+	else:
+		pass
+# 		print(f'No dimension data was parsed from the dimension statement: {dimstr}')
+
+@profile()
+def _populate_object_present_location(data, now_key, destruction_types_map):
 	location = data.get('present_location')
 	if location:
 		loc = location.get('geog')
@@ -782,10 +811,9 @@ def populate_object(data, post_sale_map, unique_catalogs, vocab_instance_map, de
 			pass
 			# TODO: the acquisition_note needs to be attached as a Note to the final post owner acquisition
 
-	notes = parent.get('auction_of_lot', {}).get('lot_notes')
-	if notes and notes.startswith('Destroyed'):
-		populate_destruction_events(data, notes, destruction_types_map)
-
+@profile()
+def _populate_object_notes(data, parent, unique_catalogs):
+	hmo = get_crom_object(data)
 	notes = data.get('hand_note', [])
 	for note in notes:
 		c = note['hand_note']
@@ -802,6 +830,8 @@ def populate_object(data, post_sale_map, unique_catalogs, vocab_instance_map, de
 	if inscription:
 		hmo.carries = vocab.Note(content=inscription)
 
+@profile()
+def _populate_object_prev_post_sales(data, post_sale_map):
 	post_sales = data.get('post_sale', [])
 	prev_sales = data.get('prev_sale', [])
 	prev_post_sales_records = [(post_sales, False), (prev_sales, True)]
@@ -817,17 +847,8 @@ def populate_object(data, post_sale_map, unique_catalogs, vocab_instance_map, de
 					later_key, now_key = now_key, later_key
 				post_sale_map[later_key] = now_key
 
-	dimstr = data.get('dimensions')
-	if dimstr:
-		dimstmt = vocab.DimensionStatement()
-		dimstmt.content = dimstr
-		hmo.referred_to_by = dimstmt
-		for dim in extract_physical_dimensions(dimstr):
-			hmo.dimension = dim
-		else:
-			pass
-# 			print(f'No dimension data was parsed from the dimension statement: {dimstr}')
-	return data
+
+
 
 @use('vocab_type_map')
 @profile()

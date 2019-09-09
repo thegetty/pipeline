@@ -1425,11 +1425,13 @@ class ProvenancePipeline(PipelineBase):
 		start = timeit.default_timer()
 		print('Running graph component 1...', file=sys.stderr)
 		graph1 = self.get_graph_1(**options)
-		bonobo.run(graph1, services=services)
+		self.run_graph(graph1, services=services)
+# 		bonobo.run(graph1, services=services)
 
 		print('Running graph component 2...', file=sys.stderr)
 		graph2 = self.get_graph_2(**options)
-		bonobo.run(graph2, services=services)
+		self.run_graph(graph2, services=services)
+# 		bonobo.run(graph2, services=services)
 		
 		print(f'Pipeline runtime: {timeit.default_timer() - start}', file=sys.stderr)
 

@@ -7,6 +7,7 @@ import settings
 from sqlalchemy import create_engine
 from sqlalchemy.engine.url import URL
 
+import pipeline.execution
 from pipeline.nodes.basic import \
 			AddArchesModel, \
 			Serializer
@@ -69,110 +70,8 @@ class PipelineBase:
 			sys.stderr.write('*** No serialization chain defined\n')
 
 	def run_graph(self, graph, *, services):
-		bonobo.run(graph, services=services)
-
-##########################################################################################
-##########################################################################################
-##########################################################################################
-
-from bonobo.execution.contexts.graph import BaseGraphExecutionContext
-from bonobo.execution import events
-from bonobo.constants import BEGIN, EMPTY, END
-from queue import Empty
-from bonobo.errors import InactiveReadableError
-from bonobo.util.statistics import WithStatistics
-from bonobo.execution.contexts.base import BaseContext
-
-class SimpleGraphExecutionContext(BaseGraphExecutionContext):
-	def __init__(self, *args, **kwargs):
-		super(SimpleGraphExecutionContext, self).__init__(*args, **kwargs)
-		for i, node in enumerate(self):
-			print(f'[{i}] {node!r}')
-
-	def start(self, starter=None):
-		super(SimpleGraphExecutionContext, self).start()
-
-		self.register_plugins()
-		self.dispatch(events.START)
-# 		self.tick(pause=False)
-
-		for node in self.nodes:
-			print(f'starting node {node}')
-			if starter is None:
-				node.start()
-			else:
-				starter(node)
-
-		self.dispatch(events.STARTED)
-
-# 	def tick(self, pause=True):
-# 		self.dispatch(events.TICK)
-# 		if pause:
-# 			sleep(self.TICK_PERIOD)
-
-	def stop(self, stopper=None):
-		super(SimpleGraphExecutionContext, self).stop()
-
-		self.dispatch(events.STOP)
-		for node_context in self.nodes:
-			if stopper is None:
-				node_context.stop()
-			else:
-				stopper(node_context)
-# 		self.tick(pause=False)
-		self.dispatch(events.STOPPED)
-		self.unregister_plugins()
-
-	def kill(self):
-		super(SimpleGraphExecutionContext, self).kill()
-
-		self.dispatch(events.KILL)
-		for node_context in self.nodes:
-			node_context.kill()
-# 		self.tick()
-
-	def write(self, *messages):
-		"""Push a list of messages in the inputs of this graph's inputs, matching the output of special node "BEGIN" in
-		our graph."""
-
-		for i in self.graph.outputs_of(BEGIN):
-			for message in messages:
-				self[i].write(message)
-
-	def loop(self):
-		nodes = set(node for node in self.nodes if node.should_loop)
-		while self.should_loop and len(nodes):
-# 			self.tick(pause=False)
-			for node in list(nodes):
-				try:
-					node.step()
-				except Empty:
-					continue
-				except InactiveReadableError:
-					nodes.discard(node)
-
-	def run_until_complete(self):
-		self.write(BEGIN, EMPTY, END)
-		self.loop()
-
-##########################################################################################
-##########################################################################################
-##########################################################################################
-
-
-import bonobo.execution.strategies
-from bonobo.execution.strategies.base import Strategy
-from bonobo.execution.strategies.naive import NaiveStrategy
-from bonobo.execution.contexts.graph import GraphExecutionContext
-class MyExecutionStrategy(NaiveStrategy):
-	def execute(self, graph, **kwargs):
-		print(f'======= MyExecutionStrategy.execute()')
-# 		context = GraphExecutionContext(graph, **kwargs)
-		context = SimpleGraphExecutionContext(graph, **kwargs)
-		with context:
-			print(f'context: {context}')
-			context.run_until_complete()
-		return context
-
-bonobo.execution.strategies.STRATEGIES['__getty'] = MyExecutionStrategy
-bonobo.execution.strategies.DEFAULT_STRATEGY = '__getty'
+		if False:
+			bonobo.run(graph, services=services)
+		else:
+			e = pipeline.execution.GraphExecutor(graph, services)
+			e.run()

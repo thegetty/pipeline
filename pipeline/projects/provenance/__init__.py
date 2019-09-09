@@ -24,6 +24,8 @@ import inspect
 import timeit
 from sqlalchemy import create_engine
 
+import pipeline.execution
+
 import graphviz
 import bonobo
 from bonobo.config import use, Service, Configurable
@@ -202,13 +204,16 @@ def add_auction_houses(data, auction_houses):
 		if auction_houses:
 			house_objects.append(house)
 	auction_houses[cno] = house_objects
-	yield d
+	return d
 
 
 #mark - Auction of Lot
 
 class AddAuctionOfLot(Configurable):
 	'''Add modeling data for the auction of a lot of objects.'''
+	
+	# TODO: does this handle all the cases of data packed into the lot_number string that need to be stripped?
+	shared_lot_number_re = re.compile(r'(\[[a-z]\])')
 	
 	problematic_records = Service('problematic_records')
 	auction_locations = Service('auction_locations')
@@ -227,9 +232,7 @@ class AddAuctionOfLot(Configurable):
 
 		'0001[a]' -> '0001'
 		'''
-		# TODO: does this handle all the cases of data packed into the lot_number string that need to be stripped?
-		r = re.compile(r'(\[[a-z]\])')
-		m = r.search(lno)
+		m = AddAuctionOfLot.shared_lot_number_re.search(lno)
 		if m:
 			return lno.replace(m.group(1), '')
 		return lno
@@ -425,9 +428,13 @@ def add_acquisition(data, hmo, buyers, sellers):
 # 	if not prices:
 # 		print(f'*** No price data found for {transaction} transaction')
 
+	tx_data = parent['_procurement_data']
+	current_tx = get_crom_object(tx_data)
+	payment_id = current_tx.id + '-Payment'
+
 	acq = model.Acquisition(label=f'Acquisition of {cno} {lno} ({date}): “{object_label}”')
 	acq.transferred_title_of = hmo
-	paym = model.Payment(label=f'Payment for “{object_label}”')
+	paym = model.Payment(ident=payment_id, label=f'Payment for “{object_label}”')
 	for seller in [get_crom_object(s) for s in sellers]:
 		paym.paid_to = seller
 		acq.transferred_title_from = seller
@@ -437,8 +444,6 @@ def add_acquisition(data, hmo, buyers, sellers):
 	for amnt in amnts:
 		paym.paid_amount = amnt
 
-	tx_data = parent['_procurement_data']
-	current_tx = get_crom_object(tx_data)
 	ts = tx_data.get('_date')
 	if ts:
 		acq.timespan = ts

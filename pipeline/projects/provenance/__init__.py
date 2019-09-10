@@ -47,6 +47,7 @@ from pipeline.util.cleaners import \
 			date_parse, \
 			date_cleaner
 from pipeline.io.file import MergingFileWriter
+from pipeline.io.memory import MergingMemoryWriter
 # from pipeline.io.arches import ArchesWriter
 from pipeline.linkedart import \
 			add_crom_data, \
@@ -1538,15 +1539,21 @@ class ProvenanceFilePipeline(ProvenancePipeline):
 	'''
 	def __init__(self, input_path, catalogs, auction_events, contents, **kwargs):
 		super().__init__(input_path, catalogs, auction_events, contents, **kwargs)
+		self.writers = []
 		debug = kwargs.get('debug', False)
 		self.output_path = kwargs.get('output_path')
 
 	def serializer_nodes_for_model(self, model=None):
 		nodes = []
 		if self.debug:
-			nodes.append(MergingFileWriter(directory=self.output_path, partition_directories=True, compact=False, model=model))
+# 			w = MergingFileWriter(directory=self.output_path, partition_directories=True, compact=False, model=model)
+			w = MergingMemoryWriter(directory=self.output_path, partition_directories=True, compact=False, model=model)
+			nodes.append(w)
 		else:
-			nodes.append(MergingFileWriter(directory=self.output_path, partition_directories=True, compact=True, model=model))
+# 			w = MergingFileWriter(directory=self.output_path, partition_directories=True, compact=True, model=model)
+			w = MergingMemoryWriter(directory=self.output_path, partition_directories=True, compact=True, model=model)
+			nodes.append(w)
+		self.writers += nodes
 		return nodes
 
 	def merge_post_sale_objects(self, counter, post_map):
@@ -1619,6 +1626,10 @@ class ProvenanceFilePipeline(ProvenancePipeline):
 		start = timeit.default_timer()
 		services = self.get_services(**options)
 		super().run(services=services, **options)
+		
+		for w in self.writers:
+			if isinstance(w, MergingMemoryWriter):
+				w.flush()
 
 		print('====================================================')
 		print('Running post-processing of post-sale data...')

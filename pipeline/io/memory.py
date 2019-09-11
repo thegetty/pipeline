@@ -2,6 +2,8 @@ import os
 import os.path
 import hashlib
 import uuid
+import pprint
+from collections import Counter, defaultdict, namedtuple
 
 from pipeline.util import CromObjectMerger
 
@@ -26,6 +28,7 @@ class MergingMemoryWriter(Configurable):
 		'''
 		super().__init__(self, *args, **kwargs)
 		self.data = {}
+		self.counter = Counter()
 		self.merger = CromObjectMerger()
 		self.__name__ = f'{type(self).__name__} ({self.model})'
 
@@ -47,11 +50,24 @@ class MergingMemoryWriter(Configurable):
 			print(content)
 			raise
 
+	def __call__(self, data: dict):
+		model_object = data['_LOD_OBJECT']
+		ident = model_object.id
+		self.counter['total'] += 1
+		if ident in self.data:
+			self.counter['collision'] += 1
+			self.data[ident] = self.merge(model_object)
+		else:
+			self.counter['non-collision'] += 1
+			self.data[ident] = model_object
+		return NOT_MODIFIED
+
 	def flush(self):
 		writer = MergingFileWriter(directory=self.directory, partition_directories=self.partition_directories, compact=self.compact, model=self.model)
 		objects = self.data.values()
-		count = len(objects)
+		count = len(self.data)
 		skip = max(count / 400, 1)
+		pprint.pprint(self.counter)
 		for i, o in enumerate(objects):
 			if (i % skip) == 0:
 				pct = 100.0 * float(i) / float(count)
@@ -59,12 +75,4 @@ class MergingMemoryWriter(Configurable):
 			d = add_crom_data(data={}, what=o)
 			writer(d)
 		print(f'100.0% writing objects for model {self.model}')
-
-	def __call__(self, data: dict):
-		model_object = data['_LOD_OBJECT']
-		ident = model_object.id
-		if ident in self.data:
-			self.data[ident] = self.merge(model_object)
-		else:
-			self.data[ident] = model_object
-		return NOT_MODIFIED
+		pprint.pprint(self.counter)

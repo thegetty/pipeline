@@ -158,10 +158,10 @@ class CromObjectMerger:
 	def set_or_merge(self, obj, p, *values):
 		existing = []
 # 		print('------------------------')
-		with suppress(AttributeError):
+		if hasattr(obj, p):
 			e = getattr(obj, p)
 			if isinstance(e, list):
-				existing.extend(e)
+				existing = e
 			else:
 				existing = [e]
 
@@ -171,8 +171,8 @@ class CromObjectMerger:
 		for v in existing + list(values):
 			handled = False
 			for attr, classes in self.attribute_based_identity.items():
-				if isinstance(v, classes):
-					if hasattr(v, 'content'):
+				if hasattr(v, 'content'):
+					if isinstance(v, classes):
 						identified[getattr(v, attr)].append(v)
 						handled = True
 						break
@@ -192,10 +192,14 @@ class CromObjectMerger:
 		for v in identified.values():
 			if not allows_multiple:
 				setattr(obj, p, None)
+				setattr(obj, p, self.merge(*v))
+				break
 			setattr(obj, p, self.merge(*v))
 		for v in unidentified:
 			if not allows_multiple:
 				setattr(obj, p, None)
+				setattr(obj, p, v)
+				break
 			setattr(obj, p, v)
 
 class ExtractKeyedValues(Configurable):

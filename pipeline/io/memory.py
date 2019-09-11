@@ -55,7 +55,7 @@ class MergingMemoryWriter(Configurable):
 		for i, o in enumerate(objects):
 			if (i % skip) == 0:
 				pct = 100.0 * float(i) / float(count)
-				print('%.1f%% writing objects for model %s' % (pct, self.model))
+				print('[%d/%d] %.1f%% writing objects for model %s' % (i, count, pct, self.model))
 			d = add_crom_data(data={}, what=o)
 			writer(d)
 		print(f'100.0% writing objects for model {self.model})

@@ -187,12 +187,14 @@ class CromObjectMerger:
 			# print('*** TODO: calling setattr(_, "type") on crom objects throws; skipping')
 			return
 		setattr(obj, p, None)
+		
+		allows_multiple = obj.allows_multiple(p)
 		for v in identified.values():
-			if not obj.allows_multiple(p):
+			if not allows_multiple:
 				setattr(obj, p, None)
 			setattr(obj, p, self.merge(*v))
 		for v in unidentified:
-			if not obj.allows_multiple(p):
+			if not allows_multiple:
 				setattr(obj, p, None)
 			setattr(obj, p, v)
 

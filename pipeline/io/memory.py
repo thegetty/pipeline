@@ -66,9 +66,10 @@ class MergingMemoryWriter(Configurable):
 		writer = MergingFileWriter(directory=self.directory, partition_directories=self.partition_directories, compact=self.compact, model=self.model)
 		objects = self.data.values()
 		count = len(self.data)
-		skip = max(count / 400, 1)
+		skip = max(int(count / 100), 1)
 		pprint.pprint(self.counter)
-		for i, o in enumerate(objects):
+		for i, k in enumerate(self.data):
+			o = self.data[k]
 			if (i % skip) == 0:
 				pct = 100.0 * float(i) / float(count)
 				print('[%d/%d] %.1f%% writing objects for model %s' % (i, count, pct, self.model))

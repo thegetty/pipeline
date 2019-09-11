@@ -49,7 +49,7 @@ nt:
 	find $(GETTY_PIPELINE_OUTPUT) -name '*.json' | sort | xargs -n 128 -P 10 $(PYTHON) ./scripts/json2nt.py $(GETTY_PIPELINE_TMP_PATH)/linked-art.json
 
 profile:
-	QUIET=$(QUIET) GETTY_PIPELINE_DEBUG=$(DEBUG) GETTY_PIPELINE_LIMIT=$(LIMIT) $(PYTHON) -m cProfile ./pir.py
+	QUIET=$(QUIET) GETTY_PIPELINE_DEBUG=$(DEBUG) GETTY_PIPELINE_LIMIT=$(LIMIT) $(PYTHON) -m cProfile -o $(GETTY_PIPELINE_OUTPUT)/pipeline.prof ./pir.py
 
 pir:
 	mkdir -p $(GETTY_PIPELINE_TMP_PATH)/pipeline

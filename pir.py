@@ -4,24 +4,15 @@ import os
 import sys
 import csv
 import bonobo
-from cromulent import vocab
+from cromulent import model, vocab
 
 from pipeline.projects.provenance import ProvenanceFilePipeline, ProvenancePipeline
 from settings import project_data_path, output_file_path, arches_models, DEBUG
 
-import bonobo.constants
-bonobo.constants.TICK_PERIOD = 0.0
-
-import bonobo.execution.contexts.node
-bonobo.execution.contexts.node.TICK_PERDIO = 0.0
-
-import bonobo.execution.contexts.graph
-bonobo.execution.contexts.graph.BaseGraphExecutionContext.TICK_PERIOD = 0.0
-
-
 ### Pipeline
 
 if __name__ == '__main__':
+	model.cache_hierarchy()
 	if DEBUG:
 		LIMIT		= int(os.environ.get('GETTY_PIPELINE_LIMIT', 10))
 	else:

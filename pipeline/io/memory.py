@@ -58,6 +58,7 @@ class MergingMemoryWriter(Configurable):
 				print('%.1f%% writing objects for model %s' % (pct, self.model))
 			d = add_crom_data(data={}, what=o)
 			writer(d)
+		print(f'100.0% writing objects for model {self.model})
 
 	def __call__(self, data: dict):
 		model_object = data['_LOD_OBJECT']

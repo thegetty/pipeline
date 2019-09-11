@@ -136,6 +136,8 @@ class CromObjectMerger:
 		# print('merging...')
 		# print(f'base object: {obj}')
 		for m in to_merge:
+			if obj == m:
+				continue
 			# print('============================================')
 			# print(f'merge: {m}')
 			for p in m.list_my_props():

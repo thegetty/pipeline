@@ -154,6 +154,20 @@ class CromObjectMerger:
 # 		print(factory.toString(obj, False))
 		return obj
 
+	def classify_values(self, values, identified, unidentified):
+		for v in values:
+			handled = False
+			for attr, classes in self.attribute_based_identity.items():
+				if isinstance(v, classes) and hasattr(v, 'content'):
+					identified[getattr(v, attr)].append(v)
+					handled = True
+					break
+			if not handled:
+				if hasattr(v, 'id'):
+					identified[v.id].append(v)
+				else:
+					unidentified.append(v)
+
 	def set_or_merge(self, obj, p, *values):
 		existing = []
 		if hasattr(obj, p):
@@ -163,44 +177,40 @@ class CromObjectMerger:
 			else:
 				existing = [e]
 
-		if len(values) == 1 and values[0] in existing:
-			# value is already set as a value of obj.p
-			return
-
 		identified = defaultdict(list)
 		unidentified = []
-		for v in existing + list(values):
-			handled = False
-			for attr, classes in self.attribute_based_identity.items():
-				if hasattr(v, 'content'):
-					if isinstance(v, classes):
-						identified[getattr(v, attr)].append(v)
-						handled = True
-						break
-			if not handled:
-				if hasattr(v, 'id'):
-					identified[v.id].append(v)
-				else:
-					unidentified.append(v)
-
-		if p == 'type':
-			# print('*** TODO: calling setattr(_, "type") on crom objects throws; skipping')
-			return
-
-		setattr(obj, p, None)
+		self.classify_values(list(values), identified, unidentified)
+		
 		allows_multiple = obj.allows_multiple(p)
-		for v in identified.values():
-			if not allows_multiple:
-				setattr(obj, p, None)
+		if identified:
+			# there are values in the new objects that have to be merged with existing identifiable values
+			self.classify_values(existing, identified, unidentified)
+			if p == 'type':
+				# print('*** TODO: calling setattr(_, "type") on crom objects throws; skipping')
+				return
+
+			setattr(obj, p, None)
+			allows_multiple = obj.allows_multiple(p)
+			for v in identified.values():
+				if not allows_multiple:
+					setattr(obj, p, None)
+					setattr(obj, p, self.merge(*v))
+					break
 				setattr(obj, p, self.merge(*v))
-				break
-			setattr(obj, p, self.merge(*v))
-		for v in unidentified:
-			if not allows_multiple:
-				setattr(obj, p, None)
+			for v in unidentified:
+				if not allows_multiple:
+					setattr(obj, p, None)
+					setattr(obj, p, v)
+					break
 				setattr(obj, p, v)
-				break
-			setattr(obj, p, v)
+		else:
+			# there are no identifiable values in the new objects, so we can just append them
+			for v in unidentified:
+				if not allows_multiple:
+					setattr(obj, p, None)
+					setattr(obj, p, v)
+					break
+				setattr(obj, p, v)
 
 class ExtractKeyedValues(Configurable):
 	'''

@@ -139,33 +139,30 @@ class CromObjectMerger:
 		for m in to_merge:
 			if obj == m:
 				continue
-			# print('============================================')
-			# print(f'merge: {m}')
 			for p in m.list_my_props():
-				if hasattr(m, p):
+				try:
 					value = getattr(m, p)
 					if value is not None:
 						if isinstance(value, list):
 							self.set_or_merge(obj, p, *value)
 						else:
 							self.set_or_merge(obj, p, value)
-# 			obj = self.merge(obj, m)
-# 		print('Result of merge:')
-# 		print(factory.toString(obj, False))
+				except AttributeError:
+					pass
 		return obj
 
-	def classify_values(self, values, identified, unidentified):
+	def _classify_values(self, values, identified, unidentified):
 		for v in values:
 			handled = False
 			for attr, classes in self.attribute_based_identity.items():
-				if isinstance(v, classes) and hasattr(v, 'content'):
+				if isinstance(v, classes) and hasattr(v, attr):
 					identified[getattr(v, attr)].append(v)
 					handled = True
 					break
 			if not handled:
-				if hasattr(v, 'id'):
+				try:
 					identified[v.id].append(v)
-				else:
+				except AttributeError:
 					unidentified.append(v)
 
 	def set_or_merge(self, obj, p, *values):
@@ -174,32 +171,32 @@ class CromObjectMerger:
 			return
 
 		existing = []
-		if hasattr(obj, p):
+		try:
 			e = getattr(obj, p)
 			if isinstance(e, list):
 				existing = e
 			else:
 				existing = [e]
+		except AttributeError:
+			pass
 
 		identified = defaultdict(list)
 		unidentified = []
-		self.classify_values(list(values), identified, unidentified)
+		self._classify_values(values, identified, unidentified)
 		
 		allows_multiple = obj.allows_multiple(p)
 		if identified:
 			# there are values in the new objects that have to be merged with existing identifiable values
-			self.classify_values(existing, identified, unidentified)
+			self._classify_values(existing, identified, unidentified)
 
 			setattr(obj, p, None) # clear out all the existing values
 			for v in identified.values():
 				if not allows_multiple:
-					setattr(obj, p, None)
 					setattr(obj, p, self.merge(*v))
 					return
 				setattr(obj, p, self.merge(*v))
 			for v in unidentified:
 				if not allows_multiple:
-					setattr(obj, p, None)
 					setattr(obj, p, v)
 					return
 				setattr(obj, p, v)

@@ -51,14 +51,14 @@ class MergingMemoryWriter(Configurable):
 		writer = MergingFileWriter(directory=self.directory, partition_directories=self.partition_directories, compact=self.compact, model=self.model)
 		objects = self.data.values()
 		count = len(objects)
-		skip = count / 100
+		skip = max(count / 400, 1)
 		for i, o in enumerate(objects):
 			if (i % skip) == 0:
 				pct = 100.0 * float(i) / float(count)
 				print('[%d/%d] %.1f%% writing objects for model %s' % (i, count, pct, self.model))
 			d = add_crom_data(data={}, what=o)
 			writer(d)
-		print(f'100.0% writing objects for model {self.model})
+		print(f'100.0% writing objects for model {self.model}')
 
 	def __call__(self, data: dict):
 		model_object = data['_LOD_OBJECT']

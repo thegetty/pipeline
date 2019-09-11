@@ -8,6 +8,7 @@ import datetime
 from threading import Lock
 from contextlib import ContextDecorator, suppress
 from collections import defaultdict, namedtuple
+import warnings
 
 import dateutil.parser
 from bonobo.config import Configurable, Option, Service
@@ -289,7 +290,7 @@ class MatchingFiles(Configurable):
 		count = 0
 		if not self.pattern:
 			return
-		print(repr(self.pattern))
+# 		print(repr(self.pattern))
 		subpath, pattern = os.path.split(self.pattern)
 		fullpath = os.path.join(self.path, subpath)
 		for f in sorted(fs.listdir(fullpath)):
@@ -354,7 +355,7 @@ def timespan_from_outer_bounds(begin=None, end=None):
 				begin = begin.strftime("%Y-%m-%dT%H:%M:%SZ")
 				ts.begin_of_the_begin = begin
 			except ValueError:
-				print(f'*** failed to parse begin date: {begin}')
+				warnings.warn(f'*** failed to parse begin date: {begin}')
 				raise
 		if end is not None:
 			try:
@@ -363,6 +364,6 @@ def timespan_from_outer_bounds(begin=None, end=None):
 				end = end.strftime("%Y-%m-%dT%H:%M:%SZ")
 				ts.end_of_the_end = end
 			except ValueError:
-				print(f'*** failed to parse end date: {end}')
+				warnings.warn(f'*** failed to parse end date: {end}')
 		return ts
 	return None

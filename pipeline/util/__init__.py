@@ -142,14 +142,13 @@ class CromObjectMerger:
 			# print('============================================')
 			# print(f'merge: {m}')
 			for p in m.list_my_props():
-				value = None
-				with suppress(AttributeError):
+				if hasattr(m, p):
 					value = getattr(m, p)
-				if value is not None:
-					if isinstance(value, list):
-						self.set_or_merge(obj, p, *value)
-					else:
-						self.set_or_merge(obj, p, value)
+					if value is not None:
+						if isinstance(value, list):
+							self.set_or_merge(obj, p, *value)
+						else:
+							self.set_or_merge(obj, p, value)
 # 			obj = self.merge(obj, m)
 # 		print('Result of merge:')
 # 		print(factory.toString(obj, False))
@@ -157,7 +156,6 @@ class CromObjectMerger:
 
 	def set_or_merge(self, obj, p, *values):
 		existing = []
-# 		print('------------------------')
 		if hasattr(obj, p):
 			e = getattr(obj, p)
 			if isinstance(e, list):
@@ -165,7 +163,10 @@ class CromObjectMerger:
 			else:
 				existing = [e]
 
-# 		print(f'Setting {p}')
+		if len(values) == 1 and values[0] in existing:
+			# value is already set as a value of obj.p
+			return
+
 		identified = defaultdict(list)
 		unidentified = []
 		for v in existing + list(values):
@@ -181,13 +182,12 @@ class CromObjectMerger:
 					identified[v.id].append(v)
 				else:
 					unidentified.append(v)
-	# 			print(f'- {v}')
 
 		if p == 'type':
 			# print('*** TODO: calling setattr(_, "type") on crom objects throws; skipping')
 			return
+
 		setattr(obj, p, None)
-		
 		allows_multiple = obj.allows_multiple(p)
 		for v in identified.values():
 			if not allows_multiple:

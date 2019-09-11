@@ -1056,35 +1056,41 @@ class ProvenancePipeline(PipelineBase):
 		'''Add modeling of auction events.'''
 		auction_events = graph.add_chain(
 			AddFieldNames(field_names=self.auction_events_headers),
-			GroupRepeatingKeys(mapping={
-				'seller': {'prefixes': ('sell_auth_name', 'sell_auth_q')},
-				'expert': {'prefixes': ('expert', 'expert_auth', 'expert_ulan')},
-				'commissaire': {'prefixes': ('comm_pr', 'comm_pr_auth', 'comm_pr_ulan')},
-				'auction_house': {'prefixes': ('auc_house_name', 'auc_house_auth', 'auc_house_ulan')},
-				'portal': {'prefixes': ('portal_url',)},
-			}),
-			GroupKeys(mapping={
-				'lugt': {'properties': ('lugt_number_1', 'lugt_number_2', 'lugt_number_3')},
-				'auc_copy': {
-					'properties': (
-						'auc_copy_seller_1',
-						'auc_copy_seller_2',
-						'auc_copy_seller_3',
-						'auc_copy_seller_4')},
-				'other_seller': {
-					'properties': (
-						'other_seller_1',
-						'other_seller_2',
-						'other_seller_3')},
-				'title_pg_sell': {'properties': ('title_pg_sell_1', 'title_pg_sell_2')},
-				'location': {
-					'properties': (
-						'city_of_sale',
-						'sale_location',
-						'country_auth_1',
-						'country_auth_2',
-						'specific_loc')},
-			}),
+			GroupRepeatingKeys(
+				drop_empty=True,
+				mapping={
+					'seller': {'prefixes': ('sell_auth_name', 'sell_auth_q')},
+					'expert': {'prefixes': ('expert', 'expert_auth', 'expert_ulan')},
+					'commissaire': {'prefixes': ('comm_pr', 'comm_pr_auth', 'comm_pr_ulan')},
+					'auction_house': {'prefixes': ('auc_house_name', 'auc_house_auth', 'auc_house_ulan')},
+					'portal': {'prefixes': ('portal_url',)},
+				}
+			),
+			GroupKeys(
+				drop_empty=True,
+				mapping={
+					'lugt': {'properties': ('lugt_number_1', 'lugt_number_2', 'lugt_number_3')},
+					'auc_copy': {
+						'properties': (
+							'auc_copy_seller_1',
+							'auc_copy_seller_2',
+							'auc_copy_seller_3',
+							'auc_copy_seller_4')},
+					'other_seller': {
+						'properties': (
+							'other_seller_1',
+							'other_seller_2',
+							'other_seller_3')},
+					'title_pg_sell': {'properties': ('title_pg_sell_1', 'title_pg_sell_2')},
+					'location': {
+						'properties': (
+							'city_of_sale',
+							'sale_location',
+							'country_auth_1',
+							'country_auth_2',
+							'specific_loc')},
+				}
+			),
 			add_auction_catalog,
 			add_auction_event,
 			add_auction_houses,
@@ -1144,109 +1150,112 @@ class ProvenancePipeline(PipelineBase):
 		'''Add transformation of sales records to the bonobo pipeline.'''
 		sales = graph.add_chain(
 			AddFieldNames(field_names=self.contents_headers),
-			GroupRepeatingKeys(mapping={
-				'expert': {'prefixes': ('expert_auth', 'expert_ulan')},
-				'commissaire': {'prefixes': ('commissaire_pr', 'comm_ulan')},
-				'auction_house': {'prefixes': ('auction_house', 'house_ulan')},
-				'_artists': {
-					'postprocess': add_pir_record_ids,
-					'prefixes': (
-						'artist_name',
-						'artist_info',
-						'art_authority',
-						'nationality',
-						'attrib_mod',
-						'attrib_mod_auth',
-						'star_rec_no',
-						'artist_ulan')},
-				'hand_note': {'prefixes': ('hand_note', 'hand_note_so')},
-				'seller': {
-					'postprocess': lambda x, _: strip_key_prefix('sell_', x),
-					'prefixes': (
-						'sell_name',
-						'sell_name_so',
-						'sell_name_ques',
-						'sell_mod',
-						'sell_auth_name',
-						'sell_auth_nameq',
-						'sell_auth_mod',
-						'sell_auth_mod_a',
-						'sell_ulan')},
-				'price': {
-					'postprocess': add_crom_price,
-					'prefixes': (
-						'price_amount',
-						'price_currency',
-						'price_note',
-						'price_source',
-						'price_citation')},
-				'buyer': {
-					'postprocess': lambda x, _: strip_key_prefix('buy_', x),
-					'prefixes': (
-						'buy_name',
-						'buy_name_so',
-						'buy_name_ques',
-						'buy_name_cite',
-						'buy_mod',
-						'buy_auth_name',
-						'buy_auth_nameQ',
-						'buy_auth_mod',
-						'buy_auth_mod_a',
-						'buy_ulan')},
-				'prev_owner': {
-					'postprocess': [
-						lambda x, _: replace_key_pattern(r'(prev_owner)', 'prev_own', x),
-						lambda x, _: strip_key_prefix('prev_', x),
-					],
-					'prefixes': (
-						'prev_owner',
-						'prev_own_ques',
-						'prev_own_so',
-						'prev_own_auth',
-						'prev_own_auth_D',
-						'prev_own_auth_L',
-						'prev_own_auth_Q',
-						'prev_own_ulan')},
-				'prev_sale': {
-					'postprocess': lambda x, _: strip_key_prefix('prev_sale_', x),
-					'prefixes': (
-						'prev_sale_year',
-						'prev_sale_mo',
-						'prev_sale_day',
-						'prev_sale_loc',
-						'prev_sale_lot',
-						'prev_sale_ques',
-						'prev_sale_artx',
-						'prev_sale_ttlx',
-						'prev_sale_note',
-						'prev_sale_coll',
-						'prev_sale_cat')},
-				'post_sale': {
-					'postprocess': lambda x, _: strip_key_prefix('post_sale_', x),
-					'prefixes': (
-						'post_sale_year',
-						'post_sale_mo',
-						'post_sale_day',
-						'post_sale_loc',
-						'post_sale_lot',
-						'post_sale_q',
-						'post_sale_art',
-						'post_sale_ttl',
-						'post_sale_nte',
-						'post_sale_col',
-						'post_sale_cat')},
-				'post_owner': {
-					'postprocess': lambda x, _: strip_key_prefix('post_', x),
-					'prefixes': (
-						'post_own',
-						'post_own_q',
-						'post_own_so',
-						'post_own_auth',
-						'post_own_auth_D',
-						'post_own_auth_L',
-						'post_own_auth_Q',
-						'post_own_ulan')},
-			}),
+			GroupRepeatingKeys(
+				drop_empty=True,
+				mapping={
+					'expert': {'prefixes': ('expert_auth', 'expert_ulan')},
+					'commissaire': {'prefixes': ('commissaire_pr', 'comm_ulan')},
+					'auction_house': {'prefixes': ('auction_house', 'house_ulan')},
+					'_artists': {
+						'postprocess': add_pir_record_ids,
+						'prefixes': (
+							'artist_name',
+							'artist_info',
+							'art_authority',
+							'nationality',
+							'attrib_mod',
+							'attrib_mod_auth',
+							'star_rec_no',
+							'artist_ulan')},
+					'hand_note': {'prefixes': ('hand_note', 'hand_note_so')},
+					'seller': {
+						'postprocess': lambda x, _: strip_key_prefix('sell_', x),
+						'prefixes': (
+							'sell_name',
+							'sell_name_so',
+							'sell_name_ques',
+							'sell_mod',
+							'sell_auth_name',
+							'sell_auth_nameq',
+							'sell_auth_mod',
+							'sell_auth_mod_a',
+							'sell_ulan')},
+					'price': {
+						'postprocess': add_crom_price,
+						'prefixes': (
+							'price_amount',
+							'price_currency',
+							'price_note',
+							'price_source',
+							'price_citation')},
+					'buyer': {
+						'postprocess': lambda x, _: strip_key_prefix('buy_', x),
+						'prefixes': (
+							'buy_name',
+							'buy_name_so',
+							'buy_name_ques',
+							'buy_name_cite',
+							'buy_mod',
+							'buy_auth_name',
+							'buy_auth_nameQ',
+							'buy_auth_mod',
+							'buy_auth_mod_a',
+							'buy_ulan')},
+					'prev_owner': {
+						'postprocess': [
+							lambda x, _: replace_key_pattern(r'(prev_owner)', 'prev_own', x),
+							lambda x, _: strip_key_prefix('prev_', x),
+						],
+						'prefixes': (
+							'prev_owner',
+							'prev_own_ques',
+							'prev_own_so',
+							'prev_own_auth',
+							'prev_own_auth_D',
+							'prev_own_auth_L',
+							'prev_own_auth_Q',
+							'prev_own_ulan')},
+					'prev_sale': {
+						'postprocess': lambda x, _: strip_key_prefix('prev_sale_', x),
+						'prefixes': (
+							'prev_sale_year',
+							'prev_sale_mo',
+							'prev_sale_day',
+							'prev_sale_loc',
+							'prev_sale_lot',
+							'prev_sale_ques',
+							'prev_sale_artx',
+							'prev_sale_ttlx',
+							'prev_sale_note',
+							'prev_sale_coll',
+							'prev_sale_cat')},
+					'post_sale': {
+						'postprocess': lambda x, _: strip_key_prefix('post_sale_', x),
+						'prefixes': (
+							'post_sale_year',
+							'post_sale_mo',
+							'post_sale_day',
+							'post_sale_loc',
+							'post_sale_lot',
+							'post_sale_q',
+							'post_sale_art',
+							'post_sale_ttl',
+							'post_sale_nte',
+							'post_sale_col',
+							'post_sale_cat')},
+					'post_owner': {
+						'postprocess': lambda x, _: strip_key_prefix('post_', x),
+						'prefixes': (
+							'post_own',
+							'post_own_q',
+							'post_own_so',
+							'post_own_auth',
+							'post_own_auth_D',
+							'post_own_auth_L',
+							'post_own_auth_Q',
+							'post_own_ulan')},
+				}
+			),
 			GroupKeys(mapping={
 				'present_location': {
 					'postprocess': lambda x, _: strip_key_prefix('present_loc_', x),
@@ -1540,12 +1549,12 @@ class ProvenanceFilePipeline(ProvenancePipeline):
 			with open(rewrite_map_filename, 'r') as f:
 				with suppress(json.decoder.JSONDecodeError):
 					post_sale_rewrite_map = json.load(f)
-		print('Rewrite output files, replacing the following URIs:')
+# 		print('Rewrite output files, replacing the following URIs:')
 		for src, dst in g:
 			canonical, steps = g.canonical_key(src)
 			src_uri = pir_uri('OBJECT', *src)
 			dst_uri = pir_uri('OBJECT', *canonical)
-			print(f's/ {src_uri:<100} / {dst_uri:<100} /')
+# 			print(f's/ {src_uri:<100} / {dst_uri:<100} /')
 			post_sale_rewrite_map[src_uri] = dst_uri
 			if canonical in large_components:
 				i = node_id(g.nodes[src])

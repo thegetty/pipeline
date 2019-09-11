@@ -169,6 +169,10 @@ class CromObjectMerger:
 					unidentified.append(v)
 
 	def set_or_merge(self, obj, p, *values):
+		if p == 'type':
+			# print('*** TODO: calling setattr(_, "type") on crom objects throws; skipping')
+			return
+
 		existing = []
 		if hasattr(obj, p):
 			e = getattr(obj, p)
@@ -185,23 +189,19 @@ class CromObjectMerger:
 		if identified:
 			# there are values in the new objects that have to be merged with existing identifiable values
 			self.classify_values(existing, identified, unidentified)
-			if p == 'type':
-				# print('*** TODO: calling setattr(_, "type") on crom objects throws; skipping')
-				return
 
-			setattr(obj, p, None)
-			allows_multiple = obj.allows_multiple(p)
+			setattr(obj, p, None) # clear out all the existing values
 			for v in identified.values():
 				if not allows_multiple:
 					setattr(obj, p, None)
 					setattr(obj, p, self.merge(*v))
-					break
+					return
 				setattr(obj, p, self.merge(*v))
 			for v in unidentified:
 				if not allows_multiple:
 					setattr(obj, p, None)
 					setattr(obj, p, v)
-					break
+					return
 				setattr(obj, p, v)
 		else:
 			# there are no identifiable values in the new objects, so we can just append them
@@ -209,7 +209,7 @@ class CromObjectMerger:
 				if not allows_multiple:
 					setattr(obj, p, None)
 					setattr(obj, p, v)
-					break
+					return
 				setattr(obj, p, v)
 
 class ExtractKeyedValues(Configurable):

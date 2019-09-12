@@ -134,6 +134,9 @@ class CromObjectMerger:
 		}
 
 	def merge(self, obj, *to_merge):
+		if not to_merge:
+			return obj
+# 		print(f'merge called with {1+len(to_merge)} objects: ({obj}, {to_merge})')
 		for m in to_merge:
 			if obj == m:
 				continue

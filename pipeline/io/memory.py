@@ -4,6 +4,7 @@ import hashlib
 import uuid
 import pprint
 from collections import Counter, defaultdict, namedtuple
+import multiprocessing
 
 from pipeline.util import CromObjectMerger
 
@@ -28,7 +29,8 @@ class MergingMemoryWriter(Configurable):
 		visually differentiated.
 		'''
 		super().__init__(self, *args, **kwargs)
-		self.data = defaultdict(list)
+# 		self.data = {}
+		self.unmerged = defaultdict(list)
 		self.counter = Counter()
 		self.merger = CromObjectMerger()
 		self.__name__ = f'{type(self).__name__} ({self.model})'
@@ -54,7 +56,7 @@ class MergingMemoryWriter(Configurable):
 	def __call__(self, data: dict):
 		model_object = data['_LOD_OBJECT']
 		ident = model_object.id
-		self.data[ident].append(model_object)
+		self.unmerged[ident].append(model_object)
 # 		self.counter['total'] += 1
 # 		if ident in self.data:
 # 			self.counter['collision'] += 1
@@ -66,14 +68,29 @@ class MergingMemoryWriter(Configurable):
 
 	def flush(self):
 		writer = MergingFileWriter(directory=self.directory, partition_directories=self.partition_directories, compact=self.compact, model=self.model)
-		count = len(self.data)
+		count = len(self.unmerged)
+# 		count = len(self.data)
 		skip = max(int(count / 100), 1)
-		for i, k in enumerate(self.data):
-			objects = self.data[k]
+# 		for i, k in enumerate(self.data):
+# 			o = self.data[k]
+# 			if (i % skip) == 0:
+# 				pct = 100.0 * float(i) / float(count)
+# 				print('[%d/%d] %.1f%% writing objects for model %s' % (i+1, count, pct, self.model))
+# 			d = add_crom_data(data={}, what=o)
+# 			writer(d)
+
+		j = 8
+		pool = multiprocessing.Pool(j)
+		merge = self.merger.merge
+		keys = self.unmerged.keys()
+		print('*********************** POOL RUN')
+		objects = pool.starmap(merge, self.unmerged.values())
+		pairs = zip(keys, objects)
+		for i, pair in enumerate(pairs):
+			k, o = pair
 			if (i % skip) == 0:
 				pct = 100.0 * float(i) / float(count)
-				print('[%d/%d] %.1f%% writing objects for model %s' % (i, count, pct, self.model))
-			o = self.merger.merge(*objects)
+				print('[%d/%d] %.1f%% writing objects for model %s' % (i+1, count, pct, self.model))
 			d = add_crom_data(data={}, what=o)
 			writer(d)
 		print(f'[%d/%d] %.1f%% writing objects for model %s' % (count, count, 100.0, self.model))

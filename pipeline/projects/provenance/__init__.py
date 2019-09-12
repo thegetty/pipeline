@@ -161,7 +161,7 @@ def add_auction_house_data(a):
 		a['ulan'] = ulan
 		house = vocab.AuctionHouseOrg(ident=a['uri'])
 	else:
-		# not enough information to identify this person uniquely, so they get a UUID
+		# not enough information to identify this house uniquely, so they get a UUID
 		a['uuid'] = str(uuid.uuid4())
 		uri = "urn:uuid:%s" % a['uuid']
 		house = vocab.AuctionHouseOrg(ident=uri)
@@ -1578,7 +1578,9 @@ class ProvenanceFilePipeline(ProvenancePipeline):
 		services = self.get_services(**options)
 		super().run(services=services, **options)
 		
-		for w in self.writers:
+		count = len(self.writers)
+		for i, w in enumerate(self.writers):
+			print('[%d/%d] writers being flushed' % (i+1, count))
 			if isinstance(w, MergingMemoryWriter):
 				w.flush()
 

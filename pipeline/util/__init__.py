@@ -134,8 +134,6 @@ class CromObjectMerger:
 		}
 
 	def merge(self, obj, *to_merge):
-		# print('merging...')
-		# print(f'base object: {obj}')
 		for m in to_merge:
 			if obj == m:
 				continue
@@ -157,9 +155,8 @@ class CromObjectMerger:
 			for attr, classes in self.attribute_based_identity.items():
 				if isinstance(v, classes) and hasattr(v, attr):
 					identified[getattr(v, attr)].append(v)
-					handled = True
 					break
-			if not handled:
+			else:
 				try:
 					identified[v.id].append(v)
 				except AttributeError:

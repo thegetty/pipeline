@@ -87,7 +87,10 @@ class GroupRepeatingKeys(Configurable):
 							postprocess = [postprocess]
 						for p in postprocess:
 							subd = p(subd, data)
-					data[key].append(subd)
+							if not subd:
+								break
+					if subd:
+						data[key].append(subd)
 			for k in to_delete:
 				del data[k]
 		return data

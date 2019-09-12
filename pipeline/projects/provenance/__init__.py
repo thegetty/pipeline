@@ -89,7 +89,7 @@ def add_auction_event(data):
 	data['uid'] = uid
 	data['uri'] = uri
 	add_crom_data(data=data, what=auction)
-	yield data
+	return data
 
 #mark - Places
 
@@ -144,7 +144,7 @@ def populate_auction_event(data, auction_locations):
 		auction.timespan = ts
 
 	auction.subject_of = catalog
-	yield data
+	return data
 
 def add_auction_house_data(a):
 	'''Add modeling data for an auction house organization.'''
@@ -364,6 +364,26 @@ class AddAuctionOfLot(Configurable):
 		add_crom_data(data=data, what=lot)
 		yield data
 
+def _filter_empty_person(data: dict, _):
+	'''
+	If all the values of the supplied dictionary are false (or false after int conversion
+	for keys ending with 'ulan'), return `None`. Otherwise return the dictionary.
+	'''
+	set = []
+	for k, v in data.items():
+		if k.endswith('ulan'):
+			try:
+				s = int(0)
+			except ValueError:
+				s = True
+		else:
+			s = bool(v)
+		set.append(s)
+	if any(set):
+		return data
+	else:
+		return None
+
 def add_crom_price(data, _):
 	'''
 	Add modeling data for `MonetaryAmount`, `StartingPrice`, or `EstimatedPrice`,
@@ -375,7 +395,7 @@ def add_crom_price(data, _):
 	return data
 
 @use('make_la_person')
-def add_person(data: dict, *, make_la_person=None):
+def add_person(data: dict, *, make_la_person):
 	'''
 	Add modeling data for people, based on properties of the supplied `data` dict.
 
@@ -404,8 +424,6 @@ def add_person(data: dict, *, make_la_person=None):
 	else:
 		data['label'] = '(Anonymous person)'
 
-	if not make_la_person:
-		make_la_person = MakeLinkedArtPerson()
 	make_la_person(data)
 	return data
 
@@ -419,8 +437,9 @@ def final_owner_procurement(final_owner, current_tx, hmo, current_ts):
 	return tx
 
 @use('make_la_person')
-def add_acquisition(data, hmo, buyers, sellers, make_la_person=None):
+def add_acquisition(data, buyers, sellers, make_la_person=None):
 	'''Add modeling of an acquisition as a transfer of title from the seller to the buyer'''
+	hmo = get_crom_object(data)
 	parent = data['parent_data']
 	transaction = parent['transaction']
 	prices = parent['price']
@@ -584,16 +603,12 @@ def add_acquisition_or_bidding(data, *, make_la_person):
 	transaction = transaction.replace('[?]', '')
 	transaction = transaction.rstrip()
 
-	data = data.copy()
-	hmo = get_crom_object(data)
-
-	# TODO: filtering empty people should be moved much earlier in the pipeline
-	buyers = [add_person(p, make_la_person=make_la_person) for p in filter_empty_people(*parent['buyer'])]
-	sellers = [add_person(p, make_la_person=make_la_person) for p in filter_empty_people(*parent['seller'])]
+	buyers = [add_person(p, make_la_person=make_la_person) for p in parent['buyer']]
+	sellers = [add_person(p, make_la_person=make_la_person) for p in parent['seller']]
 
 	# TODO: is this the right set of transaction types to represent acquisition?
 	if transaction in ('Sold', 'Vendu', 'Verkauft', 'Bought In'):
-		yield from add_acquisition(data, hmo, buyers, sellers, make_la_person)
+		yield from add_acquisition(data, buyers, sellers, make_la_person)
 	elif transaction in ('Unknown', 'Unbekannt', 'Inconnue', 'Withdrawn', 'Non Vendu', ''):
 		yield from add_bidding(data, buyers)
 	else:
@@ -832,10 +847,7 @@ def add_pir_artists(data, *, make_la_person):
 
 	artists = data.get('_artists', [])
 
-	# TODO: filtering empty people should be moved much earlier in the pipeline
-	artists = list(filter_empty_people(*artists))
 	data['_artists'] = artists
-	make_la_person = MakeLinkedArtPerson()
 	for a in artists:
 		star_rec_no = a.get('star_rec_no')
 		ulan = None
@@ -845,15 +857,18 @@ def add_pir_artists(data, *, make_la_person):
 			key = f'PERSON-ULAN-{ulan}'
 			a['uri'] = pir_uri('PERSON', 'ULAN', ulan)
 			a['ulan'] = ulan
-		else:
+		elif star_rec_no:
 			key = f'PERSON-STAR-{star_rec_no}'
 			a['uri'] = pir_uri('PERSON', 'star', star_rec_no)
+		else:
+			warnings.warn(f'*** Person without a ulan or star number: {a}')
+			a['uuid'] = str(uuid.uuid4())
 		a['uid'] = key
-		if a.get('artist_name'):
-			name = a.get('artist_name')
+		try:
+			name = a['artist_name']
 			a['names'] = [(name,)]
 			a['label'] = name
-		else:
+		except KeyError:
 			a['label'] = '(Anonymous artist)'
 
 		make_la_person(a)
@@ -863,9 +878,9 @@ def add_pir_artists(data, *, make_la_person):
 		names = a.get('names')
 		if names:
 			name = names[0][0]
-			subevent._label = f'Production sub-event for {name}'
+			subevent._label = f'Production sub-event for artist {name}'
 		subevent.carried_out_by = person
-	yield data
+	return data
 
 #mark - Physical Catalogs
 
@@ -879,7 +894,7 @@ def add_auction_catalog(data):
 	data['_catalog'] = cdata
 
 	add_crom_data(data=cdata, what=catalog)
-	yield data
+	return data
 
 def add_physical_catalog_objects(data):
 	'''Add modeling for physical copies of an auction catalog'''
@@ -962,7 +977,7 @@ def populate_auction_catalog(data):
 	if notes:
 		note = vocab.Note(content=parent['notes'])
 		catalog.referred_to_by = note
-	yield d
+	return d
 
 #mark - Provenance Pipeline class
 
@@ -1157,7 +1172,10 @@ class ProvenancePipeline(PipelineBase):
 					'commissaire': {'prefixes': ('commissaire_pr', 'comm_ulan')},
 					'auction_house': {'prefixes': ('auction_house', 'house_ulan')},
 					'_artists': {
-						'postprocess': add_pir_record_ids,
+						'postprocess': [
+							_filter_empty_person,
+							add_pir_record_ids
+						],
 						'prefixes': (
 							'artist_name',
 							'artist_info',
@@ -1169,7 +1187,10 @@ class ProvenancePipeline(PipelineBase):
 							'artist_ulan')},
 					'hand_note': {'prefixes': ('hand_note', 'hand_note_so')},
 					'seller': {
-						'postprocess': lambda x, _: strip_key_prefix('sell_', x),
+						'postprocess': [
+							lambda x, _: strip_key_prefix('buy_', x),
+							_filter_empty_person
+						],
 						'prefixes': (
 							'sell_name',
 							'sell_name_so',
@@ -1189,7 +1210,10 @@ class ProvenancePipeline(PipelineBase):
 							'price_source',
 							'price_citation')},
 					'buyer': {
-						'postprocess': lambda x, _: strip_key_prefix('buy_', x),
+						'postprocess': [
+							lambda x, _: strip_key_prefix('buy_', x),
+							_filter_empty_person
+						],
 						'prefixes': (
 							'buy_name',
 							'buy_name_so',

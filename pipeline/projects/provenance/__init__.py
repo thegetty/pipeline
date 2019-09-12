@@ -857,13 +857,15 @@ def add_pir_artists(data, *, make_la_person):
 			key = f'PERSON-ULAN-{ulan}'
 			a['uri'] = pir_uri('PERSON', 'ULAN', ulan)
 			a['ulan'] = ulan
+			a['uid'] = key
 		elif star_rec_no:
 			key = f'PERSON-STAR-{star_rec_no}'
 			a['uri'] = pir_uri('PERSON', 'star', star_rec_no)
+			a['uid'] = key
 		else:
-			warnings.warn(f'*** Person without a ulan or star number: {a}')
+			# TODO: should this be a UUID, or something else? (pi_record_no, persistent_puid, etc.)
+# 			warnings.warn(f'*** Person without a ulan or star number: {a}')
 			a['uuid'] = str(uuid.uuid4())
-		a['uid'] = key
 		try:
 			name = a['artist_name']
 			a['names'] = [(name,)]

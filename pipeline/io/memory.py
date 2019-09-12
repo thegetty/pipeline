@@ -11,6 +11,7 @@ from bonobo.constants import NOT_MODIFIED
 from bonobo.config import Configurable, Option
 from pipeline.util import ExclusiveValue
 from cromulent import model, reader
+from cromulent.model import factory
 from .file import MergingFileWriter
 from pipeline.linkedart import add_crom_data, get_crom_object
 
@@ -27,51 +28,52 @@ class MergingMemoryWriter(Configurable):
 		visually differentiated.
 		'''
 		super().__init__(self, *args, **kwargs)
-		self.data = {}
+		self.data = defaultdict(list)
 		self.counter = Counter()
 		self.merger = CromObjectMerger()
 		self.__name__ = f'{type(self).__name__} ({self.model})'
 
-	def merge(self, model_object):
-		merger = self.merger
-		ident = model_object.id
-		try:
-			m = self.data.get(ident)
-			if not m:
-				return model_object
-			if m == model_object:
-				return model_object
-			else:
-				merger.merge(m, model_object)
-				return m
-		except model.DataError:
-			print(f'Exception caught while merging data:')
-			print(d)
-			print(content)
-			raise
+# 	def merge(self, model_object):
+# 		merger = self.merger
+# 		ident = model_object.id
+# 		try:
+# 			m = self.data.get(ident)
+# 			if not m:
+# 				return model_object
+# 			if m == model_object:
+# 				return model_object
+# 			else:
+# 				merger.merge(m, model_object)
+# 				return m
+# 		except model.DataError:
+# 			print(f'Exception caught while merging data:')
+# 			print(d)
+# 			print(content)
+# 			raise
 
 	def __call__(self, data: dict):
 		model_object = data['_LOD_OBJECT']
 		ident = model_object.id
-		self.counter['total'] += 1
-		if ident in self.data:
-			self.counter['collision'] += 1
-			self.data[ident] = self.merge(model_object)
-		else:
-			self.counter['non-collision'] += 1
-			self.data[ident] = model_object
-		return NOT_MODIFIED
+		self.data[ident].append(model_object)
+# 		self.counter['total'] += 1
+# 		if ident in self.data:
+# 			self.counter['collision'] += 1
+# 			self.data[ident] = self.merge(model_object)
+# 		else:
+# 			self.counter['non-collision'] += 1
+# 			self.data[ident] = model_object
+		return None
 
 	def flush(self):
 		writer = MergingFileWriter(directory=self.directory, partition_directories=self.partition_directories, compact=self.compact, model=self.model)
-		objects = self.data.values()
 		count = len(self.data)
 		skip = max(int(count / 100), 1)
 		for i, k in enumerate(self.data):
-			o = self.data[k]
+			objects = self.data[k]
 			if (i % skip) == 0:
 				pct = 100.0 * float(i) / float(count)
 				print('[%d/%d] %.1f%% writing objects for model %s' % (i, count, pct, self.model))
+			o = self.merger.merge(*objects)
 			d = add_crom_data(data={}, what=o)
 			writer(d)
 		print(f'[%d/%d] %.1f%% writing objects for model %s' % (count, count, 100.0, self.model))

@@ -31,7 +31,6 @@ class MergingMemoryWriter(Configurable):
 		'''
 		super().__init__(self, *args, **kwargs)
 		self.data = {}
-# 		self.unmerged = defaultdict(list)
 		self.counter = Counter()
 		self.merger = CromObjectMerger()
 		self.__name__ = f'{type(self).__name__} ({self.model})'
@@ -57,9 +56,6 @@ class MergingMemoryWriter(Configurable):
 	def __call__(self, data: dict):
 		model_object = data['_LOD_OBJECT']
 		ident = model_object.id
-# 		self.unmerged[ident].append(model_object)
-# 		if len(self.unmerged[ident]) > 100:
-# 			print(f'{len(self.unmerged[ident])}: {ident}')
 		self.counter['total'] += 1
 		if ident in self.data:
 			self.counter['collision'] += 1
@@ -71,7 +67,6 @@ class MergingMemoryWriter(Configurable):
 
 	def flush(self):
 		writer = MergingFileWriter(directory=self.directory, partition_directories=self.partition_directories, compact=self.compact, model=self.model)
-# 		count = len(self.unmerged)
 		count = len(self.data)
 		skip = max(int(count / 100), 1)
 		for i, k in enumerate(self.data):
@@ -81,28 +76,3 @@ class MergingMemoryWriter(Configurable):
 				print('[%d/%d] %.1f%% writing objects for model %s' % (i+1, count, pct, self.model))
 			d = add_crom_data(data={}, what=o)
 			writer(d)
-
-# 		j = 8
-# # 		pool = multiprocessing.Pool(j)
-# 		pool = ThreadPool(j)
-# 		merger = self.merger
-# 		def merge(*objects):
-# 			if len(objects) == 1:
-# 				return objects[0]
-# 			else:
-# 				return merger.merge(*objects)
-# 		keys = self.unmerged.keys()
-# 		values = self.unmerged.values()
-# 		print('*********************** POOL RUN BEGIN')
-# 		objects = pool.starmap(merge, values)
-# 		print(f'*********************** POOL RUN END: {len(objects)} values')
-# 		pairs = zip(keys, objects)
-# 		for i, pair in enumerate(pairs):
-# 			k, o = pair
-# 			if (i % skip) == 0:
-# 				pct = 100.0 * float(i) / float(count)
-# 				print('[%d/%d] %.1f%% writing objects for model %s' % (i+1, count, pct, self.model))
-# 			d = add_crom_data(data={}, what=o)
-# 			writer(d)
-# 		print(f'[%d/%d] %.1f%% writing objects for model %s' % (count, count, 100.0, self.model))
-# # 		pprint.pprint({self.model: self.counter})

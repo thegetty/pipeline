@@ -7,6 +7,7 @@ import datetime
 import dateutil.parser
 from pipeline.util import implode_date
 from cromulent import model
+import warnings
 
 UID_TAG_PREFIX = 'tag:getty.edu,2019:digital:pipeline:provenance:REPLACE-WITH-UUID#'
 
@@ -111,9 +112,9 @@ class SalesTree:
 		j = self.add_node(dst)
 		if i in self.outgoing_edges:
 			if self.outgoing_edges[i] == j:
-				print(f'*** re-asserted sale edge: {src!s:<40} -> {dst}')
+				warnings.warn(f'*** re-asserted sale edge: {src!s:<40} -> {dst}')
 			else:
-				print(f'*** {src} already has an outgoing edge: {self.outgoing_edges[i]}')
+				warnings.warn(f'*** {src} already has an outgoing edge: {self.outgoing_edges[i]}')
 		self.outgoing_edges[i] = j
 		self.incoming_edges[j] = i
 
@@ -158,10 +159,10 @@ class SalesTree:
 
 			parent = self.nodes_rev[j]
 			if parent == key:
-				print(f'*** Self-loop found in post sale data: {key!s:<40}')
+				warnings.warn(f'*** Self-loop found in post sale data: {key!s:<40}')
 				break
 			if parent in seen:
-				print(f'*** Loop found in post sale data: {key!s:<40} -> {parent!s:<40}')
+				warnings.warn(f'*** Loop found in post sale data: {key!s:<40} -> {parent!s:<40}')
 				break
 			seen.add(parent)
 			key = parent

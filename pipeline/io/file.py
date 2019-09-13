@@ -5,6 +5,7 @@ import uuid
 
 from pipeline.util import CromObjectMerger
 
+from bonobo.constants import NOT_MODIFIED
 from bonobo.config import Configurable, Option
 from pipeline.util import ExclusiveValue
 from cromulent import model, reader
@@ -66,50 +67,68 @@ class MultiFileWriter(Configurable):
 class MergingFileWriter(Configurable):
 	directory = Option(default="output")
 	partition_directories = Option(default=False)
-	serialize = Option(default=False, required=False)
 	compact = Option(default=True, required=False)
-	model = Option(default=None, required=False)
+	model = Option(default=None, required=True)
 
-	def __call__(self, data: dict):
-		if self.serialize:
-			factory = data['_CROM_FACTORY']
-			js = factory.toString(data['_LOD_OBJECT'], self.compact)
-			data['_OUTPUT'] = js
-		if self.model:
-			data['_ARCHES_MODEL'] = self.model		
-		d = data['_OUTPUT']
-		filename, partition = filename_for(data)
-		dr = os.path.join(self.directory, data['_ARCHES_MODEL'])
-		merger = CromObjectMerger()
-		with ExclusiveValue(dr):
-			if not os.path.exists(dr):
-				os.mkdir(dr)
+	def __init__(self, *args, **kwargs):
+		'''
+		Sets the __name__ property to include the relevant options so that when the
+		bonobo graph is serialized as a GraphViz document, different objects can be
+		visually differentiated.
+		'''
+		super().__init__(self, *args, **kwargs)
+		self.merger = CromObjectMerger()
+		self.__name__ = f'{type(self).__name__} ({self.model})'
+
+		self.dr = os.path.join(self.directory, self.model)
+		with ExclusiveValue(self.dr):
+			if not os.path.exists(self.dr):
+				os.mkdir(self.dr)
 			if self.partition_directories:
-				dr = os.path.join(dr, partition)
-				if not os.path.exists(dr):
-					os.mkdir(dr)
+				for partition in [('00' + str(hex(x))[2:])[-2:] for x in range(256)]:
+					pp = os.path.join(self.dr, partition)
+					if not os.path.exists(pp):
+						os.mkdir(pp)
+
+	def merge(self, model_object, fn):
+		r = reader.Reader()
+		merger = self.merger
+		with open(fn, 'r') as fh:
+			content = fh.read()
+			try:
+				m = r.read(content)
+				if m == model_object:
+					return None
+				else:
+					merger.merge(m, model_object)
+					return m
+			except model.DataError:
+				print(f'Exception caught while merging data from {fn}:')
+				print(d)
+				print(content)
+				raise
+		
+	def __call__(self, data: dict):
+		filename, partition = filename_for(data)
+		factory = data['_CROM_FACTORY']
+		model_object = data['_LOD_OBJECT']
+
+		dr = self.dr
+		if self.partition_directories:
+			dr = os.path.join(dr, partition)
+		
+		with ExclusiveValue(dr):
 			fn = os.path.join(dr, filename)
 			if os.path.exists(fn):
-				r = reader.Reader()
-				with open(fn, 'r') as fh:
-					content = fh.read()
-					try:
-						m = r.read(content)
-						n = r.read(d)
-# 						print('========================= MERGING =========================')
-# 						print('merging objects:')
-# 						print(f'- {m}')
-# 						print(f'- {n}')
-						merger.merge(m, n)
-					except model.DataError:
-						print(f'Exception caught while merging data from {fn}:')
-						print(d)
-						print(content)
-						raise
+				m = self.merge(model_object, fn)
+				if m:
+					d = factory.toString(m, self.compact)
+				else:
+					d = None
+			else:
+				d = factory.toString(model_object, self.compact)
 
-					factory = data['_CROM_FACTORY']
-					d = factory.toString(m, False)
 			if d:
 				with open(fn, 'w') as fh:
 					fh.write(d)
-			return data
+			return NOT_MODIFIED

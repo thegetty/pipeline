@@ -21,13 +21,17 @@ from collections import Counter, defaultdict, namedtuple
 from contextlib import suppress
 import inspect
 
+import time
 import timeit
 from sqlalchemy import create_engine
 
+import pipeline.execution
+
 import graphviz
 import bonobo
-from bonobo.config import use, Service, Configurable
+from bonobo.config import use, Option, Service, Configurable
 from bonobo.nodes import Limit
+from bonobo.constants import NOT_MODIFIED
 
 import settings
 from cromulent import model, vocab
@@ -43,6 +47,7 @@ from pipeline.util.cleaners import \
 			date_parse, \
 			date_cleaner
 from pipeline.io.file import MergingFileWriter
+from pipeline.io.memory import MergingMemoryWriter
 # from pipeline.io.arches import ArchesWriter
 from pipeline.linkedart import \
 			add_crom_data, \
@@ -84,7 +89,7 @@ def add_auction_event(data):
 	data['uid'] = uid
 	data['uri'] = uri
 	add_crom_data(data=data, what=auction)
-	yield data
+	return data
 
 #mark - Places
 
@@ -135,7 +140,7 @@ def populate_auction_event(data, auction_locations):
 		auction.timespan = ts
 
 	auction.subject_of = catalog
-	yield data
+	return data
 
 def add_auction_house_data(a):
 	'''Add modeling data for an auction house organization.'''
@@ -152,7 +157,7 @@ def add_auction_house_data(a):
 		a['ulan'] = ulan
 		house = vocab.AuctionHouseOrg(ident=a['uri'])
 	else:
-		# not enough information to identify this person uniquely, so they get a UUID
+		# not enough information to identify this house uniquely, so they get a UUID
 		a['uuid'] = str(uuid.uuid4())
 		uri = "urn:uuid:%s" % a['uuid']
 		house = vocab.AuctionHouseOrg(ident=uri)
@@ -198,13 +203,16 @@ def add_auction_houses(data, auction_houses):
 		if auction_houses:
 			house_objects.append(house)
 	auction_houses[cno] = house_objects
-	yield d
+	return d
 
 
 #mark - Auction of Lot
 
 class AddAuctionOfLot(Configurable):
 	'''Add modeling data for the auction of a lot of objects.'''
+	
+	# TODO: does this handle all the cases of data packed into the lot_number string that need to be stripped?
+	shared_lot_number_re = re.compile(r'(\[[a-z]\])')
 	
 	problematic_records = Service('problematic_records')
 	auction_locations = Service('auction_locations')
@@ -223,9 +231,7 @@ class AddAuctionOfLot(Configurable):
 
 		'0001[a]' -> '0001'
 		'''
-		# TODO: does this handle all the cases of data packed into the lot_number string that need to be stripped?
-		r = re.compile(r'(\[[a-z]\])')
-		m = r.search(lno)
+		m = AddAuctionOfLot.shared_lot_number_re.search(lno)
 		if m:
 			return lno.replace(m.group(1), '')
 		return lno
@@ -354,6 +360,26 @@ class AddAuctionOfLot(Configurable):
 		add_crom_data(data=data, what=lot)
 		yield data
 
+def _filter_empty_person(data: dict, _):
+	'''
+	If all the values of the supplied dictionary are false (or false after int conversion
+	for keys ending with 'ulan'), return `None`. Otherwise return the dictionary.
+	'''
+	set = []
+	for k, v in data.items():
+		if k.endswith('ulan'):
+			try:
+				s = int(0)
+			except ValueError:
+				s = True
+		else:
+			s = bool(v)
+		set.append(s)
+	if any(set):
+		return data
+	else:
+		return None
+
 def add_crom_price(data, _):
 	'''
 	Add modeling data for `MonetaryAmount`, `StartingPrice`, or `EstimatedPrice`,
@@ -364,7 +390,8 @@ def add_crom_price(data, _):
 		add_crom_data(data=data, what=amnt)
 	return data
 
-def add_person(data: dict):
+@use('make_la_person')
+def add_person(data: dict, *, make_la_person):
 	'''
 	Add modeling data for people, based on properties of the supplied `data` dict.
 
@@ -393,7 +420,6 @@ def add_person(data: dict):
 	else:
 		data['label'] = '(Anonymous person)'
 
-	make_la_person = MakeLinkedArtPerson()
 	make_la_person(data)
 	return data
 
@@ -406,8 +432,10 @@ def final_owner_procurement(final_owner, current_tx, hmo, current_ts):
 		tx._label = f'Procurement leading to the currently known location of object'
 	return tx
 
-def add_acquisition(data, hmo, buyers, sellers):
+@use('make_la_person')
+def add_acquisition(data, buyers, sellers, make_la_person=None):
 	'''Add modeling of an acquisition as a transfer of title from the seller to the buyer'''
+	hmo = get_crom_object(data)
 	parent = data['parent_data']
 	transaction = parent['transaction']
 	prices = parent['price']
@@ -421,9 +449,13 @@ def add_acquisition(data, hmo, buyers, sellers):
 # 	if not prices:
 # 		print(f'*** No price data found for {transaction} transaction')
 
+	tx_data = parent['_procurement_data']
+	current_tx = get_crom_object(tx_data)
+	payment_id = current_tx.id + '-Payment'
+
 	acq = model.Acquisition(label=f'Acquisition of {cno} {lno} ({date}): “{object_label}”')
 	acq.transferred_title_of = hmo
-	paym = model.Payment(label=f'Payment for “{object_label}”')
+	paym = model.Payment(ident=payment_id, label=f'Payment for “{object_label}”')
 	for seller in [get_crom_object(s) for s in sellers]:
 		paym.paid_to = seller
 		acq.transferred_title_from = seller
@@ -433,8 +465,6 @@ def add_acquisition(data, hmo, buyers, sellers):
 	for amnt in amnts:
 		paym.paid_amount = amnt
 
-	tx_data = parent['_procurement_data']
-	current_tx = get_crom_object(tx_data)
 	ts = tx_data.get('_date')
 	if ts:
 		acq.timespan = ts
@@ -561,23 +591,20 @@ def add_bidding(data, buyers):
 		pass
 		warnings.warn(f'*** No price data found for {parent["transaction"]!r} transaction')
 
-def add_acquisition_or_bidding(data):
+@use('make_la_person')
+def add_acquisition_or_bidding(data, *, make_la_person):
 	'''Determine if this record has an acquisition or bidding, and add appropriate modeling'''
 	parent = data['parent_data']
 	transaction = parent['transaction']
 	transaction = transaction.replace('[?]', '')
 	transaction = transaction.rstrip()
 
-	data = data.copy()
-	hmo = get_crom_object(data)
-
-	# TODO: filtering empty people should be moved much earlier in the pipeline
-	buyers = [add_person(p) for p in filter_empty_people(*parent['buyer'])]
-	sellers = [add_person(p) for p in filter_empty_people(*parent['seller'])]
+	buyers = [add_person(p, make_la_person=make_la_person) for p in parent['buyer']]
+	sellers = [add_person(p, make_la_person=make_la_person) for p in parent['seller']]
 
 	# TODO: is this the right set of transaction types to represent acquisition?
 	if transaction in ('Sold', 'Vendu', 'Verkauft', 'Bought In'):
-		yield from add_acquisition(data, hmo, buyers, sellers)
+		yield from add_acquisition(data, buyers, sellers, make_la_person)
 	elif transaction in ('Unknown', 'Unbekannt', 'Inconnue', 'Withdrawn', 'Non Vendu', ''):
 		yield from add_bidding(data, buyers)
 	else:
@@ -652,11 +679,9 @@ def populate_object(data, post_sale_map, unique_catalogs, vocab_instance_map, de
 		if not lno:
 			warnings.warn(f'Setting empty identifier on {hmo.id}')
 		data['identifiers'].append(model.Identifier(content=str(lno)))
-	m = data.get('materials')
-	if m:
-		matstmt = vocab.MaterialStatement()
-		matstmt.content = m
-		hmo.referred_to_by = matstmt
+	else:
+		print(f'***** NO AUCTION DATA FOUND IN populate_object')
+
 
 	cno = auction_data['catalog_number']
 	lno = auction_data['lot_number']
@@ -664,6 +689,22 @@ def populate_object(data, post_sale_map, unique_catalogs, vocab_instance_map, de
 	lot = AddAuctionOfLot.shared_lot_number_from_lno(lno)
 	now_key = (cno, lot, date) # the current key for this object; may be associated later with prev and post object keys
 
+	_populate_object_visual_item(data, vocab_instance_map)
+	_populate_object_destruction(data, parent, destruction_types_map)
+	_populate_object_statements(data)
+	_populate_object_present_location(data, now_key, destruction_types_map)
+	_populate_object_notes(data, parent, unique_catalogs)
+	_populate_object_prev_post_sales(data, now_key, post_sale_map)
+
+	return data
+
+def _populate_object_destruction(data, parent, destruction_types_map):
+	notes = parent.get('auction_of_lot', {}).get('lot_notes')
+	if notes and notes.startswith('Destroyed'):
+		populate_destruction_events(data, notes, destruction_types_map)
+
+def _populate_object_visual_item(data, vocab_instance_map):
+	hmo = get_crom_object(data)
 	title = data.get('title')
 	vi = model.VisualItem()
 	if title:
@@ -673,6 +714,26 @@ def populate_object(data, post_sale_map, unique_catalogs, vocab_instance_map, de
 		vi.classified_as = genre
 	hmo.shows = vi
 
+def _populate_object_statements(data):
+	hmo = get_crom_object(data)
+	m = data.get('materials')
+	if m:
+		matstmt = vocab.MaterialStatement()
+		matstmt.content = m
+		hmo.referred_to_by = matstmt
+
+	dimstr = data.get('dimensions')
+	if dimstr:
+		dimstmt = vocab.DimensionStatement()
+		dimstmt.content = dimstr
+		hmo.referred_to_by = dimstmt
+		for dim in extract_physical_dimensions(dimstr):
+			hmo.dimension = dim
+	else:
+		pass
+# 		print(f'No dimension data was parsed from the dimension statement: {dimstr}')
+
+def _populate_object_present_location(data, now_key, destruction_types_map):
 	location = data.get('present_location')
 	if location:
 		loc = location.get('geog')
@@ -687,8 +748,10 @@ def populate_object(data, post_sale_map, unique_catalogs, vocab_instance_map, de
 				inst = location.get('inst')
 				if inst:
 					owner_data = {
-						'name': inst,
 						'label': f'{inst} ({loc})',
+						'identifiers': [
+							model.Name(ident='', content=inst)
+						]
 					}
 					ulan = None
 					with suppress(ValueError, TypeError):
@@ -701,11 +764,10 @@ def populate_object(data, post_sale_map, unique_catalogs, vocab_instance_map, de
 				else:
 					owner_data = {
 						'label': '(Anonymous organization)',
-						'name': '(Anonymous organization)',
-						'uri': pir_uri('ORGANIZATION', 'PRESENT-OWNER', *now_key)
+						'uri': pir_uri('ORGANIZATION', 'PRESENT-OWNER', *now_key),
 					}
-				lao = MakeLinkedArtOrganization()
-				owner_data = lao(owner_data)
+				make_la_org = MakeLinkedArtOrganization()
+				owner_data = make_la_org(owner_data)
 				owner = get_crom_object(owner_data)
 				owner.residence = place
 				data['_locations'] = [place_data]
@@ -717,10 +779,8 @@ def populate_object(data, post_sale_map, unique_catalogs, vocab_instance_map, de
 			pass
 			# TODO: the acquisition_note needs to be attached as a Note to the final post owner acquisition
 
-	notes = parent.get('auction_of_lot', {}).get('lot_notes')
-	if notes and notes.startswith('Destroyed'):
-		populate_destruction_events(data, notes, destruction_types_map)
-
+def _populate_object_notes(data, parent, unique_catalogs):
+	hmo = get_crom_object(data)
 	notes = data.get('hand_note', [])
 	for note in notes:
 		c = note['hand_note']
@@ -737,6 +797,7 @@ def populate_object(data, post_sale_map, unique_catalogs, vocab_instance_map, de
 	if inscription:
 		hmo.carries = vocab.Note(content=inscription)
 
+def _populate_object_prev_post_sales(data, now_key, post_sale_map):
 	post_sales = data.get('post_sale', [])
 	prev_sales = data.get('prev_sale', [])
 	prev_post_sales_records = [(post_sales, False), (prev_sales, True)]
@@ -752,17 +813,8 @@ def populate_object(data, post_sale_map, unique_catalogs, vocab_instance_map, de
 					later_key, now_key = now_key, later_key
 				post_sale_map[later_key] = now_key
 
-	dimstr = data.get('dimensions')
-	if dimstr:
-		dimstmt = vocab.DimensionStatement()
-		dimstmt.content = dimstr
-		hmo.referred_to_by = dimstmt
-		for dim in extract_physical_dimensions(dimstr):
-			hmo.dimension = dim
-		else:
-			pass
-# 			print(f'No dimension data was parsed from the dimension statement: {dimstr}')
-	return data
+
+
 
 @use('vocab_type_map')
 def add_object_type(data, vocab_type_map):
@@ -783,7 +835,8 @@ def add_object_type(data, vocab_type_map):
 
 	return data
 
-def add_pir_artists(data):
+@use('make_la_person')
+def add_pir_artists(data, *, make_la_person):
 	'''Add modeling for artists as people involved in the production of an object'''
 	lod_object = get_crom_object(data)
 	event = model.Production()
@@ -791,10 +844,7 @@ def add_pir_artists(data):
 
 	artists = data.get('_artists', [])
 
-	# TODO: filtering empty people should be moved much earlier in the pipeline
-	artists = list(filter_empty_people(*artists))
 	data['_artists'] = artists
-	make_la_person = MakeLinkedArtPerson()
 	for a in artists:
 		star_rec_no = a.get('star_rec_no')
 		ulan = None
@@ -804,15 +854,20 @@ def add_pir_artists(data):
 			key = f'PERSON-ULAN-{ulan}'
 			a['uri'] = pir_uri('PERSON', 'ULAN', ulan)
 			a['ulan'] = ulan
-		else:
+			a['uid'] = key
+		elif star_rec_no:
 			key = f'PERSON-STAR-{star_rec_no}'
 			a['uri'] = pir_uri('PERSON', 'star', star_rec_no)
-		a['uid'] = key
-		if a.get('artist_name'):
-			name = a.get('artist_name')
+			a['uid'] = key
+		else:
+			# TODO: should this be a UUID, or something else? (pi_record_no, persistent_puid, etc.)
+# 			warnings.warn(f'*** Person without a ulan or star number: {a}')
+			a['uuid'] = str(uuid.uuid4())
+		try:
+			name = a['artist_name']
 			a['names'] = [(name,)]
 			a['label'] = name
-		else:
+		except KeyError:
 			a['label'] = '(Anonymous artist)'
 
 		make_la_person(a)
@@ -822,9 +877,9 @@ def add_pir_artists(data):
 		names = a.get('names')
 		if names:
 			name = names[0][0]
-			subevent._label = f'Production sub-event for {name}'
+			subevent._label = f'Production sub-event for artist {name}'
 		subevent.carried_out_by = person
-	yield data
+	return data
 
 #mark - Physical Catalogs
 
@@ -838,7 +893,7 @@ def add_auction_catalog(data):
 	data['_catalog'] = cdata
 
 	add_crom_data(data=cdata, what=catalog)
-	yield data
+	return data
 
 def add_physical_catalog_objects(data):
 	'''Add modeling for physical copies of an auction catalog'''
@@ -877,10 +932,12 @@ def add_physical_catalog_owners(data, location_codes, unique_catalogs):
 	try:
 		owner_name = location_codes[owner_code]
 		data['_owner'] = {
-			'name': owner_name,
 			'label': owner_name,
 			'uri': pir_uri('ORGANIZATION', 'LOCATION-CODE', owner_code),
-			'identifiers': [model.Identifier(ident='', content=str(owner_code))],
+			'identifiers': [
+				model.Name(ident='', content=owner_name),
+				model.Identifier(ident='', content=str(owner_code))
+			],
 		}
 		owner = model.Group(ident=data['_owner']['uri'])
 		if not owner_code:
@@ -921,7 +978,7 @@ def populate_auction_catalog(data):
 	if notes:
 		note = vocab.Note(content=parent['notes'])
 		catalog.referred_to_by = note
-	yield d
+	return d
 
 #mark - Provenance Pipeline class
 
@@ -964,6 +1021,7 @@ class ProvenancePipeline(PipelineBase):
 		'''Return a `dict` of named services available to the bonobo pipeline.'''
 		services = super().get_services()
 		services.update({
+			'make_la_person': MakeLinkedArtPerson(),
 			'lot_counter': Counter(),
 			'unique_catalogs': {},
 			'post_sale_map': {},
@@ -1014,34 +1072,41 @@ class ProvenancePipeline(PipelineBase):
 		'''Add modeling of auction events.'''
 		auction_events = graph.add_chain(
 			AddFieldNames(field_names=self.auction_events_headers),
-			GroupRepeatingKeys(mapping={
-				'seller': {'prefixes': ('sell_auth_name', 'sell_auth_q')},
-				'expert': {'prefixes': ('expert', 'expert_auth', 'expert_ulan')},
-				'commissaire': {'prefixes': ('comm_pr', 'comm_pr_auth', 'comm_pr_ulan')},
-				'auction_house': {'prefixes': ('auc_house_name', 'auc_house_auth', 'auc_house_ulan')},
-			}),
-			GroupKeys(mapping={
-				'lugt': {'properties': ('lugt_number_1', 'lugt_number_2', 'lugt_number_3')},
-				'auc_copy': {
-					'properties': (
-						'auc_copy_seller_1',
-						'auc_copy_seller_2',
-						'auc_copy_seller_3',
-						'auc_copy_seller_4')},
-				'other_seller': {
-					'properties': (
-						'other_seller_1',
-						'other_seller_2',
-						'other_seller_3')},
-				'title_pg_sell': {'properties': ('title_pg_sell_1', 'title_pg_sell_2')},
-				'location': {
-					'properties': (
-						'city_of_sale',
-						'sale_location',
-						'country_auth_1',
-						'country_auth_2',
-						'specific_loc')},
-			}),
+			GroupRepeatingKeys(
+				drop_empty=True,
+				mapping={
+					'seller': {'prefixes': ('sell_auth_name', 'sell_auth_q')},
+					'expert': {'prefixes': ('expert', 'expert_auth', 'expert_ulan')},
+					'commissaire': {'prefixes': ('comm_pr', 'comm_pr_auth', 'comm_pr_ulan')},
+					'auction_house': {'prefixes': ('auc_house_name', 'auc_house_auth', 'auc_house_ulan')},
+					'portal': {'prefixes': ('portal_url',)},
+				}
+			),
+			GroupKeys(
+				drop_empty=True,
+				mapping={
+					'lugt': {'properties': ('lugt_number_1', 'lugt_number_2', 'lugt_number_3')},
+					'auc_copy': {
+						'properties': (
+							'auc_copy_seller_1',
+							'auc_copy_seller_2',
+							'auc_copy_seller_3',
+							'auc_copy_seller_4')},
+					'other_seller': {
+						'properties': (
+							'other_seller_1',
+							'other_seller_2',
+							'other_seller_3')},
+					'title_pg_sell': {'properties': ('title_pg_sell_1', 'title_pg_sell_2')},
+					'location': {
+						'properties': (
+							'city_of_sale',
+							'sale_location',
+							'country_auth_1',
+							'country_auth_2',
+							'specific_loc')},
+				}
+			),
 			add_auction_catalog,
 			add_auction_event,
 			add_auction_houses,
@@ -1101,109 +1166,121 @@ class ProvenancePipeline(PipelineBase):
 		'''Add transformation of sales records to the bonobo pipeline.'''
 		sales = graph.add_chain(
 			AddFieldNames(field_names=self.contents_headers),
-			GroupRepeatingKeys(mapping={
-				'expert': {'prefixes': ('expert_auth', 'expert_ulan')},
-				'commissaire': {'prefixes': ('commissaire_pr', 'comm_ulan')},
-				'auction_house': {'prefixes': ('auction_house', 'house_ulan')},
-				'_artists': {
-					'postprocess': add_pir_record_ids,
-					'prefixes': (
-						'artist_name',
-						'artist_info',
-						'art_authority',
-						'nationality',
-						'attrib_mod',
-						'attrib_mod_auth',
-						'star_rec_no',
-						'artist_ulan')},
-				'hand_note': {'prefixes': ('hand_note', 'hand_note_so')},
-				'seller': {
-					'postprocess': lambda x, _: strip_key_prefix('sell_', x),
-					'prefixes': (
-						'sell_name',
-						'sell_name_so',
-						'sell_name_ques',
-						'sell_mod',
-						'sell_auth_name',
-						'sell_auth_nameq',
-						'sell_auth_mod',
-						'sell_auth_mod_a',
-						'sell_ulan')},
-				'price': {
-					'postprocess': add_crom_price,
-					'prefixes': (
-						'price_amount',
-						'price_currency',
-						'price_note',
-						'price_source',
-						'price_citation')},
-				'buyer': {
-					'postprocess': lambda x, _: strip_key_prefix('buy_', x),
-					'prefixes': (
-						'buy_name',
-						'buy_name_so',
-						'buy_name_ques',
-						'buy_name_cite',
-						'buy_mod',
-						'buy_auth_name',
-						'buy_auth_nameQ',
-						'buy_auth_mod',
-						'buy_auth_mod_a',
-						'buy_ulan')},
-				'prev_owner': {
-					'postprocess': [
-						lambda x, _: replace_key_pattern(r'(prev_owner)', 'prev_own', x),
-						lambda x, _: strip_key_prefix('prev_', x),
-					],
-					'prefixes': (
-						'prev_owner',
-						'prev_own_ques',
-						'prev_own_so',
-						'prev_own_auth',
-						'prev_own_auth_D',
-						'prev_own_auth_L',
-						'prev_own_auth_Q',
-						'prev_own_ulan')},
-				'prev_sale': {
-					'postprocess': lambda x, _: strip_key_prefix('prev_sale_', x),
-					'prefixes': (
-						'prev_sale_year',
-						'prev_sale_mo',
-						'prev_sale_day',
-						'prev_sale_loc',
-						'prev_sale_lot',
-						'prev_sale_ques',
-						'prev_sale_artx',
-						'prev_sale_ttlx',
-						'prev_sale_note',
-						'prev_sale_coll',
-						'prev_sale_cat')},
-				'post_sale': {
-					'postprocess': lambda x, _: strip_key_prefix('post_sale_', x),
-					'prefixes': (
-						'post_sale_year',
-						'post_sale_mo',
-						'post_sale_day',
-						'post_sale_loc',
-						'post_sale_lot',
-						'post_sale_q',
-						'post_sale_art',
-						'post_sale_ttl',
-						'post_sale_nte',
-						'post_sale_col',
-						'post_sale_cat')},
-				'post_owner': {
-					'postprocess': lambda x, _: strip_key_prefix('post_', x),
-					'prefixes': (
-						'post_own',
-						'post_own_q',
-						'post_own_so',
-						'post_own_auth',
-						'post_own_auth_D',
-						'post_own_auth_L',
-						'post_own_auth_Q',
-						'post_own_ulan')},
-			}),
+			GroupRepeatingKeys(
+				drop_empty=True,
+				mapping={
+					'expert': {'prefixes': ('expert_auth', 'expert_ulan')},
+					'commissaire': {'prefixes': ('commissaire_pr', 'comm_ulan')},
+					'auction_house': {'prefixes': ('auction_house', 'house_ulan')},
+					'_artists': {
+						'postprocess': [
+							_filter_empty_person,
+							add_pir_record_ids
+						],
+						'prefixes': (
+							'artist_name',
+							'artist_info',
+							'art_authority',
+							'nationality',
+							'attrib_mod',
+							'attrib_mod_auth',
+							'star_rec_no',
+							'artist_ulan')},
+					'hand_note': {'prefixes': ('hand_note', 'hand_note_so')},
+					'seller': {
+						'postprocess': [
+							lambda x, _: strip_key_prefix('buy_', x),
+							_filter_empty_person
+						],
+						'prefixes': (
+							'sell_name',
+							'sell_name_so',
+							'sell_name_ques',
+							'sell_mod',
+							'sell_auth_name',
+							'sell_auth_nameq',
+							'sell_auth_mod',
+							'sell_auth_mod_a',
+							'sell_ulan')},
+					'price': {
+						'postprocess': add_crom_price,
+						'prefixes': (
+							'price_amount',
+							'price_currency',
+							'price_note',
+							'price_source',
+							'price_citation')},
+					'buyer': {
+						'postprocess': [
+							lambda x, _: strip_key_prefix('buy_', x),
+							_filter_empty_person
+						],
+						'prefixes': (
+							'buy_name',
+							'buy_name_so',
+							'buy_name_ques',
+							'buy_name_cite',
+							'buy_mod',
+							'buy_auth_name',
+							'buy_auth_nameQ',
+							'buy_auth_mod',
+							'buy_auth_mod_a',
+							'buy_ulan')},
+					'prev_owner': {
+						'postprocess': [
+							lambda x, _: replace_key_pattern(r'(prev_owner)', 'prev_own', x),
+							lambda x, _: strip_key_prefix('prev_', x),
+						],
+						'prefixes': (
+							'prev_owner',
+							'prev_own_ques',
+							'prev_own_so',
+							'prev_own_auth',
+							'prev_own_auth_D',
+							'prev_own_auth_L',
+							'prev_own_auth_Q',
+							'prev_own_ulan')},
+					'prev_sale': {
+						'postprocess': lambda x, _: strip_key_prefix('prev_sale_', x),
+						'prefixes': (
+							'prev_sale_year',
+							'prev_sale_mo',
+							'prev_sale_day',
+							'prev_sale_loc',
+							'prev_sale_lot',
+							'prev_sale_ques',
+							'prev_sale_artx',
+							'prev_sale_ttlx',
+							'prev_sale_note',
+							'prev_sale_coll',
+							'prev_sale_cat')},
+					'post_sale': {
+						'postprocess': lambda x, _: strip_key_prefix('post_sale_', x),
+						'prefixes': (
+							'post_sale_year',
+							'post_sale_mo',
+							'post_sale_day',
+							'post_sale_loc',
+							'post_sale_lot',
+							'post_sale_q',
+							'post_sale_art',
+							'post_sale_ttl',
+							'post_sale_nte',
+							'post_sale_col',
+							'post_sale_cat')},
+					'post_owner': {
+						'postprocess': lambda x, _: strip_key_prefix('post_', x),
+						'prefixes': (
+							'post_own',
+							'post_own_q',
+							'post_own_so',
+							'post_own_auth',
+							'post_own_auth_D',
+							'post_own_auth_L',
+							'post_own_auth_Q',
+							'post_own_ulan')},
+				}
+			),
 			GroupKeys(mapping={
 				'present_location': {
 					'postprocess': lambda x, _: strip_key_prefix('present_loc_', x),
@@ -1357,7 +1434,7 @@ class ProvenancePipeline(PipelineBase):
 		for g in component1:
 			physical_catalog_records = g.add_chain(
 				MatchingFiles(path='/', pattern=self.catalogs_files_pattern, fs='fs.data.provenance'),
-				CurriedCSVReader(fs='fs.data.provenance', limit=self.limit),
+				CurriedCSVReader(fs='fs.data.provenance', limit=self.limit)
 			)
 
 			auction_events_records = g.add_chain(
@@ -1375,7 +1452,7 @@ class ProvenancePipeline(PipelineBase):
 		for g in component2:
 			contents_records = g.add_chain(
 				MatchingFiles(path='/', pattern=self.contents_files_pattern, fs='fs.data.provenance'),
-				CurriedCSVReader(fs='fs.data.provenance', limit=self.limit)
+				CurriedCSVReader(fs='fs.data.provenance', limit=self.limit),
 			)
 			sales = self.add_sales_chain(g, contents_records, serialize=True)
 			_ = self.add_single_object_lot_tracking_chain(g, sales)
@@ -1420,11 +1497,11 @@ class ProvenancePipeline(PipelineBase):
 		start = timeit.default_timer()
 		print('Running graph component 1...', file=sys.stderr)
 		graph1 = self.get_graph_1(**options)
-		bonobo.run(graph1, services=services)
+		self.run_graph(graph1, services=services)
 
 		print('Running graph component 2...', file=sys.stderr)
 		graph2 = self.get_graph_2(**options)
-		bonobo.run(graph2, services=services)
+		self.run_graph(graph2, services=services)
 		
 		print(f'Pipeline runtime: {timeit.default_timer() - start}', file=sys.stderr)
 
@@ -1438,15 +1515,21 @@ class ProvenanceFilePipeline(ProvenancePipeline):
 	'''
 	def __init__(self, input_path, catalogs, auction_events, contents, **kwargs):
 		super().__init__(input_path, catalogs, auction_events, contents, **kwargs)
+		self.writers = []
 		debug = kwargs.get('debug', False)
 		self.output_path = kwargs.get('output_path')
 
 	def serializer_nodes_for_model(self, model=None):
 		nodes = []
 		if self.debug:
-			nodes.append(MergingFileWriter(directory=self.output_path, partition_directories=True, serialize=True, compact=False, model=model))
+# 			w = MergingFileWriter(directory=self.output_path, partition_directories=True, compact=False, model=model)
+			w = MergingMemoryWriter(directory=self.output_path, partition_directories=True, compact=False, model=model)
+			nodes.append(w)
 		else:
-			nodes.append(MergingFileWriter(directory=self.output_path, partition_directories=True, serialize=True, compact=True, model=model))
+# 			w = MergingFileWriter(directory=self.output_path, partition_directories=True, compact=True, model=model)
+			w = MergingMemoryWriter(directory=self.output_path, partition_directories=True, compact=True, model=model)
+			nodes.append(w)
+		self.writers += nodes
 		return nodes
 
 	def merge_post_sale_objects(self, counter, post_map):
@@ -1491,12 +1574,12 @@ class ProvenanceFilePipeline(ProvenancePipeline):
 			with open(rewrite_map_filename, 'r') as f:
 				with suppress(json.decoder.JSONDecodeError):
 					post_sale_rewrite_map = json.load(f)
-		print('Rewrite output files, replacing the following URIs:')
+# 		print('Rewrite output files, replacing the following URIs:')
 		for src, dst in g:
 			canonical, steps = g.canonical_key(src)
 			src_uri = pir_uri('OBJECT', *src)
 			dst_uri = pir_uri('OBJECT', *canonical)
-			print(f's/ {src_uri:<100} / {dst_uri:<100} /')
+# 			print(f's/ {src_uri:<100} / {dst_uri:<100} /')
 			post_sale_rewrite_map[src_uri] = dst_uri
 			if canonical in large_components:
 				i = node_id(g.nodes[src])
@@ -1519,6 +1602,12 @@ class ProvenanceFilePipeline(ProvenancePipeline):
 		start = timeit.default_timer()
 		services = self.get_services(**options)
 		super().run(services=services, **options)
+		
+		count = len(self.writers)
+		for i, w in enumerate(self.writers):
+			print('[%d/%d] writers being flushed' % (i+1, count))
+			if isinstance(w, MergingMemoryWriter):
+				w.flush()
 
 		print('====================================================')
 		print('Running post-processing of post-sale data...')

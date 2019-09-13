@@ -752,8 +752,10 @@ def _populate_object_present_location(data, now_key, destruction_types_map):
 				inst = location.get('inst')
 				if inst:
 					owner_data = {
-						'names': [[inst]],
 						'label': f'{inst} ({loc})',
+						'identifiers': [
+							model.Name(ident='', content=inst)
+						]
 					}
 					ulan = None
 					with suppress(ValueError, TypeError):
@@ -766,11 +768,10 @@ def _populate_object_present_location(data, now_key, destruction_types_map):
 				else:
 					owner_data = {
 						'label': '(Anonymous organization)',
-						'names': [['(Anonymous organization)']],
-						'uri': pir_uri('ORGANIZATION', 'PRESENT-OWNER', *now_key)
+						'uri': pir_uri('ORGANIZATION', 'PRESENT-OWNER', *now_key),
 					}
-				lao = MakeLinkedArtOrganization()
-				owner_data = lao(owner_data)
+				make_la_org = MakeLinkedArtOrganization()
+				owner_data = make_la_org(owner_data)
 				owner = get_crom_object(owner_data)
 				owner.residence = place
 				data['_locations'] = [place_data]
@@ -935,10 +936,12 @@ def add_physical_catalog_owners(data, location_codes, unique_catalogs):
 	try:
 		owner_name = location_codes[owner_code]
 		data['_owner'] = {
-			'names': [[owner_name]],
 			'label': owner_name,
 			'uri': pir_uri('ORGANIZATION', 'LOCATION-CODE', owner_code),
-			'identifiers': [model.Identifier(ident='', content=str(owner_code))],
+			'identifiers': [
+				model.Name(ident='', content=owner_name),
+				model.Identifier(ident='', content=str(owner_code))
+			],
 		}
 		owner = model.Group(ident=data['_owner']['uri'])
 		if not owner_code:

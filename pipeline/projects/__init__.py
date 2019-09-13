@@ -70,7 +70,7 @@ class PipelineBase:
 			sys.stderr.write('*** No serialization chain defined\n')
 
 	def run_graph(self, graph, *, services):
-		if False:
+		if True:
 			bonobo.run(graph, services=services)
 		else:
 			e = pipeline.execution.GraphExecutor(graph, services)

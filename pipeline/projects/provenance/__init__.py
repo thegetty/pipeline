@@ -752,7 +752,7 @@ def _populate_object_present_location(data, now_key, destruction_types_map):
 				inst = location.get('inst')
 				if inst:
 					owner_data = {
-						'name': inst,
+						'names': [[inst]],
 						'label': f'{inst} ({loc})',
 					}
 					ulan = None
@@ -766,7 +766,7 @@ def _populate_object_present_location(data, now_key, destruction_types_map):
 				else:
 					owner_data = {
 						'label': '(Anonymous organization)',
-						'name': '(Anonymous organization)',
+						'names': [['(Anonymous organization)']],
 						'uri': pir_uri('ORGANIZATION', 'PRESENT-OWNER', *now_key)
 					}
 				lao = MakeLinkedArtOrganization()
@@ -935,7 +935,7 @@ def add_physical_catalog_owners(data, location_codes, unique_catalogs):
 	try:
 		owner_name = location_codes[owner_code]
 		data['_owner'] = {
-			'name': owner_name,
+			'names': [[owner_name]],
 			'label': owner_name,
 			'uri': pir_uri('ORGANIZATION', 'LOCATION-CODE', owner_code),
 			'identifiers': [model.Identifier(ident='', content=str(owner_code))],

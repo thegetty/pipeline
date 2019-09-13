@@ -7,6 +7,7 @@ import settings
 from sqlalchemy import create_engine
 from sqlalchemy.engine.url import URL
 
+import pipeline.execution
 from pipeline.nodes.basic import \
 			AddArchesModel, \
 			Serializer
@@ -67,3 +68,10 @@ class PipelineBase:
 			graph.add_chain(*nodes, _input=input_node)
 		else:
 			sys.stderr.write('*** No serialization chain defined\n')
+
+	def run_graph(self, graph, *, services):
+		if False:
+			bonobo.run(graph, services=services)
+		else:
+			e = pipeline.execution.GraphExecutor(graph, services)
+			e.run()

@@ -53,6 +53,7 @@ pir:
 	QUIET=$(QUIET) GETTY_PIPELINE_DEBUG=$(DEBUG) GETTY_PIPELINE_LIMIT=$(LIMIT) $(PYTHON) ./pir.py
 	PYTHONPATH=`pwd` $(PYTHON) ./scripts/rewrite_post_sales_uris.py "${GETTY_PIPELINE_TMP_PATH}/post_sale_rewrite_map.json"
 	PYTHONPATH=`pwd` $(PYTHON) ./scripts/rewrite_uris_to_uuids.py 'tag:getty.edu,2019:digital:pipeline:provenance:REPLACE-WITH-UUID#'
+	PYTHONPATH=`pwd` $(PYTHON) ./scripts/coalesce_json.py
 
 pirgraph: $(GETTY_PIPELINE_TMP_PATH)/pir.pdf
 	open -a Preview $(GETTY_PIPELINE_TMP_PATH)/pir.pdf

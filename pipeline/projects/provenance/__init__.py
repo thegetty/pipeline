@@ -695,7 +695,7 @@ def populate_object(data, post_sale_map, unique_catalogs, vocab_instance_map, de
 
 	_populate_object_visual_item(data, vocab_instance_map)
 	_populate_object_destruction(data, parent, destruction_types_map)
-	_populate_object_statements(data)
+	_populate_object_statements(data) # TODO: dimension parsing can be expensive. can this be moved off the critical path for this bonobo graph chain?
 	_populate_object_present_location(data, now_key, destruction_types_map)
 	_populate_object_notes(data, parent, unique_catalogs)
 	_populate_object_prev_post_sales(data, now_key, post_sale_map)
@@ -710,6 +710,7 @@ def _populate_object_destruction(data, parent, destruction_types_map):
 def _populate_object_visual_item(data, vocab_instance_map):
 	hmo = get_crom_object(data)
 	title = data.get('title')
+	# TODO: use a URI for VisualItem based on the HMO
 	vi = model.VisualItem()
 	if title:
 		vi._label = f'Visual work of “{title}”'
@@ -722,12 +723,14 @@ def _populate_object_statements(data):
 	hmo = get_crom_object(data)
 	m = data.get('materials')
 	if m:
+		# TODO: use a URI for MaterialStatement based on the HMO
 		matstmt = vocab.MaterialStatement()
 		matstmt.content = m
 		hmo.referred_to_by = matstmt
 
 	dimstr = data.get('dimensions')
 	if dimstr:
+		# TODO: use a URI for MaterialStatement based on the HMO
 		dimstmt = vocab.DimensionStatement()
 		dimstmt.content = dimstr
 		hmo.referred_to_by = dimstmt
@@ -842,9 +845,10 @@ def add_object_type(data, vocab_type_map):
 @use('make_la_person')
 def add_pir_artists(data, *, make_la_person):
 	'''Add modeling for artists as people involved in the production of an object'''
-	lod_object = get_crom_object(data)
+	hmo = get_crom_object(data)
+	# TODO: use a URI for Production based on the HMO
 	event = model.Production()
-	lod_object.produced_by = event
+	hmo.produced_by = event
 
 	artists = data.get('_artists', [])
 

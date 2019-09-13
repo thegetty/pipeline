@@ -66,42 +66,47 @@ class GroupRepeatingKeys(Configurable):
 	mapping = Option(dict)
 	drop_empty = Option(bool, default=True)
 	def __call__(self, data):
-		d = data.copy()
 		for key, mapping in self.mapping.items():
 			property_prefixes = mapping['prefixes']
 			postprocess = mapping.get('postprocess')
-			d[key] = []
+			data[key] = []
+			to_delete = set()
 			with suppress(KeyError):
 				for i in itertools.count(1):
 					ks = ((prefix, f'{prefix}_{i}') for prefix in property_prefixes)
 					subd = {}
 					for p, k in ks:
-						subd[p] = d[k]
-						del d[k]
+						subd[p] = data[k]
+						to_delete.add(k)
 					if self.drop_empty:
 						values_unset = list(map(lambda v: not bool(v), subd.values()))
 						if all(values_unset):
-							continue
-					if postprocess:
+							break
+					if postprocess and subd:
 						if callable(postprocess):
 							postprocess = [postprocess]
 						for p in postprocess:
 							subd = p(subd, data)
-					d[key].append(subd)
-		return d
+							if not subd:
+								break
+					if subd:
+						data[key].append(subd)
+			for k in to_delete:
+				del data[k]
+		return data
 
 class GroupKeys(Configurable):
 	mapping = Option(dict)
 	drop_empty = Option(bool, default=True)
 	def __call__(self, data):
-		d = data.copy()
+		to_delete = set()
 		for key, mapping in self.mapping.items():
 			subd = {}
 			properties = mapping['properties']
 			postprocess = mapping.get('postprocess')
 			for k in properties:
-				v = d[k]
-				del d[k]
+				v = data[k]
+				to_delete.add(k)
 				if self.drop_empty and not v:
 					continue
 				subd[k] = v
@@ -110,8 +115,10 @@ class GroupKeys(Configurable):
 					postprocess = [postprocess]
 				for p in postprocess:
 					subd = p(subd, data)
-			d[key] = subd
-		return d
+			data[key] = subd
+		for k in to_delete:
+			del data[k]
+		return data
 
 class AddDataDependentArchesModel(Configurable):
 	'''

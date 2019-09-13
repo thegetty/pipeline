@@ -1075,7 +1075,7 @@ class AATAFilePipeline(AATAPipeline):
 	def serializer_nodes_for_model(self, model=None):
 		nodes = []
 		if self.debug:
-			nodes.append(MergingFileWriter(directory=self.output_path, partition_directories=True, serialize=True, compact=False, model=model))
+			nodes.append(MergingFileWriter(directory=self.output_path, partition_directories=True, compact=False, model=model))
 		else:
-			nodes.append(MergingFileWriter(directory=self.output_path, partition_directories=True, serialize=True, compact=True, model=model))
+			nodes.append(MergingFileWriter(directory=self.output_path, partition_directories=True, compact=True, model=model))
 		return nodes

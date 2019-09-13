@@ -8,6 +8,7 @@ import datetime
 from threading import Lock
 from contextlib import ContextDecorator, suppress
 from collections import defaultdict, namedtuple
+import warnings
 
 import dateutil.parser
 from bonobo.config import Configurable, Option, Service
@@ -133,65 +134,80 @@ class CromObjectMerger:
 		}
 
 	def merge(self, obj, *to_merge):
-		# print('merging...')
-		# print(f'base object: {obj}')
+		if not to_merge:
+			return obj
+# 		print(f'merge called with {1+len(to_merge)} objects: ({obj}, {to_merge})')
 		for m in to_merge:
-			# print('============================================')
-			# print(f'merge: {m}')
+			if obj == m:
+				continue
 			for p in m.list_my_props():
-				value = None
-				with suppress(AttributeError):
+				try:
 					value = getattr(m, p)
-				if value is not None:
-					if isinstance(value, list):
-						self.set_or_merge(obj, p, *value)
-					else:
-						self.set_or_merge(obj, p, value)
-# 			obj = self.merge(obj, m)
-# 		print('Result of merge:')
-# 		print(factory.toString(obj, False))
+					if value is not None:
+						if isinstance(value, list):
+							self.set_or_merge(obj, p, *value)
+						else:
+							self.set_or_merge(obj, p, value)
+				except AttributeError:
+					pass
 		return obj
 
-	def set_or_merge(self, obj, p, *values):
-		existing = []
-# 		print('------------------------')
-		with suppress(AttributeError):
-			e = getattr(obj, p)
-			if isinstance(e, list):
-				existing.extend(e)
-			else:
-				existing = [e]
-
-# 		print(f'Setting {p}')
-		identified = defaultdict(list)
-		unidentified = []
-		for v in existing + list(values):
+	def _classify_values(self, values, identified, unidentified):
+		for v in values:
 			handled = False
 			for attr, classes in self.attribute_based_identity.items():
-				if isinstance(v, classes):
-					if hasattr(v, 'content'):
-						identified[getattr(v, attr)].append(v)
-						handled = True
-						break
-			if not handled:
-				if hasattr(v, 'id'):
+				if isinstance(v, classes) and hasattr(v, attr):
+					identified[getattr(v, attr)].append(v)
+					break
+			else:
+				try:
 					identified[v.id].append(v)
-				else:
+				except AttributeError:
 					unidentified.append(v)
-	# 			print(f'- {v}')
 
+	def set_or_merge(self, obj, p, *values):
 		if p == 'type':
 			# print('*** TODO: calling setattr(_, "type") on crom objects throws; skipping')
 			return
-		setattr(obj, p, None)
-		for v in identified.values():
-			if not obj.allows_multiple(p):
-				setattr(obj, p, None)
-			setattr(obj, p, self.merge(*v))
-		for v in unidentified:
-			if not obj.allows_multiple(p):
-				setattr(obj, p, None)
-			setattr(obj, p, v)
+
+		existing = []
+		try:
+			e = getattr(obj, p)
+			if isinstance(e, list):
+				existing = e
+			else:
+				existing = [e]
+		except AttributeError:
+			pass
+
+		identified = defaultdict(list)
+		unidentified = []
+		self._classify_values(values, identified, unidentified)
+		
+		allows_multiple = obj.allows_multiple(p)
+		if identified:
+			# there are values in the new objects that have to be merged with existing identifiable values
+			self._classify_values(existing, identified, unidentified)
+
+			setattr(obj, p, None) # clear out all the existing values
+			for v in identified.values():
+				if not allows_multiple:
+					setattr(obj, p, self.merge(*v))
+					return
+				setattr(obj, p, self.merge(*v))
+			for v in unidentified:
+				if not allows_multiple:
+					setattr(obj, p, v)
+					return
+				setattr(obj, p, v)
+		else:
+			# there are no identifiable values in the new objects, so we can just append them
+			for v in unidentified:
+				if not allows_multiple:
+					setattr(obj, p, None)
+					setattr(obj, p, v)
+					return
+				setattr(obj, p, v)
 
 class ExtractKeyedValues(Configurable):
 	'''
@@ -287,7 +303,7 @@ class MatchingFiles(Configurable):
 		count = 0
 		if not self.pattern:
 			return
-		print(repr(self.pattern))
+# 		print(repr(self.pattern))
 		subpath, pattern = os.path.split(self.pattern)
 		fullpath = os.path.join(self.path, subpath)
 		for f in sorted(fs.listdir(fullpath)):
@@ -352,7 +368,7 @@ def timespan_from_outer_bounds(begin=None, end=None):
 				begin = begin.strftime("%Y-%m-%dT%H:%M:%SZ")
 				ts.begin_of_the_begin = begin
 			except ValueError:
-				print(f'*** failed to parse begin date: {begin}')
+				warnings.warn(f'*** failed to parse begin date: {begin}')
 				raise
 		if end is not None:
 			try:
@@ -361,6 +377,6 @@ def timespan_from_outer_bounds(begin=None, end=None):
 				end = end.strftime("%Y-%m-%dT%H:%M:%SZ")
 				ts.end_of_the_end = end
 			except ValueError:
-				print(f'*** failed to parse end date: {end}')
+				warnings.warn(f'*** failed to parse end date: {end}')
 		return ts
 	return None

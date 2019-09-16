@@ -31,28 +31,31 @@ coalesce_count = 0
 for filename in files:
 	with open(filename, 'r') as fh:
 		content = fh.read()
-		m = read.read(content)
-		id = m.id
-		if id in seen:
-			canon_file = seen[id]
-# 			print(f'*** {id} already seen in {canon_file} ; merging {filename}')
-			merger = CromObjectMerger()
-			with open(canon_file, 'r') as cfh:
-				canon_content = cfh.read()
-				n = read.read(canon_content)
-				try:
-					merger.merge(m, n)
-				except model.DataError:
-					print(f'Exception caught while merging data from {newfile}:')
-					print(d)
-					print(content)
-					raise
-			merged_data = factory.toString(m, False)
-			d = json.loads(merged_data)
-			with open(canon_file, 'w') as data_file:
-				json.dump(d, data_file, indent=2, ensure_ascii=False)
-				os.remove(filename)
-			coalesce_count += 1
-		else:
-			seen[id] = filename
-print(f'Coalesced {coalesce_count} JSON files')
+		try:
+			m = read.read(content)
+			id = m.id
+			if id in seen:
+				canon_file = seen[id]
+# 				print(f'*** {id} already seen in {canon_file} ; merging {filename}')
+				merger = CromObjectMerger()
+				with open(canon_file, 'r') as cfh:
+					canon_content = cfh.read()
+					n = read.read(canon_content)
+					try:
+						merger.merge(m, n)
+					except model.DataError:
+						print(f'Exception caught while merging data from {newfile}:')
+						print(d)
+						print(content)
+						raise
+				merged_data = factory.toString(m, False)
+				d = json.loads(merged_data)
+				with open(canon_file, 'w') as data_file:
+					json.dump(d, data_file, indent=2, ensure_ascii=False)
+					os.remove(filename)
+				coalesce_count += 1
+			else:
+				seen[id] = filename
+		except model.DataError as e:
+			print(f'*** Failed to read CRM data: {e}')
+print(f'Coalesced {coalesce_count} JSON files in {path}')

@@ -699,6 +699,9 @@ def populate_object(data, post_sale_map, unique_catalogs, vocab_instance_map, de
 	_populate_object_present_location(data, now_key, destruction_types_map)
 	_populate_object_notes(data, parent, unique_catalogs)
 	_populate_object_prev_post_sales(data, now_key, post_sale_map)
+	for p in data.get('portal', []):
+		url = p['portal_url']
+		hmo.referred_to_by = vocab.WebPage(ident=url)
 
 	return data
 
@@ -1283,6 +1286,7 @@ class ProvenancePipeline(PipelineBase):
 							'post_own_auth_L',
 							'post_own_auth_Q',
 							'post_own_ulan')},
+					'portal': {'prefixes': ('portal_url',)},
 				}
 			),
 			GroupKeys(mapping={
@@ -1328,7 +1332,8 @@ class ProvenancePipeline(PipelineBase):
 						'post_sale',
 						'prev_sale',
 						'prev_owner',
-						'post_owner')},
+						'post_owner',
+						'portal')},
 				'estimated_price': {
 					'postprocess': add_crom_price,
 					'properties': (

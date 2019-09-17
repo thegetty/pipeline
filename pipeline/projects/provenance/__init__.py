@@ -920,7 +920,7 @@ def add_physical_catalog_objects(data):
 	labels = [f'Sale Catalog {cno}', f'owned by “{owner}”']
 	if copy:
 		labels.append(f'copy {copy}')
-	catalogObject = model.HumanMadeObject(ident=uri, label=', '.join(labels))
+	catalogObject = vocab.AuctionCatalog(ident=uri, label=', '.join(labels))
 	info = data.get('annotation_info')
 	if info:
 		catalogObject.referred_to_by = vocab.Note(content=info)
@@ -1002,6 +1002,8 @@ class ProvenancePipeline(PipelineBase):
 		vocab.register_instance('fire', {'parent': model.Type, 'id': '300068986', 'label': 'Fire'})
 		vocab.register_instance('animal', {'parent': model.Type, 'id': '300249395', 'label': 'Animal'})
 		vocab.register_instance('history', {'parent': model.Type, 'id': '300033898', 'label': 'History'})
+		vocab.register_vocab_class('SalesCatalog', {'parent': model.HumanMadeObject, 'id': '300026074', 'label': 'Sales Catalog'})
+		vocab.register_vocab_class('AuctionCatalog', {'parent': model.HumanMadeObject, 'id': '300026068', 'label': 'Auction Catalog'})
 		
 		super().__init__()
 		self.project_name = 'provenance'

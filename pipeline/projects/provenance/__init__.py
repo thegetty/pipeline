@@ -52,6 +52,7 @@ from pipeline.io.memory import MergingMemoryWriter
 from pipeline.linkedart import \
 			add_crom_data, \
 			get_crom_object, \
+			MakeLinkedArtRecord, \
 			MakeLinkedArtHumanMadeObject, \
 			MakeLinkedArtAuctionHouseOrganization, \
 			MakeLinkedArtOrganization, \
@@ -713,12 +714,16 @@ def _populate_object_destruction(data, parent, destruction_types_map):
 def _populate_object_visual_item(data, vocab_instance_map):
 	hmo = get_crom_object(data)
 	title = data.get('title')
+	vidata = {}
+	
 	vi = model.VisualItem()
 	if title:
-		vi._label = f'Visual work of “{title}”'
+		vidata['label'] = f'Visual work of “{title}”'
+		vidata['names'] = [(title,)]
 	genre = genre_instance(data.get('genre'), vocab_instance_map)
 	if genre:
 		vi.classified_as = genre
+	data['_visual_item'] = add_crom_data(data=vidata, what=vi)
 	hmo.shows = vi
 
 def _populate_object_statements(data):
@@ -798,7 +803,7 @@ def _populate_object_notes(data, parent, unique_catalogs):
 		note = vocab.Note(content=c)
 		hmo.referred_to_by = note
 		if catalogs and len(catalogs) == 1:
-			note.carried_by = model.HumanMadeObject(ident=catalog_uri, label=f'Sale Catalog {cno}, owned by {owner}')
+			note.carried_by = model.HumanMadeObject(ident=catalog_uri, label=f'Sale Catalog {cno}, owned by “{owner}”')
 
 	inscription = data.get('inscription')
 	if inscription:
@@ -845,9 +850,11 @@ def add_object_type(data, vocab_type_map):
 @use('make_la_person')
 def add_pir_artists(data, *, make_la_person):
 	'''Add modeling for artists as people involved in the production of an object'''
-	lod_object = get_crom_object(data)
-	event = model.Production()
-	lod_object.produced_by = event
+	hmo = get_crom_object(data)
+	hmo_label = hmo._label
+	event = model.Production(ident=f'{data["uri"]}-Production', label=f'Production event for “{hmo_label}”')
+	hmo.produced_by = event
+	data['_production_event'] = add_crom_data({}, event)
 
 	artists = data.get('_artists', [])
 
@@ -884,7 +891,7 @@ def add_pir_artists(data, *, make_la_person):
 		names = a.get('names')
 		if names:
 			name = names[0][0]
-			subevent._label = f'Production sub-event for artist {name}'
+			subevent._label = f'Production sub-event for artist “{name}”'
 		subevent.carried_out_by = person
 	return data
 
@@ -910,7 +917,7 @@ def add_physical_catalog_objects(data):
 	copy = data['copy_number']
 	uri = pir_uri('CATALOG', cno, owner, copy)
 	data['uri'] = uri
-	labels = [f'Sale Catalog {cno}', f'owned by {owner}']
+	labels = [f'Sale Catalog {cno}', f'owned by “{owner}”']
 	if copy:
 		labels.append(f'copy {copy}')
 	catalogObject = model.HumanMadeObject(ident=uri, label=', '.join(labels))
@@ -1411,6 +1418,29 @@ class ProvenancePipeline(PipelineBase):
 			self.add_serialization_chain(graph, houses.output, model=self.models['Group'])
 		return houses
 
+	def add_production_chain(self, graph, objects, serialize=True):
+		'''Add transformation of production events to the bonobo pipeline.'''
+		events = graph.add_chain(
+			ExtractKeyedValue(key='_production_event'),
+			_input=objects.output
+		)
+		if serialize:
+			# write VISUAL ITEMS data
+			self.add_serialization_chain(graph, events.output, model=self.models['Production'])
+		return events
+
+	def add_visual_item_chain(self, graph, objects, serialize=True):
+		'''Add transformation of visual items to the bonobo pipeline.'''
+		items = graph.add_chain(
+			ExtractKeyedValue(key='_visual_item'),
+			MakeLinkedArtRecord(),
+			_input=objects.output
+		)
+		if serialize:
+			# write VISUAL ITEMS data
+			self.add_serialization_chain(graph, items.output, model=self.models['VisualItem'])
+		return items
+
 	def add_people_chain(self, graph, objects, serialize=True):
 		'''Add transformation of artists records to the bonobo pipeline.'''
 		people = graph.add_chain(
@@ -1471,6 +1501,8 @@ class ProvenancePipeline(PipelineBase):
 			self.add_buyers_sellers_chain(g, acquisitions, serialize=True)
 			self.add_procurement_chain(g, acquisitions, serialize=True)
 			_ = self.add_people_chain(g, objects, serialize=True)
+			_ = self.add_visual_item_chain(g, objects, serialize=True)
+			_ = self.add_production_chain(g, objects, serialize=True)
 
 		if single_graph:
 			self.graph_0 = graph0

@@ -302,7 +302,7 @@ class AddAuctionOfLot(Configurable):
 
 	def set_lot_objects(self, lot, lno, data):
 		'''Associate the set of objects with the auction lot.'''
-		coll = vocab.AuctionLotSet(ident=data['uri'])
+		coll = vocab.AuctionLotSet(ident=f'data["uri"]-Set')
 		shared_lot_number = self.shared_lot_number_from_lno(lno)
 		coll._label = f'Auction Lot {shared_lot_number}'
 		est_price = data.get('estimated_price')

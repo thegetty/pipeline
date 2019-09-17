@@ -83,14 +83,16 @@ class TestProvenancePipelineOutput(unittest.TestCase):
 	def test_pipeline_pir(self):
 		input_path = os.getcwd()
 		models = {
+			'Activity': 'model-activity',
+			'Event': 'model-event',
+			'Group': 'model-groups',
 			'HumanMadeObject': 'model-object',
 			'LinguisticObject': 'model-lo',
 			'Person': 'model-person',
-			'Event': 'model-event',
-			'Group': 'model-groups',
-			'Activity': 'model-activity',
+			'Place': 'model-place',
 			'Procurement': 'model-activity',
-			'Place': 'model-place'
+			'Production': 'model-production',
+			'VisualItem': 'model-visual-item'
 		}
 		output = self.run_pipeline(models, input_path)
 

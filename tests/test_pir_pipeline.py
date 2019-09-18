@@ -19,7 +19,7 @@ class ProvenanceTestPipeline(ProvenancePipeline):
 		super().__init__(input_path, catalogs, auction_events, contents, **kwargs)
 		self.writer = writer
 
-	def serializer_nodes_for_model(self, model=None):
+	def serializer_nodes_for_model(self, *args, model=None, **kwargs):
 		nodes = []
 		if model:
 			nodes.append(AddArchesModel(model=model))
@@ -83,6 +83,7 @@ class TestProvenancePipelineOutput(unittest.TestCase):
 	def test_pipeline_pir(self):
 		input_path = os.getcwd()
 		models = {
+			'Acquisition': 'model-acquisition',
 			'Activity': 'model-activity',
 			'Event': 'model-event',
 			'Group': 'model-groups',
@@ -114,7 +115,7 @@ class TestProvenancePipelineOutput(unittest.TestCase):
 		self.assertEqual(len(events), 1, 'expected count of auction events')
 
 		object_types = {c['_label'] for o in objects.values() for c in o.get('classified_as', [])}
-		self.assertEqual(object_types, {'Painting'})
+		self.assertEqual(object_types, {'Auction Catalog', 'Painting'})
 
 		lo_types = {c['_label'] for o in los.values() for c in o.get('classified_as', [])}
 		self.assertEqual(lo_types, {'Auction Catalog'})

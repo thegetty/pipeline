@@ -37,9 +37,18 @@ import settings
 from cromulent import model, vocab
 from pipeline.projects import PipelineBase
 from pipeline.projects.provenance.util import *
-from pipeline.util import RecursiveExtractKeyedValue, ExtractKeyedValue, ExtractKeyedValues, \
-			MatchingFiles, identity, implode_date, timespan_before, timespan_after, \
-			replace_key_pattern, strip_key_prefix, timespan_from_outer_bounds
+from pipeline.util import \
+			RecursiveExtractKeyedValue, \
+			ExtractKeyedValue, \
+			ExtractKeyedValues, \
+			MatchingFiles, \
+			identity, \
+			implode_date, \
+			timespan_before, \
+			timespan_after, \
+			replace_key_pattern, \
+			strip_key_prefix, \
+			timespan_from_outer_bounds
 from cromulent.extract import extract_physical_dimensions, extract_monetary_amount
 from pipeline.util.cleaners import \
 			parse_location, \
@@ -481,7 +490,9 @@ def add_acquisition(data, buyers, sellers, make_la_person=None):
 # 	lot_uid, lot_uri = AddAuctionOfLot.shared_lot_number_ids(cno, lno)
 	# TODO: `annotation` here is from add_physical_catalog_objects
 # 	paym.referred_to_by = annotation
-	add_crom_data(data=data, what=acq)
+
+	data['_acquisition'] = {}
+	add_crom_data(data=data['_acquisition'], what=acq)
 
 	final_owner_data = data.get('_final_org')
 	if final_owner_data:
@@ -558,6 +569,7 @@ def add_bidding(data, buyers):
 	if amnts:
 		lot = get_crom_object(parent)
 		all_bids = model.Activity(label=f'Bidding on {cno} {lno} ({date})')
+		
 		all_bids.part_of = lot
 
 		for amnt in amnts:
@@ -590,7 +602,8 @@ def add_bidding(data, buyers):
 				data['_procurements'] = []
 			data['_procurements'].append(add_crom_data(data={}, what=tx))
 
-		add_crom_data(data=data, what=all_bids)
+		data['_bidding'] = {}
+		add_crom_data(data=data['_bidding'], what=all_bids)
 		yield data
 	else:
 		pass
@@ -1163,20 +1176,29 @@ class ProvenancePipeline(PipelineBase):
 
 	def add_acquisitions_chain(self, graph, sales, serialize=True):
 		'''Add modeling of the acquisitions and bidding on lots being auctioned.'''
-		acqs = graph.add_chain(
+		bid_acqs = graph.add_chain(
 			add_acquisition_or_bidding,
 			_input=sales.output
 		)
 		orgs = graph.add_chain(
 			ExtractKeyedValue(key='_final_org'),
-			_input=acqs.output
+			_input=bid_acqs.output
 		)
-		
+		acqs = graph.add_chain(
+			ExtractKeyedValue(key='_acquisition'),
+			_input=bid_acqs.output
+		)
+		bids = graph.add_chain(
+			ExtractKeyedValue(key='_bidding'),
+			_input=bid_acqs.output
+		)
+
 		if serialize:
 			# write SALES data
-			self.add_serialization_chain(graph, acqs.output, model=self.models['Activity'])
+			self.add_serialization_chain(graph, acqs.output, model=self.models['Acquisition'])
+			self.add_serialization_chain(graph, bids.output, model=self.models['Activity'])
 			self.add_serialization_chain(graph, orgs.output, model=self.models['Group'])
-		return acqs
+		return bid_acqs
 
 	def add_sales_chain(self, graph, records, serialize=True):
 		'''Add transformation of sales records to the bonobo pipeline.'''

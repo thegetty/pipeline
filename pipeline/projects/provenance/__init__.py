@@ -141,10 +141,18 @@ def populate_auction_event(data, auction_locations):
 		auction.took_place_at = place
 		auction_locations[cno] = place
 
+	begin = implode_date(data, 'sale_begin_', clamp='begin')
+	end = implode_date(data, 'sale_end_', clamp='end')
 	ts = timespan_from_outer_bounds(
-		begin=implode_date(data, 'sale_begin_', clamp='begin'),
-		end=implode_date(data, 'sale_end_', clamp='end'),
+		begin=begin,
+		end=end,
 	)
+	if begin and end:
+		ts.identified_by = model.Name(content=f'{begin} – {end}')
+	elif begin:
+		ts.identified_by = model.Name(content=begin)
+	elif end:
+		ts.identified_by = model.Name(content=end)
 
 	for p in data.get('portal', []):
 		url = p['portal_url']
@@ -673,6 +681,7 @@ def populate_destruction_events(data, note, destruction_types_map):
 		if year is not None:
 			begin, end = date_cleaner(year)
 			ts = timespan_from_outer_bounds(begin, end)
+			ts.identified_by = model.Name(content=year)
 			d.timespan = ts
 		hmo.destroyed_by = d
 

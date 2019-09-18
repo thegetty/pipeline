@@ -1131,7 +1131,7 @@ class ProvenancePipeline(PipelineBase):
 		)
 		if serialize:
 			# write SALES data
-			self.add_serialization_chain(graph, auction_events.output, model=self.models['Event'])
+			self.add_serialization_chain(graph, auction_events.output, model=self.models['Event'], use_memory_writer=False)
 		return auction_events
 
 	def add_procurement_chain(self, graph, acquisitions, serialize=True):
@@ -1142,7 +1142,7 @@ class ProvenancePipeline(PipelineBase):
 		)
 		if serialize:
 			# write SALES data
-			self.add_serialization_chain(graph, p.output, model=self.models['Procurement'])
+			self.add_serialization_chain(graph, p.output, model=self.models['Procurement'], use_memory_writer=False)
 	
 	def add_buyers_sellers_chain(self, graph, acquisitions, serialize=True):
 		'''Add modeling of the buyers, bidders, and sellers involved in an auction.'''
@@ -1428,7 +1428,7 @@ class ProvenancePipeline(PipelineBase):
 		)
 		if serialize:
 			# write VISUAL ITEMS data
-			self.add_serialization_chain(graph, events.output, model=self.models['Production'])
+			self.add_serialization_chain(graph, events.output, model=self.models['Production'], use_memory_writer=False)
 		return events
 
 	def add_visual_item_chain(self, graph, objects, serialize=True):
@@ -1440,7 +1440,7 @@ class ProvenancePipeline(PipelineBase):
 		)
 		if serialize:
 			# write VISUAL ITEMS data
-			self.add_serialization_chain(graph, items.output, model=self.models['VisualItem'])
+			self.add_serialization_chain(graph, items.output, model=self.models['VisualItem'], use_memory_writer=False)
 		return items
 
 	def add_people_chain(self, graph, objects, serialize=True):
@@ -1562,15 +1562,19 @@ class ProvenanceFilePipeline(ProvenancePipeline):
 		debug = kwargs.get('debug', False)
 		self.output_path = kwargs.get('output_path')
 
-	def serializer_nodes_for_model(self, model=None):
+	def serializer_nodes_for_model(self, *args, model=None, use_memory_writer=True, **kwargs):
 		nodes = []
 		if self.debug:
-# 			w = MergingFileWriter(directory=self.output_path, partition_directories=True, compact=False, model=model)
-			w = MergingMemoryWriter(directory=self.output_path, partition_directories=True, compact=False, model=model)
+			if use_memory_writer:
+				w = MergingMemoryWriter(directory=self.output_path, partition_directories=True, compact=False, model=model)
+			else:
+				w = MergingFileWriter(directory=self.output_path, partition_directories=True, compact=False, model=model)
 			nodes.append(w)
 		else:
-# 			w = MergingFileWriter(directory=self.output_path, partition_directories=True, compact=True, model=model)
-			w = MergingMemoryWriter(directory=self.output_path, partition_directories=True, compact=True, model=model)
+			if use_memory_writer:
+				w = MergingMemoryWriter(directory=self.output_path, partition_directories=True, compact=True, model=model)
+			else:
+				w = MergingFileWriter(directory=self.output_path, partition_directories=True, compact=True, model=model)
 			nodes.append(w)
 		self.writers += nodes
 		return nodes

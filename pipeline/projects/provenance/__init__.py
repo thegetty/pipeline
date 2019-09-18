@@ -269,9 +269,12 @@ class AddAuctionOfLot(Configurable):
 	def set_lot_date(lot, auction_data):
 		'''Associate a timespan with the auction lot.'''
 		date = implode_date(auction_data, 'lot_sale_')
-		dates = date_parse(date, delim='-')
-		if dates:
-			bounds = map(lambda v: v.strftime("%Y-%m-%dT%H:%M:%SZ"), dates)
+# 		dates = date_parse(date, delim='-')
+# 		if dates:
+		if date:
+			begin = implode_date(auction_data, 'lot_sale_', clamp='begin')
+			end = implode_date(auction_data, 'lot_sale_', clamp='end')
+			bounds = [begin, end]
 		else:
 			bounds = []
 		if bounds:

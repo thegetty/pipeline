@@ -57,5 +57,5 @@ for filename in files:
 			else:
 				seen[id] = filename
 		except model.DataError as e:
-			print(f'*** Failed to read CRM data: {e}')
+			print(f'*** Failed to read CRM data from {filename}: {e}')
 print(f'Coalesced {coalesce_count} JSON files in {path}')

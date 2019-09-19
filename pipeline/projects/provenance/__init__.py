@@ -828,7 +828,7 @@ def _populate_object_notes(data, parent, unique_catalogs):
 		note = vocab.Note(content=c)
 		hmo.referred_to_by = note
 		if catalogs and len(catalogs) == 1:
-			note.carried_by = model.HumanMadeObject(ident=catalog_uri, label=f'Sale Catalog {cno}, owned by “{owner}”')
+			note.carried_by = vocab.AuctionCatalog(ident=catalog_uri, label=f'Sale Catalog {cno}, owned by “{owner}”')
 
 	inscription = data.get('inscription')
 	if inscription:

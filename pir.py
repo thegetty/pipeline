@@ -5,6 +5,7 @@ import sys
 import csv
 import bonobo
 from cromulent import model, vocab
+from cromulent.model import factory
 
 from pipeline.projects.provenance import ProvenanceFilePipeline, ProvenancePipeline
 from settings import project_data_path, output_file_path, arches_models, DEBUG
@@ -12,7 +13,7 @@ from settings import project_data_path, output_file_path, arches_models, DEBUG
 ### Pipeline
 
 if __name__ == '__main__':
-	model.cache_hierarchy()
+	factory.cache_hierarchy()
 	if DEBUG:
 		LIMIT		= int(os.environ.get('GETTY_PIPELINE_LIMIT', 10))
 	else:
@@ -31,6 +32,7 @@ if __name__ == '__main__':
 		'files_pattern': 'sales_descriptions.csv',
 	}
 
+#	factory.production_mode()
 	vocab.add_linked_art_boundary_check()
 
 	print_dot = False

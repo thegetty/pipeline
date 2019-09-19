@@ -453,9 +453,10 @@ def make_la_place(data: dict):
 	p = model.Place(**placeargs)
 	if type:
 		p.classified_as = type
-	if not name:
-		warnings.warn(f'Setting empty name on {p.id}')
-	p.identified_by = model.Name(ident='', content=name)
+	if name:
+		p.identified_by = model.Name(ident='', content=name)
+# 	else:
+# 		warnings.warn(f'Setting empty name on {p.id}')
 	if parent:
 		p.part_of = parent
 	return add_crom_data(data=data, what=p)

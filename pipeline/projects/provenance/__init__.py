@@ -876,8 +876,11 @@ def add_object_type(data, vocab_type_map):
 def add_pir_artists(data, *, make_la_person):
 	'''Add modeling for artists as people involved in the production of an object'''
 	hmo = get_crom_object(data)
-	hmo_label = hmo._label
-	event = model.Production(ident=f'{data["uri"]}-Production', label=f'Production event for “{hmo_label}”')
+	try:
+		hmo_label = f'“{hmo._label}”'
+	except AttributeError:
+		hmo_label = 'object'
+	event = model.Production(ident=f'{data["uri"]}-Production', label=f'Production event for {hmo_label}')
 	hmo.produced_by = event
 	data['_production_event'] = add_crom_data({}, event)
 

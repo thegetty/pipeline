@@ -28,6 +28,7 @@ seen = {}
 
 read = reader.Reader()
 coalesce_count = 0
+print(f'Coalescing JSON files in {path} ...')
 for filename in files:
 	with open(filename, 'r') as fh:
 		content = fh.read()

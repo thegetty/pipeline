@@ -573,11 +573,11 @@ def add_bidding(data, buyers):
 	'''Add modeling of bids that did not lead to an acquisition'''
 	parent = data['parent_data']
 	prices = parent['price']
-	auction_data = parent['auction_of_lot']
-	cno, lno, date = object_key(auction_data)
 	amnts = [get_crom_object(p) for p in prices]
 
 	if amnts:
+		auction_data = parent['auction_of_lot']
+		cno, lno, date = object_key(auction_data)
 		lot = get_crom_object(parent)
 		all_bids = model.Activity(label=f'Bidding on {cno} {lno} ({date})')
 		
@@ -625,14 +625,13 @@ def add_acquisition_or_bidding(data, *, make_la_person):
 	'''Determine if this record has an acquisition or bidding, and add appropriate modeling'''
 	parent = data['parent_data']
 	transaction = parent['transaction']
-	transaction = transaction.replace('[?]', '')
-	transaction = transaction.rstrip()
+	transaction = transaction.replace('[?]', '').rstrip()
 
 	buyers = [add_person(p, make_la_person=make_la_person) for p in parent['buyer']]
-	sellers = [add_person(p, make_la_person=make_la_person) for p in parent['seller']]
 
 	# TODO: is this the right set of transaction types to represent acquisition?
 	if transaction in ('Sold', 'Vendu', 'Verkauft', 'Bought In'):
+		sellers = [add_person(p, make_la_person=make_la_person) for p in parent['seller']]
 		yield from add_acquisition(data, buyers, sellers, make_la_person)
 	elif transaction in ('Unknown', 'Unbekannt', 'Inconnue', 'Withdrawn', 'Non Vendu', ''):
 		yield from add_bidding(data, buyers)

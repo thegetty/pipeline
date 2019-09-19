@@ -51,7 +51,7 @@ nt:
 nq:
 	curl -s 'https://linked.art/ns/v1/linked-art.json' > $(GETTY_PIPELINE_TMP_PATH)/linked-art.json
 	echo 'Transcoding JSON-LD to N-Quads...'
-	find $(GETTY_PIPELINE_OUTPUT) -name '*.json' | xargs -n 128 -P 10 $(PYTHON) ./scripts/json2nq.py $(GETTY_PIPELINE_TMP_PATH)/linked-art.json
+	find $(GETTY_PIPELINE_OUTPUT) -name '*.json' | xargs -n 256 -P 16 $(PYTHON) ./scripts/json2nq.py $(GETTY_PIPELINE_TMP_PATH)/linked-art.json
 
 pir:
 	mkdir -p $(GETTY_PIPELINE_TMP_PATH)/pipeline

@@ -81,7 +81,7 @@ class MakeLinkedArtRecord:
 						if not content:
 							warnings.warn(f'Setting empty identifier on {thing.id}')
 					else:
-						ident = model.Identifier()
+						ident = model.Identifier(ident='')
 						if not content:
 							warnings.warn(f'Setting empty identifier on {thing.id}')
 						ident.content = content
@@ -139,7 +139,7 @@ def set_la_name(thing, value, title_type=None, set_label=False):
 		language = None
 	if set_label:
 		thing._label = label
-	name = model.Name()
+	name = model.Name(ident='')
 	if title_type is not None:
 		name.classified_as = title_type
 	if not label:

@@ -148,11 +148,11 @@ def populate_auction_event(data, auction_locations):
 		end=end,
 	)
 	if begin and end:
-		ts.identified_by = model.Name(content=f'{begin} – {end}')
+		ts.identified_by = model.Name(ident='', content=f'{begin} – {end}')
 	elif begin:
-		ts.identified_by = model.Name(content=begin)
+		ts.identified_by = model.Name(ident='', content=begin)
 	elif end:
-		ts.identified_by = model.Name(content=end)
+		ts.identified_by = model.Name(ident='', content=end)
 
 	for p in data.get('portal', []):
 		url = p['portal_url']
@@ -175,13 +175,13 @@ def add_auction_house_data(a):
 		key = f'AUCTION-HOUSE-ULAN-{ulan}'
 		a['uid'] = key
 		a['uri'] = pir_uri('AUCTION-HOUSE', 'ULAN', ulan)
-		a['identifiers'] = [model.Identifier(content=str(ulan))]
+		a['identifiers'] = [model.Identifier(ident='', content=str(ulan))]
 		a['ulan'] = ulan
 		house = vocab.AuctionHouseOrg(ident=a['uri'])
 	else:
 		# not enough information to identify this house uniquely, so they get a UUID
 		a['uuid'] = str(uuid.uuid4())
-		uri = "urn:uuid:%s" % a['uuid']
+		uri = "urn:uuid:%s" % a['uuid'] # TODO: tie this to the source data so that it is repeatable
 		house = vocab.AuctionHouseOrg(ident=uri)
 
 	name = a.get('auc_house_name', a.get('name'))
@@ -314,10 +314,11 @@ class AddAuctionOfLot(Configurable):
 		auction, _, _ = auction_event_for_catalog_number(cno)
 		notes = auction_data.get('lot_notes')
 		if notes:
-			lot.referred_to_by = vocab.Note(content=notes)
+			note_id = lot.id + '-LotNotes'
+			lot.referred_to_by = vocab.Note(ident=note_id, content=notes)
 		if not lno:
 			warnings.warn(f'Setting empty identifier on {lot.id}')
-		lot.identified_by = model.Identifier(content=str(lno))
+		lot.identified_by = model.Identifier(ident='', content=str(lno))
 		lot.part_of = auction
 
 	def set_lot_objects(self, lot, lno, data):
@@ -430,7 +431,7 @@ def add_person(data: dict, *, make_la_person):
 		key = f'PERSON-ULAN-{ulan}'
 		data['uid'] = key
 		data['uri'] = pir_uri('PERSON', 'ULAN', ulan)
-		data['identifiers'] = [model.Identifier(content=str(ulan))]
+		data['identifiers'] = [model.Identifier(ident='', content=str(ulan))]
 		data['ulan'] = ulan
 	else:
 		# not enough information to identify this person uniquely, so they get a UUID
@@ -579,19 +580,23 @@ def add_bidding(data, buyers):
 		auction_data = parent['auction_of_lot']
 		cno, lno, date = object_key(auction_data)
 		lot = get_crom_object(parent)
-		all_bids = model.Activity(label=f'Bidding on {cno} {lno} ({date})')
+		hmo = get_crom_object(data)
+		bidding_id = hmo.id + '-Bidding'
+		all_bids = model.Activity(ident=bidding_id, label=f'Bidding on {cno} {lno} ({date})')
 		
 		all_bids.part_of = lot
 
-		for amnt in amnts:
-			bid = vocab.Bidding()
+		for seq_no, amnt in enumerate(amnts):
+			bid_id = hmo.id + f'-Bid-{seq_no}'
+			bid = vocab.Bidding(ident=bid_id)
+			prop_id = hmo.id + f'-Bid-{seq_no}-Promise'
 			try:
 				amnt_label = amnt._label
 				bid._label = f'Bid of {amnt_label} on {cno} {lno} ({date})'
-				prop = model.PropositionalObject(label=f'Promise to pay {amnt_label}')
+				prop = model.PropositionalObject(ident=prop_id, label=f'Promise to pay {amnt_label}')
 			except AttributeError:
 				bid._label = f'Bid on {cno} {lno} ({date})'
-				prop = model.PropositionalObject(label=f'Promise to pay')
+				prop = model.PropositionalObject(ident=prop_id, label=f'Promise to pay')
 
 			prop.refers_to = amnt
 			bid.created = prop
@@ -675,12 +680,13 @@ def populate_destruction_events(data, note, destruction_types_map):
 	if m:
 		method = m.group(1)
 		year = m.group(2)
-		d = model.Destruction(label=f'Destruction of “{title}”')
+		dest_id = hmo.id + '-Destruction'
+		d = model.Destruction(ident=dest_id, label=f'Destruction of “{title}”')
 		d.referred_to_by = vocab.Note(content=note)
 		if year is not None:
 			begin, end = date_cleaner(year)
 			ts = timespan_from_outer_bounds(begin, end)
-			ts.identified_by = model.Name(content=year)
+			ts.identified_by = model.Name(ident='', content=year)
 			d.timespan = ts
 		hmo.destroyed_by = d
 
@@ -707,7 +713,7 @@ def populate_object(data, post_sale_map, unique_catalogs, vocab_instance_map, de
 			data['identifiers'] = []
 		if not lno:
 			warnings.warn(f'Setting empty identifier on {hmo.id}')
-		data['identifiers'].append(model.Identifier(content=str(lno)))
+		data['identifiers'].append(model.Identifier(ident='', content=str(lno)))
 	else:
 		print(f'***** NO AUCTION DATA FOUND IN populate_object')
 
@@ -740,7 +746,8 @@ def _populate_object_visual_item(data, vocab_instance_map):
 	title = data.get('title')
 	vidata = {}
 	
-	vi = model.VisualItem()
+	vi_id = hmo.id + '-VisualItem'
+	vi = model.VisualItem(ident=vi_id)
 	if title:
 		vidata['label'] = f'Visual work of “{title}”'
 		vidata['names'] = [(title,)]
@@ -754,13 +761,13 @@ def _populate_object_statements(data):
 	hmo = get_crom_object(data)
 	m = data.get('materials')
 	if m:
-		matstmt = vocab.MaterialStatement()
+		matstmt = vocab.MaterialStatement(ident='')
 		matstmt.content = m
 		hmo.referred_to_by = matstmt
 
 	dimstr = data.get('dimensions')
 	if dimstr:
-		dimstmt = vocab.DimensionStatement()
+		dimstmt = vocab.DimensionStatement(ident='')
 		dimstmt.content = dimstr
 		hmo.referred_to_by = dimstmt
 		for dim in extract_physical_dimensions(dimstr):
@@ -824,14 +831,14 @@ def _populate_object_notes(data, parent, unique_catalogs):
 		cno = parent['auction_of_lot']['catalog_number']
 		catalog_uri = pir_uri('CATALOG', cno, owner, None)
 		catalogs = unique_catalogs.get(catalog_uri)
-		note = vocab.Note(content=c)
+		note = vocab.Note(ident='', content=c)
 		hmo.referred_to_by = note
 		if catalogs and len(catalogs) == 1:
 			note.carried_by = vocab.AuctionCatalog(ident=catalog_uri, label=f'Sale Catalog {cno}, owned by “{owner}”')
 
 	inscription = data.get('inscription')
 	if inscription:
-		hmo.carries = vocab.Note(content=inscription)
+		hmo.carries = vocab.Note(ident='', content=inscription)
 
 def _populate_object_prev_post_sales(data, now_key, post_sale_map):
 	post_sales = data.get('post_sale', [])
@@ -879,15 +886,18 @@ def add_pir_artists(data, *, make_la_person):
 		hmo_label = f'“{hmo._label}”'
 	except AttributeError:
 		hmo_label = 'object'
-	event = model.Production(ident=f'{data["uri"]}-Production', label=f'Production event for {hmo_label}')
+	event_id = f'{data["uri"]}-Production'
+	event = model.Production(ident=event_id, label=f'Production event for {hmo_label}')
 	hmo.produced_by = event
 	data['_production_event'] = add_crom_data({}, event)
 
 	artists = data.get('_artists', [])
 
 	data['_artists'] = artists
-	for a in artists:
-		star_rec_no = a.get('star_rec_no')
+	for seq_no, a in enumerate(artists):
+		star_rec_no = None
+		with suppress(ValueError, TypeError):
+			star_rec_no = int(a.get('star_rec_no'))
 		ulan = None
 		with suppress(ValueError, TypeError):
 			ulan = int(a.get('artist_ulan'))
@@ -913,7 +923,8 @@ def add_pir_artists(data, *, make_la_person):
 
 		make_la_person(a)
 		person = get_crom_object(a)
-		subevent = model.Production()
+		subevent_id = event_id + f'-{seq_no}'
+		subevent = model.Production(ident=subevent_id)
 		event.part = subevent
 		names = a.get('names')
 		if names:
@@ -950,7 +961,7 @@ def add_physical_catalog_objects(data):
 	catalogObject = vocab.AuctionCatalog(ident=uri, label=', '.join(labels))
 	info = data.get('annotation_info')
 	if info:
-		catalogObject.referred_to_by = vocab.Note(content=info)
+		catalogObject.referred_to_by = vocab.Note(ident='', content=info)
 	catalogObject.carries = catalog
 
 	# TODO: Rob's build-sample-auction-data.py script adds this annotation. where does it come from?
@@ -972,15 +983,17 @@ def add_physical_catalog_owners(data, location_codes, unique_catalogs):
 	owner_name = None
 	try:
 		owner_name = location_codes[owner_code]
+		owner_uri = pir_uri('ORGANIZATION', 'LOCATION-CODE', owner_code)
 		data['_owner'] = {
 			'label': owner_name,
-			'uri': pir_uri('ORGANIZATION', 'LOCATION-CODE', owner_code),
+			'uri': owner_uri,
 			'identifiers': [
 				model.Name(ident='', content=owner_name),
 				model.Identifier(ident='', content=str(owner_code))
 			],
 		}
-		owner = model.Group(ident=data['_owner']['uri'])
+		owner = model.Group(ident=owner_uri)
+		add_crom_data(data['_owner'], owner)
 		if not owner_code:
 			warnings.warn(f'Setting empty identifier on {owner.id}')
 		owner_data = add_crom_data(data=data['_owner'], what=owner)
@@ -1008,16 +1021,16 @@ def populate_auction_catalog(data):
 	for lno in parent.get('lugt', {}).values():
 		if not lno:
 			warnings.warn(f'Setting empty identifier on {catalog.id}')
-		catalog.identified_by = model.Identifier(label=f"Lugt Number: {lno}", content=str(lno))
+		catalog.identified_by = model.Identifier(ident='', label=f"Lugt Number: {lno}", content=str(lno))
 	if not cno:
 		warnings.warn(f'Setting empty identifier on {catalog.id}')
-	catalog.identified_by = model.Identifier(content=str(cno))
+	catalog.identified_by = model.Identifier(ident='', content=str(cno))
 	if not sno:
 		warnings.warn(f'Setting empty identifier on {catalog.id}')
-	catalog.identified_by = vocab.LocalNumber(content=sno)
+	catalog.identified_by = vocab.LocalNumber(ident='', content=sno)
 	notes = data.get('notes')
 	if notes:
-		note = vocab.Note(content=parent['notes'])
+		note = vocab.Note(ident='', content=parent['notes'])
 		catalog.referred_to_by = note
 	return d
 

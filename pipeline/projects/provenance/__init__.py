@@ -82,7 +82,7 @@ PROBLEMATIC_RECORD_URI = 'tag:getty.edu,2019:digital:pipeline:provenance:Problem
 CSV_SOURCE_COLUMNS = ['pi_record_no', 'catalog_number']
 
 IGNORE_PERSON_AUTHNAMES = CaseFoldingSet(('NEW', 'NON-UNIQUE'))
-IGNORE_HOUSE_AUTHNAMES = CaseFoldingSet(('Anonymous'))
+IGNORE_HOUSE_AUTHNAMES = CaseFoldingSet(('Anonymous',))
 
 #mark - utility functions and classes
 

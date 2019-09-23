@@ -1064,13 +1064,13 @@ class ProvenancePipeline(PipelineBase):
 		fs = bonobo.open_fs(input_path)
 		with fs.open(self.catalogs_header_file, newline='') as csvfile:
 			r = csv.reader(csvfile)
-			self.catalogs_headers = next(r)
+			self.catalogs_headers = [v.lower() for v in next(r)]
 		with fs.open(self.auction_events_header_file, newline='') as csvfile:
 			r = csv.reader(csvfile)
-			self.auction_events_headers = next(r)
+			self.auction_events_headers = [v.lower() for v in next(r)]
 		with fs.open(self.contents_header_file, newline='') as csvfile:
 			r = csv.reader(csvfile)
-			self.contents_headers = next(r)
+			self.contents_headers = [v.lower() for v in next(r)]
 
 	# Set up environment
 	def get_services(self):

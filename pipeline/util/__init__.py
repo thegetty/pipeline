@@ -380,3 +380,21 @@ def timespan_from_outer_bounds(begin=None, end=None):
 				warnings.warn(f'*** failed to parse end date: {end}')
 		return ts
 	return None
+
+class CaseFoldingSet(set):
+	def __init__(self, iterable):
+		for v in iterable:
+			if isinstance(v, str):
+				self.add(v.casefold())
+			else:
+				self.add(v)
+
+	def add(self, v):
+		super().add(v.casefold())
+
+	def remove(self, v):
+		super().remove(v.casefold())
+
+	def __contains__(self, v):
+		return super().__contains__(v.casefold())
+

@@ -88,10 +88,8 @@ IGNORE_HOUSE_AUTHNAMES = CaseFoldingSet(('Anonymous'))
 
 def copy_source_information(dst: dict, src: dict):
 	for k in CSV_SOURCE_COLUMNS:
-		try:
+		with suppress(KeyError):
 			dst[k] = src[k]
-		except KeyError:
-			continue
 	return dst
 
 def auction_event_for_catalog_number(catalog_number):
@@ -1017,7 +1015,7 @@ def add_physical_catalog_owners(data, location_codes, unique_catalogs):
 	cno = data['catalog_number']
 	owner_code = data['owner_code']
 	owner_name = None
-	try:
+	with suppress(KeyError):
 		owner_name = location_codes[owner_code]
 		owner_uri = pir_uri('ORGANIZATION', 'LOCATION-CODE', owner_code)
 		data['_owner'] = {
@@ -1035,8 +1033,6 @@ def add_physical_catalog_owners(data, location_codes, unique_catalogs):
 		owner_data = add_crom_data(data=data['_owner'], what=owner)
 		catalog = get_crom_object(data)
 		catalog.current_owner = owner
-	except KeyError:
-		pass
 
 	uri = pir_uri('CATALOG', cno, owner_code, None)
 	if uri not in unique_catalogs:

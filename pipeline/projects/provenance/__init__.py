@@ -38,6 +38,7 @@ from cromulent import model, vocab
 from pipeline.projects import PipelineBase
 from pipeline.projects.provenance.util import *
 from pipeline.util import \
+			CaseFoldingSet, \
 			RecursiveExtractKeyedValue, \
 			ExtractKeyedValue, \
 			ExtractKeyedValues, \
@@ -78,8 +79,20 @@ from pipeline.nodes.basic import \
 from pipeline.util.rewriting import rewrite_output_files, JSONValueRewriter
 
 PROBLEMATIC_RECORD_URI = 'tag:getty.edu,2019:digital:pipeline:provenance:ProblematicRecord'
+CSV_SOURCE_COLUMNS = ['pi_record_no', 'catalog_number']
+
+IGNORE_PERSON_AUTHNAMES = CaseFoldingSet(('NEW', 'NON-UNIQUE'))
+IGNORE_HOUSE_AUTHNAMES = CaseFoldingSet(('Anonymous'))
 
 #mark - utility functions and classes
+
+def copy_source_information(dst: dict, src: dict):
+	for k in CSV_SOURCE_COLUMNS:
+		try:
+			dst[k] = src[k]
+		except KeyError:
+			continue
+	return dst
 
 def auction_event_for_catalog_number(catalog_number):
 	'''
@@ -170,22 +183,29 @@ def add_auction_house_data(a):
 
 	ulan = None
 	with suppress(ValueError, TypeError):
-		ulan = int(a.get('ulan'))
+		ulan = int(a.get('auc_house_ulan'))
+	auth_name = a.get('auc_house_auth')
+	a['identifiers'] = []
 	if ulan:
 		key = f'AUCTION-HOUSE-ULAN-{ulan}'
 		a['uid'] = key
 		a['uri'] = pir_uri('AUCTION-HOUSE', 'ULAN', ulan)
-		a['identifiers'] = [model.Identifier(ident='', content=str(ulan))]
+		a['identifiers'].append(model.Identifier(ident='', content=str(ulan)))
 		a['ulan'] = ulan
 		house = vocab.AuctionHouseOrg(ident=a['uri'])
+	elif auth_name and auth_name not in IGNORE_HOUSE_AUTHNAMES:
+		a['uri'] = pir_uri('AUCTION-HOUSE', 'AUTHNAME', auth_name)
+		a['identifiers'].append(
+			vocab.PrimaryName(ident='', content=auth_name)
+		)
+		house = vocab.AuctionHouseOrg(ident=a['uri'])
 	else:
-		# not enough information to identify this house uniquely, so they get a UUID
-		a['uuid'] = str(uuid.uuid4())
-		uri = "urn:uuid:%s" % a['uuid'] # TODO: tie this to the source data so that it is repeatable
-		house = vocab.AuctionHouseOrg(ident=uri)
+		# TODO: should auc_house_auth be used here?
+		# not enough information to identify this house uniquely, so use the source location in the input file
+		a['uri'] = pir_uri('AUCTION-HOUSE', 'FILESOURCE', 'CATALOG-NUMBER', a['catalog_number'])
+		house = vocab.AuctionHouseOrg(ident=a['uri'])
 
 	name = a.get('auc_house_name', a.get('name'))
-	a['identifiers'] = []
 	if name:
 		n = model.Name(content=name)
 		n.referred_to_by = catalog
@@ -219,7 +239,7 @@ def add_auction_houses(data, auction_houses):
 
 	for h in houses:
 		h['_catalog'] = catalog
-		add_auction_house_data(h)
+		add_auction_house_data(copy_source_information(h, data))
 		house = get_crom_object(h)
 		auction.carried_out_by = house
 		if auction_houses:
@@ -344,6 +364,8 @@ class AddAuctionOfLot(Configurable):
 			# filter these out from subsequent modeling of auction lots.
 			return
 		
+		copy_source_information(data['_object'], data)
+		
 		auction_data = data['auction_of_lot']
 		lot_object_key = object_key(auction_data)
 		cno, lno, date = lot_object_key
@@ -417,7 +439,7 @@ def add_crom_price(data, _):
 	return data
 
 @use('make_la_person')
-def add_person(data: dict, *, make_la_person):
+def add_person(data: dict, rec_id, *, make_la_person):
 	'''
 	Add modeling data for people, based on properties of the supplied `data` dict.
 
@@ -427,15 +449,23 @@ def add_person(data: dict, *, make_la_person):
 	ulan = None
 	with suppress(ValueError, TypeError):
 		ulan = int(data.get('ulan'))
+
+	auth_name = data.get('auth_name')
+	auth_name_q = '?' in data.get('auth_nameq', '')
 	if ulan:
 		key = f'PERSON-ULAN-{ulan}'
 		data['uid'] = key
 		data['uri'] = pir_uri('PERSON', 'ULAN', ulan)
 		data['identifiers'] = [model.Identifier(ident='', content=str(ulan))]
 		data['ulan'] = ulan
+	elif auth_name and auth_name not in IGNORE_PERSON_AUTHNAMES and not(auth_name_q):
+		data['uri'] = pir_uri('PERSON', 'AUTHNAME', auth_name)
+		data['identifiers'] = [
+			vocab.PrimaryName(ident='', content=auth_name) # NOTE: most of these are also vocab.SortName, but not 100%, so witholding that assertion for now
+		]
 	else:
-		# not enough information to identify this person uniquely, so they get a UUID
-		data['uuid'] = str(uuid.uuid4())
+		# not enough information to identify this person uniquely, so use the source location in the input file
+		data['uri'] = pir_uri('PERSON', 'FILESOURCE', data['pi_record_no'], rec_id)
 
 	names = []
 	for name_string in set([data[k] for k in ('auth_name', 'name') if k in data and data[k]]):
@@ -517,12 +547,13 @@ def add_acquisition(data, buyers, sellers, make_la_person=None):
 	prev_post_owner_records = [(post_own, False), (prev_own, True)]
 	make_la_person = MakeLinkedArtPerson()
 	for owner_data, rev in prev_post_owner_records:
-		for owner_record in owner_data:
+		rev_name = 'prev-owner' if rev else 'post-owner'
+		for rec_no, owner_record in enumerate(owner_data):
 			name = owner_record.get('own_auth', owner_record.get('own'))
 			owner_record['names'] = [(name,)]
 			owner_record['label'] = name
-			owner_record['uuid'] = str(uuid.uuid4())
-			# TODO: handle other fields of owner_record: own_auth_D, own_auth_L, own_auth_Q, own_ques, own_so, own_ulan
+			owner_record['uri'] = pir_uri('PERSON', 'FILESOURCE', data['pi_record_no'], f'{rev_name}-{rec_no+1}')
+			# TODO: handle other fields of owner_record: own_auth_d, own_auth_l, own_auth_q, own_ques, own_so, own_ulan
 			make_la_person(owner_record)
 			owner = get_crom_object(owner_record)
 			own_info_source = owner_record.get('own_so')
@@ -632,11 +663,11 @@ def add_acquisition_or_bidding(data, *, make_la_person):
 	transaction = parent['transaction']
 	transaction = transaction.replace('[?]', '').rstrip()
 
-	buyers = [add_person(p, make_la_person=make_la_person) for p in parent['buyer']]
+	buyers = [add_person(copy_source_information(p, parent), f'buyer_{i+1}', make_la_person=make_la_person) for i, p in enumerate(parent['buyer'])]
 
 	# TODO: is this the right set of transaction types to represent acquisition?
 	if transaction in ('Sold', 'Vendu', 'Verkauft', 'Bought In'):
-		sellers = [add_person(p, make_la_person=make_la_person) for p in parent['seller']]
+		sellers = [add_person(copy_source_information(p, parent), f'seller_{i+1}', make_la_person=make_la_person) for i, p in enumerate(parent['seller'])]
 		yield from add_acquisition(data, buyers, sellers, make_la_person)
 	elif transaction in ('Unknown', 'Unbekannt', 'Inconnue', 'Withdrawn', 'Non Vendu', ''):
 		yield from add_bidding(data, buyers)
@@ -857,8 +888,6 @@ def _populate_object_prev_post_sales(data, now_key, post_sale_map):
 				post_sale_map[later_key] = now_key
 
 
-
-
 @use('vocab_type_map')
 def add_object_type(data, vocab_type_map):
 	'''Add appropriate type information for an object based on its 'object_type' name'''
@@ -895,31 +924,38 @@ def add_pir_artists(data, *, make_la_person):
 
 	data['_artists'] = artists
 	for seq_no, a in enumerate(artists):
-		star_rec_no = None
-		with suppress(ValueError, TypeError):
-			star_rec_no = int(a.get('star_rec_no'))
+		# TODO: handle attrib_mod_auth field
+# 		star_rec_no = None
+# 		with suppress(ValueError, TypeError):
+# 			star_rec_no = int(a.get('star_rec_no'))
 		ulan = None
 		with suppress(ValueError, TypeError):
 			ulan = int(a.get('artist_ulan'))
+		auth_name = a.get('art_authority')
 		if ulan:
 			key = f'PERSON-ULAN-{ulan}'
 			a['uri'] = pir_uri('PERSON', 'ULAN', ulan)
 			a['ulan'] = ulan
 			a['uid'] = key
-		elif star_rec_no:
-			key = f'PERSON-STAR-{star_rec_no}'
-			a['uri'] = pir_uri('PERSON', 'star', star_rec_no)
-			a['uid'] = key
+		elif auth_name and auth_name not in IGNORE_PERSON_AUTHNAMES:
+			a['uri'] = pir_uri('PERSON', 'AUTHNAME', auth_name)
+			a['identifiers'] = [
+				vocab.PrimaryName(ident='', content=auth_name) # NOTE: most of these are also vocab.SortName, but not 100%, so witholding that assertion for now
+			]
 		else:
-			# TODO: should this be a UUID, or something else? (pi_record_no, persistent_puid, etc.)
+			# not enough information to identify this person uniquely, so use the source location in the input file
 # 			warnings.warn(f'*** Person without a ulan or star number: {a}')
-			a['uuid'] = str(uuid.uuid4())
+			a['uri'] = pir_uri('PERSON', 'FILESOURCE', data['pi_record_no'], f'artist-{seq_no+1}')
+
+		names = []
 		try:
 			name = a['artist_name']
-			a['names'] = [(name,)]
+			names += [(name,)]
 			a['label'] = name
 		except KeyError:
 			a['label'] = '(Anonymous artist)'
+
+		a['names'] = names
 
 		make_la_person(a)
 		person = get_crom_object(a)
@@ -1101,7 +1137,6 @@ class ProvenancePipeline(PipelineBase):
 	def add_physical_catalogs_chain(self, graph, records, serialize=True):
 		'''Add modeling of physical copies of auction catalogs.'''
 		catalogs = graph.add_chain(
-			AddFieldNames(field_names=self.catalogs_headers),
 			add_auction_catalog,
 			add_physical_catalog_objects,
 			add_physical_catalog_owners,
@@ -1127,7 +1162,6 @@ class ProvenancePipeline(PipelineBase):
 	def add_auction_events_chain(self, graph, records, serialize=True):
 		'''Add modeling of auction events.'''
 		auction_events = graph.add_chain(
-			AddFieldNames(field_names=self.auction_events_headers),
 			GroupRepeatingKeys(
 				drop_empty=True,
 				mapping={
@@ -1230,7 +1264,6 @@ class ProvenancePipeline(PipelineBase):
 	def add_sales_chain(self, graph, records, serialize=True):
 		'''Add transformation of sales records to the bonobo pipeline.'''
 		sales = graph.add_chain(
-			AddFieldNames(field_names=self.contents_headers),
 			GroupRepeatingKeys(
 				drop_empty=True,
 				mapping={
@@ -1254,7 +1287,7 @@ class ProvenancePipeline(PipelineBase):
 					'hand_note': {'prefixes': ('hand_note', 'hand_note_so')},
 					'seller': {
 						'postprocess': [
-							lambda x, _: strip_key_prefix('buy_', x),
+							lambda x, _: strip_key_prefix('sell_', x),
 							_filter_empty_person
 						],
 						'prefixes': (
@@ -1301,9 +1334,9 @@ class ProvenancePipeline(PipelineBase):
 							'prev_own_ques',
 							'prev_own_so',
 							'prev_own_auth',
-							'prev_own_auth_D',
-							'prev_own_auth_L',
-							'prev_own_auth_Q',
+							'prev_own_auth_d',
+							'prev_own_auth_l',
+							'prev_own_auth_q',
 							'prev_own_ulan')},
 					'prev_sale': {
 						'postprocess': lambda x, _: strip_key_prefix('prev_sale_', x),
@@ -1340,9 +1373,9 @@ class ProvenancePipeline(PipelineBase):
 							'post_own_q',
 							'post_own_so',
 							'post_own_auth',
-							'post_own_auth_D',
-							'post_own_auth_L',
-							'post_own_auth_Q',
+							'post_own_auth_d',
+							'post_own_auth_l',
+							'post_own_auth_q',
 							'post_own_ulan')},
 					'portal': {'prefixes': ('portal_url',)},
 				}
@@ -1524,12 +1557,14 @@ class ProvenancePipeline(PipelineBase):
 		for g in component1:
 			physical_catalog_records = g.add_chain(
 				MatchingFiles(path='/', pattern=self.catalogs_files_pattern, fs='fs.data.provenance'),
-				CurriedCSVReader(fs='fs.data.provenance', limit=self.limit)
+				CurriedCSVReader(fs='fs.data.provenance', limit=self.limit),
+				AddFieldNames(field_names=self.catalogs_headers),
 			)
 
 			auction_events_records = g.add_chain(
 				MatchingFiles(path='/', pattern=self.auction_events_files_pattern, fs='fs.data.provenance'),
 				CurriedCSVReader(fs='fs.data.provenance', limit=self.limit),
+				AddFieldNames(field_names=self.auction_events_headers),
 			)
 
 			catalogs = self.add_physical_catalogs_chain(g, physical_catalog_records, serialize=True)
@@ -1543,6 +1578,7 @@ class ProvenancePipeline(PipelineBase):
 			contents_records = g.add_chain(
 				MatchingFiles(path='/', pattern=self.contents_files_pattern, fs='fs.data.provenance'),
 				CurriedCSVReader(fs='fs.data.provenance', limit=self.limit),
+				AddFieldNames(field_names=self.contents_headers),
 			)
 			sales = self.add_sales_chain(g, contents_records, serialize=True)
 			_ = self.add_single_object_lot_tracking_chain(g, sales)

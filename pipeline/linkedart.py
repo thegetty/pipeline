@@ -289,7 +289,7 @@ def make_ymd_timespan(data: dict, start_prefix="", end_prefix="", label=""):
 	m2 = f'{end_prefix}month'
 	d2 = f'{end_prefix}day'	
 
-	t = model.TimeSpan()
+	t = model.TimeSpan(ident='')
 	if not label:
 		label = ymd_to_label(data[y], data[m], data[d])
 		if y != y2:
@@ -352,7 +352,7 @@ class MakeLinkedArtPerson(MakeLinkedArtRecord):
 
 		if data.get('active_early') or data.get('active_late'):
 			act = vocab.Active()
-			ts = model.TimeSpan()
+			ts = model.TimeSpan(ident='')
 			if data['active_early']:
 				ts.begin_of_the_begin = "%s-01-01:00:00:00Z" % (data['active_early'],)
 				ts.end_of_the_begin = "%s-01-01:00:00:00Z" % (data['active_early']+1,)
@@ -368,7 +368,7 @@ class MakeLinkedArtPerson(MakeLinkedArtRecord):
 
 		if data.get('birth'):
 			b = model.Birth()
-			ts = model.TimeSpan()
+			ts = model.TimeSpan(ident='')
 			if 'birth_clean' in data and data['birth_clean']:
 				if data['birth_clean'][0]:
 					ts.begin_of_the_begin = data['birth_clean'][0].strftime("%Y-%m-%dT%H:%M:%SZ")
@@ -381,7 +381,7 @@ class MakeLinkedArtPerson(MakeLinkedArtRecord):
 
 		if data.get('death'):
 			d = model.Death()
-			ts = model.TimeSpan()
+			ts = model.TimeSpan(ident='')
 			if 'death_clean' in data and data['death_clean']:
 				if data['death_clean'][0]:
 					ts.begin_of_the_begin = data['death_clean'][0].strftime("%Y-%m-%dT%H:%M:%SZ")
@@ -455,8 +455,8 @@ def make_la_place(data: dict):
 		p.classified_as = type
 	if name:
 		p.identified_by = model.Name(ident='', content=name)
-# 	else:
-# 		warnings.warn(f'Setting empty name on {p.id}')
+	else:
+		warnings.warn(f'Place with missing name on {p.id}')
 	if parent:
 		p.part_of = parent
 	return add_crom_data(data=data, what=p)

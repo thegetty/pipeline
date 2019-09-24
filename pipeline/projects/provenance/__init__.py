@@ -35,6 +35,7 @@ from bonobo.constants import NOT_MODIFIED
 
 import settings
 from cromulent import model, vocab
+from cromulent.model import factory
 from pipeline.projects import PipelineBase
 from pipeline.projects.provenance.util import *
 from pipeline.util import \
@@ -159,11 +160,11 @@ def populate_auction_event(data, auction_locations):
 		end=end,
 	)
 	if begin and end:
-		ts.identified_by = model.Name(ident='', content=f'{begin} – {end}')
+		ts.identified_by = model.Name(ident='', content=f'{begin} to {end}')
 	elif begin:
-		ts.identified_by = model.Name(ident='', content=begin)
+		ts.identified_by = model.Name(ident='', content=f'{begin} onwards')
 	elif end:
-		ts.identified_by = model.Name(ident='', content=end)
+		ts.identified_by = model.Name(ident='', content=f'up to {end}')
 
 	for p in data.get('portal', []):
 		url = p['portal_url']
@@ -198,25 +199,18 @@ def add_auction_house_data(a):
 		)
 		house = vocab.AuctionHouseOrg(ident=a['uri'])
 	else:
-		# TODO: should auc_house_auth be used here?
 		# not enough information to identify this house uniquely, so use the source location in the input file
 		a['uri'] = pir_uri('AUCTION-HOUSE', 'FILESOURCE', 'CATALOG-NUMBER', a['catalog_number'])
 		house = vocab.AuctionHouseOrg(ident=a['uri'])
 
 	name = a.get('auc_house_name', a.get('name'))
 	if name:
-		n = model.Name(content=name)
+		n = model.Name(ident='', content=name)
 		n.referred_to_by = catalog
 		a['identifiers'].append(n)
 		a['label'] = name
 	else:
 		a['label'] = '(Anonymous)'
-
-	auth = a.get('auc_house_auth')
-	if auth:
-		n = vocab.PrimaryName()
-		n.content = auth
-		a['identifiers'].append(n)
 
 	add_crom_data(data=a, what=house)
 	return a
@@ -381,7 +375,7 @@ class AddAuctionOfLot(Configurable):
 			#       represent a tuple directly as a JSON dict key, and we don't want to
 			#       have to do post-processing on the services JSON files after loading.
 			if tuple(problem_key) == lot_object_key:
-				note = model.LinguisticObject(content=problem)
+				note = model.LinguisticObject(ident='', content=problem)
 				note.classified_as = vocab.instances["brief text"]
 				note.classified_as = model.Type(
 					ident=PROBLEMATIC_RECORD_URI,
@@ -507,9 +501,16 @@ def add_acquisition(data, buyers, sellers, make_la_person=None):
 	current_tx = get_crom_object(tx_data)
 	payment_id = current_tx.id + '-Payment'
 
-	acq = model.Acquisition(label=f'Acquisition of {cno} {lno} ({date}): “{object_label}”')
+	acq_id = hmo.id + '-Acquisition'
+	acq = model.Acquisition(ident=acq_id, label=f'Acquisition of {cno} {lno} ({date}): “{object_label}”')
 	acq.transferred_title_of = hmo
+
+	# TODO: in the case of multi-acquisition procurements, the label for this
+	# Payment will be merged with other labels (for the other objects), and only
+	# one will survive the merging process. Therefore, the label for multi-acq
+	# payments should indicate this (e.g. "Payment for lots NNNN and MMMM")
 	paym = model.Payment(ident=payment_id, label=f'Payment for “{object_label}”')
+
 	for seller in [get_crom_object(s) for s in sellers]:
 		paym.paid_to = seller
 		acq.transferred_title_from = seller
@@ -556,7 +557,7 @@ def add_acquisition(data, buyers, sellers, make_la_person=None):
 			owner = get_crom_object(owner_record)
 			own_info_source = owner_record.get('own_so')
 			if own_info_source:
-				note = vocab.Note(content=own_info_source)
+				note = vocab.Note(ident='', content=own_info_source)
 				hmo.referred_to_by = note
 				owner.referred_to_by = note
 			tx = related_procurement(current_tx, hmo, ts, buyer=owner, previous=rev)
@@ -711,7 +712,7 @@ def populate_destruction_events(data, note, destruction_types_map):
 		year = m.group(2)
 		dest_id = hmo.id + '-Destruction'
 		d = model.Destruction(ident=dest_id, label=f'Destruction of “{title}”')
-		d.referred_to_by = vocab.Note(content=note)
+		d.referred_to_by = vocab.Note(ident='', content=note)
 		if year is not None:
 			begin, end = date_cleaner(year)
 			ts = timespan_from_outer_bounds(begin, end)

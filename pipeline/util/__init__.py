@@ -314,17 +314,25 @@ class MatchingFiles(Configurable):
 			sys.stderr.write(f'*** No files matching {pattern} found in {fullpath}\n')
 
 def timespan_before(after):
-	ts = model.TimeSpan()
+	ts = model.TimeSpan(ident='')
 	try:
 		ts.end_of_the_end = after.begin_of_the_begin
+		with suppress(AttributeError):
+			l = f'Before {after._label}'
+			l.identified_by = model.Name(ident='', content=l)
+			ts._label = l
 		return ts
 	except AttributeError:
 		return None
 
 def timespan_after(before):
-	ts = model.TimeSpan()
+	ts = model.TimeSpan(ident='')
 	try:
 		ts.begin_of_the_begin = before.end_of_the_end
+		with suppress(AttributeError):
+			l = f'After {before._label}'
+			l.identified_by = model.Name(ident='', content=l)
+			ts._label = l
 		return ts
 	except AttributeError:
 		return None
@@ -361,6 +369,16 @@ def timespan_from_outer_bounds(begin=None, end=None):
 	'''
 	if begin or end:
 		ts = model.TimeSpan(ident='')
+		if begin and end:
+			ts._label = f'{begin} to {end}'
+			ts.identified_by = model.Name(ts._label)
+		elif begin:
+			ts._label = f'{begin} onwards'
+			ts.identified_by = model.Name(ts._label)
+		elif end:
+			ts._label = f'up to {end}'
+			ts.identified_by = model.Name(ts._label)
+
 		if begin is not None:
 			try:
 				if not isinstance(begin, datetime.datetime):

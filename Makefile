@@ -31,6 +31,7 @@ fetchaata:
 fetchpir:
 	mkdir -p $(GETTY_PIPELINE_INPUT)/provenance
 	aws s3 sync s3://jpgt-or-provenance-01/provenance_batch/data/provenance $(GETTY_PIPELINE_INPUT)/provenance
+	cp $(GETTY_PIPELINE_INPUT)/provenance/uri_to_uuid_map.json "${GETTY_PIPELINE_TMP_PATH}/uri_to_uuid_map.json"
 
 fetchknoedler:
 	mkdir -p $(GETTY_PIPELINE_INPUT)/knoedler

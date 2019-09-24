@@ -190,24 +190,33 @@ class CromObjectMerger:
 			self._classify_values(existing, identified, unidentified)
 
 			setattr(obj, p, None) # clear out all the existing values
-			for v in identified.values():
-				if not allows_multiple:
+			if allows_multiple:
+				for v in identified.values():
 					setattr(obj, p, self.merge(*v))
-					return
-				setattr(obj, p, self.merge(*v))
-			for v in unidentified:
-				if not allows_multiple:
+				for v in unidentified:
 					setattr(obj, p, v)
-					return
-				setattr(obj, p, v)
+			else:
+				identified_values = sorted(identified.values())[0]
+				if len(identified) > 1:
+					warnings.warn(f'*** Dropping {len(identified_values)-1} extra identified values for property {p} of {obj}; idents={identified.keys()}')
+				setattr(obj, p, self.merge(*identified_values))
+				
+				if unidentified:
+					warnings.warn(f'*** Dropping {len(unidentified)} unidentified values for property {p} of {obj}')
+# 					unidentified_value = sorted(unidentified)[0]
+# 					setattr(obj, p, unidentified_value)
 		else:
 			# there are no identifiable values in the new objects, so we can just append them
-			for v in unidentified:
-				if not allows_multiple:
+			if allows_multiple:
+				setattr(obj, p, None)
+				setattr(obj, p, *unidentified)
+			else:
+				if unidentified:
+					if len(unidentified) > 1:
+						warnings.warn(f'*** Dropping {len(unidentified)-1} extra unidentified values for property {p} of {obj}')
+					value = sorted(unidentified)[0]
 					setattr(obj, p, None)
-					setattr(obj, p, v)
-					return
-				setattr(obj, p, v)
+					setattr(obj, p, value)
 
 class ExtractKeyedValues(Configurable):
 	'''

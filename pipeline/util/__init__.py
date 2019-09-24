@@ -40,7 +40,7 @@ def identity(d):
 	'''
 	yield d
 
-def implode_date(data: dict, prefix: str, clamp:str=None):
+def implode_date(data: dict, prefix: str='', clamp:str=None):
 	'''
 	Given a dict `data` and a string `prefix`, extract year, month, and day elements
 	from `data` (e.g. '{prefix}year', '{prefix}month', and '{prefix}day'), and return
@@ -53,6 +53,10 @@ def implode_date(data: dict, prefix: str, clamp:str=None):
 
 	If `clamp='end'`, clamping occurs using the latest valid values. For example,
 	'1800-02' would become '1800-02-28'.
+
+	If `clamp='eoe'` ('end of the end'), clamping occurs using the first value that is
+	*not* valid. That is, the returned value may be used as an exclusive endpoint for a
+	date range. For example, '1800-02' would become '1800-03-01'.
 	'''
 	year = data.get(f'{prefix}year')
 	try:
@@ -64,22 +68,40 @@ def implode_date(data: dict, prefix: str, clamp:str=None):
 	try:
 		month = int(month)
 		if month < 1 or month > 12:
-			raise Exception
-	except:
+			raise Exception(f'Month value is not valid: {month}')
+	except Exception as e:
 		if clamp == 'begin':
 			month = 1
 		elif clamp == 'end':
 			month = 12
+		elif clamp == 'eoe':
+			month = 1
+			year += 1
 
+	max_day = calendar.monthrange(year, month)[1]
 	try:
 		day = int(day)
 		if day < 1 or day > 31:
-			raise Exception
-	except:
+			raise Exception(f'Day value is not valid: {day}')
+		if clamp == 'eoe':
+			day += 1
+			if day > max_day:
+				day = 1
+				month += 1
+				if month > 12:
+					month = 1
+					year += 1
+	except Exception as e:
 		if clamp == 'begin':
 			day = 1
 		elif clamp == 'end':
-			day = calendar.monthrange(year, month)[1]
+			day = max_day
+		elif clamp == 'eoe':
+			day = 1
+			month += 1
+			if month > 12:
+				month = 1
+				year += 1
 
 	if year and month and day:
 		return '%04d-%02d-%02d' % (int(year), month, day)

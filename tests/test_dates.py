@@ -1,6 +1,7 @@
 import unittest
 from datetime import datetime
 import pipeline.util.cleaners
+from pipeline.util import implode_date
 
 class TestDateCleaners(unittest.TestCase):
 	'''
@@ -43,6 +44,32 @@ class TestDateCleaners(unittest.TestCase):
 			self.assertIsInstance(date_range, list)
 			if expected is not None:
 				self.assertEqual(date_range, expected, msg=f'date string: {value!r}')
+
+	def test_implode_date(self):
+		full_data = {'year': '2019', 'month': '04', 'day': '08'}
+		self.assertEqual('2019-04-08', implode_date(full_data))
+		self.assertEqual('2019-04-08', implode_date(full_data, clamp='begin'))
+		self.assertEqual('2019-04-08', implode_date(full_data, clamp='end'))
+		self.assertEqual('2019-04-09', implode_date(full_data, clamp='eoe'))
+
+		prefixed_data = {'xxyear': '2019', 'xxmonth': '02'}
+		self.assertEqual('2019-02', implode_date(prefixed_data, prefix='xx'))
+		self.assertEqual('2019-02-01', implode_date(prefixed_data, prefix='xx', clamp='begin'))
+		self.assertEqual('2019-02-28', implode_date(prefixed_data, prefix='xx', clamp='end'))
+		self.assertEqual('2019-03-01', implode_date(prefixed_data, prefix='xx', clamp='eoe'))
+
+		month_end_data = {'year': '2019', 'month': '02', 'day': '28'}
+		self.assertEqual('2019-02-28', implode_date(month_end_data))
+		self.assertEqual('2019-02-28', implode_date(month_end_data, clamp='begin'))
+		self.assertEqual('2019-02-28', implode_date(month_end_data, clamp='end'))
+		self.assertEqual('2019-03-01', implode_date(month_end_data, clamp='eoe'))
+
+		year_end_data = {'year': '2019', 'month': '12', 'day': '31'}
+		self.assertEqual('2019-12-31', implode_date(year_end_data))
+		self.assertEqual('2019-12-31', implode_date(year_end_data, clamp='begin'))
+		self.assertEqual('2019-12-31', implode_date(year_end_data, clamp='end'))
+		self.assertEqual('2020-01-01', implode_date(year_end_data, clamp='eoe'))
+
 
 
 if __name__ == '__main__':

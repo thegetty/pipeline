@@ -154,7 +154,7 @@ def populate_auction_event(data, auction_locations):
 		auction_locations[cno] = place
 
 	begin = implode_date(data, 'sale_begin_', clamp='begin')
-	end = implode_date(data, 'sale_end_', clamp='end')
+	end = implode_date(data, 'sale_end_', clamp='eoe')
 	ts = timespan_from_outer_bounds(
 		begin=begin,
 		end=end,
@@ -293,7 +293,7 @@ class AddAuctionOfLot(Configurable):
 # 		if dates:
 		if date:
 			begin = implode_date(auction_data, 'lot_sale_', clamp='begin')
-			end = implode_date(auction_data, 'lot_sale_', clamp='end')
+			end = implode_date(auction_data, 'lot_sale_', clamp='eoe')
 			bounds = [begin, end]
 		else:
 			bounds = []
@@ -517,6 +517,8 @@ def add_acquisition(data, buyers, sellers, make_la_person=None):
 	for buyer in [get_crom_object(b) for b in buyers]:
 		paym.paid_from = buyer
 		acq.transferred_title_to = buyer
+	if len(amnts) > 1:
+		warnings.warn(f'Multiple Payment.paid_amount values for object {hmo.id} ({payment_id})')
 	for amnt in amnts:
 		paym.paid_amount = amnt
 

@@ -494,7 +494,10 @@ def add_acquisition(data, buyers, sellers, make_la_person=None):
 	cno, lno, date = object_key(auction_data)
 	data['buyer'] = buyers
 	data['seller'] = sellers
-	object_label = hmo._label
+	try:
+		object_label = f'“{hmo._label}”'
+	except AttributeError:
+		object_label = '(object)'
 	amnts = [get_crom_object(p) for p in prices]
 
 # 	if not prices:
@@ -505,14 +508,14 @@ def add_acquisition(data, buyers, sellers, make_la_person=None):
 	payment_id = current_tx.id + '-Payment'
 
 	acq_id = hmo.id + '-Acquisition'
-	acq = model.Acquisition(ident=acq_id, label=f'Acquisition of {cno} {lno} ({date}): “{object_label}”')
+	acq = model.Acquisition(ident=acq_id, label=f'Acquisition of {cno} {lno} ({date}): {object_label}')
 	acq.transferred_title_of = hmo
 
 	# TODO: in the case of multi-acquisition procurements, the label for this
 	# Payment will be merged with other labels (for the other objects), and only
 	# one will survive the merging process. Therefore, the label for multi-acq
 	# payments should indicate this (e.g. "Payment for lots NNNN and MMMM")
-	paym = model.Payment(ident=payment_id, label=f'Payment for “{object_label}”')
+	paym = model.Payment(ident=payment_id, label=f'Payment for {object_label}')
 
 	for seller in [get_crom_object(s) for s in sellers]:
 		paym.paid_to = seller
@@ -704,7 +707,7 @@ def genre_instance(value, vocab_instance_map):
 	if instance_name:
 		instance = vocab.instances.get(instance_name)
 		if not instance:
-			print(f'*** No genre instance available for {instance_name!r} in vocab_instance_map')
+			warnings.warn(f'*** No genre instance available for {instance_name!r} in vocab_instance_map')
 		return instance
 	return None
 
@@ -752,7 +755,7 @@ def populate_object(data, post_sale_map, unique_catalogs, vocab_instance_map, de
 			warnings.warn(f'Setting empty identifier on {hmo.id}')
 		data['identifiers'].append(model.Identifier(ident='', content=str(lno)))
 	else:
-		print(f'***** NO AUCTION DATA FOUND IN populate_object')
+		warnings.warn(f'***** NO AUCTION DATA FOUND IN populate_object')
 
 
 	cno = auction_data['catalog_number']
@@ -903,7 +906,7 @@ def add_object_type(data, vocab_type_map):
 		otype = getattr(vocab, clsname)
 		add_crom_data(data=data, what=otype(ident=data['uri']))
 	else:
-		print(f'*** No object type for {typestring!r}')
+		warnings.warn(f'*** No object type for {typestring!r}')
 		add_crom_data(data=data, what=model.HumanMadeObject(ident=data['uri']))
 
 	parent = data['parent_data']

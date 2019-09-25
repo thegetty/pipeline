@@ -20,21 +20,27 @@ def pir_uri(*values):
 		suffix = str(uuid.uuid4())
 		return UID_TAG_PREFIX + suffix
 
-def filter_empty_people(*people):
-	'''Yield only the `people` dicts that have relevant properties set'''
-	for p in people:
-		keys = set(p.keys())
-		data_keys = keys - {
-			'_CROM_FACTORY',
-			'_LOD_OBJECT',
-			'pi_record_no',
-			'star_rec_no',
-			'persistent_puid',
-			'parent_data'
-		}
-		d = {k: p[k] for k in data_keys if p[k] and p[k] != '0'}
-		if d:
-			yield p
+def filter_empty_person(data: dict, _):
+	'''
+	If all the values of the supplied dictionary are false (or false after int conversion
+	for keys ending with 'ulan'), return `None`. Otherwise return the dictionary.
+	'''
+	set = []
+	for k, v in data.items():
+		if k.endswith('ulan'):
+			if v in ('', '0'):
+				s = False
+			else:
+				s = True
+		elif k in ('pi_record_no', 'star_rec_no'):
+			s = False
+		else:
+			s = bool(v)
+		set.append(s)
+	if any(set):
+		return data
+	else:
+		return None
 
 def add_pir_record_ids(data, parent):
 	'''Copy identifying key-value pairs from `parent` to `data`, returning `data`'''

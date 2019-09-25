@@ -400,28 +400,6 @@ class AddAuctionOfLot(Configurable):
 		add_crom_data(data=data, what=lot)
 		yield data
 
-def _filter_empty_person(data: dict, _):
-	'''
-	If all the values of the supplied dictionary are false (or false after int conversion
-	for keys ending with 'ulan'), return `None`. Otherwise return the dictionary.
-	'''
-	set = []
-	for k, v in data.items():
-		if k.endswith('ulan'):
-			if v in ('', '0'):
-				s = False
-			else:
-				s = True
-		elif k in ('pi_record_no', 'star_rec_no'):
-			s = False
-		else:
-			s = bool(v)
-		set.append(s)
-	if any(set):
-		return data
-	else:
-		return None
-
 def add_crom_price(data, _):
 	'''
 	Add modeling data for `MonetaryAmount`, `StartingPrice`, or `EstimatedPrice`,
@@ -1280,7 +1258,7 @@ class ProvenancePipeline(PipelineBase):
 					'auction_house': {'prefixes': ('auction_house', 'house_ulan')},
 					'_artists': {
 						'postprocess': [
-							_filter_empty_person,
+							filter_empty_person,
 							add_pir_record_ids
 						],
 						'prefixes': (
@@ -1296,7 +1274,7 @@ class ProvenancePipeline(PipelineBase):
 					'seller': {
 						'postprocess': [
 							lambda x, _: strip_key_prefix('sell_', x),
-							_filter_empty_person
+							filter_empty_person
 						],
 						'prefixes': (
 							'sell_name',
@@ -1319,7 +1297,7 @@ class ProvenancePipeline(PipelineBase):
 					'buyer': {
 						'postprocess': [
 							lambda x, _: strip_key_prefix('buy_', x),
-							_filter_empty_person
+							filter_empty_person
 						],
 						'prefixes': (
 							'buy_name',

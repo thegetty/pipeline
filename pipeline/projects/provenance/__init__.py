@@ -408,10 +408,12 @@ def _filter_empty_person(data: dict, _):
 	set = []
 	for k, v in data.items():
 		if k.endswith('ulan'):
-			try:
-				s = int(0)
-			except ValueError:
+			if v in ('', '0'):
+				s = False
+			else:
 				s = True
+		elif k in ('pi_record_no', 'star_rec_no'):
+			s = False
 		else:
 			s = bool(v)
 		set.append(s)

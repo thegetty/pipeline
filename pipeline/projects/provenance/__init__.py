@@ -200,7 +200,7 @@ def add_auction_house_data(a):
 		house = vocab.AuctionHouseOrg(ident=a['uri'])
 	else:
 		# not enough information to identify this house uniquely, so use the source location in the input file
-		a['uri'] = pir_uri('AUCTION-HOUSE', 'FILESOURCE', 'CATALOG-NUMBER', a['catalog_number'])
+		a['uri'] = pir_uri('AUCTION-HOUSE', 'CAT_NO', 'CATALOG-NUMBER', a['catalog_number'])
 		house = vocab.AuctionHouseOrg(ident=a['uri'])
 
 	name = a.get('auc_house_name', a.get('name'))
@@ -459,7 +459,7 @@ def add_person(data: dict, rec_id, *, make_la_person):
 		]
 	else:
 		# not enough information to identify this person uniquely, so use the source location in the input file
-		data['uri'] = pir_uri('PERSON', 'FILESOURCE', data['pi_record_no'], rec_id)
+		data['uri'] = pir_uri('PERSON', 'PI_REC_NO', data['pi_record_no'], rec_id)
 
 	names = []
 	for name_string in set([data[k] for k in ('auth_name', 'name') if k in data and data[k]]):
@@ -558,7 +558,7 @@ def add_acquisition(data, buyers, sellers, make_la_person=None):
 			name = owner_record.get('own_auth', owner_record.get('own'))
 			owner_record['names'] = [(name,)]
 			owner_record['label'] = name
-			owner_record['uri'] = pir_uri('PERSON', 'FILESOURCE', data['pi_record_no'], f'{rev_name}-{rec_no+1}')
+			owner_record['uri'] = pir_uri('PERSON', 'PI_REC_NO', data['pi_record_no'], f'{rev_name}-{rec_no+1}')
 			# TODO: handle other fields of owner_record: own_auth_d, own_auth_l, own_auth_q, own_ques, own_so, own_ulan
 			make_la_person(owner_record)
 			owner = get_crom_object(owner_record)
@@ -951,7 +951,7 @@ def add_pir_artists(data, *, make_la_person):
 		else:
 			# not enough information to identify this person uniquely, so use the source location in the input file
 # 			warnings.warn(f'*** Person without a ulan or star number: {a}')
-			a['uri'] = pir_uri('PERSON', 'FILESOURCE', data['pi_record_no'], f'artist-{seq_no+1}')
+			a['uri'] = pir_uri('PERSON', 'PI_REC_NO', data['pi_record_no'], f'artist-{seq_no+1}')
 
 		names = []
 		try:

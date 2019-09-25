@@ -40,7 +40,7 @@ def identity(d):
 	'''
 	yield d
 
-def implode_date(data: dict, prefix: str='', clamp:str=None):
+def implode_date(data:dict, prefix:str='', clamp:str=None):
 	'''
 	Given a dict `data` and a string `prefix`, extract year, month, and day elements
 	from `data` (e.g. '{prefix}year', '{prefix}month', and '{prefix}day'), and return
@@ -65,6 +65,7 @@ def implode_date(data: dict, prefix: str='', clamp:str=None):
 		return None
 	month = data.get(f'{prefix}month', data.get(f'{prefix}mo'))
 	day = data.get(f'{prefix}day')
+	
 	try:
 		month = int(month)
 		if month < 1 or month > 12:
@@ -72,11 +73,19 @@ def implode_date(data: dict, prefix: str='', clamp:str=None):
 	except Exception as e:
 		if clamp == 'begin':
 			month = 1
+			day = 1
+			return '%04d-%02d-%02d' % (int(year), month, day)
 		elif clamp == 'end':
+			day = 31
 			month = 12
+			return '%04d-%02d-%02d' % (int(year), month, day)
 		elif clamp == 'eoe':
+			day = 1
 			month = 1
 			year += 1
+			return '%04d-%02d-%02d' % (int(year), month, day)
+		else:
+			return '%04d' % (int(year),)
 
 	max_day = calendar.monthrange(year, month)[1]
 	try:

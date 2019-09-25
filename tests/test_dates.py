@@ -70,6 +70,17 @@ class TestDateCleaners(unittest.TestCase):
 		self.assertEqual('2019-12-31', implode_date(year_end_data, clamp='end'))
 		self.assertEqual('2020-01-01', implode_date(year_end_data, clamp='eoe'))
 
+		bad_month_data = {'day': '00', 'mo': '00', 'year': '1781'}
+		self.assertEqual('1781', implode_date(bad_month_data, prefix=''))
+		self.assertEqual('1781-01-01', implode_date(bad_month_data, prefix='', clamp='begin'))
+		self.assertEqual('1781-12-31', implode_date(bad_month_data, prefix='', clamp='end'))
+		self.assertEqual('1782-01-01', implode_date(bad_month_data, prefix='', clamp='eoe'))
+
+		bad_day_data = {'day': '00', 'mo': '09', 'year': '1781'}
+		self.assertEqual('1781-09', implode_date(bad_day_data, prefix=''))
+		self.assertEqual('1781-09-01', implode_date(bad_day_data, prefix='', clamp='begin'))
+		self.assertEqual('1781-09-30', implode_date(bad_day_data, prefix='', clamp='end'))
+		self.assertEqual('1781-10-01', implode_date(bad_day_data, prefix='', clamp='eoe'))
 
 
 if __name__ == '__main__':

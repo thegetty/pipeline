@@ -218,7 +218,11 @@ class CromObjectMerger:
 				for v in unidentified:
 					setattr(obj, p, v)
 			else:
-				identified_values = sorted(identified.values())[0]
+				try:
+					identified_values = sorted(identified.values())[0]
+				except TypeError:
+					# in case the values cannot be sorted
+					identified_values = identified.values()[0]
 				if len(identified) > 1:
 					warnings.warn(f'*** Dropping {len(identified_values)-1} extra identified values for property {p} of {obj}; idents={identified.keys()}')
 				setattr(obj, p, self.merge(*identified_values))
@@ -236,7 +240,11 @@ class CromObjectMerger:
 				if unidentified:
 					if len(unidentified) > 1:
 						warnings.warn(f'*** Dropping {len(unidentified)-1} extra unidentified values for property {p} of {obj}')
-					value = sorted(unidentified)[0]
+					try:
+						value = sorted(unidentified)[0]
+					except TypeError:
+						# in case the values cannot be sorted
+						value = unidentified[0]
 					setattr(obj, p, None)
 					setattr(obj, p, value)
 

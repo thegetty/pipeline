@@ -463,7 +463,8 @@ def add_person(data: dict, rec_id, *, make_la_person):
 
 	names = []
 	for name_string in set([data[k] for k in ('auth_name', 'name') if k in data and data[k]]):
-		names.append((name_string,))
+		if name_string:
+			names.append((name_string,))
 	if names:
 		data['names'] = names
 		data['label'] = names[0][0]
@@ -519,10 +520,12 @@ def add_acquisition(data, buyers, sellers, make_la_person=None):
 	for buyer in [get_crom_object(b) for b in buyers]:
 		paym.paid_from = buyer
 		acq.transferred_title_to = buyer
+
 	if len(amnts) > 1:
 		warnings.warn(f'Multiple Payment.paid_amount values for object {hmo.id} ({payment_id})')
 	for amnt in amnts:
 		paym.paid_amount = amnt
+		break # TODO: sensibly handle multiplicity in paid amount data
 
 	ts = tx_data.get('_date')
 	if ts:
@@ -953,8 +956,9 @@ def add_pir_artists(data, *, make_la_person):
 		names = []
 		try:
 			name = a['artist_name']
-			names += [(name,)]
-			a['label'] = name
+			if name:
+				names += [(name,)]
+				a['label'] = name
 		except KeyError:
 			a['label'] = '(Anonymous artist)'
 

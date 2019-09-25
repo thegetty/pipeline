@@ -231,7 +231,7 @@ class CromObjectMerger:
 					identified_values = sorted(identified.values())[0]
 				except TypeError:
 					# in case the values cannot be sorted
-					identified_values = identified.values()[0]
+					identified_values = list(identified.values())[0]
 				if len(identified) > 1:
 					warnings.warn(f'*** Dropping {len(identified_values)-1} extra identified values for property {p} of {obj}; idents={identified.keys()}')
 				setattr(obj, p, self.merge(*identified_values))

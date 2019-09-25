@@ -327,7 +327,8 @@ def ymd_to_label(year, month, day):
 class MakeLinkedArtPerson(MakeLinkedArtRecord):
 	def set_properties(self, data, who):
 		super().set_properties(data, who)
-		who._label = str(data['label'])
+		with suppress(KeyError):
+			who._label = str(data['label'])
 
 		with suppress(ValueError, TypeError):
 			ulan = int(data.get('ulan'))

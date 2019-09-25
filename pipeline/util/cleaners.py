@@ -151,7 +151,10 @@ _US_STATES = {
 }
 
 def _parse_us_location(parts, *, uri_base):
-	city_name, state_name, country_name = parts
+	try:
+		city_name, state_name, country_name = parts
+	except ValueError:
+		return None
 	state_type = None
 	city_type = None
 	state_uri = None

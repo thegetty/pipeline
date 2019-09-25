@@ -203,7 +203,7 @@ def add_auction_house_data(a):
 		a['uri'] = pir_uri('AUCTION-HOUSE', 'CAT_NO', 'CATALOG-NUMBER', a['catalog_number'])
 		house = vocab.AuctionHouseOrg(ident=a['uri'])
 
-	name = a.get('auc_house_name', a.get('name'))
+	name = a.get('auc_house_name') or a.get('name')
 	if name:
 		n = model.Name(ident='', content=name)
 		n.referred_to_by = catalog
@@ -536,7 +536,10 @@ def add_acquisition(data, buyers, sellers, make_la_person=None):
 	for owner_data, rev in prev_post_owner_records:
 		rev_name = 'prev-owner' if rev else 'post-owner'
 		for rec_no, owner_record in enumerate(owner_data):
-			name = owner_record.get('own_auth', owner_record.get('own'))
+			name = owner_record.get('own_auth') or owner_record.get('own')
+			if not name:
+				warnings.warn(f'*** No name for {rev_name}: {owner_record}')
+				pprint.pprint(owner_record)
 			owner_record['names'] = [(name,)]
 			owner_record['label'] = name
 			owner_record['uri'] = pir_uri('PERSON', 'PI_REC_NO', data['pi_record_no'], f'{rev_name}-{rec_no+1}')

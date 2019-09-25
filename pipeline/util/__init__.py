@@ -419,13 +419,13 @@ def timespan_from_outer_bounds(begin=None, end=None):
 		ts = model.TimeSpan(ident='')
 		if begin and end:
 			ts._label = f'{begin} to {end}'
-			ts.identified_by = model.Name(ts._label)
+			ts.identified_by = model.Name(ident='', content=ts._label)
 		elif begin:
 			ts._label = f'{begin} onwards'
-			ts.identified_by = model.Name(ts._label)
+			ts.identified_by = model.Name(ident='', content=ts._label)
 		elif end:
 			ts._label = f'up to {end}'
-			ts.identified_by = model.Name(ts._label)
+			ts.identified_by = model.Name(ident='', content=ts._label)
 
 		if begin is not None:
 			try:

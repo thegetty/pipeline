@@ -305,13 +305,35 @@ class AddAuctionOfLot(Configurable):
 
 	@staticmethod
 	def shared_lot_number_ids(cno, lno, date):
+		'''
+		Return a tuple of a UID string and a URI for the lot identified by the supplied
+		data which identifies a specific object in that lot.
+		'''
 		shared_lot_number = AddAuctionOfLot.shared_lot_number_from_lno(lno)
 		uid = f'AUCTION-{cno}-LOT-{shared_lot_number}-DATE-{date}'
 		uri = pir_uri('AUCTION', cno, 'LOT', shared_lot_number, 'DATE', date)
 		return uid, uri
 
 	@staticmethod
+	def transaction_contains_multiple_lots(data, prices):
+		'''
+		Return `True` if the procurement related to the supplied data represents a
+		transaction of multiple lots with a single payment, `False` otherwise.
+		'''
+		cno, lno, date = object_key(data)
+		shared_lot_number = AddAuctionOfLot.shared_lot_number_from_lno(lno)
+		for p in prices:
+			n = p.get('price_note')
+			if n and n.startswith('for lots '):
+				return True
+		return False
+
+	@staticmethod
 	def lots_in_transaction(data, prices):
+		'''
+		Return a string that represents the lot numbers that are a part of the procurement
+		related to the supplied data.
+		'''
 		cno, lno, date = object_key(data)
 		shared_lot_number = AddAuctionOfLot.shared_lot_number_from_lno(lno)
 		for p in prices:
@@ -322,6 +344,12 @@ class AddAuctionOfLot(Configurable):
 
 	@staticmethod
 	def transaction_uri_for_lot(data, prices):
+		'''
+		Return a URI representing the procurement which the object (identified by the
+		supplied data) is a part of. This may identify just the lot being sold or, in the
+		case of multiple lots being bought for a single price, a single procurement that
+		encompasses multiple acquisitions that span different lots. 
+		'''
 		cno, lno, date = object_key(data)
 		shared_lot_number = AddAuctionOfLot.shared_lot_number_from_lno(lno)
 		for p in prices:
@@ -402,10 +430,14 @@ class AddAuctionOfLot(Configurable):
 		
 		tx_uri = AddAuctionOfLot.transaction_uri_for_lot(auction_data, data.get('price', []))
 		lots = AddAuctionOfLot.lots_in_transaction(auction_data, data.get('price', []))
+		multi = AddAuctionOfLot.transaction_contains_multiple_lots(auction_data, data.get('price', []))
 		tx = vocab.Procurement(ident=tx_uri)
 		tx._label = f'Procurement of Lot {cno} {lots} ({date})'
 		lot.caused = tx
 		tx_data = {}
+		
+		if multi:
+			tx_data['multi_lot_tx'] = lots
 		with suppress(AttributeError):
 			tx_data['_date'] = lot.timespan
 		data['_procurement_data'] = add_crom_data(data=tx_data, what=tx)
@@ -506,7 +538,9 @@ def add_acquisition(data, buyers, sellers, make_la_person=None):
 	# Payment will be merged with other labels (for the other objects), and only
 	# one will survive the merging process. Therefore, the label for multi-acq
 	# payments should indicate this (e.g. "Payment for lots NNNN and MMMM")
-	paym = model.Payment(ident=payment_id, label=f'Payment for {object_label}')
+	multi = tx_data.get('multi_lot_tx')
+	paym_label = f'multiple lots {multi}' if multi else object_label
+	paym = model.Payment(ident=payment_id, label=f'Payment for {paym_label}')
 
 	for seller in [get_crom_object(s) for s in sellers]:
 		paym.paid_to = seller

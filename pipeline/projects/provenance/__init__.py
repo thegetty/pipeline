@@ -87,6 +87,15 @@ IGNORE_HOUSE_AUTHNAMES = CaseFoldingSet(('Anonymous',))
 
 #mark - utility functions and classes
 
+def acceptable_person_auth_name(auth_name):
+	if not auth_name:
+		return False
+	if auth_name in IGNORE_PERSON_AUTHNAMES:
+		return False
+	if '[' in auth_name:
+		return False
+	return True
+
 def copy_source_information(dst: dict, src: dict):
 	for k in CSV_SOURCE_COLUMNS:
 		with suppress(KeyError):
@@ -475,7 +484,7 @@ def add_person(data: dict, rec_id, *, make_la_person):
 		data['uri'] = pir_uri('PERSON', 'ULAN', ulan)
 		data['identifiers'] = [model.Identifier(ident='', content=str(ulan))]
 		data['ulan'] = ulan
-	elif auth_name and auth_name not in IGNORE_PERSON_AUTHNAMES and not(auth_name_q):
+	elif acceptable_person_auth_name(auth_name) and not(auth_name_q):
 		data['uri'] = pir_uri('PERSON', 'AUTHNAME', auth_name)
 		data['identifiers'] = [
 			vocab.PrimaryName(ident='', content=auth_name) # NOTE: most of these are also vocab.SortName, but not 100%, so witholding that assertion for now
@@ -978,11 +987,11 @@ def add_pir_artists(data, *, make_la_person):
 			a['uri'] = pir_uri('PERSON', 'ULAN', ulan)
 			a['ulan'] = ulan
 			a['uid'] = key
-		elif auth_name and auth_name not in IGNORE_PERSON_AUTHNAMES:
+		elif acceptable_person_auth_name(auth_name):
 			a['uri'] = pir_uri('PERSON', 'AUTHNAME', auth_name)
 		else:
 			# not enough information to identify this person uniquely, so use the source location in the input file
-# 			warnings.warn(f'*** Person without a ulan or star number: {a}')
+# 			warnings.warn(f'*** Person without a ulan or authority name: {a}')
 			a['uri'] = pir_uri('PERSON', 'PI_REC_NO', data['pi_record_no'], f'artist-{seq_no+1}')
 
 		names = []

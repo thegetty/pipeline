@@ -146,7 +146,8 @@ def populate_auction_event(data, auction_locations):
 	# make_la_place is called here instead of as a separate graph node because the Place object
 	# gets stored in the `auction_locations` object to be used in the second graph component
 	# which uses the data to associate the place with auction lots.
-	place_data = make_la_place(current)
+	base_uri = pir_uri('AUCTION-EVENT', 'CATALOGNUMBER', cno, 'PLACE')
+	place_data = make_la_place(current, base_uri=base_uri)
 	place = get_crom_object(place_data)
 	if place:
 		data['_locations'] = [place_data]
@@ -310,6 +311,16 @@ class AddAuctionOfLot(Configurable):
 		return uid, uri
 
 	@staticmethod
+	def lots_in_transaction(data, prices):
+		cno, lno, date = object_key(data)
+		shared_lot_number = AddAuctionOfLot.shared_lot_number_from_lno(lno)
+		for p in prices:
+			n = p.get('price_note')
+			if n and n.startswith('for lots '):
+				return n[9:]
+		return shared_lot_number
+
+	@staticmethod
 	def transaction_uri_for_lot(data, prices):
 		cno, lno, date = object_key(data)
 		shared_lot_number = AddAuctionOfLot.shared_lot_number_from_lno(lno)
@@ -390,7 +401,9 @@ class AddAuctionOfLot(Configurable):
 		self.set_lot_objects(lot, lno, data)
 		
 		tx_uri = AddAuctionOfLot.transaction_uri_for_lot(auction_data, data.get('price', []))
+		lots = AddAuctionOfLot.lots_in_transaction(auction_data, data.get('price', []))
 		tx = vocab.Procurement(ident=tx_uri)
+		tx._label = f'Procurement of Lot {cno} {lots} ({date})'
 		lot.caused = tx
 		tx_data = {}
 		with suppress(AttributeError):
@@ -440,7 +453,7 @@ def add_person(data: dict, rec_id, *, make_la_person):
 		data['uri'] = pir_uri('PERSON', 'PI_REC_NO', data['pi_record_no'], rec_id)
 
 	names = []
-	for name_string in set([data[k] for k in ('auth_name', 'name') if k in data and data[k]]):
+	for name_string in sorted(set([data[k] for k in ('auth_name', 'name') if k in data and data[k]])):
 		if name_string:
 			names.append((name_string,))
 	if names:
@@ -798,6 +811,7 @@ def _populate_object_statements(data):
 # 		print(f'No dimension data was parsed from the dimension statement: {dimstr}')
 
 def _populate_object_present_location(data, now_key, destruction_types_map):
+	hmo = get_crom_object(data)
 	location = data.get('present_location')
 	if location:
 		loc = location.get('geog')
@@ -805,10 +819,8 @@ def _populate_object_present_location(data, now_key, destruction_types_map):
 			if 'Destroyed ' in loc:
 				populate_destruction_events(data, loc, destruction_types_map)
 			else:
-				current = parse_location_name(loc, uri_base=UID_TAG_PREFIX)
-				place_data = make_la_place(current)
-				place = get_crom_object(place_data)
 				# TODO: if `parse_location_name` fails, still preserve the location string somehow
+				current = parse_location_name(loc, uri_base=UID_TAG_PREFIX)
 				inst = location.get('inst')
 				if inst:
 					owner_data = {
@@ -830,6 +842,11 @@ def _populate_object_present_location(data, now_key, destruction_types_map):
 						'label': '(Anonymous organization)',
 						'uri': pir_uri('ORGANIZATION', 'PRESENT-OWNER', *now_key),
 					}
+
+				base_uri = hmo.id + '-PLACE,'
+				place_data = make_la_place(current, base_uri=base_uri)
+				place = get_crom_object(place_data)
+
 				make_la_org = MakeLinkedArtOrganization()
 				owner_data = make_la_org(owner_data)
 				owner = get_crom_object(owner_data)
@@ -929,33 +946,37 @@ def add_pir_artists(data, *, make_la_person):
 			a['uid'] = key
 		elif auth_name and auth_name not in IGNORE_PERSON_AUTHNAMES:
 			a['uri'] = pir_uri('PERSON', 'AUTHNAME', auth_name)
-			a['identifiers'] = [
-				vocab.PrimaryName(ident='', content=auth_name) # NOTE: most of these are also vocab.SortName, but not 100%, so witholding that assertion for now
-			]
 		else:
 			# not enough information to identify this person uniquely, so use the source location in the input file
 # 			warnings.warn(f'*** Person without a ulan or star number: {a}')
 			a['uri'] = pir_uri('PERSON', 'PI_REC_NO', data['pi_record_no'], f'artist-{seq_no+1}')
 
 		names = []
+		if auth_name and auth_name not in IGNORE_PERSON_AUTHNAMES:
+			a['label'] = auth_name
+			a['identifiers'] = [
+				vocab.PrimaryName(ident='', content=auth_name) # NOTE: most of these are also vocab.SortName, but not 100%, so witholding that assertion for now
+			]
+			names.append(auth_name)
+
 		try:
 			name = a['artist_name']
 			if name:
-				names += [(name,)]
-				a['label'] = name
+				names.append(auth_name)
+				a['names'] = [(name,)]
+				if 'label' not in a:
+					a['label'] = name
 		except KeyError:
 			a['label'] = '(Anonymous artist)'
 
-		a['names'] = names
 
 		make_la_person(a)
 		person = get_crom_object(a)
 		subevent_id = event_id + f'-{seq_no}'
 		subevent = model.Production(ident=subevent_id)
 		event.part = subevent
-		names = a.get('names')
 		if names:
-			name = names[0][0]
+			name = names[0]
 			subevent._label = f'Production sub-event for artist “{name}”'
 		subevent.carried_out_by = person
 	return data

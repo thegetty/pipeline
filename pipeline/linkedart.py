@@ -1,6 +1,7 @@
 import pprint
 from contextlib import suppress
 import warnings
+import urllib.parse
 
 from cromulent import model, vocab
 from cromulent.model import factory
@@ -72,7 +73,7 @@ class MakeLinkedArtRecord:
 				content, itype = identifier
 				if itype is not None:
 					if isinstance(itype, type):
-						ident = itype(content=content)
+						ident = itype(ident='', content=content)
 						if not content:
 							warnings.warn(f'Setting empty identifier on {thing.id}')
 					elif isinstance(itype, object):
@@ -139,12 +140,11 @@ def set_la_name(thing, value, title_type=None, set_label=False):
 		language = None
 	if set_label:
 		thing._label = label
-	name = model.Name(ident='')
+	name = model.Name(ident='', content=label)
 	if title_type is not None:
 		name.classified_as = title_type
 	if not label:
 		warnings.warn(f'Setting empty name on {thing.id}')
-	name.content = label
 	thing.identified_by = name
 	if language is not None:
 		name.language = language
@@ -416,7 +416,7 @@ class MakeLinkedArtPerson(MakeLinkedArtRecord):
 			data['object_type'] = model.Person
 		return super().__call__(data)
 
-def make_la_place(data: dict):
+def make_la_place(data:dict, base_uri=None):
 	'''
 	Given a dictionary representing data about a place, construct a model.Place object,
 	assign it as the crom data in the dictionary, and return the dictionary.
@@ -444,13 +444,17 @@ def make_la_place(data: dict):
 	type = TYPES.get(type_name)
 	parent = None
 	if parent_data:
-		parent_data = make_la_place(parent_data)
+		parent_data = make_la_place(parent_data, base_uri=base_uri)
 		parent = get_crom_object(parent_data)
 		label = f'{label}, {parent._label}'
 
 	placeargs = {'label': label}
 	if data.get('uri'):
 		placeargs['ident'] = data['uri']
+	elif base_uri:
+		data['uri'] = base_uri + urllib.parse.quote(label)
+		placeargs['ident'] = data['uri']
+
 	p = model.Place(**placeargs)
 	if type:
 		p.classified_as = type

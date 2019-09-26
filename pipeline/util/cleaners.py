@@ -1,3 +1,4 @@
+import warnings
 import locale
 import re
 import calendar
@@ -268,7 +269,7 @@ def parse_location(*parts, uri_base=None, types=None):
 		country_type = 'Country'
 		country_name = _COUNTRY_NAMES.get(country_name, country_name)
 	else:
-		print(f'*** Expecting country name, but found unexpected value: {country_name!r}')
+		warnings.warn(f'*** Expecting country name, but found unexpected value: {country_name!r}')
 		# not a recognized place name format; assert a generic Place with the associated value as a name
 		return {'name': value}
 

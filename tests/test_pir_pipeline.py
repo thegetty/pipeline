@@ -121,7 +121,7 @@ class TestProvenancePipelineOutput(unittest.TestCase):
 		self.assertEqual(lo_types, {'Auction Catalog'})
 
 		people_names = {o['_label'] for o in people.values()}
-		self.assertEqual(people_names, {'[Anonymous]', 'Gillemans', 'Vinckebooms'})
+		self.assertEqual(people_names, {'[ANONYMOUS]', 'GILLEMANS, JAN PAUWEL', 'VINCKEBOONS, DAVID'})
 
 		key_119 = 'tag:getty.edu,2019:digital:pipeline:provenance:REPLACE-WITH-UUID#AUCTION,B-A139,LOT,0119,DATE,1774-05-31'
 		key_120 = 'tag:getty.edu,2019:digital:pipeline:provenance:REPLACE-WITH-UUID#AUCTION,B-A139,LOT,0120,DATE,1774-05-31'

@@ -243,14 +243,14 @@ class CromObjectMerger:
 		else:
 			# there are no identifiable values in the new objects, so we can just append them
 			if allows_multiple:
-				setattr(obj, p, None)
 				setattr(obj, p, *unidentified)
 			else:
 				if unidentified:
 					if len(unidentified) > 1:
 						warnings.warn(f'*** Dropping {len(unidentified)-1} extra unidentified values for property {p} of {obj}')
 					try:
-						value = sorted(unidentified)[0]
+						values = set(unidentified + [getattr(obj, p)])
+						value = sorted(values)[0]
 					except TypeError:
 						# in case the values cannot be sorted
 						value = unidentified[0]

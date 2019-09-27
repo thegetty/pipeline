@@ -105,6 +105,7 @@ clean:
 	rm -f $(GETTY_PIPELINE_TMP_PATH)/knoedler.pdf
 	rm -f $(GETTY_PIPELINE_TMP_PATH)/pir.dot
 	rm -f $(GETTY_PIPELINE_TMP_PATH)/knoedler.dot
+	rm -f $(GETTY_PIPELINE_TMP_PATH)/sales-tree.data
 	rm -f "${GETTY_PIPELINE_TMP_PATH}/post_sale_rewrite_map.json"
 
 .PHONY: aata aatagraph knoedler knoedlergraph pir pirgraph test upload nt docker dockerimage dockertest fetch fetchaata fetchpir fetchknoedler

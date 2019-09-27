@@ -92,7 +92,6 @@ class SalesTree:
 		self.nodes = {}
 		self.nodes_rev = {}
 		self.outgoing_edges = {}
-		self.incoming_edges = {}
 
 	def add_node(self, node):
 		if node not in self.nodes:
@@ -122,7 +121,6 @@ class SalesTree:
 			else:
 				warnings.warn(f'*** {src} already has an outgoing edge: {self.outgoing_edges[i]}')
 		self.outgoing_edges[i] = j
-		self.incoming_edges[j] = i
 
 	def __iter__(self):
 		for i in self.outgoing_edges.keys():
@@ -139,7 +137,6 @@ class SalesTree:
 		g.nodes_rev = {int(i): tuple(n) for i, n in d['nodes'].items()}
 		g.nodes = {n: i for i, n in g.nodes_rev.items()}
 		g.outgoing_edges = {int(k): int(v) for k, v in d['outgoing'].items()}
-		g.incoming_edges = {v: k for k, v in g.outgoing_edges.items()}
 		return g
 
 	def dump(self, f):
@@ -155,6 +152,7 @@ class SalesTree:
 		key = src
 		steps = 0
 		seen = {key}
+		path = [key]
 		while True:
 			if key not in self.nodes:
 				break
@@ -168,9 +166,12 @@ class SalesTree:
 				warnings.warn(f'*** Self-loop found in post sale data: {key!s:<40}')
 				break
 			if parent in seen:
-				warnings.warn(f'*** Loop found in post sale data: {key!s:<40} -> {parent!s:<40}')
+				path.append(parent)
+				warnings.warn(f'*** Loop found in post sale data: {path}')
+# 				warnings.warn(f'*** Loop found in post sale data: {key!s:<40} -> {parent!s:<40}')
 				break
-			seen.add(parent)
 			key = parent
+			seen.add(key)
+			path.append(key)
 			steps += 1
 		return key, steps

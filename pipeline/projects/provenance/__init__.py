@@ -918,7 +918,7 @@ def _populate_object_notes(data, parent, unique_catalogs):
 	if inscription:
 		hmo.carries = vocab.Note(ident='', content=inscription)
 
-def _populate_object_prev_post_sales(data, now_key, post_sale_map):
+def _populate_object_prev_post_sales(data, this_key, post_sale_map):
 	post_sales = data.get('post_sale', [])
 	prev_sales = data.get('prev_sale', [])
 	prev_post_sales_records = [(post_sales, False), (prev_sales, True)]
@@ -929,10 +929,13 @@ def _populate_object_prev_post_sales(data, now_key, post_sale_map):
 			plot = AddAuctionOfLot.shared_lot_number_from_lno(plno)
 			pdate = implode_date(sale_record, '')
 			if pcno and plot and pdate:
-				later_key = (pcno, plot, pdate)
+				that_key = (pcno, plot, pdate)
 				if rev:
-					later_key, now_key = now_key, later_key
-				post_sale_map[later_key] = now_key
+					# `that_key` is for a previous sale for this object
+					post_sale_map[this_key] = that_key
+				else:
+					# `that_key` is for a later sale for this object
+					post_sale_map[that_key] = this_key
 
 
 @use('vocab_type_map')

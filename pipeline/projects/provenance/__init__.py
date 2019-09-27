@@ -378,7 +378,8 @@ class AddAuctionOfLot(Configurable):
 			lot.referred_to_by = vocab.Note(ident=note_id, content=notes)
 		if not lno:
 			warnings.warn(f'Setting empty identifier on {lot.id}')
-		lot.identified_by = model.Identifier(ident='', content=str(lno))
+		lno = str(lno)
+		lot.identified_by = vocab.LotNumber(ident='', content=lno)
 		lot.part_of = auction
 
 	def set_lot_objects(self, lot, lno, data):
@@ -543,10 +544,6 @@ def add_acquisition(data, buyers, sellers, make_la_person=None):
 	acq = model.Acquisition(ident=acq_id, label=f'Acquisition of {cno} {lno} ({date}): {object_label}')
 	acq.transferred_title_of = hmo
 
-	# TODO: in the case of multi-acquisition procurements, the label for this
-	# Payment will be merged with other labels (for the other objects), and only
-	# one will survive the merging process. Therefore, the label for multi-acq
-	# payments should indicate this (e.g. "Payment for lots NNNN and MMMM")
 	multi = tx_data.get('multi_lot_tx')
 	paym_label = f'multiple lots {multi}' if multi else object_label
 	paym = model.Payment(ident=payment_id, label=f'Payment for {paym_label}')
@@ -785,12 +782,12 @@ def populate_object(data, post_sale_map, unique_catalogs, vocab_instance_map, de
 	parent = data['parent_data']
 	auction_data = parent.get('auction_of_lot')
 	if auction_data:
-		lno = auction_data['lot_number']
+		lno = str(auction_data['lot_number'])
 		if 'identifiers' not in data:
 			data['identifiers'] = []
 		if not lno:
 			warnings.warn(f'Setting empty identifier on {hmo.id}')
-		data['identifiers'].append(model.Identifier(ident='', content=str(lno)))
+		data['identifiers'].append(vocab.LotNumber(ident='', content=lno))
 	else:
 		warnings.warn(f'***** NO AUCTION DATA FOUND IN populate_object')
 
@@ -907,12 +904,12 @@ def _populate_object_notes(data, parent, unique_catalogs):
 	hmo = get_crom_object(data)
 	notes = data.get('hand_note', [])
 	for note in notes:
-		c = note['hand_note']
+		hand_note_content = note['hand_note']
 		owner = note.get('hand_note_so')
 		cno = parent['auction_of_lot']['catalog_number']
 		catalog_uri = pir_uri('CATALOG', cno, owner, None)
 		catalogs = unique_catalogs.get(catalog_uri)
-		note = vocab.Note(ident='', content=c)
+		note = vocab.Note(ident='', content=hand_note_content)
 		hmo.referred_to_by = note
 		if catalogs and len(catalogs) == 1:
 			note.carried_by = vocab.AuctionCatalog(ident=catalog_uri, label=f'Sale Catalog {cno}, owned by “{owner}”')
@@ -1040,7 +1037,7 @@ def add_auction_catalog(data):
 
 def add_physical_catalog_objects(data):
 	'''Add modeling for physical copies of an auction catalog'''
-	catalog = data['_catalog']['_LOD_OBJECT']
+	catalog = get_crom_object(data['_catalog'])
 	cno = data['catalog_number']
 	owner = data['owner_code']
 	copy = data['copy_number']
@@ -1055,10 +1052,6 @@ def add_physical_catalog_objects(data):
 		catalogObject.referred_to_by = vocab.Note(ident='', content=info)
 	catalogObject.carries = catalog
 
-	# TODO: Rob's build-sample-auction-data.py script adds this annotation. where does it come from?
-# 	anno = vocab.Annotation()
-# 	anno._label = "Additional annotations in WSHC copy of BR-A1"
-# 	catalogObject.carries = anno
 	add_crom_data(data=data, what=catalogObject)
 	return data
 
@@ -1104,16 +1097,17 @@ def populate_auction_catalog(data):
 	'''Add modeling data for an auction catalog'''
 	d = {k: v for k, v in data.items()}
 	parent = data['parent_data']
-	cno = parent['catalog_number']
+	cno = str(parent['catalog_number'])
 	sno = parent['star_record_no']
 	catalog = get_crom_object(d)
-	for lno in parent.get('lugt', {}).values():
-		if not lno:
+	for lugt_no in parent.get('lugt', {}).values():
+		if not lugt_no:
 			warnings.warn(f'Setting empty identifier on {catalog.id}')
-		catalog.identified_by = model.Identifier(ident='', label=f"Lugt Number: {lno}", content=str(lno))
+		lugt_number = str(lugt_no)
+		catalog.identified_by = model.Identifier(ident='', label=f"Lugt Number: {lugt_number}", content=lugt_number)
 	if not cno:
 		warnings.warn(f'Setting empty identifier on {catalog.id}')
-	catalog.identified_by = model.Identifier(ident='', content=str(cno))
+	catalog.identified_by = vocab.LocalNumber(ident='', content=cno)
 	if not sno:
 		warnings.warn(f'Setting empty identifier on {catalog.id}')
 	catalog.identified_by = vocab.LocalNumber(ident='', content=sno)
@@ -1200,7 +1194,7 @@ class ProvenancePipeline(PipelineBase):
 			self.add_serialization_chain(graph, catalogs.output, model=self.models['HumanMadeObject'])
 		return catalogs
 
-	def add_catalog_linguistic_objects(self, graph, events, serialize=True):
+	def add_catalog_linguistic_objects_chain(self, graph, events, serialize=True):
 		'''Add modeling of auction catalogs as linguistic objects.'''
 		los = graph.add_chain(
 			ExtractKeyedValue(key='_catalog'),
@@ -1623,7 +1617,7 @@ class ProvenancePipeline(PipelineBase):
 			catalogs = self.add_physical_catalogs_chain(g, physical_catalog_records, serialize=True)
 			_ = self.add_physical_catalog_owners_chain(g, catalogs, serialize=True)
 			auction_events = self.add_auction_events_chain(g, auction_events_records, serialize=True)
-			_ = self.add_catalog_linguistic_objects(g, auction_events, serialize=True)
+			_ = self.add_catalog_linguistic_objects_chain(g, auction_events, serialize=True)
 			_ = self.add_auction_houses_chain(g, auction_events, serialize=True)
 			_ = self.add_places_chain(g, auction_events, serialize=True)
 

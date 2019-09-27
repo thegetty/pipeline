@@ -298,7 +298,7 @@ def make_ymd_timespan(data: dict, start_prefix="", end_prefix="", label=""):
 	t._label = label
 	if not label:
 		warnings.warn(f'Setting empty name on {t.id}')
-	t.identified_by = model.Name(content=label)
+	t.identified_by = model.Name(ident='', content=label)
 	t.begin_of_the_begin = ymd_to_datetime(data[y], data[m], data[d])
 	t.end_of_the_end = ymd_to_datetime(data[y2], data[m2], data[d2], which="end")
 	return t

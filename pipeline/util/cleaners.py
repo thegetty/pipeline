@@ -236,7 +236,7 @@ def parse_location(*parts, uri_base=None, types=None):
 
 	If the iterable `types` is given, it supplies the type names of the associated names
 	(e.g. `('City', 'Country')`). Otherwise, heuristics are used to guide the parsing,
-	with the caveat that the final 
+	with the caveat that the final
 	'''
 	value = ', '.join(parts)
 	if uri_base is None:

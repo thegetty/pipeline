@@ -192,7 +192,11 @@ class CromObjectMerger:
 					break
 			else:
 				try:
-					identified[v.id].append(v)
+					i = v.id
+					if i:
+						identified[i].append(v)
+					else:
+						unidentified.append(v)
 				except AttributeError:
 					unidentified.append(v)
 
@@ -241,7 +245,8 @@ class CromObjectMerger:
 		else:
 			# there are no identifiable values in the new objects, so we can just append them
 			if allows_multiple:
-				setattr(obj, p, *unidentified)
+				for v in unidentified:
+					setattr(obj, p, v)
 			else:
 				if unidentified:
 					if len(unidentified) > 1:

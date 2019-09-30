@@ -254,10 +254,10 @@ def add_auction_houses(data, auction_houses):
 
 class AddAuctionOfLot(Configurable):
 	'''Add modeling data for the auction of a lot of objects.'''
-	
+
 	# TODO: does this handle all the cases of data packed into the lot_number string that need to be stripped?
 	shared_lot_number_re = re.compile(r'(\[[a-z]\])')
-	
+
 	problematic_records = Service('problematic_records')
 	auction_locations = Service('auction_locations')
 	auction_houses = Service('auction_houses')
@@ -357,7 +357,7 @@ class AddAuctionOfLot(Configurable):
 		Return a URI representing the procurement which the object (identified by the
 		supplied data) is a part of. This may identify just the lot being sold or, in the
 		case of multiple lots being bought for a single price, a single procurement that
-		encompasses multiple acquisitions that span different lots. 
+		encompasses multiple acquisitions that span different lots.
 		'''
 		cno, lno, date = object_key(data)
 		shared_lot_number = AddAuctionOfLot.shared_lot_number_from_lno(lno)
@@ -404,9 +404,9 @@ class AddAuctionOfLot(Configurable):
 			# if there is an asking price/currency, it's a direct sale, not an auction;
 			# filter these out from subsequent modeling of auction lots.
 			return
-		
+
 		copy_source_information(data['_object'], data)
-		
+
 		auction_data = data['auction_of_lot']
 		lot_object_key = object_key(auction_data)
 		cno, lno, date = lot_object_key
@@ -437,7 +437,7 @@ class AddAuctionOfLot(Configurable):
 		self.set_lot_date(lot, auction_data)
 		self.set_lot_notes(lot, auction_data)
 		self.set_lot_objects(lot, lno, data)
-		
+
 		tx_uri = AddAuctionOfLot.transaction_uri_for_lot(auction_data, data.get('price', []))
 		lots = AddAuctionOfLot.lots_in_transaction(auction_data, data.get('price', []))
 		multi = AddAuctionOfLot.transaction_contains_multiple_lots(auction_data, data.get('price', []))
@@ -445,7 +445,7 @@ class AddAuctionOfLot(Configurable):
 		tx._label = f'Procurement of Lot {cno} {lots} ({date})'
 		lot.caused = tx
 		tx_data = {}
-		
+
 		if multi:
 			tx_data['multi_lot_tx'] = lots
 		with suppress(AttributeError):
@@ -588,14 +588,14 @@ def add_acquisition(data, buyers, sellers, make_la_person=None):
 	make_la_person = MakeLinkedArtPerson()
 	for owner_data, rev in prev_post_owner_records:
 		rev_name = 'prev-owner' if rev else 'post-owner'
-		for rec_no, owner_record in enumerate(owner_data):
+		for seq_no, owner_record in enumerate(owner_data):
 			name = owner_record.get('own_auth') or owner_record.get('own')
 			if not name:
 				warnings.warn(f'*** No name for {rev_name}: {owner_record}')
 				pprint.pprint(owner_record)
 			owner_record['names'] = [(name,)]
 			owner_record['label'] = name
-			owner_record['uri'] = pir_uri('PERSON', 'PI_REC_NO', data['pi_record_no'], f'{rev_name}-{rec_no+1}')
+			owner_record['uri'] = pir_uri('PERSON', 'PI_REC_NO', data['pi_record_no'], f'{rev_name}-{seq_no+1}')
 			# TODO: handle other fields of owner_record: own_auth_d, own_auth_l, own_auth_q, own_ques, own_so, own_ulan
 			make_la_person(owner_record)
 			owner = get_crom_object(owner_record)
@@ -614,7 +614,7 @@ def related_procurement(current_tx, hmo, current_ts=None, buyer=None, seller=Non
 	Returns a new `vocab.Procurement` object (and related acquisition) that is temporally
 	related to the supplied procurement and associated data. The new procurement is for
 	the given object, and has the given buyer and seller (both optional).
-	
+
 	If the `previous` flag is `True`, the new procurement is occurs before `current_tx`,
 	and if the timespan `current_ts` is given, has temporal data to that effect. If
 	`previous` is `False`, this relationship is reversed.
@@ -657,7 +657,7 @@ def add_bidding(data, buyers):
 		hmo = get_crom_object(data)
 		bidding_id = hmo.id + '-Bidding'
 		all_bids = model.Activity(ident=bidding_id, label=f'Bidding on {cno} {lno} ({date})')
-		
+
 		all_bids.part_of = lot
 
 		for seq_no, amnt in enumerate(amnts):
@@ -771,7 +771,7 @@ def populate_destruction_events(data, note, destruction_types_map):
 				event = model.Event(label=f'{method.capitalize()} event causing the destruction of “{title}”')
 				event.classified_as = type
 				d.caused_by = event
-	
+
 @use('post_sale_map')
 @use('unique_catalogs')
 @use('vocab_instance_map')
@@ -819,12 +819,13 @@ def _populate_object_visual_item(data, vocab_instance_map):
 	hmo = get_crom_object(data)
 	title = data.get('title')
 	vidata = {}
-	
+
 	vi_id = hmo.id + '-VisualItem'
 	vi = model.VisualItem(ident=vi_id)
 	if title:
 		vidata['label'] = f'Visual work of “{title}”'
 		vidata['names'] = [(title,)]
+
 	genre = genre_instance(data.get('genre'), vocab_instance_map)
 	if genre:
 		vi.classified_as = genre
@@ -833,10 +834,9 @@ def _populate_object_visual_item(data, vocab_instance_map):
 
 def _populate_object_statements(data):
 	hmo = get_crom_object(data)
-	m = data.get('materials')
-	if m:
-		matstmt = vocab.MaterialStatement(ident='')
-		matstmt.content = m
+	materials = data.get('materials')
+	if materials:
+		matstmt = vocab.MaterialStatement(ident='', content=materials)
 		hmo.referred_to_by = matstmt
 
 	dimstr = data.get('dimensions')
@@ -883,7 +883,7 @@ def _populate_object_present_location(data, now_key, destruction_types_map):
 						'uri': pir_uri('ORGANIZATION', 'PRESENT-OWNER', *now_key),
 					}
 
-				base_uri = hmo.id + '-PLACE,'
+				base_uri = hmo.id + '-Place,'
 				place_data = make_la_place(current, base_uri=base_uri)
 				place = get_crom_object(place_data)
 
@@ -965,7 +965,7 @@ def add_pir_artists(data, *, make_la_person):
 		hmo_label = f'“{hmo._label}”'
 	except AttributeError:
 		hmo_label = 'object'
-	event_id = f'{data["uri"]}-Production'
+	event_id = hmo.id + '-Production'
 	event = model.Production(ident=event_id, label=f'Production event for {hmo_label}')
 	hmo.produced_by = event
 	data['_production_event'] = add_crom_data({}, event)
@@ -975,9 +975,6 @@ def add_pir_artists(data, *, make_la_person):
 	data['_artists'] = artists
 	for seq_no, a in enumerate(artists):
 		# TODO: handle attrib_mod_auth field
-# 		star_rec_no = None
-# 		with suppress(ValueError, TypeError):
-# 			star_rec_no = int(a.get('star_rec_no'))
 		ulan = None
 		with suppress(ValueError, TypeError):
 			ulan = int(a.get('artist_ulan'))
@@ -1130,7 +1127,7 @@ class ProvenancePipeline(PipelineBase):
 		vocab.register_instance('history', {'parent': model.Type, 'id': '300033898', 'label': 'History'})
 		vocab.register_vocab_class('SalesCatalog', {'parent': model.HumanMadeObject, 'id': '300026074', 'label': 'Sales Catalog'})
 		vocab.register_vocab_class('AuctionCatalog', {'parent': model.HumanMadeObject, 'id': '300026068', 'label': 'Auction Catalog'})
-		
+
 		super().__init__()
 		self.project_name = 'provenance'
 		self.graph_0 = None
@@ -1267,7 +1264,7 @@ class ProvenancePipeline(PipelineBase):
 		if serialize:
 			# write SALES data
 			self.add_serialization_chain(graph, p.output, model=self.models['Procurement'], use_memory_writer=False)
-	
+
 	def add_buyers_sellers_chain(self, graph, acquisitions, serialize=True):
 		'''Add modeling of the buyers, bidders, and sellers involved in an auction.'''
 		buyers = graph.add_chain(
@@ -1521,7 +1518,7 @@ class ProvenancePipeline(PipelineBase):
 			add_pir_artists,
 			_input=sales.output
 		)
-		
+
 		if serialize:
 			# write OBJECTS data
 			self.add_serialization_chain(graph, objects.output, model=self.models['HumanMadeObject'])
@@ -1680,7 +1677,7 @@ class ProvenancePipeline(PipelineBase):
 		print('Running graph component 2...', file=sys.stderr)
 		graph2 = self.get_graph_2(**options)
 		self.run_graph(graph2, services=services)
-		
+
 		print(f'Pipeline runtime: {timeit.default_timer() - start}', file=sys.stderr)
 
 
@@ -1717,7 +1714,7 @@ class ProvenanceFilePipeline(ProvenancePipeline):
 	def merge_post_sale_objects(self, counter, post_map):
 		singles = {k for k in counter if counter[k] == 1}
 		multiples = {k for k in counter if counter[k] > 1}
-		
+
 		total = 0
 		mapped = 0
 
@@ -1744,13 +1741,13 @@ class ProvenanceFilePipeline(ProvenancePipeline):
 
 		large_components = set(g.largest_component_canonical_keys(10))
 		dot = graphviz.Digraph()
-		
+
 		node_id = lambda n: f'n{n!s}'
 		for n, i in g.nodes.items():
 			key, _ = g.canonical_key(n)
 			if key in large_components:
 				dot.node(node_id(i), str(n))
-		
+
 		post_sale_rewrite_map = {}
 		if os.path.exists(rewrite_map_filename):
 			with open(rewrite_map_filename, 'r') as f:
@@ -1784,10 +1781,10 @@ class ProvenanceFilePipeline(ProvenancePipeline):
 		start = timeit.default_timer()
 		services = self.get_services(**options)
 		super().run(services=services, **options)
-		
+
 		count = len(self.writers)
-		for i, w in enumerate(self.writers):
-			print('[%d/%d] writers being flushed' % (i+1, count))
+		for seq_no, w in enumerate(self.writers):
+			print('[%d/%d] writers being flushed' % (seq_no+1, count))
 			if isinstance(w, MergingMemoryWriter):
 				w.flush()
 
@@ -1797,4 +1794,4 @@ class ProvenanceFilePipeline(ProvenancePipeline):
 		post_map = services['post_sale_map']
 		self.merge_post_sale_objects(counter, post_map)
 		print(f'>>> {len(post_map)} post sales records')
-		print('Total runtime: ', timeit.default_timer() - start)  
+		print('Total runtime: ', timeit.default_timer() - start)

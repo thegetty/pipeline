@@ -92,6 +92,9 @@ class MakeLinkedArtRecord:
 				c = ident.content
 			thing.identified_by = ident
 
+		if not hasattr(thing, '_label') and 'label' in data:
+			setattr(thing, '_label', data['label'])
+
 		for namedata in data.get('names', []):
 			# namedata should take the form of:
 			# ["A. Name"]

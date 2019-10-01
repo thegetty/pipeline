@@ -41,9 +41,10 @@ _COUNTRY_NAMES = {
 	'Ireland': 'Ireland',
 	'Eire': 'Ireland',
 	'England': 'England',
-	'Espagne': 'Spain',
-	'Espana': 'Spain',
+	'Spain': 'Spain',
 	'España': 'Spain',
+	'Espana': 'Spain',
+	'Espagne': 'Spain',
 	'France': 'France',
 	'Great Britain': 'Great Britain',
 	'Hungary': 'Hungary',
@@ -235,8 +236,7 @@ def parse_location(*parts, uri_base=None, types=None):
 	to `pipeline.linkedart.make_la_place`.
 
 	If the iterable `types` is given, it supplies the type names of the associated names
-	(e.g. `('City', 'Country')`). Otherwise, heuristics are used to guide the parsing,
-	with the caveat that the final 
+	(e.g. `('City', 'Country')`). Otherwise, heuristics are used to guide the parsing.
 	'''
 	value = ', '.join(parts)
 	if uri_base is None:

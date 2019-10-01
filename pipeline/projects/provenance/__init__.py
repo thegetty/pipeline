@@ -585,10 +585,13 @@ def add_acquisition(data, buyers, sellers, make_la_person=None):
 	post_own = data.get('post_owner', [])
 	prev_own = data.get('prev_owner', [])
 	prev_post_owner_records = [(post_own, False), (prev_own, True)]
-	make_la_person = MakeLinkedArtPerson()
 	for owner_data, rev in prev_post_owner_records:
 		rev_name = 'prev-owner' if rev else 'post-owner'
 		for seq_no, owner_record in enumerate(owner_data):
+			if not any([bool(owner_record.get(k)) for k in owner_record.keys() if k != 'own_so']):
+				# some records seem to have source information ('own_so') but no other fields set
+				# these should not constitute actual records of a prev/post owner.
+				continue
 			name = owner_record.get('own_auth') or owner_record.get('own')
 			if not name:
 				warnings.warn(f'*** No name for {rev_name}: {owner_record}')

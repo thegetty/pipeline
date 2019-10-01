@@ -112,12 +112,15 @@ def implode_date(data:dict, prefix:str='', clamp:str=None):
 				month = 1
 				year += 1
 
-	if year and month and day:
-		return '%04d-%02d-%02d' % (int(year), month, day)
-	elif year and month:
-		return '%04d-%02d' % (int(year), month)
-	elif year:
-		return '%04d' % (int(year),)
+	try:
+		if year and month and day:
+			return '%04d-%02d-%02d' % (int(year), month, day)
+		elif year and month:
+			return '%04d-%02d' % (int(year), month)
+		elif year:
+			return '%04d' % (int(year),)
+	except TypeError as e:
+		warnings.warn(f'*** {e}: {pprint.pformat([int(year), month, day])}')
 	return None
 
 class ExclusiveValue(ContextDecorator):

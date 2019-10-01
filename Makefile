@@ -46,11 +46,13 @@ aatagraph: $(GETTY_PIPELINE_TMP_PATH)/aata.pdf
 	open -a Preview $(GETTY_PIPELINE_TMP_PATH)/aata.pdf
 
 nt:
+	mkdir -p $(GETTY_PIPELINE_TMP_PATH)
 	curl -s 'https://linked.art/ns/v1/linked-art.json' > $(GETTY_PIPELINE_TMP_PATH)/linked-art.json
 	echo 'Transcoding JSON-LD to N-Triples...'
 	find $(GETTY_PIPELINE_OUTPUT) -name '*.json' | sort | xargs -n 128 -P 10 $(PYTHON) ./scripts/json2nt.py $(GETTY_PIPELINE_TMP_PATH)/linked-art.json
 
 nq:
+	mkdir -p $(GETTY_PIPELINE_TMP_PATH)
 	curl -s 'https://linked.art/ns/v1/linked-art.json' > $(GETTY_PIPELINE_TMP_PATH)/linked-art.json
 	echo 'Transcoding JSON-LD to N-Quads...'
 	find $(GETTY_PIPELINE_OUTPUT) -name '*.json' | xargs -n 256 -P 16 $(PYTHON) ./scripts/json2nq.py $(GETTY_PIPELINE_TMP_PATH)/linked-art.json

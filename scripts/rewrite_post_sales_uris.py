@@ -19,6 +19,7 @@ Usage: {cmd} URI_REWRITE_MAP.json
 	'''.lstrip())
 	sys.exit(1)
 
+print(f'Rewriting post-sales URIs ...')
 rewrite_map_filename = sys.argv[1]
 with open(rewrite_map_filename, 'r') as f:
 	post_sale_rewrite_map = json.load(f)

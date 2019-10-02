@@ -19,7 +19,7 @@ class ProvenanceTestPipeline(ProvenancePipeline):
 		super().__init__(input_path, catalogs, auction_events, contents, **kwargs)
 		self.writer = writer
 
-	def serializer_nodes_for_model(self, model=None):
+	def serializer_nodes_for_model(self, *args, model=None, **kwargs):
 		nodes = []
 		if model:
 			nodes.append(AddArchesModel(model=model))
@@ -83,14 +83,17 @@ class TestProvenancePipelineOutput(unittest.TestCase):
 	def test_pipeline_pir(self):
 		input_path = os.getcwd()
 		models = {
+			'Acquisition': 'model-acquisition',
+			'Activity': 'model-activity',
+			'Event': 'model-event',
+			'Group': 'model-groups',
 			'HumanMadeObject': 'model-object',
 			'LinguisticObject': 'model-lo',
 			'Person': 'model-person',
-			'Event': 'model-event',
-			'Group': 'model-groups',
-			'Activity': 'model-activity',
+			'Place': 'model-place',
 			'Procurement': 'model-activity',
-			'Place': 'model-place'
+			'Production': 'model-production',
+			'VisualItem': 'model-visual-item'
 		}
 		output = self.run_pipeline(models, input_path)
 
@@ -112,13 +115,13 @@ class TestProvenancePipelineOutput(unittest.TestCase):
 		self.assertEqual(len(events), 1, 'expected count of auction events')
 
 		object_types = {c['_label'] for o in objects.values() for c in o.get('classified_as', [])}
-		self.assertEqual(object_types, {'Painting'})
+		self.assertEqual(object_types, {'Auction Catalog', 'Painting'})
 
 		lo_types = {c['_label'] for o in los.values() for c in o.get('classified_as', [])}
 		self.assertEqual(lo_types, {'Auction Catalog'})
 
 		people_names = {o['_label'] for o in people.values()}
-		self.assertEqual(people_names, {'[Anonymous]', 'Gillemans', 'Vinckebooms'})
+		self.assertEqual(people_names, {'[ANONYMOUS]', 'GILLEMANS, JAN PAUWEL', 'VINCKEBOONS, DAVID'})
 
 		key_119 = 'tag:getty.edu,2019:digital:pipeline:provenance:REPLACE-WITH-UUID#AUCTION,B-A139,LOT,0119,DATE,1774-05-31'
 		key_120 = 'tag:getty.edu,2019:digital:pipeline:provenance:REPLACE-WITH-UUID#AUCTION,B-A139,LOT,0120,DATE,1774-05-31'

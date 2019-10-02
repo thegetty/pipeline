@@ -69,7 +69,7 @@ class MergingMemoryWriter(Configurable):
 		writer = MergingFileWriter(directory=self.directory, partition_directories=self.partition_directories, compact=self.compact, model=self.model)
 		count = len(self.data)
 		skip = max(int(count / 100), 1)
-		for i, k in enumerate(self.data):
+		for i, k in enumerate(sorted(self.data)):
 			o = self.data[k]
 			if (i % skip) == 0:
 				pct = 100.0 * float(i) / float(count)

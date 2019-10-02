@@ -40,7 +40,7 @@ def identity(d):
 	'''
 	yield d
 
-def implode_date(data: dict, prefix: str, clamp:str=None):
+def implode_date(data:dict, prefix:str='', clamp:str=None):
 	'''
 	Given a dict `data` and a string `prefix`, extract year, month, and day elements
 	from `data` (e.g. '{prefix}year', '{prefix}month', and '{prefix}day'), and return
@@ -53,6 +53,10 @@ def implode_date(data: dict, prefix: str, clamp:str=None):
 
 	If `clamp='end'`, clamping occurs using the latest valid values. For example,
 	'1800-02' would become '1800-02-28'.
+
+	If `clamp='eoe'` ('end of the end'), clamping occurs using the first value that is
+	*not* valid. That is, the returned value may be used as an exclusive endpoint for a
+	date range. For example, '1800-02' would become '1800-03-01'.
 	'''
 	year = data.get(f'{prefix}year')
 	try:
@@ -61,25 +65,52 @@ def implode_date(data: dict, prefix: str, clamp:str=None):
 		return None
 	month = data.get(f'{prefix}month', data.get(f'{prefix}mo'))
 	day = data.get(f'{prefix}day')
+	
 	try:
 		month = int(month)
 		if month < 1 or month > 12:
-			raise Exception
-	except:
+			raise Exception(f'Month value is not valid: {month}')
+	except Exception as e:
 		if clamp == 'begin':
 			month = 1
+			day = 1
+			return '%04d-%02d-%02d' % (int(year), month, day)
 		elif clamp == 'end':
+			day = 31
 			month = 12
+			return '%04d-%02d-%02d' % (int(year), month, day)
+		elif clamp == 'eoe':
+			day = 1
+			month = 1
+			year += 1
+			return '%04d-%02d-%02d' % (int(year), month, day)
+		else:
+			return '%04d' % (int(year),)
 
+	max_day = calendar.monthrange(year, month)[1]
 	try:
 		day = int(day)
 		if day < 1 or day > 31:
-			raise Exception
-	except:
+			raise Exception(f'Day value is not valid: {day}')
+		if clamp == 'eoe':
+			day += 1
+			if day > max_day:
+				day = 1
+				month += 1
+				if month > 12:
+					month = 1
+					year += 1
+	except Exception as e:
 		if clamp == 'begin':
 			day = 1
 		elif clamp == 'end':
-			day = calendar.monthrange(year, month)[1]
+			day = max_day
+		elif clamp == 'eoe':
+			day = 1
+			month += 1
+			if month > 12:
+				month = 1
+				year += 1
 
 	if year and month and day:
 		return '%04d-%02d-%02d' % (int(year), month, day)
@@ -190,24 +221,39 @@ class CromObjectMerger:
 			self._classify_values(existing, identified, unidentified)
 
 			setattr(obj, p, None) # clear out all the existing values
-			for v in identified.values():
-				if not allows_multiple:
+			if allows_multiple:
+				for v in identified.values():
 					setattr(obj, p, self.merge(*v))
-					return
-				setattr(obj, p, self.merge(*v))
-			for v in unidentified:
-				if not allows_multiple:
+				for v in unidentified:
 					setattr(obj, p, v)
-					return
-				setattr(obj, p, v)
+			else:
+				try:
+					identified_values = sorted(identified.values())[0]
+				except TypeError:
+					# in case the values cannot be sorted
+					identified_values = list(identified.values())[0]
+				setattr(obj, p, self.merge(*identified_values))
+				
+				if unidentified:
+					warnings.warn(f'*** Dropping {len(unidentified)} unidentified values for property {p} of {obj}')
+# 					unidentified_value = sorted(unidentified)[0]
+# 					setattr(obj, p, unidentified_value)
 		else:
 			# there are no identifiable values in the new objects, so we can just append them
-			for v in unidentified:
-				if not allows_multiple:
+			if allows_multiple:
+				setattr(obj, p, *unidentified)
+			else:
+				if unidentified:
+					if len(unidentified) > 1:
+						warnings.warn(f'*** Dropping {len(unidentified)-1} extra unidentified values for property {p} of {obj}')
+					try:
+						values = set(unidentified + [getattr(obj, p)])
+						value = sorted(values)[0]
+					except TypeError:
+						# in case the values cannot be sorted
+						value = unidentified[0]
 					setattr(obj, p, None)
-					setattr(obj, p, v)
-					return
-				setattr(obj, p, v)
+					setattr(obj, p, value)
 
 class ExtractKeyedValues(Configurable):
 	'''
@@ -314,17 +360,25 @@ class MatchingFiles(Configurable):
 			sys.stderr.write(f'*** No files matching {pattern} found in {fullpath}\n')
 
 def timespan_before(after):
-	ts = model.TimeSpan()
+	ts = model.TimeSpan(ident='')
 	try:
 		ts.end_of_the_end = after.begin_of_the_begin
+		with suppress(AttributeError):
+			l = f'Before {after._label}'
+			l.identified_by = model.Name(ident='', content=l)
+			ts._label = l
 		return ts
 	except AttributeError:
 		return None
 
 def timespan_after(before):
-	ts = model.TimeSpan()
+	ts = model.TimeSpan(ident='')
 	try:
 		ts.begin_of_the_begin = before.end_of_the_end
+		with suppress(AttributeError):
+			l = f'After {before._label}'
+			l.identified_by = model.Name(ident='', content=l)
+			ts._label = l
 		return ts
 	except AttributeError:
 		return None
@@ -361,6 +415,16 @@ def timespan_from_outer_bounds(begin=None, end=None):
 	'''
 	if begin or end:
 		ts = model.TimeSpan(ident='')
+		if begin and end:
+			ts._label = f'{begin} to {end}'
+			ts.identified_by = model.Name(ident='', content=ts._label)
+		elif begin:
+			ts._label = f'{begin} onwards'
+			ts.identified_by = model.Name(ident='', content=ts._label)
+		elif end:
+			ts._label = f'up to {end}'
+			ts.identified_by = model.Name(ident='', content=ts._label)
+
 		if begin is not None:
 			try:
 				if not isinstance(begin, datetime.datetime):
@@ -380,3 +444,21 @@ def timespan_from_outer_bounds(begin=None, end=None):
 				warnings.warn(f'*** failed to parse end date: {end}')
 		return ts
 	return None
+
+class CaseFoldingSet(set):
+	def __init__(self, iterable):
+		for v in iterable:
+			if isinstance(v, str):
+				self.add(v.casefold())
+			else:
+				self.add(v)
+
+	def add(self, v):
+		super().add(v.casefold())
+
+	def remove(self, v):
+		super().remove(v.casefold())
+
+	def __contains__(self, v):
+		return super().__contains__(v.casefold())
+

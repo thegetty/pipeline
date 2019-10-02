@@ -7,6 +7,7 @@ import uuid
 import pprint
 import itertools
 from pathlib import Path
+from contextlib import suppress
 
 from settings import output_file_path
 from pipeline.util.rewriting import rewrite_output_files
@@ -18,8 +19,9 @@ class UUIDRewriter:
 		self.map_file = map_file
 		if map_file:
 			# Load JSON map file for pre-written UUIDs
-			with open(map_file) as fh:
-				self.map = json.load(fh)
+			with suppress(FileNotFoundError):
+				with open(map_file) as fh:
+					self.map = json.load(fh)
 
 	def persist_map(self):
 		with open(self.map_file, 'w') as fh:
@@ -28,12 +30,6 @@ class UUIDRewriter:
 	def rewrite(self, d, *args, **kwargs):
 		if isinstance(d, dict):
 			return {k: self.rewrite(v, *args, **kwargs) for k, v in d.items()}
-		elif isinstance(d, list):
-			return [self.rewrite(v, *args, **kwargs) for v in d]
-		elif isinstance(d, int):
-			return d
-		elif isinstance(d, float):
-			return d
 		elif isinstance(d, str):
 			if d.startswith(self.prefix):
 				d = d[len(self.prefix):]
@@ -45,9 +41,13 @@ class UUIDRewriter:
 					self.map[d] = u
 					return u
 			return d
+		elif isinstance(d, list):
+			return [self.rewrite(v, *args, **kwargs) for v in d]
+		elif isinstance(d, (int, float)):
+			return d
 		else:
 			print(f'failed to rewrite JSON value: {d!r}')
-			raise Exception()
+			raise Exception(f'failed to rewrite JSON value: {d!r}')
 
 if len(sys.argv) < 2:
 	cmd = sys.argv[0]
@@ -61,6 +61,8 @@ URIs.
 	sys.exit(1)
 
 prefix = sys.argv[1]
+
+print(f'Rewriting URIs to UUIDs ...')
 map_file = sys.argv[2] if len(sys.argv) > 2 else None
 r = UUIDRewriter(prefix, map_file)
 rewrite_output_files(r, update_filename=True, verify_uuid=True)

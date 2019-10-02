@@ -51,7 +51,7 @@ class PipelineBase:
 
 		return services
 
-	def serializer_nodes_for_model(self, model=None):
+	def serializer_nodes_for_model(self, model=None, *args, **kwargs):
 		nodes = []
 		if model:
 			nodes.append(AddArchesModel(model=model))
@@ -61,9 +61,9 @@ class PipelineBase:
 			nodes.append(Serializer(compact=True))
 		return nodes
 
-	def add_serialization_chain(self, graph, input_node, model=None):
+	def add_serialization_chain(self, graph, input_node, model=None, *args, **kwargs):
 		'''Add serialization of the passed transformer node to the bonobo graph.'''
-		nodes = self.serializer_nodes_for_model(model=model)
+		nodes = self.serializer_nodes_for_model(*args, model=model, **kwargs)
 		if nodes:
 			graph.add_chain(*nodes, _input=input_node)
 		else:

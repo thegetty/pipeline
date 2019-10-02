@@ -29,8 +29,10 @@ fetchaata:
 	aws s3 sync s3://jpgt-or-provenance-01/provenance_batch/data/aata $(GETTY_PIPELINE_INPUT)/aata
 
 fetchpir:
+	mkdir -p $(GETTY_PIPELINE_TMP_PATH)/pipeline
 	mkdir -p $(GETTY_PIPELINE_INPUT)/provenance
 	aws s3 sync s3://jpgt-or-provenance-01/provenance_batch/data/provenance $(GETTY_PIPELINE_INPUT)/provenance
+	cp $(GETTY_PIPELINE_INPUT)/provenance/uri_to_uuid_map.json "${GETTY_PIPELINE_TMP_PATH}/uri_to_uuid_map.json"
 
 fetchknoedler:
 	mkdir -p $(GETTY_PIPELINE_INPUT)/knoedler
@@ -48,12 +50,17 @@ nt:
 	echo 'Transcoding JSON-LD to N-Triples...'
 	find $(GETTY_PIPELINE_OUTPUT) -name '*.json' | sort | xargs -n 128 -P 10 $(PYTHON) ./scripts/json2nt.py $(GETTY_PIPELINE_TMP_PATH)/linked-art.json
 
+nq:
+	curl -s 'https://linked.art/ns/v1/linked-art.json' > $(GETTY_PIPELINE_TMP_PATH)/linked-art.json
+	echo 'Transcoding JSON-LD to N-Quads...'
+	find $(GETTY_PIPELINE_OUTPUT) -name '*.json' | xargs -n 256 -P 16 $(PYTHON) ./scripts/json2nq.py $(GETTY_PIPELINE_TMP_PATH)/linked-art.json
+
 pir:
 	mkdir -p $(GETTY_PIPELINE_TMP_PATH)/pipeline
 	QUIET=$(QUIET) GETTY_PIPELINE_DEBUG=$(DEBUG) GETTY_PIPELINE_LIMIT=$(LIMIT) $(PYTHON) ./pir.py
 	PYTHONPATH=`pwd` $(PYTHON) ./scripts/rewrite_post_sales_uris.py "${GETTY_PIPELINE_TMP_PATH}/post_sale_rewrite_map.json"
-	PYTHONPATH=`pwd` $(PYTHON) ./scripts/rewrite_uris_to_uuids.py 'tag:getty.edu,2019:digital:pipeline:provenance:REPLACE-WITH-UUID#'
-	PYTHONPATH=`pwd` $(PYTHON) ./scripts/coalesce_json.py
+	PYTHONPATH=`pwd` $(PYTHON) ./scripts/rewrite_uris_to_uuids.py 'tag:getty.edu,2019:digital:pipeline:provenance:REPLACE-WITH-UUID#' "${GETTY_PIPELINE_TMP_PATH}/uri_to_uuid_map.json"
+	ls $(GETTY_PIPELINE_OUTPUT) | PYTHONPATH=`pwd` xargs -n 1 -P 8 -I '{}' $(PYTHON) ./scripts/coalesce_json.py "${GETTY_PIPELINE_OUTPUT}/{}"
 
 pirgraph: $(GETTY_PIPELINE_TMP_PATH)/pir.pdf
 	open -a Preview $(GETTY_PIPELINE_TMP_PATH)/pir.pdf
@@ -98,6 +105,7 @@ clean:
 	rm -f $(GETTY_PIPELINE_TMP_PATH)/knoedler.pdf
 	rm -f $(GETTY_PIPELINE_TMP_PATH)/pir.dot
 	rm -f $(GETTY_PIPELINE_TMP_PATH)/knoedler.dot
+	rm -f $(GETTY_PIPELINE_TMP_PATH)/sales-tree.data
 	rm -f "${GETTY_PIPELINE_TMP_PATH}/post_sale_rewrite_map.json"
 
 .PHONY: aata aatagraph knoedler knoedlergraph pir pirgraph test upload nt docker dockerimage dockertest fetch fetchaata fetchpir fetchknoedler

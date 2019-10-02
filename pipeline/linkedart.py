@@ -1,6 +1,7 @@
 import pprint
 from contextlib import suppress
 import warnings
+import urllib.parse
 
 from cromulent import model, vocab
 from cromulent.model import factory
@@ -72,7 +73,7 @@ class MakeLinkedArtRecord:
 				content, itype = identifier
 				if itype is not None:
 					if isinstance(itype, type):
-						ident = itype(content=content)
+						ident = itype(ident='', content=content)
 						if not content:
 							warnings.warn(f'Setting empty identifier on {thing.id}')
 					elif isinstance(itype, object):
@@ -81,7 +82,7 @@ class MakeLinkedArtRecord:
 						if not content:
 							warnings.warn(f'Setting empty identifier on {thing.id}')
 					else:
-						ident = model.Identifier()
+						ident = model.Identifier(ident='')
 						if not content:
 							warnings.warn(f'Setting empty identifier on {thing.id}')
 						ident.content = content
@@ -139,12 +140,11 @@ def set_la_name(thing, value, title_type=None, set_label=False):
 		language = None
 	if set_label:
 		thing._label = label
-	name = model.Name()
+	name = model.Name(ident='', content=label)
 	if title_type is not None:
 		name.classified_as = title_type
 	if not label:
 		warnings.warn(f'Setting empty name on {thing.id}')
-	name.content = label
 	thing.identified_by = name
 	if language is not None:
 		name.language = language
@@ -289,7 +289,7 @@ def make_ymd_timespan(data: dict, start_prefix="", end_prefix="", label=""):
 	m2 = f'{end_prefix}month'
 	d2 = f'{end_prefix}day'	
 
-	t = model.TimeSpan()
+	t = model.TimeSpan(ident='')
 	if not label:
 		label = ymd_to_label(data[y], data[m], data[d])
 		if y != y2:
@@ -298,7 +298,7 @@ def make_ymd_timespan(data: dict, start_prefix="", end_prefix="", label=""):
 	t._label = label
 	if not label:
 		warnings.warn(f'Setting empty name on {t.id}')
-	t.identified_by = model.Name(content=label)
+	t.identified_by = model.Name(ident='', content=label)
 	t.begin_of_the_begin = ymd_to_datetime(data[y], data[m], data[d])
 	t.end_of_the_end = ymd_to_datetime(data[y2], data[m2], data[d2], which="end")
 	return t
@@ -327,7 +327,8 @@ def ymd_to_label(year, month, day):
 class MakeLinkedArtPerson(MakeLinkedArtRecord):
 	def set_properties(self, data, who):
 		super().set_properties(data, who)
-		who._label = str(data['label'])
+		with suppress(KeyError):
+			who._label = str(data['label'])
 
 		with suppress(ValueError, TypeError):
 			ulan = int(data.get('ulan'))
@@ -352,7 +353,7 @@ class MakeLinkedArtPerson(MakeLinkedArtRecord):
 
 		if data.get('active_early') or data.get('active_late'):
 			act = vocab.Active()
-			ts = model.TimeSpan()
+			ts = model.TimeSpan(ident='')
 			if data['active_early']:
 				ts.begin_of_the_begin = "%s-01-01:00:00:00Z" % (data['active_early'],)
 				ts.end_of_the_begin = "%s-01-01:00:00:00Z" % (data['active_early']+1,)
@@ -368,7 +369,7 @@ class MakeLinkedArtPerson(MakeLinkedArtRecord):
 
 		if data.get('birth'):
 			b = model.Birth()
-			ts = model.TimeSpan()
+			ts = model.TimeSpan(ident='')
 			if 'birth_clean' in data and data['birth_clean']:
 				if data['birth_clean'][0]:
 					ts.begin_of_the_begin = data['birth_clean'][0].strftime("%Y-%m-%dT%H:%M:%SZ")
@@ -381,7 +382,7 @@ class MakeLinkedArtPerson(MakeLinkedArtRecord):
 
 		if data.get('death'):
 			d = model.Death()
-			ts = model.TimeSpan()
+			ts = model.TimeSpan(ident='')
 			if 'death_clean' in data and data['death_clean']:
 				if data['death_clean'][0]:
 					ts.begin_of_the_begin = data['death_clean'][0].strftime("%Y-%m-%dT%H:%M:%SZ")
@@ -415,7 +416,7 @@ class MakeLinkedArtPerson(MakeLinkedArtRecord):
 			data['object_type'] = model.Person
 		return super().__call__(data)
 
-def make_la_place(data: dict):
+def make_la_place(data:dict, base_uri=None):
 	'''
 	Given a dictionary representing data about a place, construct a model.Place object,
 	assign it as the crom data in the dictionary, and return the dictionary.
@@ -443,19 +444,24 @@ def make_la_place(data: dict):
 	type = TYPES.get(type_name)
 	parent = None
 	if parent_data:
-		parent_data = make_la_place(parent_data)
+		parent_data = make_la_place(parent_data, base_uri=base_uri)
 		parent = get_crom_object(parent_data)
 		label = f'{label}, {parent._label}'
 
 	placeargs = {'label': label}
 	if data.get('uri'):
 		placeargs['ident'] = data['uri']
+	elif base_uri:
+		data['uri'] = base_uri + urllib.parse.quote(label)
+		placeargs['ident'] = data['uri']
+
 	p = model.Place(**placeargs)
 	if type:
 		p.classified_as = type
-	if not name:
-		warnings.warn(f'Setting empty name on {p.id}')
-	p.identified_by = model.Name(ident='', content=name)
+	if name:
+		p.identified_by = model.Name(ident='', content=name)
+	else:
+		warnings.warn(f'Place with missing name on {p.id}')
 	if parent:
 		p.part_of = parent
 	return add_crom_data(data=data, what=p)

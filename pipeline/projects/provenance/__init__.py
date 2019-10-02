@@ -16,7 +16,6 @@ import pprint
 import pathlib
 import itertools
 import datetime
-import dateutil.parser
 from collections import Counter, defaultdict, namedtuple
 from contextlib import suppress
 import inspect
@@ -24,8 +23,7 @@ import inspect
 import time
 import timeit
 from sqlalchemy import create_engine
-
-import pipeline.execution
+import dateutil.parser
 
 import graphviz
 import bonobo
@@ -34,8 +32,12 @@ from bonobo.nodes import Limit
 from bonobo.constants import NOT_MODIFIED
 
 import settings
+
 from cromulent import model, vocab
 from cromulent.model import factory
+from cromulent.extract import extract_physical_dimensions, extract_monetary_amount
+
+import pipeline.execution
 from pipeline.projects import PipelineBase
 from pipeline.projects.provenance.util import *
 from pipeline.util import \
@@ -51,7 +53,6 @@ from pipeline.util import \
 			replace_key_pattern, \
 			strip_key_prefix, \
 			timespan_from_outer_bounds
-from cromulent.extract import extract_physical_dimensions, extract_monetary_amount
 from pipeline.util.cleaners import \
 			parse_location, \
 			parse_location_name, \
@@ -329,8 +330,6 @@ class AddAuctionOfLot(Configurable):
 		Return `True` if the procurement related to the supplied data represents a
 		transaction of multiple lots with a single payment, `False` otherwise.
 		'''
-		cno, lno, date = object_key(data)
-		shared_lot_number = AddAuctionOfLot.shared_lot_number_from_lno(lno)
 		for p in prices:
 			n = p.get('price_note')
 			if n and n.startswith('for lots '):
@@ -343,7 +342,7 @@ class AddAuctionOfLot(Configurable):
 		Return a string that represents the lot numbers that are a part of the procurement
 		related to the supplied data.
 		'''
-		cno, lno, date = object_key(data)
+		_, lno, _ = object_key(data)
 		shared_lot_number = AddAuctionOfLot.shared_lot_number_from_lno(lno)
 		for p in prices:
 			n = p.get('price_note')
@@ -485,7 +484,7 @@ def add_person(data: dict, rec_id, *, make_la_person):
 		data['uri'] = pir_uri('PERSON', 'ULAN', ulan)
 		data['identifiers'] = [model.Identifier(ident='', content=str(ulan))]
 		data['ulan'] = ulan
-	elif acceptable_person_auth_name(auth_name) and not(auth_name_q):
+	elif acceptable_person_auth_name(auth_name) and not auth_name_q:
 		data['uri'] = pir_uri('PERSON', 'AUTHNAME', auth_name)
 		data['identifiers'] = [
 			vocab.PrimaryName(ident='', content=auth_name) # NOTE: most of these are also vocab.SortName, but not 100%, so witholding that assertion for now
@@ -521,7 +520,7 @@ def add_acquisition(data, buyers, sellers, make_la_person=None):
 	'''Add modeling of an acquisition as a transfer of title from the seller to the buyer'''
 	hmo = get_crom_object(data)
 	parent = data['parent_data']
-	transaction = parent['transaction']
+# 	transaction = parent['transaction']
 	prices = parent['price']
 	auction_data = parent['auction_of_lot']
 	cno, lno, date = object_key(auction_data)
@@ -639,7 +638,6 @@ def related_procurement(current_tx, hmo, current_ts=None, buyer=None, seller=Non
 	if seller:
 		pacq.transferred_title_from = seller
 	tx.part = pacq
-	tx_data = {}
 	if current_ts:
 		if previous:
 			pacq.timespan = timespan_before(current_ts)
@@ -1083,7 +1081,7 @@ def add_physical_catalog_owners(data, location_codes, unique_catalogs):
 		add_crom_data(data['_owner'], owner)
 		if not owner_code:
 			warnings.warn(f'Setting empty identifier on {owner.id}')
-		owner_data = add_crom_data(data=data['_owner'], what=owner)
+		add_crom_data(data=data['_owner'], what=owner)
 		catalog = get_crom_object(data)
 		catalog.current_owner = owner
 
@@ -1163,6 +1161,8 @@ class ProvenancePipeline(PipelineBase):
 		'''Return a `dict` of named services available to the bonobo pipeline.'''
 		services = super().get_services()
 		services.update({
+			# to avoid constructing new MakeLinkedArtPerson objects millions of times, this
+			# is passed around as a service to the functions and classes that require it.
 			'make_la_person': MakeLinkedArtPerson(),
 			'lot_counter': Counter(),
 			'unique_catalogs': {},
@@ -1694,7 +1694,6 @@ class ProvenanceFilePipeline(ProvenancePipeline):
 	def __init__(self, input_path, catalogs, auction_events, contents, **kwargs):
 		super().__init__(input_path, catalogs, auction_events, contents, **kwargs)
 		self.writers = []
-		debug = kwargs.get('debug', False)
 		self.output_path = kwargs.get('output_path')
 
 	def serializer_nodes_for_model(self, *args, model=None, use_memory_writer=True, **kwargs):
@@ -1736,7 +1735,6 @@ class ProvenanceFilePipeline(ProvenancePipeline):
 				mapped += 1
 				g.add_edge(src, dst)
 			elif dst in multiples:
-				pass
 				print(f'  {src} maps to a MULTI-OBJECT lot')
 			else:
 				print(f'  {src} maps to an UNKNOWN lot')

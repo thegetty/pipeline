@@ -69,7 +69,7 @@ def implode_date(data:dict, prefix:str='', clamp:str=None):
 	try:
 		month = int(month)
 		if month < 1 or month > 12:
-			raise Exception(f'Month value is not valid: {month}')
+			raise ValueError(f'Month value is not valid: {month}')
 	except Exception as e:
 		if clamp == 'begin':
 			month = 1
@@ -91,7 +91,7 @@ def implode_date(data:dict, prefix:str='', clamp:str=None):
 	try:
 		day = int(day)
 		if day < 1 or day > 31:
-			raise Exception(f'Day value is not valid: {day}')
+			raise ValueError(f'Day value is not valid: {day}')
 		if clamp == 'eoe':
 			day += 1
 			if day > max_day:
@@ -111,6 +111,10 @@ def implode_date(data:dict, prefix:str='', clamp:str=None):
 			if month > 12:
 				month = 1
 				year += 1
+		else:
+			if type(e) not in (TypeError, ValueError):
+				warnings.warn(f'Failed to interpret day value {day!r} in implode_date: {e}')
+				pprint.pprint(data)
 
 	try:
 		if year and month and day:

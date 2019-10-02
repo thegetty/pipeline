@@ -185,10 +185,8 @@ class CromObjectMerger:
 		for attr, classes in self.classified_attribute_based_identity.items():
 			id_sets = []
 			for c in classes:
-				ids = set()
 				o = c()
-				for cl in o.classified_as:
-					ids.add(cl.id)
+				ids = {cl.id for cl in o.classified_as}
 				id_sets.append(ids)
 			self._classified_attribute_based_identity[attr] = id_sets
 

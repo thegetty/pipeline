@@ -587,8 +587,9 @@ def add_acquisition(data, buyers, sellers, make_la_person=None):
 	for owner_data, rev in prev_post_owner_records:
 		rev_name = 'prev-owner' if rev else 'post-owner'
 		for seq_no, owner_record in enumerate(owner_data):
-			if not any([bool(owner_record.get(k)) for k in owner_record.keys() if k != 'own_so']):
-				# some records seem to have source information ('own_so') but no other fields set
+			ignore_fields = ('own_so', 'own_auth_l', 'own_auth_d')
+			if not any([bool(owner_record.get(k)) for k in owner_record.keys() if k not in ignore_fields]):
+				# some records seem to have metadata (source information, location, or notes) but no other fields set
 				# these should not constitute actual records of a prev/post owner.
 				continue
 			name = owner_record.get('own_auth') or owner_record.get('own')

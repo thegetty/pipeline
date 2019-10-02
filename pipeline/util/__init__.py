@@ -15,7 +15,7 @@ from bonobo.config import Configurable, Option, Service
 
 import settings
 import pipeline.io.arches
-from cromulent import model
+from cromulent import model, vocab
 from cromulent.model import factory, BaseResource
 
 # Dimension = namedtuple("Dimension", [
@@ -165,7 +165,28 @@ class CromObjectMerger:
 			#       referencing an `id` value that is dropped will be left with a dangling
 			#       pointer).
 			'content': (model.Name, model.Identifier),
+			'value': (model.Dimension,),
 		}
+		self.classified_attribute_based_identity = {
+			# This is similar to `self.attribute_based_identity`, but instead of being
+			# based on the `type` of the object, it is based on the `classified_as` value
+			# of the object
+			'content': (vocab.MaterialStatement, vocab.DimensionStatement),
+		}
+		
+		# instead of mapping to a tuple of classes, `self._classified_attribute_based_identity`
+		# maps to a list of sets of URIs (the set of classifications that must be present to be
+		# interpreted as a member of the class)
+		self._classified_attribute_based_identity = {}
+		for attr, classes in self.classified_attribute_based_identity.items():
+			id_sets = []
+			for c in classes:
+				ids = set()
+				o = c()
+				for cl in o.classified_as:
+					ids.add(cl.id)
+				id_sets.append(ids)
+			self._classified_attribute_based_identity[attr] = id_sets
 
 	def merge(self, obj, *to_merge):
 		if not to_merge:
@@ -192,8 +213,19 @@ class CromObjectMerger:
 			for attr, classes in self.attribute_based_identity.items():
 				if isinstance(v, classes) and hasattr(v, attr):
 					identified[getattr(v, attr)].append(v)
+					handled = True
 					break
-			else:
+			for attr, id_sets in self._classified_attribute_based_identity.items():
+				if handled:
+					break
+				if hasattr(v, 'classified_as') and hasattr(v, attr):
+					obj_ids = {c.id for c in v.classified_as}
+					for id_set in id_sets:
+						if id_set <= obj_ids:
+							identified[getattr(v, attr)].append(v)
+							handled = True
+							break
+			if not handled:
 				try:
 					i = v.id
 					if i:

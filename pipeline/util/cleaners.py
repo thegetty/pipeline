@@ -263,7 +263,7 @@ def parse_location(*parts, uri_base=None, types=None):
 		return current
 
 	current = None
-	country_name = parts[-1].rstrip('.')
+	country_name = re.sub(r'[.].*$', '', parts[-1])
 	country_type = None
 	if country_name in _COUNTRIES:
 		country_type = 'Country'
@@ -274,7 +274,8 @@ def parse_location(*parts, uri_base=None, types=None):
 		return {'name': value}
 
 	if country_name in _COUNTRY_HANDLERS:
-		loc = _COUNTRY_HANDLERS[country_name](parts, uri_base=uri_base)
+		_parts = list(parts[:-1]) + [country_name]
+		loc = _COUNTRY_HANDLERS[country_name](_parts, uri_base=uri_base)
 		if loc:
 			return loc
 

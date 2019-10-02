@@ -2,10 +2,12 @@ import sys
 import pathlib
 import itertools
 import json
-import bonobo
-import settings
+
 from sqlalchemy import create_engine
 from sqlalchemy.engine.url import URL
+
+import bonobo
+import settings
 
 import pipeline.execution
 from pipeline.nodes.basic import \

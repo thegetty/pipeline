@@ -3,11 +3,9 @@ import urllib.parse
 from collections import Counter
 import uuid
 import json
-import datetime
-import dateutil.parser
-from pipeline.util import implode_date
-from cromulent import model
 import warnings
+
+from pipeline.util import implode_date
 
 UID_TAG_PREFIX = 'tag:getty.edu,2019:digital:pipeline:provenance:REPLACE-WITH-UUID#'
 
@@ -25,7 +23,7 @@ def filter_empty_person(data: dict, _):
 	If all the values of the supplied dictionary are false (or false after int conversion
 	for keys ending with 'ulan'), return `None`. Otherwise return the dictionary.
 	'''
-	set = []
+	set_flags = []
 	for k, v in data.items():
 		if k.endswith('ulan'):
 			if v in ('', '0'):
@@ -36,8 +34,8 @@ def filter_empty_person(data: dict, _):
 			s = False
 		else:
 			s = bool(v)
-		set.append(s)
-	if any(set):
+		set_flags.append(s)
+	if any(set_flags):
 		return data
 	else:
 		return None

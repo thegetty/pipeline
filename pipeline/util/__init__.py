@@ -65,7 +65,7 @@ def implode_date(data:dict, prefix:str='', clamp:str=None):
 		return None
 	month = data.get(f'{prefix}month', data.get(f'{prefix}mo'))
 	day = data.get(f'{prefix}day')
-	
+
 	try:
 		month = int(month)
 		if month < 1 or month > 12:
@@ -225,7 +225,7 @@ class CromObjectMerger:
 		identified = defaultdict(list)
 		unidentified = []
 		self._classify_values(values, identified, unidentified)
-		
+
 		allows_multiple = obj.allows_multiple(p)
 		if identified:
 			# there are values in the new objects that have to be merged with existing identifiable values
@@ -244,7 +244,7 @@ class CromObjectMerger:
 					# in case the values cannot be sorted
 					identified_values = list(identified.values())[0]
 				setattr(obj, p, self.merge(*identified_values))
-				
+
 				if unidentified:
 					warnings.warn(f'*** Dropping {len(unidentified)} unidentified values for property {p} of {obj}')
 # 					unidentified_value = sorted(unidentified)[0]
@@ -459,6 +459,7 @@ def timespan_from_outer_bounds(begin=None, end=None):
 
 class CaseFoldingSet(set):
 	def __init__(self, iterable):
+		super().__init__(self)
 		for v in iterable:
 			if isinstance(v, str):
 				self.add(v.casefold())
@@ -473,4 +474,3 @@ class CaseFoldingSet(set):
 
 	def __contains__(self, v):
 		return super().__contains__(v.casefold())
-

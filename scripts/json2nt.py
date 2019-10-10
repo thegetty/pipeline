@@ -28,7 +28,7 @@ for filename in sys.argv[1:]:
 			if bid in bnode_map:
 				u = bnode_map[bid]
 			else:
-				u = f'b{uuid.uuid4()}'
+				u = f'b{uuid.uuid4()}'.replace('-', '')
 				bnode_map[bid] = u
 			triples = re.sub(f'_:{bid} ', f'_:{u} ', triples)
 

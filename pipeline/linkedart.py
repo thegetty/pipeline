@@ -1,15 +1,14 @@
-import pprint
 from contextlib import suppress
 import warnings
 import urllib.parse
+import calendar
 
 from cromulent import model, vocab
 from cromulent.model import factory
+from pipeline.util.cleaners import ymd_to_datetime
+
 factory.auto_id_type = 'uuid'
 vocab.add_art_setter()
-
-from pipeline.util.cleaners import ymd_to_datetime
-import calendar
 
 def add_crom_data(data: dict, what=None):
 	data['_CROM_FACTORY'] = factory
@@ -25,7 +24,7 @@ class MakeLinkedArtRecord:
 	def set_properties(self, data, thing):
 		'''
 		The following keys in `data` are handled to set properties on `thing`:
-		
+
 		`referred_to_by`
 		`identifiers`
 		`names` -	An array of arrays of one or two elements. The first element of each
@@ -36,7 +35,7 @@ class MakeLinkedArtRecord:
 					(or `dict`s representing a `LinguisticObject`) refer to the name.
 
 		Example data:
-		
+
 		{
 			'names': [
 				['J. Paul Getty'],
@@ -89,8 +88,11 @@ class MakeLinkedArtRecord:
 						ident.classified_as = itype
 			else:
 				ident = identifier
-				c = ident.content
+# 				c = ident.content
 			thing.identified_by = ident
+
+		if not hasattr(thing, '_label') and 'label' in data:
+			setattr(thing, '_label', data['label'])
 
 		for namedata in data.get('names', []):
 			# namedata should take the form of:
@@ -99,7 +101,7 @@ class MakeLinkedArtRecord:
 			name, *properties = namedata
 			n = set_la_name(thing, name)
 			for props in properties:
-				assert(isinstance(props, dict))
+				assert isinstance(props, dict)
 				for ref in props.get('referred_to_by', []):
 					if isinstance(ref, dict):
 						if 'uri' in ref:
@@ -245,8 +247,7 @@ class MakeLinkedArtHumanMadeObject(MakeLinkedArtRecord):
 			thing.member_of = coll
 
 		for annotation in data.get('annotations', []):
-			a = model.Annotation()
-			a.content = content
+			a = model.Annotation(ident='', content=annotation)
 			thing.carries = a
 
 
@@ -441,7 +442,7 @@ def make_la_place(data:dict, base_uri=None):
 	label = name
 	parent_data = data.get('part_of')
 
-	type = TYPES.get(type_name)
+	place_type = TYPES.get(type_name)
 	parent = None
 	if parent_data:
 		parent_data = make_la_place(parent_data, base_uri=base_uri)
@@ -456,8 +457,8 @@ def make_la_place(data:dict, base_uri=None):
 		placeargs['ident'] = data['uri']
 
 	p = model.Place(**placeargs)
-	if type:
-		p.classified_as = type
+	if place_type:
+		p.classified_as = place_type
 	if name:
 		p.identified_by = model.Name(ident='', content=name)
 	else:

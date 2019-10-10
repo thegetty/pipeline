@@ -1401,7 +1401,7 @@ class ProvenancePipeline(PipelineBase):
 							'buy_name_cite',
 							'buy_mod',
 							'buy_auth_name',
-							'buy_auth_nameQ',
+							'buy_auth_nameq',
 							'buy_auth_mod',
 							'buy_auth_mod_a',
 							'buy_ulan')},

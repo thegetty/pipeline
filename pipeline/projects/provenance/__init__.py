@@ -587,25 +587,50 @@ def add_acquisition(data, buyers, sellers, make_la_person=None):
 	for owner_data, rev in prev_post_owner_records:
 		rev_name = 'prev-owner' if rev else 'post-owner'
 		for seq_no, owner_record in enumerate(owner_data):
-			if not any([bool(owner_record.get(k)) for k in owner_record.keys() if k != 'own_so']):
-				# some records seem to have source information ('own_so') but no other fields set
+			ignore_fields = ('own_so', 'own_auth_l', 'own_auth_d')
+			if not any([bool(owner_record.get(k)) for k in owner_record.keys() if k not in ignore_fields]):
+				# some records seem to have metadata (source information, location, or notes) but no other fields set
 				# these should not constitute actual records of a prev/post owner.
 				continue
-			name = owner_record.get('own_auth') or owner_record.get('own')
+			auth_name = owner_record.get('own_auth')
+			name = owner_record.get('own')
+			ulan = None
+			with suppress(ValueError, TypeError):
+				ulan = int(owner_record.get('own_ulan'))
+			if ulan:
+				key = f'PERSON-ULAN-{ulan}'
+				owner_record['uid'] = key
+				owner_record['uri'] = pir_uri('PERSON', 'ULAN', ulan)
+				owner_record['identifiers'] = [model.Identifier(ident='', content=str(ulan))]
+				owner_record['ulan'] = ulan
+			elif acceptable_person_auth_name(auth_name):
+				owner_record['uri'] = pir_uri('PERSON', 'AUTHNAME', auth_name)
+				owner_record['identifiers'] = [
+					vocab.PrimaryName(ident='', content=auth_name) # NOTE: most of these are also vocab.SortName, but not 100%, so witholding that assertion for now
+				]
+			else:
+				# not enough information to identify this person uniquely, so use the source location in the input file
+				owner_record['uri'] = pir_uri('PERSON', 'PI_REC_NO', data['pi_record_no'], f'{rev_name}-{seq_no+1}')
+				print(owner_record['uri'])
 			if not name:
 				warnings.warn(f'*** No name for {rev_name}: {owner_record}')
 				pprint.pprint(owner_record)
-			owner_record['names'] = [(name,)]
+			if name:
+				owner_record['names'] = [(name,)]
 			owner_record['label'] = name
-			owner_record['uri'] = pir_uri('PERSON', 'PI_REC_NO', data['pi_record_no'], f'{rev_name}-{seq_no+1}')
-			# TODO: handle other fields of owner_record: own_auth_d, own_auth_l, own_auth_q, own_ques, own_so, own_ulan
+			# TODO: handle other fields of owner_record: own_auth_d, own_auth_l, own_auth_q, own_ques, own_so
 			make_la_person(owner_record)
 			owner = get_crom_object(owner_record)
 			own_info_source = owner_record.get('own_so')
 			if own_info_source:
-				note = vocab.Note(ident='', content=own_info_source)
+				note = vocab.Note(ident='', content=own_info_source, label='Source of information on history of the object prior to the current sale.')
 				hmo.referred_to_by = note
 				owner.referred_to_by = note
+
+			if '_other_owners' not in data:
+				data['_other_owners'] = []
+			data['_other_owners'].append(owner_record)
+
 			tx = related_procurement(current_tx, hmo, ts, buyer=owner, previous=rev)
 			ptx_data = tx_data.copy()
 			data['_procurements'].append(add_crom_data(data=ptx_data, what=tx))
@@ -1275,6 +1300,11 @@ class ProvenancePipeline(PipelineBase):
 			_input=acquisitions.output
 		)
 
+		owners = graph.add_chain(
+			ExtractKeyedValues(key='_other_owners'),
+			_input=acquisitions.output
+		)
+
 		sellers = graph.add_chain(
 			ExtractKeyedValues(key='seller'),
 			_input=acquisitions.output
@@ -1282,6 +1312,7 @@ class ProvenancePipeline(PipelineBase):
 
 		if serialize:
 			# write SALES data
+			self.add_serialization_chain(graph, owners.output, model=self.models['Person'])
 			self.add_serialization_chain(graph, buyers.output, model=self.models['Person'])
 			self.add_serialization_chain(graph, sellers.output, model=self.models['Person'])
 

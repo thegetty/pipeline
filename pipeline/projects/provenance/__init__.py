@@ -200,7 +200,6 @@ def add_auction_house_data(a):
 		key = f'AUCTION-HOUSE-ULAN-{ulan}'
 		a['uid'] = key
 		a['uri'] = pir_uri('AUCTION-HOUSE', 'ULAN', ulan)
-		a['identifiers'].append(model.Identifier(ident='', content=str(ulan)))
 		a['ulan'] = ulan
 		house = vocab.AuctionHouseOrg(ident=a['uri'])
 	elif auth_name and auth_name not in IGNORE_HOUSE_AUTHNAMES:
@@ -482,7 +481,6 @@ def add_person(data: dict, rec_id, *, make_la_person):
 		key = f'PERSON-ULAN-{ulan}'
 		data['uid'] = key
 		data['uri'] = pir_uri('PERSON', 'ULAN', ulan)
-		data['identifiers'] = [model.Identifier(ident='', content=str(ulan))]
 		data['ulan'] = ulan
 	elif acceptable_person_auth_name(auth_name) and not auth_name_q:
 		data['uri'] = pir_uri('PERSON', 'AUTHNAME', auth_name)
@@ -601,7 +599,6 @@ def add_acquisition(data, buyers, sellers, make_la_person=None):
 				key = f'PERSON-ULAN-{ulan}'
 				owner_record['uid'] = key
 				owner_record['uri'] = pir_uri('PERSON', 'ULAN', ulan)
-				owner_record['identifiers'] = [model.Identifier(ident='', content=str(ulan))]
 				owner_record['ulan'] = ulan
 			elif acceptable_person_auth_name(auth_name):
 				owner_record['uri'] = pir_uri('PERSON', 'AUTHNAME', auth_name)

@@ -588,7 +588,12 @@ def add_acquisition(data, buyers, sellers, make_la_person=None):
 	prev_own = data.get('prev_owner', [])
 	prev_post_owner_records = [(post_own, False), (prev_own, True)]
 	for owner_data, rev in prev_post_owner_records:
-		rev_name = 'prev-owner' if rev else 'post-owner'
+		if rev:
+			rev_name = 'prev-owner'
+			source_label = 'Source of information on history of the object prior to the current sale.'
+		else:
+			rev_name = 'post-owner'
+			source_label = 'Source of information on history of the object after the current sale.'
 		for seq_no, owner_record in enumerate(owner_data):
 			ignore_fields = ('own_so', 'own_auth_l', 'own_auth_d')
 			if not any([bool(owner_record.get(k)) for k in owner_record.keys() if k not in ignore_fields]):
@@ -623,17 +628,17 @@ def add_acquisition(data, buyers, sellers, make_la_person=None):
 			# TODO: handle other fields of owner_record: own_auth_d, own_auth_l, own_auth_q, own_ques, own_so
 			make_la_person(owner_record)
 			owner = get_crom_object(owner_record)
-			own_info_source = owner_record.get('own_so')
-			if own_info_source:
-				note = vocab.Note(ident='', content=own_info_source, label='Source of information on history of the object prior to the current sale.')
-				hmo.referred_to_by = note
-				owner.referred_to_by = note
-
 			if '_other_owners' not in data:
 				data['_other_owners'] = []
 			data['_other_owners'].append(owner_record)
 
 			tx = related_procurement(current_tx, hmo, ts, buyer=owner, previous=rev)
+
+			own_info_source = owner_record.get('own_so')
+			if own_info_source:
+				note = vocab.SourceStatement(content=own_info_source, label=source_label)
+				tx.referred_to_by = note
+
 			ptx_data = tx_data.copy()
 			data['_procurements'].append(add_crom_data(data=ptx_data, what=tx))
 	yield data

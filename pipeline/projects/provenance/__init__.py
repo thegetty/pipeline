@@ -406,7 +406,12 @@ class AddAuctionOfLot(Configurable):
 		copy_source_information(data['_object'], data)
 
 		auction_data = data['auction_of_lot']
-		lot_object_key = object_key(auction_data)
+		try:
+			lot_object_key = object_key(auction_data)
+		except:
+			warnings.warn(f'Failed to compute lot object key from data {auction_data}')
+			pprint.pprint(data)
+			raise
 		cno, lno, date = lot_object_key
 		shared_lot_number = self.shared_lot_number_from_lno(lno)
 		uid, uri = self.shared_lot_number_ids(cno, lno, date)

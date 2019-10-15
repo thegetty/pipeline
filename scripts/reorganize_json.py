@@ -43,4 +43,4 @@ for filename in files:
 # 			print(f'mv {p} {correct_filename}')
 		else:
 			pass
-# 			print(f'ALREADY CORRECT: {p}')
+# 			print(f'Already in the correct directory: {p}')

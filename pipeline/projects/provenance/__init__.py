@@ -408,8 +408,8 @@ class AddAuctionOfLot(Configurable):
 		auction_data = data['auction_of_lot']
 		try:
 			lot_object_key = object_key(auction_data)
-		except:
-			warnings.warn(f'Failed to compute lot object key from data {auction_data}')
+		except Exception as e:
+			warnings.warn(f'Failed to compute lot object key from data {auction_data} ({e})')
 			pprint.pprint(data)
 			raise
 		cno, lno, date = lot_object_key

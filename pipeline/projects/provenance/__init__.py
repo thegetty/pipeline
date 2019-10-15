@@ -618,7 +618,6 @@ def add_acquisition(data, buyers, sellers, make_la_person=None):
 			else:
 				# not enough information to identify this person uniquely, so use the source location in the input file
 				owner_record['uri'] = pir_uri('PERSON', 'PI_REC_NO', data['pi_record_no'], f'{rev_name}-{seq_no+1}')
-				print(owner_record['uri'])
 			if not name:
 				warnings.warn(f'*** No name for {rev_name}: {owner_record}')
 				pprint.pprint(owner_record)

@@ -410,7 +410,7 @@ class AddAuctionOfLot(Configurable):
 			lot_object_key = object_key(auction_data)
 		except Exception as e:
 			warnings.warn(f'Failed to compute lot object key from data {auction_data} ({e})')
-			pprint.pprint(data)
+			pprint.pprint({k: v for k, v in data.items() if v != ''})
 			raise
 		cno, lno, date = lot_object_key
 		shared_lot_number = self.shared_lot_number_from_lno(lno)

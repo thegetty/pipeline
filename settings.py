@@ -15,7 +15,6 @@ arches_models = {
 	"Organization": "edbee5e8-2e41-11e9-bc39-a4d18cec433a",
 	"Person": "0b47366e-2e42-11e9-9018-a4d18cec433a",
 	"Phase": "17871ac7-2e42-11e9-87b2-a4d18cec433a",
-	"Production": "19b69e92-7e21-402f-9e9e-6f1413935daa",
 	"VisualItem": "504dcf0a-2e42-11e9-b4e2-a4d18cec433a"
 }
 

@@ -1000,7 +1000,6 @@ def add_pir_artists(data, *, make_la_person):
 	event_id = hmo.id + '-Production'
 	event = model.Production(ident=event_id, label=f'Production event for {hmo_label}')
 	hmo.produced_by = event
-	data['_production_event'] = add_crom_data({}, event)
 
 	artists = data.get('_artists', [])
 
@@ -1589,17 +1588,6 @@ class ProvenancePipeline(PipelineBase):
 			self.add_serialization_chain(graph, houses.output, model=self.models['Group'])
 		return houses
 
-	def add_production_chain(self, graph, objects, serialize=True):
-		'''Add transformation of production events to the bonobo pipeline.'''
-		events = graph.add_chain(
-			ExtractKeyedValue(key='_production_event'),
-			_input=objects.output
-		)
-		if serialize:
-			# write VISUAL ITEMS data
-			self.add_serialization_chain(graph, events.output, model=self.models['Production'], use_memory_writer=False)
-		return events
-
 	def add_visual_item_chain(self, graph, objects, serialize=True):
 		'''Add transformation of visual items to the bonobo pipeline.'''
 		items = graph.add_chain(
@@ -1676,7 +1664,6 @@ class ProvenancePipeline(PipelineBase):
 			self.add_procurement_chain(g, acquisitions, serialize=True)
 			_ = self.add_people_chain(g, objects, serialize=True)
 			_ = self.add_visual_item_chain(g, objects, serialize=True)
-			_ = self.add_production_chain(g, objects, serialize=True)
 
 		if single_graph:
 			self.graph_0 = graph0

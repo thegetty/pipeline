@@ -410,7 +410,7 @@ class AddAuctionOfLot(Configurable):
 			lot_object_key = object_key(auction_data)
 		except Exception as e:
 			warnings.warn(f'Failed to compute lot object key from data {auction_data} ({e})')
-			pprint.pprint(data)
+			pprint.pprint({k: v for k, v in data.items() if v != ''})
 			raise
 		cno, lno, date = lot_object_key
 		shared_lot_number = self.shared_lot_number_from_lno(lno)
@@ -1023,16 +1023,20 @@ def add_pir_artists(data, *, make_la_person):
 			a['uri'] = pir_uri('PERSON', 'PI_REC_NO', data['pi_record_no'], f'artist-{seq_no+1}')
 
 		names = []
-		if auth_name and auth_name not in IGNORE_PERSON_AUTHNAMES:
+		artist_label = None
+		if acceptable_person_auth_name(auth_name):
 			a['label'] = auth_name
+			artist_label = f'artist “{auth_name}”'
 			a['identifiers'] = [
 				vocab.PrimaryName(ident='', content=auth_name) # NOTE: most of these are also vocab.SortName, but not 100%, so witholding that assertion for now
 			]
 			names.append(auth_name)
 
 		try:
-			name = a['artist_name']
+			name = a['artist_label']
 			if name:
+				if not artist_label:
+					artist_label = f'artist “{name}”'
 				names.append(auth_name)
 				a['names'] = [(name,)]
 				if 'label' not in a:
@@ -1040,6 +1044,8 @@ def add_pir_artists(data, *, make_la_person):
 		except KeyError:
 			a['label'] = '(Anonymous artist)'
 
+		if not artist_label:
+			artist_label = 'anonymous artist'
 
 		make_la_person(a)
 		person = get_crom_object(a)
@@ -1048,7 +1054,7 @@ def add_pir_artists(data, *, make_la_person):
 		event.part = subevent
 		if names:
 			name = names[0]
-			subevent._label = f'Production sub-event for artist “{name}”'
+			subevent._label = f'Production sub-event for {artist_label}'
 		subevent.carried_out_by = person
 	return data
 

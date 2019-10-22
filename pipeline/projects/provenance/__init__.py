@@ -65,6 +65,7 @@ from pipeline.linkedart import \
 			add_crom_data, \
 			get_crom_object, \
 			MakeLinkedArtRecord, \
+			MakeLinkedArtLinguisticObject, \
 			MakeLinkedArtHumanMadeObject, \
 			MakeLinkedArtAuctionHouseOrganization, \
 			MakeLinkedArtOrganization, \
@@ -419,7 +420,10 @@ class AddAuctionOfLot(Configurable):
 		data['uri'] = uri
 
 		lot = vocab.Auction(ident=data['uri'])
-		lot._label = f'Auction of Lot {cno} {shared_lot_number} ({date})'
+		lot_id = f'{cno} {shared_lot_number} ({date})'
+		lot_label = f'Auction of Lot {lot_id}'
+		lot._label = lot_label
+		data['lot_id'] = lot_id
 
 		for problem_key, problem in problematic_records.get('lots', []):
 			# TODO: this is inefficient, but will probably be OK so long as the number
@@ -529,10 +533,14 @@ def add_acquisition(data, buyers, sellers, make_la_person=None):
 	cno, lno, date = object_key(auction_data)
 	data['buyer'] = buyers
 	data['seller'] = sellers
+	
+	acq_label = None
 	try:
 		object_label = f'“{hmo._label}”'
+		acq_label = f'Acquisition of {cno} {lno} ({date}): {object_label}'
 	except AttributeError:
 		object_label = '(object)'
+		acq_label = f'Acquisition of {cno} {lno} ({date})'
 	amnts = [get_crom_object(p) for p in prices]
 
 # 	if not prices:
@@ -543,7 +551,7 @@ def add_acquisition(data, buyers, sellers, make_la_person=None):
 	payment_id = current_tx.id + '-Payment'
 
 	acq_id = hmo.id + '-Acquisition'
-	acq = model.Acquisition(ident=acq_id, label=f'Acquisition of {cno} {lno} ({date}): {object_label}')
+	acq = model.Acquisition(ident=acq_id, label=acq_label)
 	acq.transferred_title_of = hmo
 
 	multi = tx_data.get('multi_lot_tx')
@@ -830,6 +838,7 @@ def populate_object(data, post_sale_map, unique_catalogs, vocab_instance_map, de
 	lot = AddAuctionOfLot.shared_lot_number_from_lno(lno)
 	now_key = (cno, lot, date) # the current key for this object; may be associated later with prev and post object keys
 
+	record = _populate_object_catalog_record(data, parent, lot, cno, parent['pi_record_no'])
 	_populate_object_visual_item(data, vocab_instance_map)
 	_populate_object_destruction(data, parent, destruction_types_map)
 	_populate_object_statements(data)
@@ -840,7 +849,28 @@ def populate_object(data, post_sale_map, unique_catalogs, vocab_instance_map, de
 		url = p['portal_url']
 		hmo.referred_to_by = vocab.WebPage(ident=url)
 
+	title = data['title']
+	del(data['title'])
+	t = vocab.PrimaryName(ident='', content=title)
+	t.classified_as = model.Type(ident='http://vocab.getty.edu/aat/300417193', label='Title')
+	t.referred_to_by = record
+	data['identifiers'].append(t)
+
 	return data
+
+def _populate_object_catalog_record(data, parent, lot, cno, rec_num):
+	catalog_uri = pir_uri('CATALOG', cno)
+	catalog = vocab.AuctionCatalogText(ident=catalog_uri)
+	
+	record_uri = pir_uri('CATALOG', cno, 'RECORD', rec_num)
+	lot_id = parent['lot_id']
+	record = model.LinguisticObject(ident=record_uri, label=f'Sale recorded in catalog: {lot_id} (record number {rec_num})') # TODO: needs classification
+	record_data	= {'uri': record_uri}
+	record_data['identifiers'] = [model.Name(ident='', content=f'Record of sale {lot_id}')]
+	record.part_of = catalog
+
+	data['_sale_record_text'] = add_crom_data(data=record_data, what=record)
+	return record
 
 def _populate_object_destruction(data, parent, destruction_types_map):
 	notes = parent.get('auction_of_lot', {}).get('lot_notes')
@@ -856,7 +886,8 @@ def _populate_object_visual_item(data, vocab_instance_map):
 	vi = model.VisualItem(ident=vi_id)
 	if title:
 		vidata['label'] = f'Visual work of “{title}”'
-		vidata['names'] = [(title,)]
+		sales_record = get_crom_object(data['_sale_record_text'])
+		vidata['names'] = [(title,{'referred_to_by': [sales_record]})]
 
 	genre = genre_instance(data.get('genre'), vocab_instance_map)
 	if genre:
@@ -869,14 +900,18 @@ def _populate_object_statements(data):
 	materials = data.get('materials')
 	if materials:
 		matstmt = vocab.MaterialStatement(ident='', content=materials)
+		sales_record = get_crom_object(data['_sale_record_text'])
+		matstmt.referred_to_by = sales_record
 		hmo.referred_to_by = matstmt
 
 	dimstr = data.get('dimensions')
 	if dimstr:
-		dimstmt = vocab.DimensionStatement(ident='')
-		dimstmt.content = dimstr
+		dimstmt = vocab.DimensionStatement(ident='', content=dimstr)
+		sales_record = get_crom_object(data['_sale_record_text'])
+		dimstmt.referred_to_by = sales_record
 		hmo.referred_to_by = dimstmt
 		for dim in extract_physical_dimensions(dimstr):
+			dim.referred_to_by = sales_record
 			hmo.dimension = dim
 	else:
 		pass
@@ -1064,12 +1099,12 @@ def add_auction_catalog(data):
 	'''Add modeling for auction catalogs as linguistic objects'''
 	cno = data['catalog_number']
 	key = f'CATALOG-{cno}'
+
 	cdata = {'uid': key, 'uri': pir_uri('CATALOG', cno)}
 	catalog = vocab.AuctionCatalogText(ident=cdata['uri'])
 	catalog._label = f'Sale Catalog {cno}'
-	data['_catalog'] = cdata
 
-	add_crom_data(data=cdata, what=catalog)
+	data['_catalog'] = add_crom_data(data=cdata, what=catalog)
 	return data
 
 def add_physical_catalog_objects(data):
@@ -1162,8 +1197,7 @@ class ProvenancePipeline(PipelineBase):
 		vocab.register_instance('fire', {'parent': model.Type, 'id': '300068986', 'label': 'Fire'})
 		vocab.register_instance('animal', {'parent': model.Type, 'id': '300249395', 'label': 'Animal'})
 		vocab.register_instance('history', {'parent': model.Type, 'id': '300033898', 'label': 'History'})
-		vocab.register_vocab_class('SalesCatalog', {'parent': model.HumanMadeObject, 'id': '300026074', 'label': 'Sales Catalog'})
-		vocab.register_vocab_class('AuctionCatalog', {'parent': model.HumanMadeObject, 'id': '300026068', 'label': 'Auction Catalog'})
+		vocab.register_vocab_class('AuctionCatalog', {'parent': model.HumanMadeObject, 'id': '300026068', 'label': 'Auction Catalog', 'metatype': 'work type'})
 
 		super().__init__()
 		self.project_name = 'provenance'
@@ -1606,6 +1640,18 @@ class ProvenancePipeline(PipelineBase):
 			self.add_serialization_chain(graph, items.output, model=self.models['VisualItem'], use_memory_writer=False)
 		return items
 
+	def add_record_text_chain(self, graph, objects, serialize=True):
+		'''Add transformation of record texts to the bonobo pipeline.'''
+		texts = graph.add_chain(
+			ExtractKeyedValue(key='_sale_record_text'),
+			MakeLinkedArtLinguisticObject(),
+			_input=objects.output
+		)
+		if serialize:
+			# write RECORD data
+			self.add_serialization_chain(graph, texts.output, model=self.models['LinguisticObject'])
+		return texts
+
 	def add_people_chain(self, graph, objects, serialize=True):
 		'''Add transformation of artists records to the bonobo pipeline.'''
 		people = graph.add_chain(
@@ -1669,6 +1715,7 @@ class ProvenancePipeline(PipelineBase):
 			self.add_buyers_sellers_chain(g, acquisitions, serialize=True)
 			self.add_procurement_chain(g, acquisitions, serialize=True)
 			_ = self.add_people_chain(g, objects, serialize=True)
+			_ = self.add_record_text_chain(g, objects, serialize=True)
 			_ = self.add_visual_item_chain(g, objects, serialize=True)
 
 		if single_graph:

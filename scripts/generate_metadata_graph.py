@@ -12,6 +12,7 @@ from collections import defaultdict
 
 from settings import output_file_path, arches_models
 
+project_name = sys.argv[1]
 models = {v: k for k, v in arches_models.items()}
 
 proc = jsonld.JsonLdProcessor()
@@ -47,7 +48,7 @@ ctx = {
 
 data = {
 	'@context': ctx,
-	'@id': 'http://provenance.getty.edu/pir-metadata',
+	'@id': f'http://data.getty.edu/provenance/{project_name}/metadata',
 	'@graph': {
 		'@id': '_:b',
 		'models': graphs

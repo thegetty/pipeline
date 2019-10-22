@@ -24,7 +24,7 @@ for filename in sys.argv[2:]:
 		try:
 			id = input['id']
 		except KeyError as e:
-			print(f'*** ERROR:{filename}: {e}')
+			print(f'*** Skipping {filename}')
 			continue
 		if not id.startswith('urn:uuid:'):
 			raise Exception(f"file doesn't have a valid top-level UUID: {filename}")

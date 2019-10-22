@@ -1196,8 +1196,7 @@ class ProvenancePipeline(PipelineBase):
 		vocab.register_instance('fire', {'parent': model.Type, 'id': '300068986', 'label': 'Fire'})
 		vocab.register_instance('animal', {'parent': model.Type, 'id': '300249395', 'label': 'Animal'})
 		vocab.register_instance('history', {'parent': model.Type, 'id': '300033898', 'label': 'History'})
-		vocab.register_vocab_class('SalesCatalog', {'parent': model.HumanMadeObject, 'id': '300026074', 'label': 'Sales Catalog'})
-		vocab.register_vocab_class('AuctionCatalog', {'parent': model.HumanMadeObject, 'id': '300026068', 'label': 'Auction Catalog'})
+		vocab.register_vocab_class('AuctionCatalog', {'parent': model.HumanMadeObject, 'id': '300026068', 'label': 'Auction Catalog', 'metatype': 'work type'})
 
 		super().__init__()
 		self.project_name = 'provenance'

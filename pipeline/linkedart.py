@@ -100,21 +100,24 @@ class MakeLinkedArtRecord:
 			# ["A. Name", {'referred_to_by': [{'uri': 'URI-OF-LINGUISTIC_OBJECT'}, model.LinguisticObject()]}]
 			name, *properties = namedata
 			n = set_la_name(thing, name)
-			for props in properties:
-				assert isinstance(props, dict)
-				for ref in props.get('referred_to_by', []):
-					if isinstance(ref, dict):
-						if 'uri' in ref:
-							l = model.LinguisticObject(ident=ref['uri'])
-						elif 'uuid' in data:
-							l = model.LinguisticObject(ident="urn:uuid:%s" % ref['uuid'])
-						else:
-							raise Exception(f'MakeLinkedArtRecord call attempt to set name {name} with a non-identified reference: {ref}')
-					elif isinstance(ref, object):
-						l = ref
+			self.set_lo_properties(n, *properties)
+
+	def set_lo_properties(self, n, *properties):
+		for props in properties:
+			assert isinstance(props, dict)
+			for ref in props.get('referred_to_by', []):
+				if isinstance(ref, dict):
+					if 'uri' in ref:
+						l = model.LinguisticObject(ident=ref['uri'])
+					elif 'uuid' in data:
+						l = model.LinguisticObject(ident="urn:uuid:%s" % ref['uuid'])
 					else:
-						raise Exception(f'MakeLinkedArtRecord call attempt to set name {name} with an unrecognized reference type: {ref}')
-					n.referred_to_by = l
+						raise Exception(f'MakeLinkedArtRecord call attempt to set name {name} with a non-identified reference: {ref}')
+				elif isinstance(ref, object):
+					l = ref
+				else:
+					raise Exception(f'MakeLinkedArtRecord call attempt to set name {name} with an unrecognized reference type: {ref}')
+				n.referred_to_by = l
 
 	def __call__(self, data: dict):
 		if '_LOD_OBJECT' in data:
@@ -158,6 +161,7 @@ class MakeLinkedArtLinguisticObject(MakeLinkedArtRecord):
 	def set_properties(self, data, thing):
 		super().set_properties(data, thing)
 
+		# TODO: this whole title_type thing isn't right. most of the identifiers below aren't titles
 		title_type = model.Type(ident='http://vocab.getty.edu/aat/300055726', label='Title') # TODO: is this the right aat URI?
 		name = None
 		if 'label' in data:
@@ -235,13 +239,21 @@ class MakeLinkedArtLinguisticObject(MakeLinkedArtRecord):
 class MakeLinkedArtHumanMadeObject(MakeLinkedArtRecord):
 	def set_properties(self, data, thing):
 		super().set_properties(data, thing)
-		title_type = model.Type(ident='http://vocab.getty.edu/aat/300055726', label='Title') # TODO: is this the right aat URI?
+		title_type = model.Type(ident='http://vocab.getty.edu/aat/300417193', label='Title') # TODO: is this the right aat URI?
 		if 'label' in data:
 			set_la_name(thing, data['label'], title_type, set_label=True)
 
 		if 'title' in data:
 			# TODO: This needs to be a PrimaryName, not a Name classified as a Title
-			set_la_name(thing, data['title'], title_type, set_label=True)
+			title = data['title']
+			if isinstance(title, str):
+				set_la_name(thing, title, title_type, set_label=True)
+			elif isinstance(title, (list, tuple)):
+				value, *properties = title
+				n = model.Name(ident='', content=value)
+				n.classified_as = title_type
+				self.set_lo_properties(n, *properties)
+				thing.identified_by = n
 
 		for coll in data.get('member_of', []):
 			thing.member_of = coll

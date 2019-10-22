@@ -36,4 +36,4 @@ for filename in sys.argv[1:]:
 		with open(p.with_suffix('.nt'), 'w') as out:
 			count += 1
 			print(triples, file=out)
-print(f'Done after writing {count} N-Quads files.')
+# print(f'Done after writing {count} N-Quads files.')

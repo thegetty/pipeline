@@ -24,12 +24,11 @@ for filename in sys.argv[2:]:
 		try:
 			id = input['id']
 		except KeyError as e:
-			print(f'*** ERROR:{filename}: {e}')
+			print(f'*** Skipping {filename}')
 			continue
 		if not id.startswith('urn:uuid:'):
 			raise Exception(f"file doesn't have a valid top-level UUID: {filename}")
-		uu = id[9:]
-		gid = f'http://data.getty.edu/provenance/sales/{uu}-graph'
+		gid = id
 		del(input['@context'])
 		input = {'@id': gid, '@graph': input}
 		triples = proc.to_rdf(input, {'expandContext': ctx, 'format': 'application/n-quads'})

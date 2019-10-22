@@ -162,7 +162,7 @@ class MakeLinkedArtLinguisticObject(MakeLinkedArtRecord):
 		super().set_properties(data, thing)
 
 		# TODO: this whole title_type thing isn't right. most of the identifiers below aren't titles
-		title_type = model.Type(ident='http://vocab.getty.edu/aat/300055726', label='Title') # TODO: is this the right aat URI?
+		title_type = model.Type(ident='http://vocab.getty.edu/aat/300417193', label='Title')
 		name = None
 		if 'label' in data:
 			name = set_la_name(thing, data['label'], title_type, set_label=True)

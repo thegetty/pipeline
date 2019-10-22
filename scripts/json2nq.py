@@ -15,10 +15,10 @@ ctx = json.load(fh)
 proc = jsonld.JsonLdProcessor()
 r = re.compile(r'_:(\S+)')
 
+count = 0
 for filename in sys.argv[2:]:
 	p = Path(filename)
 	with open(filename, 'r') as fh:
-		print(filename)
 		bnode_map = {}
 		input = json.load(fh)
 		try:
@@ -44,5 +44,6 @@ for filename in sys.argv[2:]:
 
 		nq_filename = p.with_suffix('.nq')
 		with open(nq_filename, 'w') as out:
+			count += 1
 			print(triples, file=out)
-			print(f'{nq_filename}')
+print(f'Done after writing {count} N-Quads files.')

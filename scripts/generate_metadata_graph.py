@@ -16,11 +16,11 @@ project_name = sys.argv[1]
 models = {v: k for k, v in arches_models.items()}
 
 proc = jsonld.JsonLdProcessor()
-files = sorted(Path(output_file_path).rglob('*.json'))
 uuid_re = re.compile('[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}.json')
 
 graphs = defaultdict(list)
-for filename in files:
+for line in sys.stdin:
+	filename = line.rstrip()
 	p = Path(filename)
 	m = uuid_re.match(p.name)
 	if not m:
@@ -35,15 +35,17 @@ for filename in files:
 
 
 ctx = {
-	'@vocab': 'http://example.org/',
-	'model': {'@type': '@id'},
+	'@vocab': 'http://data.getty.edu/provenance/models/',
+## TODO: the combination of @container and @index is currently not supported in pyld,
+##       but should be used to produce the expected output when support is added
 	'models': {
+		'@id': 'http://data.getty.edu/p/models',
 		'@type': '@id',
-		'@id': 'model',
-		'@container': '@index',
-		# TODO: this is currently not supported in pyld, but should be used to produce the expected output when support is added:
-		# '@index': 'type'
-	}
+# 		'@id': 'model',
+# 		'@container': '@index',
+# 		# '@index': 'type'
+	},
+# 	'model': {'@type': '@id'}
 }
 
 data = {

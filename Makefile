@@ -56,8 +56,7 @@ nq: jsonlist
 	curl -s 'https://linked.art/ns/v1/linked-art.json' > $(GETTY_PIPELINE_TMP_PATH)/linked-art.json
 	echo 'Transcoding JSON-LD to N-Quads...'
 	cat $(GETTY_PIPELINE_TMP_PATH)/json_files.txt | xargs -n 256 -P 16 $(PYTHON) ./scripts/json2nq.py $(GETTY_PIPELINE_TMP_PATH)/linked-art.json
-	cat $(GETTY_PIPELINE_OUTPUT)/*.nq > $(GETTY_PIPELINE_OUTPUT)/all.nq
-	find $(GETTY_PIPELINE_OUTPUT) -name '[0-9a-f][0-9a-f]*.nq' | xargs -n 256 cat >> $(GETTY_PIPELINE_OUTPUT)/all.nq
+	find $(GETTY_PIPELINE_OUTPUT) -name '[0-9a-f][0-9a-f]*.nq' | xargs -n 256 cat | gzip - > $(GETTY_PIPELINE_OUTPUT)/all.nq.gz
 
 pirdata:
 	mkdir -p $(GETTY_PIPELINE_TMP_PATH)/pipeline

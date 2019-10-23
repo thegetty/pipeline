@@ -849,12 +849,13 @@ def populate_object(data, post_sale_map, unique_catalogs, vocab_instance_map, de
 		url = p['portal_url']
 		hmo.referred_to_by = vocab.WebPage(ident=url)
 
-	title = data['title']
-	del(data['title'])
-	t = vocab.PrimaryName(ident='', content=title)
-	t.classified_as = model.Type(ident='http://vocab.getty.edu/aat/300417193', label='Title')
-	t.referred_to_by = record
-	data['identifiers'].append(t)
+	if 'title' in data:
+		title = data['title']
+		del(data['title'])
+		t = vocab.PrimaryName(ident='', content=title)
+		t.classified_as = model.Type(ident='http://vocab.getty.edu/aat/300417193', label='Title')
+		t.referred_to_by = record
+		data['identifiers'].append(t)
 
 	return data
 

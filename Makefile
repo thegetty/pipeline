@@ -57,6 +57,7 @@ nq: jsonlist
 	echo 'Transcoding JSON-LD to N-Quads...'
 	cat $(GETTY_PIPELINE_TMP_PATH)/json_files.txt | xargs -n 256 -P 16 $(PYTHON) ./scripts/json2nq.py $(GETTY_PIPELINE_TMP_PATH)/linked-art.json
 	find $(GETTY_PIPELINE_OUTPUT) -name '[0-9a-f][0-9a-f]*.nq' | xargs -n 256 cat | gzip - > $(GETTY_PIPELINE_OUTPUT)/all.nq.gz
+	gzip -k $(GETTY_PIPELINE_OUTPUT)/meta.nq
 
 pirdata:
 	mkdir -p $(GETTY_PIPELINE_TMP_PATH)/pipeline

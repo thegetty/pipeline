@@ -42,6 +42,7 @@ from pipeline.projects import PipelineBase
 from pipeline.projects.provenance.util import *
 from pipeline.util import \
 			CaseFoldingSet, \
+			CromObjectMerger, \
 			RecursiveExtractKeyedValue, \
 			ExtractKeyedValue, \
 			ExtractKeyedValues, \
@@ -565,11 +566,33 @@ def add_acquisition(data, buyers, sellers, make_la_person=None):
 		paym.paid_from = buyer
 		acq.transferred_title_to = buyer
 
-	if len(amnts) > 1:
-		warnings.warn(f'Multiple Payment.paid_amount values for object {hmo.id} ({payment_id})')
+	grouped_amounts = defaultdict(list)
 	for amnt in amnts:
+		value = amnt.value
+		grouped_amounts[value].append(amnt)
+	
+	merged_amounts = []
+	merger = CromObjectMerger()
+	for value, amounts in grouped_amounts.items():
+		currencies = set()
+		for amnt in amounts:
+			with suppress(AttributeError):
+				currencies.add(amnt.currency.id)
+		if len(currencies) == 1:
+			amnt = merger.merge(*amounts)
+			merged_amounts.append(amnt)
+		else:
+			merged_amounts += amounts
+
+	if amnts:
+		amnt = amnts.pop(0)
+		if amnts:
+			warnings.warn(f'Multiple Payment.paid_amount values for object {hmo.id} ({payment_id})')
+		for extra in amnts:
+			with suppress(AttributeError):
+				for r in extra.referred_to_by:
+					amnt.referred_to_by = r
 		paym.paid_amount = amnt
-		break # TODO: sensibly handle multiplicity in paid amount data
 
 	ts = tx_data.get('_date')
 	if ts:

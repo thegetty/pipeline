@@ -30,7 +30,8 @@ for line in sys.stdin:
 
 	model = models.get(p.parent.parent.name)
 	if not model:
-		warnings.warn(f'Not a valid model: {model}')
+		warnings.warn(f'Not a valid model for {filename}: {model}')
+		continue
 	graphs[model].append(gid)
 
 
@@ -43,17 +44,33 @@ ctx = {
 		'@type': '@id',
 # 		'@id': 'model',
 # 		'@container': '@index',
-# 		# '@index': 'type'
+# 		# '@index': 'type',
 	},
-# 	'model': {'@type': '@id'}
+# 	'model': {'@type': '@id'},
+	'Acquisition': { '@type': '@id' },
+	'Activity': { '@type': '@id' },
+	'Destruction': { '@type': '@id' },
+	'Event': { '@type': '@id' },
+	'Group': { '@type': '@id' },
+	'HumanMadeObject': { '@type': '@id' },
+	'LinguisticObject': { '@type': '@id' },
+	'Organization': { '@type': '@id' },
+	'Person': { '@type': '@id' },
+	'Phase': { '@type': '@id' },
+	'Place': { '@type': '@id' },
+	'Procurement': { '@type': '@id' },
+	'VisualItem': { '@type': '@id' },
 }
 
 data = {
 	'@context': ctx,
-	'@id': f'http://data.getty.edu/provenance/{project_name}/metadata',
+	'@id': f'http://data.getty.edu/provenance/{project_name}',
 	'@graph': {
-		'@id': '_:b',
-		'models': graphs
+		'@id': f'http://data.getty.edu/provenance/{project_name}/dataset',
+		'models': {
+			'@id': f'http://data.getty.edu/provenance/{project_name}/dataset/models',
+			**graphs
+		}
 	}
 }
 
@@ -62,6 +79,13 @@ with open(jld_filename, 'w') as out:
 	json.dump(data, out)
 
 nq_filename = Path(output_file_path).joinpath('meta.nq')
-triples = proc.to_rdf(data, {'format': 'application/n-quads'})
+# TODO: this is too slow to work on the full dataset, so we manually construct the nq data
+# triples = proc.to_rdf(data, {'format': 'application/n-quads'})
+# with open(nq_filename, 'w') as out:
+# 	print(triples, file=out)
+
 with open(nq_filename, 'w') as out:
-	print(triples, file=out)
+	print(f'<http://data.getty.edu/provenance/{project_name}/dataset> <http://data.getty.edu/p/models> <http://data.getty.edu/provenance/{project_name}/dataset/models> <http://data.getty.edu/provenance/{project_name}> .', file=out)
+	for model, graphs in graphs.items():
+		for gid in graphs:
+			print(f'<http://data.getty.edu/provenance/{project_name}/dataset/models> <http://data.getty.edu/provenance/models/{model}> <{gid}> <http://data.getty.edu/provenance/{project_name}> .', file=out)

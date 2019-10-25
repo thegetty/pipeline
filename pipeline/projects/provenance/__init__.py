@@ -463,12 +463,12 @@ class AddAuctionOfLot(Configurable):
 		add_crom_data(data=data, what=lot)
 		yield data
 
-def add_crom_price(data, _):
+def add_crom_price(data, _, add_citations=False):
 	'''
 	Add modeling data for `MonetaryAmount`, `StartingPrice`, or `EstimatedPrice`,
 	based on properties of the supplied `data` dict.
 	'''
-	amnt = extract_monetary_amount(data)
+	amnt = extract_monetary_amount(data, add_citations=add_citations)
 	if amnt:
 		add_crom_data(data=data, what=amnt)
 	return data
@@ -523,8 +523,63 @@ def final_owner_procurement(final_owner, current_tx, hmo, current_ts):
 		tx._label = f'Procurement leading to the currently known location of object'
 	return tx
 
-@use('make_la_person')
-def add_acquisition(data, buyers, sellers, make_la_person=None):
+def combine_payments(*amnts):
+	grouped_amounts = defaultdict(list)
+	for amnt in amnts:
+		value = amnt.value
+		grouped_amounts[value].append(amnt)
+	
+	merged_amounts = []
+	merger = CromObjectMerger()
+	for value, amounts in grouped_amounts.items():
+		currencies = set()
+		for amnt in amounts:
+			with suppress(AttributeError):
+				currencies.add(amnt.currency.id)
+		if len(currencies) == 1:
+			amnt = merger.merge(*amounts)
+			merged_amounts.append(amnt)
+		else:
+			merged_amounts += amounts
+	return merged_amounts
+
+def add_price_references(cno, prices, location_codes):
+	refs = []
+	for p in prices:
+		amnt = get_crom_object(p)
+		if cno.startswith('D-'):
+			cite = p.get('price_citation')
+			source = p.get('price_source')
+			if cite and source:
+				journal = vocab.JournalText(ident=pir_uri('Journal', source), label=f'Periodical “{source}”')
+				journal.identified_by = model.Name(ident='', content=source)
+				issue = vocab.IssueText(ident=pir_uri('Journal', source, 'Issue', cite), label=f'Issue of “{source}”: {cite}')
+				issue.identified_by = model.Identifier(ident='', content=cite)
+				journal.part = issue
+				refs += [journal, issue]
+				amnt.referred_to_by = issue
+			elif source:
+				owner_code = source
+				copy = ''
+				with suppress(ValueError):
+					owner_code, copy = source.split(maxsplit=1)
+				owner_name = location_codes[owner_code]
+				labels = [f'Sale Catalog {cno}', f'owned by {owner_name}']
+				if copy:
+					labels.append(f'copy {copy}')
+				catalog_uri = pir_uri('CATALOG', cno, owner_code, copy)
+				catalog_label = ', '.join(labels)
+				catalogObject = vocab.AuctionCatalog(ident=catalog_uri, label=catalog_label)
+				notes_uri = catalog_uri + '-Annotation'
+				notes = vocab.Annotation(ident=notes_uri, label=f'Handwritten notes on ' + catalog_label)
+				notes.carried_by = catalogObject
+				refs += [catalogObject, notes]
+				amnt.referred_to_by = notes
+			else:
+				warnings.warn(f'only a price citation: {pprint.pformat(cite)}')
+	return map(lambda o: add_crom_data({}, o), refs)
+
+def add_acquisition(data, buyers, sellers, location_codes, make_la_person):
 	'''Add modeling of an acquisition as a transfer of title from the seller to the buyer'''
 	hmo = get_crom_object(data)
 	parent = data['parent_data']
@@ -542,6 +597,8 @@ def add_acquisition(data, buyers, sellers, make_la_person=None):
 	except AttributeError:
 		object_label = '(object)'
 		acq_label = f'Acquisition of {cno} {lno} ({date})'
+
+	data['_citation_references'] = add_price_references(cno, prices, location_codes)
 	amnts = [get_crom_object(p) for p in prices]
 
 # 	if not prices:
@@ -566,24 +623,7 @@ def add_acquisition(data, buyers, sellers, make_la_person=None):
 		paym.paid_from = buyer
 		acq.transferred_title_to = buyer
 
-	grouped_amounts = defaultdict(list)
-	for amnt in amnts:
-		value = amnt.value
-		grouped_amounts[value].append(amnt)
-	
-	merged_amounts = []
-	merger = CromObjectMerger()
-	for value, amounts in grouped_amounts.items():
-		currencies = set()
-		for amnt in amounts:
-			with suppress(AttributeError):
-				currencies.add(amnt.currency.id)
-		if len(currencies) == 1:
-			amnt = merger.merge(*amounts)
-			merged_amounts.append(amnt)
-		else:
-			merged_amounts += amounts
-
+	amnts = combine_payments(*amnts)
 	if amnts:
 		amnt = amnts.pop(0)
 		if amnts:
@@ -762,8 +802,9 @@ def add_bidding(data, buyers):
 		pass
 		warnings.warn(f'*** No price data found for {parent["transaction"]!r} transaction')
 
+@use('location_codes')
 @use('make_la_person')
-def add_acquisition_or_bidding(data, *, make_la_person):
+def add_acquisition_or_bidding(data, *, location_codes, make_la_person):
 	'''Determine if this record has an acquisition or bidding, and add appropriate modeling'''
 	parent = data['parent_data']
 	transaction = parent['transaction']
@@ -774,7 +815,7 @@ def add_acquisition_or_bidding(data, *, make_la_person):
 	# TODO: is this the right set of transaction types to represent acquisition?
 	if transaction in ('Sold', 'Vendu', 'Verkauft', 'Bought In'):
 		sellers = [add_person(copy_source_information(p, parent), f'seller_{i+1}', make_la_person=make_la_person) for i, p in enumerate(parent['seller'])]
-		yield from add_acquisition(data, buyers, sellers, make_la_person)
+		yield from add_acquisition(data, buyers, sellers, location_codes, make_la_person)
 	elif transaction in ('Unknown', 'Unbekannt', 'Inconnue', 'Withdrawn', 'Non Vendu', ''):
 		yield from add_bidding(data, buyers)
 	else:
@@ -996,14 +1037,14 @@ def _populate_object_notes(data, parent, unique_catalogs):
 	notes = data.get('hand_note', [])
 	for note in notes:
 		hand_note_content = note['hand_note']
-		owner = note.get('hand_note_so')
+		owner_name = note.get('hand_note_so')
 		cno = parent['auction_of_lot']['catalog_number']
-		catalog_uri = pir_uri('CATALOG', cno, owner, None)
+		catalog_uri = pir_uri('CATALOG', cno, owner_name, None)
 		catalogs = unique_catalogs.get(catalog_uri)
 		note = vocab.Note(ident='', content=hand_note_content)
 		hmo.referred_to_by = note
 		if catalogs and len(catalogs) == 1:
-			note.carried_by = vocab.AuctionCatalog(ident=catalog_uri, label=f'Sale Catalog {cno}, owned by “{owner}”')
+			note.carried_by = vocab.AuctionCatalog(ident=catalog_uri, label=f'Sale Catalog {cno}, owned by {owner_name}')
 
 	inscription = data.get('inscription')
 	if inscription:
@@ -1131,15 +1172,17 @@ def add_auction_catalog(data):
 	data['_catalog'] = add_crom_data(data=cdata, what=catalog)
 	return data
 
-def add_physical_catalog_objects(data):
+@use('location_codes')
+def add_physical_catalog_objects(data, location_codes):
 	'''Add modeling for physical copies of an auction catalog'''
 	catalog = get_crom_object(data['_catalog'])
 	cno = data['catalog_number']
-	owner = data['owner_code']
+	owner_code = data['owner_code']
+	owner_name = location_codes[owner_code]
 	copy = data['copy_number']
-	uri = pir_uri('CATALOG', cno, owner, copy)
+	uri = pir_uri('CATALOG', cno, owner_code, copy)
 	data['uri'] = uri
-	labels = [f'Sale Catalog {cno}', f'owned by “{owner}”']
+	labels = [f'Sale Catalog {cno}', f'owned by {owner_name}']
 	if copy:
 		labels.append(f'copy {copy}')
 	catalogObject = vocab.AuctionCatalog(ident=uri, label=', '.join(labels))
@@ -1395,6 +1438,10 @@ class ProvenancePipeline(PipelineBase):
 			ExtractKeyedValue(key='_final_org'),
 			_input=bid_acqs.output
 		)
+		refs = graph.add_chain(
+			ExtractKeyedValues(key='_citation_references'),
+			_input=bid_acqs.output
+		)
 		acqs = graph.add_chain(
 			ExtractKeyedValue(key='_acquisition'),
 			_input=bid_acqs.output
@@ -1407,6 +1454,7 @@ class ProvenancePipeline(PipelineBase):
 		if serialize:
 			# write SALES data
 			self.add_serialization_chain(graph, acqs.output, model=self.models['Acquisition'])
+			self.add_serialization_chain(graph, refs.output, model=self.models['LinguisticObject'])
 			self.add_serialization_chain(graph, bids.output, model=self.models['Activity'])
 			self.add_serialization_chain(graph, orgs.output, model=self.models['Group'])
 		return bid_acqs
@@ -1576,21 +1624,21 @@ class ProvenancePipeline(PipelineBase):
 						'post_owner',
 						'portal')},
 				'estimated_price': {
-					'postprocess': add_crom_price,
+					'postprocess': lambda d, p: add_crom_price(d, p, add_citations=True),
 					'properties': (
 						'est_price',
 						'est_price_curr',
 						'est_price_desc',
 						'est_price_so')},
 				'start_price': {
-					'postprocess': add_crom_price,
+					'postprocess': lambda d, p: add_crom_price(d, p, add_citations=True),
 					'properties': (
 						'start_price',
 						'start_price_curr',
 						'start_price_desc',
 						'start_price_so')},
 				'ask_price': {
-					'postprocess': add_crom_price,
+					'postprocess': lambda d, p: add_crom_price(d, p, add_citations=True),
 					'properties': (
 						'ask_price',
 						'ask_price_curr',

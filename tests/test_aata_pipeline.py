@@ -286,7 +286,7 @@ class TestAATAPipelineOutput_Journals(unittest.TestCase):
 					'classified_as': [
 						{
 							'_label': 'ISSN Identifier',
-							'id': 'http://vocab.getty.edu/aat/300417443',
+							'id': 'http://vocab.getty.edu/aat/300417430',
 							'type': 'Type'
 						}
 					],
@@ -370,7 +370,7 @@ class TestAATAPipelineOutput_Journals(unittest.TestCase):
 							'classified_as': [
 								{
 								'_label': 'ISSN Identifier',
-								'id': 'http://vocab.getty.edu/aat/300417443',
+								'id': 'http://vocab.getty.edu/aat/300417430',
 								'type': 'Type'
 								}
 							],

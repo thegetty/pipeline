@@ -526,7 +526,9 @@ def final_owner_procurement(final_owner, current_tx, hmo, current_ts):
 def combine_payments(*amnts):
 	grouped_amounts = defaultdict(list)
 	for amnt in amnts:
-		value = amnt.value
+		value = None
+		with suppress(AttributeError):
+			value = amnt.value
 		grouped_amounts[value].append(amnt)
 	
 	merged_amounts = []

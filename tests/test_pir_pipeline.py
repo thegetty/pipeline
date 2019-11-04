@@ -93,6 +93,7 @@ class TestProvenancePipelineOutput(unittest.TestCase):
 			'Place': 'model-place',
 			'Procurement': 'model-activity',
 			'Production': 'model-production',
+			'Set': 'model-set',
 			'VisualItem': 'model-visual-item'
 		}
 		output = self.run_pipeline(models, input_path)

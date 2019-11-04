@@ -301,7 +301,7 @@ class TestAATAPipelineOutput_Journals(unittest.TestCase):
 					'classified_as': [
 						{
 							'_label': 'Title',
-						'id': 'http://vocab.getty.edu/aat/300055726',
+						'id': 'http://vocab.getty.edu/aat/300417193',
 						'type': 'Type'
 						}
 					],
@@ -346,7 +346,7 @@ class TestAATAPipelineOutput_Journals(unittest.TestCase):
 					'classified_as': [
 						{
 							'_label': 'Title',
-							'id': 'http://vocab.getty.edu/aat/300055726',
+							'id': 'http://vocab.getty.edu/aat/300417193',
 							'type': 'Type'
 						}
 					],
@@ -385,7 +385,7 @@ class TestAATAPipelineOutput_Journals(unittest.TestCase):
 							'classified_as': [
 								{
 									'_label': 'Title',
-									'id': 'http://vocab.getty.edu/aat/300055726',
+									'id': 'http://vocab.getty.edu/aat/300417193',
 									'type': 'Type'
 								}
 							],
@@ -421,7 +421,7 @@ class TestAATAPipelineOutput_Journals(unittest.TestCase):
 							'classified_as': [
 								{
 									'_label': 'Title',
-									'id': 'http://vocab.getty.edu/aat/300055726',
+									'id': 'http://vocab.getty.edu/aat/300417193',
 									'type': 'Type'
 								}
 							],

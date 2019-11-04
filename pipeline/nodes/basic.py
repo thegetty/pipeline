@@ -105,7 +105,7 @@ class GroupKeys(Configurable):
 			properties = mapping['properties']
 			postprocess = mapping.get('postprocess')
 			for k in properties:
-				v = data[k]
+				v = data.get(k)
 				to_delete.add(k)
 				if self.drop_empty and not v:
 					continue

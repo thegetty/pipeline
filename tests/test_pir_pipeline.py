@@ -109,7 +109,7 @@ class TestProvenancePipelineOutput(unittest.TestCase):
 
 		self.assertEqual(len(people), 3, 'expected count of people')
 		self.assertEqual(len(objects), 6, 'expected count of physical objects')
-		self.assertEqual(len(los), 1, 'expected count of linguistic objects')
+		self.assertEqual(len(los), 4, 'expected count of linguistic objects')
 		self.assertEqual(len(auctions), 2, 'expected count of auctions')
 		self.assertEqual(len(houses), 1, 'expected count of auction houses')
 		self.assertEqual(len(events), 1, 'expected count of auction events')
@@ -121,7 +121,7 @@ class TestProvenancePipelineOutput(unittest.TestCase):
 		self.assertEqual(lo_types, {'Auction Catalog'})
 
 		people_names = {o['_label'] for o in people.values()}
-		self.assertEqual(people_names, {'[ANONYMOUS]', 'GILLEMANS, JAN PAUWEL', 'VINCKEBOONS, DAVID'})
+		self.assertEqual(people_names, {'(Anonymous artist)', 'GILLEMANS, JAN PAUWEL', 'VINCKEBOONS, DAVID'})
 
 		key_119 = 'tag:getty.edu,2019:digital:pipeline:provenance:REPLACE-WITH-UUID#AUCTION,B-A139,LOT,0119,DATE,1774-05-31'
 		key_120 = 'tag:getty.edu,2019:digital:pipeline:provenance:REPLACE-WITH-UUID#AUCTION,B-A139,LOT,0120,DATE,1774-05-31'

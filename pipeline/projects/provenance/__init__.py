@@ -1071,7 +1071,7 @@ def add_pir_artists(data, *, make_la_person):
 			names.append(auth_name)
 
 		try:
-			name = a['artist_label']
+			name = a['label']
 			if name:
 				if not artist_label:
 					artist_label = f'artist “{name}”'

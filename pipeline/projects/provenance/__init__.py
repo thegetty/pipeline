@@ -180,7 +180,8 @@ def populate_auction_event(data, auction_locations):
 
 	for p in data.get('portal', []):
 		url = p['portal_url']
-		auction.referred_to_by = vocab.WebPage(ident=url)
+		if url.startswith('http'):
+			auction.referred_to_by = vocab.WebPage(ident=url)
 
 	if ts:
 		auction.timespan = ts

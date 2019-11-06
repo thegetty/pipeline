@@ -384,11 +384,11 @@ class AddAuctionOfLot(Configurable):
 		lot.identified_by = vocab.LotNumber(ident='', content=lno)
 		lot.part_of = auction
 
-	def set_lot_objects(self, lot, lno, data):
+	def set_lot_objects(self, lot, cno, lno, data):
 		'''Associate the set of objects with the auction lot.'''
 		coll = vocab.AuctionLotSet(ident=f'{data["uri"]}-Set')
 		shared_lot_number = self.shared_lot_number_from_lno(lno)
-		coll._label = f'Auction Lot {shared_lot_number}'
+		coll._label = f'Auction Lot {cno} {shared_lot_number}'
 		est_price = data.get('estimated_price')
 		if est_price:
 			coll.dimension = get_crom_object(est_price)
@@ -397,7 +397,7 @@ class AddAuctionOfLot(Configurable):
 			coll.dimension = get_crom_object(start_price)
 
 		lot.used_specific_object = coll
-		data['_lot_object_set'] = coll
+		data['_lot_object_set'] = add_crom_data(data={}, what=coll)
 
 	def __call__(self, data, auction_houses, auction_locations, problematic_records):
 		'''Add modeling data for the auction of a lot of objects.'''
@@ -446,7 +446,7 @@ class AddAuctionOfLot(Configurable):
 		self.set_lot_location(lot, cno, auction_locations)
 		self.set_lot_date(lot, auction_data)
 		self.set_lot_notes(lot, auction_data)
-		self.set_lot_objects(lot, lno, data)
+		self.set_lot_objects(lot, cno, lno, data)
 
 		tx_uri = AddAuctionOfLot.transaction_uri_for_lot(auction_data, data.get('price', []))
 		lots = AddAuctionOfLot.lots_in_transaction(auction_data, data.get('price', []))
@@ -1022,9 +1022,11 @@ def add_object_type(data, vocab_type_map):
 		add_crom_data(data=data, what=model.HumanMadeObject(ident=data['uri']))
 
 	parent = data['parent_data']
-	coll = parent.get('_lot_object_set')
-	if coll:
-		data['member_of'] = [coll]
+	coll_data = parent.get('_lot_object_set')
+	if coll_data:
+		coll = get_crom_object(coll_data)
+		if coll:
+			data['member_of'] = [coll]
 
 	return data
 
@@ -1608,6 +1610,17 @@ class ProvenancePipeline(PipelineBase):
 
 		return objects
 
+	def add_lot_set_chain(self, graph, objects, serialize=True):
+		'''Add extraction and serialization of locations.'''
+		sets = graph.add_chain(
+			ExtractKeyedValue(key='_lot_object_set'),
+			_input=objects.output
+		)
+		if serialize:
+			# write SETS data
+			self.add_serialization_chain(graph, sets.output, model=self.models['Set'])
+		return sets
+
 	def add_places_chain(self, graph, auction_events, serialize=True):
 		'''Add extraction and serialization of locations.'''
 		places = graph.add_chain(
@@ -1713,6 +1726,7 @@ class ProvenancePipeline(PipelineBase):
 			)
 			sales = self.add_sales_chain(g, contents_records, serialize=True)
 			_ = self.add_single_object_lot_tracking_chain(g, sales)
+			_ = self.add_lot_set_chain(g, sales, serialize=True)
 			objects = self.add_object_chain(g, sales, serialize=True)
 			_ = self.add_places_chain(g, objects, serialize=True)
 			acquisitions = self.add_acquisitions_chain(g, objects, serialize=True)

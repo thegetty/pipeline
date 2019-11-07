@@ -424,9 +424,11 @@ class AddAuctionOfLot(Configurable):
 
 		lot = vocab.Auction(ident=data['uri'])
 		lot_id = f'{cno} {shared_lot_number} ({date})'
+		lot_object_id = f'{cno} {lno} ({date})'
 		lot_label = f'Auction of Lot {lot_id}'
 		lot._label = lot_label
 		data['lot_id'] = lot_id
+		data['lot_object_id'] = lot_object_id
 
 		for problem_key, problem in problematic_records.get('lots', []):
 			# TODO: this is inefficient, but will probably be OK so long as the number
@@ -867,10 +869,10 @@ def _populate_object_catalog_record(data, parent, lot, cno, rec_num):
 	catalog = vocab.AuctionCatalogText(ident=catalog_uri)
 	
 	record_uri = pir_uri('CATALOG', cno, 'RECORD', rec_num)
-	lot_id = parent['lot_id']
-	record = model.LinguisticObject(ident=record_uri, label=f'Sale recorded in catalog: {lot_id} (record number {rec_num})') # TODO: needs classification
+	lot_object_id = parent['lot_object_id']
+	record = model.LinguisticObject(ident=record_uri, label=f'Sale recorded in catalog: {lot_object_id} (record number {rec_num})') # TODO: needs classification
 	record_data	= {'uri': record_uri}
-	record_data['identifiers'] = [model.Name(ident='', content=f'Record of sale {lot_id}')]
+	record_data['identifiers'] = [model.Name(ident='', content=f'Record of sale {lot_object_id}')]
 	record.part_of = catalog
 
 	data['_sale_record_text'] = add_crom_data(data=record_data, what=record)

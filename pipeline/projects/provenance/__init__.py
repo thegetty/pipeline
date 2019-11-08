@@ -136,7 +136,7 @@ def auction_event_location(data):
 	'''
 	specific_name = data.get('specific_loc')
 	city_name = data.get('city_of_sale')
-	country_name = data.get('country_auth_1')
+	country_name = data.get('country_auth')
 
 	parts = [v for v in (specific_name, city_name, country_name) if v is not None]
 	loc = parse_location(*parts, uri_base=UID_TAG_PREFIX, types=('Place', 'City', 'Country'))
@@ -1320,8 +1320,7 @@ class ProvenancePipeline(PipelineBase):
 						'properties': (
 							'city_of_sale',
 							'sale_location',
-							'country_auth_1',
-							'country_auth_2',
+							'country_auth',
 							'specific_loc')},
 				}
 			),

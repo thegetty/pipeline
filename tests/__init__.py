@@ -5,6 +5,10 @@ import json
 import uuid
 import pprint
 
+from cromulent import model, reader
+from cromulent.model import factory
+from pipeline.util import CromObjectMerger
+
 class TestWriter():
 	'''
 	Deserialize the output of each resource and store in memory.
@@ -12,6 +16,7 @@ class TestWriter():
 	'''
 	def __init__(self):
 		self.output = {}
+		self.merger = CromObjectMerger()
 		super().__init__()
 
 	def __call__(self, data: dict, *args, **kwargs):
@@ -30,7 +35,24 @@ class TestWriter():
 		fn = '%s.json' % uu
 		data = json.loads(d)
 		if fn in self.output[dr]:
-			self.output[dr][fn] = merge(self.output[dr][fn], data)
+			r = reader.Reader()
+			model_object = r.read(d)
+			merger = self.merger
+			content = self.output[dr][fn]
+			try:
+				m = r.read(content)
+				if m == model_object:
+					self.output[dr][fn] = data
+					return
+				else:
+					merger.merge(m, model_object)
+					self.output[dr][fn] = json.loads(factory.toString(m, False))
+					return
+			except model.DataError:
+				print(f'Exception caught while merging data from {fn}:')
+				print(d)
+				print(content)
+				raise
 		else:
 			self.output[dr][fn] = data
 

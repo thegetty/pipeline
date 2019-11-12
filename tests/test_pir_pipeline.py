@@ -7,34 +7,7 @@ import json
 import uuid
 import pprint
 
-from tests import TestWriter
-from pipeline.projects.provenance import ProvenancePipeline
-from pipeline.nodes.basic import Serializer, AddArchesModel
-
-class ProvenanceTestPipeline(ProvenancePipeline):
-	'''
-	Test Provenance pipeline subclass that allows using a custom Writer.
-	'''
-	def __init__(self, writer, input_path, catalogs, auction_events, contents, **kwargs):
-		super().__init__(input_path, catalogs, auction_events, contents, **kwargs)
-		self.writer = writer
-
-	def serializer_nodes_for_model(self, *args, model=None, **kwargs):
-		nodes = []
-		if model:
-			nodes.append(AddArchesModel(model=model))
-		nodes.append(Serializer(compact=False))
-		nodes.append(self.writer)
-		return nodes
-
-	def get_services(self):
-		services = super().get_services()
-		services.update({
-			'problematic_records': {},
-			'location_codes': {}
-		})
-		return services
-
+from tests import TestWriter, ProvenanceTestPipeline
 
 class TestProvenancePipelineOutput(unittest.TestCase):
 	'''

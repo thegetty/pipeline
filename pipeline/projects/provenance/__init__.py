@@ -456,7 +456,7 @@ class AddAuctionOfLot(Configurable):
 		tx = vocab.Procurement(ident=tx_uri)
 		tx._label = f'Procurement of Lot {cno} {lots} ({date})'
 		lot.caused = tx
-		tx_data = {}
+		tx_data = {'uri': tx_uri}
 
 		if multi:
 			tx_data['multi_lot_tx'] = lots
@@ -588,7 +588,7 @@ def add_acquisition(data, buyers, sellers, make_la_person=None):
 	# TODO: `annotation` here is from add_physical_catalog_objects
 # 	paym.referred_to_by = annotation
 
-	data['_acquisition'] = {}
+	data['_acquisition'] = {'uri': acq_id}
 	add_crom_data(data=data['_acquisition'], what=acq)
 
 	final_owner_data = data.get('_final_org')
@@ -737,7 +737,7 @@ def add_bidding(data, buyers):
 				data['_procurements'] = []
 			data['_procurements'].append(add_crom_data(data={}, what=tx))
 
-		data['_bidding'] = {}
+		data['_bidding'] = {'uri': bidding_id}
 		add_crom_data(data=data['_bidding'], what=all_bids)
 		yield data
 	else:
@@ -886,10 +886,10 @@ def _populate_object_destruction(data, parent, destruction_types_map):
 def _populate_object_visual_item(data, vocab_instance_map):
 	hmo = get_crom_object(data)
 	title = data.get('title')
-	vidata = {}
 
 	vi_id = hmo.id + '-VisualItem'
 	vi = model.VisualItem(ident=vi_id)
+	vidata = {'uri': vi_id}
 	if title:
 		vidata['label'] = f'Visual work of “{title}”'
 		sales_record = get_crom_object(data['_sale_record_text'])

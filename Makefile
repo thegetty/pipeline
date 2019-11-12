@@ -87,6 +87,7 @@ upload:
 	./upload_to_arches.py
 
 test:
+	mkdir -p $(GETTY_PIPELINE_TMP_PATH)/pipeline_tests
 	python3 -B setup.py test
 
 $(GETTY_PIPELINE_TMP_PATH)/aata.dot: aata.py

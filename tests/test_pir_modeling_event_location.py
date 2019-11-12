@@ -9,6 +9,7 @@ import pprint
 import inspect
 from pathlib import Path
 import warnings
+from contextlib import suppress
 
 from tests import TestProvenancePipelineOutput
 
@@ -18,7 +19,24 @@ class PIRModelingTest_EventLocation(TestProvenancePipelineOutput):
 		Test for modeling of the locations of auction events, including a Place hierarchy.
 		'''
 		output = self.run_pipeline('event_location')
-		warnings.warn(f'TODO: implement {inspect.getframeinfo(inspect.currentframe()).function}')
+
+		events = output['model-event']
+		places = output['model-place']
+		self.assertEqual(len(events), 1)
+		self.assertEqual(len(places), 3)
+		
+		# The auction event took place at a location which is in a hierarchy of 3 places
+		# (address, city, country)
+		event = next(iter(events.values()))
+		event_location = event['took_place_at'][0]
+		place = places[event_location['id']]
+
+		names = []
+		while place:
+			name = place['_label']
+			names.append(name)
+			place = place.get('part_of', [None])[0]
+		self.assertEqual(names, ['Kaiserstr. 187, Karlsruhe, Germany', 'Karlsruhe, Germany', 'Germany'])
 
 
 if __name__ == '__main__':

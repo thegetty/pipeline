@@ -58,5 +58,6 @@ class PIRModelingTest_MultiLot(TestProvenancePipelineOutput):
 
 		self.assertEqual(objects_from_acqs, objects_from_lots)
 
+
 if __name__ == '__main__':
 	unittest.main()

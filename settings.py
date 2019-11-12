@@ -8,7 +8,6 @@ arches_models = {
 	'Place': '846cdf96-f0f5-4310-8415-018452032175',
 	'Procurement': '08ad7e74-da48-4720-9e3f-ad5577d0d57c',
 	'Series': 'd537c62e-720a-467f-ac88-9f0b53b14dd8',
-	"Acquisition": "b5fdce59-2e41-11e9-b1c2-a4d18cec433a",
 	"Activity": "24c45975-3955-11e9-80f0-a4d18cec433a",
 	"HumanMadeObject": "2486c17d-2e42-11e9-bd33-a4d18cec433a",
 	"LinguisticObject": "41a41e47-2e42-11e9-b5ee-a4d18cec433a",

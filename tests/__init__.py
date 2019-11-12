@@ -4,10 +4,29 @@ import hashlib
 import json
 import uuid
 import pprint
+import unittest
+from pathlib import Path
 
 from cromulent import model, reader
 from cromulent.model import factory
 from pipeline.util import CromObjectMerger
+from pipeline.projects.provenance import ProvenancePipeline
+from pipeline.nodes.basic import Serializer, AddArchesModel
+
+MODELS = {
+	'Acquisition': 'model-acquisition',
+	'Activity': 'model-activity',
+	'Event': 'model-event',
+	'Group': 'model-groups',
+	'HumanMadeObject': 'model-object',
+	'LinguisticObject': 'model-lo',
+	'Person': 'model-person',
+	'Place': 'model-place',
+	'Procurement': 'model-activity',
+	'Production': 'model-production',
+	'Set': 'model-set',
+	'VisualItem': 'model-visual-item'
+}
 
 class TestWriter():
 	'''
@@ -145,3 +164,86 @@ def merge(l, r):
 	else:
 		raise NotImplementedError('unhandled type: %r' % (type(l)))
 	return l
+
+
+class ProvenanceTestPipeline(ProvenancePipeline):
+	'''
+	Test Provenance pipeline subclass that allows using a custom Writer.
+	'''
+	def __init__(self, writer, input_path, catalogs, auction_events, contents, **kwargs):
+		super().__init__(input_path, catalogs, auction_events, contents, **kwargs)
+		self.writer = writer
+
+	def serializer_nodes_for_model(self, *args, model=None, **kwargs):
+		nodes = []
+		if model:
+			nodes.append(AddArchesModel(model=model))
+		nodes.append(Serializer(compact=False))
+		nodes.append(self.writer)
+		return nodes
+
+	def get_services(self):
+		services = super().get_services()
+		services.update({
+			'problematic_records': {},
+			'location_codes': {}
+		})
+		return services
+
+
+class TestProvenancePipelineOutput(unittest.TestCase):
+	'''
+	Parse test CSV data and run the Provenance pipeline with the in-memory TestWriter.
+	Then verify that the serializations in the TestWriter object are what was expected.
+	'''
+	def setUp(self):
+		self.catalogs = {
+			'header_file': 'tests/data/pir/sales_catalogs_info_0.csv',
+			'files_pattern': 'tests/data/pir/empty.csv',
+		}
+		self.contents = {
+			'header_file': 'tests/data/pir/sales_contents_0.csv',
+			'files_pattern': 'tests/data/pir/empty.csv',
+		}
+		self.auction_events = {
+			'header_file': 'tests/data/pir/sales_descriptions_0.csv',
+			'files_pattern': 'tests/data/pir/empty.csv',
+		}
+		os.environ['QUIET'] = '1'
+
+	def tearDown(self):
+		pass
+
+	def run_pipeline(self, test_name):
+		input_path = os.getcwd()
+		catalogs = self.catalogs.copy()
+		events = self.auction_events.copy()
+		contents = self.contents.copy()
+		
+		tests_path = Path(f'tests/data/pir/{test_name}')
+		catalog_files = list(tests_path.rglob('sales_catalogs_info*'))
+		event_files = list(tests_path.rglob('sales_descriptions*'))
+		content_files = list(tests_path.rglob('sales_contents*'))
+		
+		if catalog_files:
+			catalogs['files_pattern'] = str(tests_path / 'sales_catalogs_info*')
+
+		if event_files:
+			events['files_pattern'] = str(tests_path / 'sales_descriptions*')
+
+		if content_files:
+			contents['files_pattern'] = str(tests_path / 'sales_contents*')
+		
+		writer = TestWriter()
+		pipeline = ProvenanceTestPipeline(
+				writer,
+				input_path,
+				catalogs=catalogs,
+				auction_events=events,
+				contents=contents,
+				models=MODELS,
+				limit=100,
+				debug=True
+		)
+		pipeline.run()
+		return writer.processed_output()

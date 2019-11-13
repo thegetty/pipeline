@@ -989,7 +989,7 @@ def _populate_object_notes(data, parent, unique_catalogs):
 
 	inscription = data.get('inscription')
 	if inscription:
-		hmo.carries = vocab.Note(ident='', content=inscription)
+		hmo.referred_to_by = vocab.InscriptionStatement(ident='', content=inscription)
 
 def _populate_object_prev_post_sales(data, this_key, post_sale_map):
 	post_sales = data.get('post_sale', [])

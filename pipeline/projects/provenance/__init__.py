@@ -1378,10 +1378,6 @@ class ProvenancePipeline(PipelineBase):
 			ExtractKeyedValue(key='_final_org'),
 			_input=bid_acqs.output
 		)
-		acqs = graph.add_chain(
-			ExtractKeyedValue(key='_acquisition'),
-			_input=bid_acqs.output
-		)
 		bids = graph.add_chain(
 			ExtractKeyedValue(key='_bidding'),
 			_input=bid_acqs.output
@@ -1389,7 +1385,6 @@ class ProvenancePipeline(PipelineBase):
 
 		if serialize:
 			# write SALES data
-			self.add_serialization_chain(graph, acqs.output, model=self.models['Acquisition'])
 			self.add_serialization_chain(graph, bids.output, model=self.models['Activity'])
 			self.add_serialization_chain(graph, orgs.output, model=self.models['Group'])
 		return bid_acqs

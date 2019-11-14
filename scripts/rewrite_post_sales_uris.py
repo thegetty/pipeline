@@ -10,6 +10,7 @@ from pathlib import Path
 
 from settings import output_file_path
 from pipeline.util.rewriting import rewrite_output_files, JSONValueRewriter
+from pipeline.projects.provenance.util import prev_post_sales_rewrite_map
 
 if len(sys.argv) < 2:
 	cmd = sys.argv[0]
@@ -23,13 +24,8 @@ print(f'Rewriting post-sales URIs ...')
 rewrite_map_filename = sys.argv[1]
 with open(rewrite_map_filename, 'r') as f:
 	post_sale_rewrite_map = json.load(f)
-
-	also_rewrite = {}
-	also_rewrite_suffixes = ['Production', 'Destruction', 'VisualItem']
-	also_rewrite_suffixes += [f'Production-{i}' for i in range(6)]
-	for k, v in post_sale_rewrite_map.items():
-		for suffix in also_rewrite_suffixes:
-			also_rewrite[f'{k}-{suffix}'] = f'{v}-{suffix}'
-	post_sale_rewrite_map.update(also_rewrite)
+	post_sale_rewrite_map = prev_post_sales_rewrite_map(post_sale_rewrite_map)
+	print('Post sales rewrite map:')
+	pprint.pprint(post_sale_rewrite_map)
 	r = JSONValueRewriter(post_sale_rewrite_map)
 	rewrite_output_files(r, parallel=True)

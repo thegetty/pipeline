@@ -11,6 +11,7 @@ from cromulent import model, reader
 from cromulent.model import factory
 from pipeline.util import CromObjectMerger
 from pipeline.projects.provenance import ProvenancePipeline
+from pipeline.projects.provenance.util import SalesTree
 from pipeline.nodes.basic import Serializer, AddArchesModel
 
 MODELS = {
@@ -97,6 +98,7 @@ class ProvenanceTestPipeline(ProvenancePipeline):
 	def __init__(self, writer, input_path, catalogs, auction_events, contents, **kwargs):
 		super().__init__(input_path, catalogs, auction_events, contents, **kwargs)
 		self.writer = writer
+		self.prev_post_sales_map = {}
 
 	def serializer_nodes_for_model(self, *args, model=None, **kwargs):
 		nodes = []
@@ -113,6 +115,26 @@ class ProvenanceTestPipeline(ProvenancePipeline):
 			'location_codes': {}
 		})
 		return services
+
+	def run(self, **options):
+		services = self.get_services(**options)
+		super().run(services=services, **options)
+
+		counter = services['lot_counter']
+		post_map = services['post_sale_map']
+		self.generate_prev_post_sales_data(counter, post_map)
+
+	def load_prev_post_sales_data(self):
+		return {}
+
+	def persist_prev_post_sales_data(self, post_sale_rewrite_map):
+		self.prev_post_sales_map = post_sale_rewrite_map
+
+	def load_sales_tree(self):
+		return SalesTree()
+
+	def persist_sales_tree(self, g):
+		self.sales_tree = g
 
 
 class TestProvenancePipelineOutput(unittest.TestCase):
@@ -170,4 +192,5 @@ class TestProvenancePipelineOutput(unittest.TestCase):
 				debug=True
 		)
 		pipeline.run()
+		self.prev_post_sales_map = pipeline.prev_post_sales_map
 		return writer.processed_output()

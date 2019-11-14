@@ -68,6 +68,17 @@ def add_pir_object_uri(data, parent):
 	data['uri'] = object_uri(parent)
 	return data
 
+def prev_post_sales_rewrite_map(map_data):
+	post_sale_rewrite_map = map_data.copy()
+	also_rewrite = {}
+	also_rewrite_suffixes = ['Production', 'Destruction', 'VisualItem']
+	also_rewrite_suffixes += [f'Production-{i}' for i in range(6)]
+	for k, v in post_sale_rewrite_map.items():
+		for suffix in also_rewrite_suffixes:
+			also_rewrite[f'{k}-{suffix}'] = f'{v}-{suffix}'
+	post_sale_rewrite_map.update(also_rewrite)
+	return post_sale_rewrite_map
+
 class SalesTree:
 	'''
 	This class is used to represent the repeated sales of objects in provenance data.
@@ -104,20 +115,20 @@ class SalesTree:
 		for src in self.nodes.keys():
 			key, _ = self.canonical_key(src)
 			components[key] += 1
-		print(f'Post sales records connected component sizes (top {limit}):')
+# 		print(f'Post sales records connected component sizes (top {limit}):')
 		for key, count in components.most_common(limit):
 			uri = pir_uri('OBJECT', *key)
-			print(f'{count}\t{key!s:>40}\t\t{uri}')
+# 			print(f'{count}\t{key!s:>40}\t\t{uri}')
 			yield key
 
 	def add_edge(self, src, dst):
 		i = self.add_node(src)
 		j = self.add_node(dst)
-		if i in self.outgoing_edges:
-			if self.outgoing_edges[i] == j:
-				warnings.warn(f'*** re-asserted sale edge: {src!s:<40} -> {dst}')
-			else:
-				warnings.warn(f'*** {src} already has an outgoing edge: {self.outgoing_edges[i]}')
+# 		if i in self.outgoing_edges:
+# 			if self.outgoing_edges[i] == j:
+# 				warnings.warn(f'*** re-asserted sale edge: {src!s:<40} -> {dst}')
+# 			else:
+# 				warnings.warn(f'*** {src} already has an outgoing edge: {self.outgoing_edges[i]}')
 		self.outgoing_edges[i] = j
 
 	def __iter__(self):

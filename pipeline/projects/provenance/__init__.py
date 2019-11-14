@@ -1763,7 +1763,6 @@ class ProvenancePipeline(PipelineBase):
 		if not services:
 			services = self.get_services(**options)
 
-		start = timeit.default_timer()
 		print('Running graph component 1...', file=sys.stderr)
 		graph1 = self.get_graph_1(**options)
 		self.run_graph(graph1, services=services)
@@ -1772,7 +1771,52 @@ class ProvenancePipeline(PipelineBase):
 		graph2 = self.get_graph_2(**options)
 		self.run_graph(graph2, services=services)
 
-		print(f'Pipeline runtime: {timeit.default_timer() - start}', file=sys.stderr)
+	def generate_prev_post_sales_data(self, counter, post_map):
+		singles = {k for k in counter if counter[k] == 1}
+		multiples = {k for k in counter if counter[k] > 1}
+
+		total = 0
+		mapped = 0
+
+		g = self.load_sales_tree()
+		for src, dst in post_map.items():
+			total += 1
+			if dst in singles:
+				mapped += 1
+				g.add_edge(src, dst)
+# 			elif dst in multiples:
+# 				print(f'  {src} maps to a MULTI-OBJECT lot')
+# 			else:
+# 				print(f'  {src} maps to an UNKNOWN lot')
+# 		print(f'mapped {mapped}/{total} objects to a previous sale', file=sys.stderr)
+
+		large_components = set(g.largest_component_canonical_keys(10))
+		dot = graphviz.Digraph()
+
+		node_id = lambda n: f'n{n!s}'
+		for n, i in g.nodes.items():
+			key, _ = g.canonical_key(n)
+			if key in large_components:
+				dot.node(node_id(i), str(n))
+
+		post_sale_rewrite_map = self.load_prev_post_sales_data()
+# 		print('Rewrite output files, replacing the following URIs:')
+		for src, dst in g:
+			canonical, steps = g.canonical_key(src)
+			src_uri = pir_uri('OBJECT', *src)
+			dst_uri = pir_uri('OBJECT', *canonical)
+# 			print(f's/ {src_uri:<100} / {dst_uri:<100} /')
+			post_sale_rewrite_map[src_uri] = dst_uri
+			if canonical in large_components:
+				i = node_id(g.nodes[src])
+				j = node_id(g.nodes[dst])
+				dot.edge(i, j, f'{steps} steps')
+
+		self.persist_prev_post_sales_data(post_sale_rewrite_map)
+		
+		dot_filename = os.path.join(settings.pipeline_tmp_path, 'sales.dot')
+		dot.save(filename=dot_filename)
+		self.persist_sales_tree(g)
 
 
 class ProvenanceFilePipeline(ProvenancePipeline):
@@ -1804,75 +1848,40 @@ class ProvenanceFilePipeline(ProvenancePipeline):
 		self.writers += nodes
 		return nodes
 
-	def merge_post_sale_objects(self, counter, post_map):
-		singles = {k for k in counter if counter[k] == 1}
-		multiples = {k for k in counter if counter[k] > 1}
-
-		total = 0
-		mapped = 0
-
-		rewrite_map_filename = os.path.join(settings.pipeline_tmp_path, 'post_sale_rewrite_map.json')
+	def persist_sales_tree(self, g):
 		sales_tree_filename = os.path.join(settings.pipeline_tmp_path, 'sales-tree.data')
+		with open(sales_tree_filename, 'w') as f:
+			g.dump(f)
 
+	def load_sales_tree(self):
+		sales_tree_filename = os.path.join(settings.pipeline_tmp_path, 'sales-tree.data')
 		if os.path.exists(sales_tree_filename):
 			with open(sales_tree_filename) as f:
 				g = SalesTree.load(f)
 		else:
 			g = SalesTree()
 
-		for src, dst in post_map.items():
-			total += 1
-			if dst in singles:
-				mapped += 1
-				g.add_edge(src, dst)
-			elif dst in multiples:
-				print(f'  {src} maps to a MULTI-OBJECT lot')
-			else:
-				print(f'  {src} maps to an UNKNOWN lot')
-		print(f'mapped {mapped}/{total} objects to a previous sale', file=sys.stderr)
-
-		large_components = set(g.largest_component_canonical_keys(10))
-		dot = graphviz.Digraph()
-
-		node_id = lambda n: f'n{n!s}'
-		for n, i in g.nodes.items():
-			key, _ = g.canonical_key(n)
-			if key in large_components:
-				dot.node(node_id(i), str(n))
-
+	def load_prev_post_sales_data(self):
+		rewrite_map_filename = os.path.join(settings.pipeline_tmp_path, 'post_sale_rewrite_map.json')
 		post_sale_rewrite_map = {}
 		if os.path.exists(rewrite_map_filename):
 			with open(rewrite_map_filename, 'r') as f:
 				with suppress(json.decoder.JSONDecodeError):
 					post_sale_rewrite_map = json.load(f)
-# 		print('Rewrite output files, replacing the following URIs:')
-		for src, dst in g:
-			canonical, steps = g.canonical_key(src)
-			src_uri = pir_uri('OBJECT', *src)
-			dst_uri = pir_uri('OBJECT', *canonical)
-# 			print(f's/ {src_uri:<100} / {dst_uri:<100} /')
-			post_sale_rewrite_map[src_uri] = dst_uri
-			if canonical in large_components:
-				i = node_id(g.nodes[src])
-				j = node_id(g.nodes[dst])
-				dot.edge(i, j, f'{steps} steps')
+		return post_sale_rewrite_map
 
-		dot_filename = os.path.join(settings.pipeline_tmp_path, 'sales.dot')
-		dot.save(filename=dot_filename)
+	def persist_prev_post_sales_data(self, post_sale_rewrite_map):
+		rewrite_map_filename = os.path.join(settings.pipeline_tmp_path, 'post_sale_rewrite_map.json')
 		with open(rewrite_map_filename, 'w') as f:
 			json.dump(post_sale_rewrite_map, f)
 			print(f'Saved post-sales rewrite map to {rewrite_map_filename}')
-		with open(sales_tree_filename, 'w') as f:
-			g.dump(f)
-
-# 		r = JSONValueRewriter(post_sale_rewrite_map)
-# 		rewrite_output_files(r)
 
 	def run(self, **options):
 		'''Run the Provenance bonobo pipeline.'''
 		start = timeit.default_timer()
 		services = self.get_services(**options)
 		super().run(services=services, **options)
+		print(f'Pipeline runtime: {timeit.default_timer() - start}', file=sys.stderr)
 
 		count = len(self.writers)
 		for seq_no, w in enumerate(self.writers):
@@ -1884,6 +1893,6 @@ class ProvenanceFilePipeline(ProvenancePipeline):
 		print('Running post-processing of post-sale data...')
 		counter = services['lot_counter']
 		post_map = services['post_sale_map']
-		self.merge_post_sale_objects(counter, post_map)
+		self.generate_prev_post_sales_data(counter, post_map)
 		print(f'>>> {len(post_map)} post sales records')
 		print('Total runtime: ', timeit.default_timer() - start)

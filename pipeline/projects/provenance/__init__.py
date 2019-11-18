@@ -819,7 +819,6 @@ def populate_destruction_events(data, note, *, type_map, location=None):
 
 		if location:
 			current = parse_location_name(location, uri_base=UID_TAG_PREFIX)
-			pprint.pprint(current)
 			base_uri = hmo.id + '-Place,'
 			place_data = make_la_place(current, base_uri=base_uri)
 			place = get_crom_object(place_data)

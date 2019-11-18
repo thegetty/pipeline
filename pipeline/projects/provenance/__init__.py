@@ -1860,6 +1860,7 @@ class ProvenanceFilePipeline(ProvenancePipeline):
 				g = SalesTree.load(f)
 		else:
 			g = SalesTree()
+		return g
 
 	def load_prev_post_sales_data(self):
 		rewrite_map_filename = os.path.join(settings.pipeline_tmp_path, 'post_sale_rewrite_map.json')

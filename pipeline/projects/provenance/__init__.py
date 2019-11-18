@@ -945,7 +945,7 @@ def _populate_object_present_location(data, now_key, destruction_types_map):
 		if loc:
 			if 'destroyed ' in loc.lower():
 				populate_destruction_events(data, loc, type_map=destruction_types_map)
-			elif 'destroyed ' in note.lower():
+			elif isinstance(note, str) and 'destroyed ' in note.lower():
 				# the object was destroyed, so any "present location" data is actually
 				# an indication of the location of destruction.
 				populate_destruction_events(data, note, type_map=destruction_types_map, location=loc)

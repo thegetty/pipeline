@@ -265,6 +265,7 @@ class AddAuctionOfLot(Configurable):
 	problematic_records = Service('problematic_records')
 	auction_locations = Service('auction_locations')
 	auction_houses = Service('auction_houses')
+	non_auctions = Service('non_auctions')
 	def __init__(self, *args, **kwargs):
 		self.lot_cache = {}
 		super().__init__(*args, **kwargs)
@@ -399,7 +400,7 @@ class AddAuctionOfLot(Configurable):
 		lot.used_specific_object = coll
 		data['_lot_object_set'] = add_crom_data(data={}, what=coll)
 
-	def __call__(self, data, auction_houses, auction_locations, problematic_records):
+	def __call__(self, data, non_auctions, auction_houses, auction_locations, problematic_records):
 		'''Add modeling data for the auction of a lot of objects.'''
 		ask_price = data.get('ask_price', {}).get('ask_price')
 		if ask_price:
@@ -417,6 +418,11 @@ class AddAuctionOfLot(Configurable):
 			pprint.pprint({k: v for k, v in data.items() if v != ''})
 			raise
 		cno, lno, date = lot_object_key
+		if cno in non_auctions:
+			# the records in this sales catalog do not represent auction sales, so should
+			# be skipped.
+			return
+
 		shared_lot_number = self.shared_lot_number_from_lno(lno)
 		uid, uri = self.shared_lot_number_ids(cno, lno, date)
 		data['uid'] = uid
@@ -1119,17 +1125,22 @@ def add_pir_artists(data, *, make_la_person):
 
 #mark - Physical Catalogs
 
-def add_auction_catalog(data):
+@use('non_auctions')
+def add_auction_catalog(data, non_auctions):
 	'''Add modeling for auction catalogs as linguistic objects'''
 	cno = data['catalog_number']
-	key = f'CATALOG-{cno}'
 
-	cdata = {'uid': key, 'uri': pir_uri('CATALOG', cno)}
-	catalog = vocab.AuctionCatalogText(ident=cdata['uri'])
-	catalog._label = f'Sale Catalog {cno}'
+	non_auction_flag = data.get('non_auction_flag')
+	if non_auction_flag:
+		non_auctions[cno] = non_auction_flag
+	else:
+		key = f'CATALOG-{cno}'
+		cdata = {'uid': key, 'uri': pir_uri('CATALOG', cno)}
+		catalog = vocab.AuctionCatalogText(ident=cdata['uri'])
+		catalog._label = f'Sale Catalog {cno}'
 
-	data['_catalog'] = add_crom_data(data=cdata, what=catalog)
-	return data
+		data['_catalog'] = add_crom_data(data=cdata, what=catalog)
+		yield data
 
 def add_physical_catalog_objects(data):
 	'''Add modeling for physical copies of an auction catalog'''
@@ -1262,6 +1273,7 @@ class ProvenancePipeline(PipelineBase):
 			'unique_catalogs': {},
 			'post_sale_map': {},
 			'auction_houses': {},
+			'non_auctions': {},
 			'auction_locations': {},
 		})
 		return services

@@ -790,11 +790,12 @@ def genre_instance(value, vocab_instance_map):
 		return instance
 	return None
 
-def populate_destruction_events(data, note, destruction_types_map):
+def populate_destruction_events(data, note, *, type_map, location=None):
+	destruction_types_map = type_map
 	hmo = get_crom_object(data)
 	title = data.get('title')
 
-	r = re.compile(r'Destroyed(?: (?:by|during) (\w+))?(?: in (\d{4})[.]?)?')
+	r = re.compile(r'[Dd]estroyed(?: (?:by|during) (\w+))?(?: in (\d{4})[.]?)?')
 	m = r.search(note)
 	if m:
 		method = m.group(1)
@@ -807,7 +808,6 @@ def populate_destruction_events(data, note, destruction_types_map):
 			ts = timespan_from_outer_bounds(begin, end)
 			ts.identified_by = model.Name(ident='', content=year)
 			d.timespan = ts
-		hmo.destroyed_by = d
 
 		if method:
 			with suppress(KeyError, AttributeError):
@@ -816,6 +816,17 @@ def populate_destruction_events(data, note, destruction_types_map):
 				event = model.Event(label=f'{method.capitalize()} event causing the destruction of “{title}”')
 				event.classified_as = type
 				d.caused_by = event
+
+		if location:
+			current = parse_location_name(location, uri_base=UID_TAG_PREFIX)
+			base_uri = hmo.id + '-Place,'
+			place_data = make_la_place(current, base_uri=base_uri)
+			place = get_crom_object(place_data)
+			if place:
+				data['_locations'].append(place_data)
+				d.took_place_at = place
+
+		hmo.destroyed_by = d
 
 @use('post_sale_map')
 @use('unique_catalogs')
@@ -843,6 +854,7 @@ def populate_object(data, post_sale_map, unique_catalogs, vocab_instance_map, de
 	lot = AddAuctionOfLot.shared_lot_number_from_lno(lno)
 	now_key = (cno, lot, date) # the current key for this object; may be associated later with prev and post object keys
 
+	data['_locations'] = []
 	record = _populate_object_catalog_record(data, parent, lot, cno, parent['pi_record_no'])
 	_populate_object_visual_item(data, vocab_instance_map)
 	_populate_object_destruction(data, parent, destruction_types_map)
@@ -880,8 +892,8 @@ def _populate_object_catalog_record(data, parent, lot, cno, rec_num):
 
 def _populate_object_destruction(data, parent, destruction_types_map):
 	notes = parent.get('auction_of_lot', {}).get('lot_notes')
-	if notes and notes.startswith('Destroyed'):
-		populate_destruction_events(data, notes, destruction_types_map)
+	if notes and notes.lower().startswith('destroyed'):
+		populate_destruction_events(data, notes, type_map=destruction_types_map)
 
 def _populate_object_visual_item(data, vocab_instance_map):
 	hmo = get_crom_object(data)
@@ -928,9 +940,14 @@ def _populate_object_present_location(data, now_key, destruction_types_map):
 	location = data.get('present_location')
 	if location:
 		loc = location.get('geog')
+		note = location.get('note')
 		if loc:
-			if 'Destroyed ' in loc:
-				populate_destruction_events(data, loc, destruction_types_map)
+			if 'destroyed ' in loc.lower():
+				populate_destruction_events(data, loc, type_map=destruction_types_map)
+			elif isinstance(note, str) and 'destroyed ' in note.lower():
+				# the object was destroyed, so any "present location" data is actually
+				# an indication of the location of destruction.
+				populate_destruction_events(data, note, type_map=destruction_types_map, location=loc)
 			else:
 				# TODO: if `parse_location_name` fails, still preserve the location string somehow
 				current = parse_location_name(loc, uri_base=UID_TAG_PREFIX)
@@ -964,11 +981,10 @@ def _populate_object_present_location(data, now_key, destruction_types_map):
 				owner_data = make_la_org(owner_data)
 				owner = get_crom_object(owner_data)
 				owner.residence = place
-				data['_locations'] = [place_data]
+				data['_locations'].append(place_data)
 				data['_final_org'] = owner_data
 		else:
 			pass # there is no present location place string
-		note = location.get('note')
 		if note:
 			pass
 			# TODO: the acquisition_note needs to be attached as a Note to the final post owner acquisition
@@ -1860,6 +1876,7 @@ class ProvenanceFilePipeline(ProvenancePipeline):
 				g = SalesTree.load(f)
 		else:
 			g = SalesTree()
+		return g
 
 	def load_prev_post_sales_data(self):
 		rewrite_map_filename = os.path.join(settings.pipeline_tmp_path, 'post_sale_rewrite_map.json')

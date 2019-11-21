@@ -89,6 +89,46 @@ IGNORE_HOUSE_AUTHNAMES = CaseFoldingSet(('Anonymous',))
 
 #mark - utility functions and classes
 
+def setup_static_instances():
+	'''
+	These are instances that are used statically in the code. For example, when we
+	provide attribution of an identifier to Getty, or use a Lugt number, we need to
+	serialize the related Group or Person record for that attribution, even if it does
+	not appear in the source data.
+	'''
+	GETTY_GRI_URI = pir_uri('ORGANIZATION', 'LOCATION-CODE', 'JPGM')
+	lugt_ulan = 500321736
+	gri_ulan = 500115990
+	LUGT_URI = pir_uri('PERSON', 'ULAN', lugt_ulan)
+	gri = model.Group(ident=GETTY_GRI_URI, label='Getty Research Institute')
+	gri.identified_by = vocab.PrimaryName(ident='', content='Getty Research Institute')
+	gri.exact_match = model.BaseResource(ident=f'http://vocab.getty.edu/ulan/{gri_ulan}')
+	lugt = model.Person(ident=LUGT_URI, label='Frits Lugt')
+	lugt.identified_by = vocab.PrimaryName(ident='', content='Frits Lugt')
+	lugt.exact_match = model.BaseResource(ident=f'http://vocab.getty.edu/ulan/{lugt_ulan}')
+	return {
+		'Group': {
+			'gri': gri
+		},
+		'Person': {
+			'lugt': lugt
+		}
+	}
+STATIC_INSTANCES = setup_static_instances()
+
+class GraphListSource:
+	'''
+	Act as a bonobo graph source node for a set of crom objects.
+	Yields the supplied objects wrapped in data dicts.
+	'''
+	def __init__(self, values, *args, **kwargs):
+		super().__init__(*args, **kwargs)
+		self.values = values
+
+	def __call__(self):
+		for v in self.values:
+			yield add_crom_data({}, v)
+
 def acceptable_person_auth_name(auth_name):
 	if not auth_name:
 		return False
@@ -637,7 +677,7 @@ def add_acquisition(data, buyers, sellers, make_la_person=None):
 			else:
 				# not enough information to identify this person uniquely, so use the source location in the input file
 				owner_record['uri'] = pir_uri('PERSON', 'PI_REC_NO', data['pi_record_no'], f'{rev_name}-{seq_no+1}')
-			if not name:
+			if not name and not auth_name:
 				warnings.warn(f'*** No name for {rev_name}: {owner_record}')
 				pprint.pprint(owner_record)
 			if name:
@@ -1211,13 +1251,24 @@ def populate_auction_catalog(data):
 		if not lugt_no:
 			warnings.warn(f'Setting empty identifier on {catalog.id}')
 		lugt_number = str(lugt_no)
-		catalog.identified_by = model.Identifier(ident='', label=f"Lugt Number: {lugt_number}", content=lugt_number)
+		lugt_id = model.Identifier(ident='', label=f"Lugt Number: {lugt_number}", content=lugt_number)
+		catalog.identified_by = lugt_id
+		assignment = model.AttributeAssignment(ident='')
+		assignment.carried_out_by = STATIC_INSTANCES['Person']['lugt']
+		lugt_id.assigned_by = assignment
+
 	if not cno:
 		warnings.warn(f'Setting empty identifier on {catalog.id}')
-	catalog.identified_by = vocab.LocalNumber(ident='', content=cno)
+	catalog_id = vocab.LocalNumber(ident='', content=cno)
+	catalog.identified_by = catalog_id
+	assignment = model.AttributeAssignment(ident='')
+	assignment.carried_out_by = STATIC_INSTANCES['Group']['gri']
+	catalog_id.assigned_by = assignment
+	
 	if not sno:
 		warnings.warn(f'Setting empty identifier on {catalog.id}')
-	catalog.identified_by = vocab.LocalNumber(ident='', content=sno)
+	warnings.warn(f'Change catalog star_record_no classification to SystemIdentifier')
+	catalog.identified_by = vocab.LocalNumber(ident='', content=sno) # TODO: change to vocab.SystemIdentifier
 	notes = data.get('notes')
 	if notes:
 		note = vocab.Note(ident='', content=parent['notes'])
@@ -1790,6 +1841,15 @@ class ProvenancePipeline(PipelineBase):
 		print(f'- Limiting to {self.limit} records per file', file=sys.stderr)
 		if not services:
 			services = self.get_services(**options)
+
+		print('Serializing static instances...', file=sys.stderr)
+		for model, instances in STATIC_INSTANCES.items():
+			g = bonobo.Graph()
+			nodes = self.serializer_nodes_for_model(model=model, use_memory_writer=False)
+			values = instances.values()
+			source = g.add_chain(GraphListSource(values))
+			self.add_serialization_chain(g, source.output, model=self.models[model], use_memory_writer=False)
+			self.run_graph(g, services={})
 
 		print('Running graph component 1...', file=sys.stderr)
 		graph1 = self.get_graph_1(**options)

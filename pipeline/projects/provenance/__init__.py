@@ -1240,6 +1240,21 @@ def add_physical_catalog_owners(data, location_codes, unique_catalogs):
 
 #mark - Physical Catalogs - Informational Catalogs
 
+def lugt_number_id(content):
+	lugt_number = str(content)
+	lugt_id = vocab.LocalNumber(ident='', label=f"Lugt Number: {lugt_number}", content=lugt_number)
+	assignment = model.AttributeAssignment(ident='')
+	assignment.carried_out_by = STATIC_INSTANCES['Person']['lugt']
+	lugt_id.assigned_by = assignment
+	return lugt_id
+
+def gri_number_id(content):
+	catalog_id = vocab.LocalNumber(ident='', content=content)
+	assignment = model.AttributeAssignment(ident='')
+	assignment.carried_out_by = STATIC_INSTANCES['Group']['gri']
+	catalog_id.assigned_by = assignment
+	return catalog_id
+
 def populate_auction_catalog(data):
 	'''Add modeling data for an auction catalog'''
 	d = {k: v for k, v in data.items()}
@@ -1248,22 +1263,15 @@ def populate_auction_catalog(data):
 	sno = parent['star_record_no']
 	catalog = get_crom_object(d)
 	for lugt_no in parent.get('lugt', {}).values():
-		if not lugt_no:
+		if not content:
 			warnings.warn(f'Setting empty identifier on {catalog.id}')
-		lugt_number = str(lugt_no)
-		lugt_id = model.Identifier(ident='', label=f"Lugt Number: {lugt_number}", content=lugt_number)
+		lugt_id = lugt_number_id(lugt_no)
 		catalog.identified_by = lugt_id
-		assignment = model.AttributeAssignment(ident='')
-		assignment.carried_out_by = STATIC_INSTANCES['Person']['lugt']
-		lugt_id.assigned_by = assignment
 
 	if not cno:
 		warnings.warn(f'Setting empty identifier on {catalog.id}')
-	catalog_id = vocab.LocalNumber(ident='', content=cno)
+	catalog_id = gri_number_id(cno)
 	catalog.identified_by = catalog_id
-	assignment = model.AttributeAssignment(ident='')
-	assignment.carried_out_by = STATIC_INSTANCES['Group']['gri']
-	catalog_id.assigned_by = assignment
 	
 	if not sno:
 		warnings.warn(f'Setting empty identifier on {catalog.id}')

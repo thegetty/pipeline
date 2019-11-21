@@ -1242,7 +1242,7 @@ def add_physical_catalog_owners(data, location_codes, unique_catalogs):
 
 def lugt_number_id(content):
 	lugt_number = str(content)
-	lugt_id = vocab.LocalNumber(ident='', label=f"Lugt Number: {lugt_number}", content=lugt_number)
+	lugt_id = vocab.LocalNumber(ident='', label=f'Lugt Number: {lugt_number}', content=lugt_number)
 	assignment = model.AttributeAssignment(ident='')
 	assignment.carried_out_by = STATIC_INSTANCES['Person']['lugt']
 	lugt_id.assigned_by = assignment
@@ -1265,13 +1265,11 @@ def populate_auction_catalog(data):
 	for lugt_no in parent.get('lugt', {}).values():
 		if not content:
 			warnings.warn(f'Setting empty identifier on {catalog.id}')
-		lugt_id = lugt_number_id(lugt_no)
-		catalog.identified_by = lugt_id
+		catalog.identified_by = lugt_number_id(lugt_no)
 
 	if not cno:
 		warnings.warn(f'Setting empty identifier on {catalog.id}')
-	catalog_id = gri_number_id(cno)
-	catalog.identified_by = catalog_id
+	catalog.identified_by = gri_number_id(cno)
 	
 	if not sno:
 		warnings.warn(f'Setting empty identifier on {catalog.id}')

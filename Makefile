@@ -64,6 +64,8 @@ pirdata:
 	QUIET=$(QUIET) GETTY_PIPELINE_DEBUG=$(DEBUG) GETTY_PIPELINE_LIMIT=$(LIMIT) $(PYTHON) ./pir.py
 	PYTHONPATH=`pwd` $(PYTHON) ./scripts/rewrite_post_sales_uris.py "${GETTY_PIPELINE_TMP_PATH}/post_sale_rewrite_map.json"
 	PYTHONPATH=`pwd` $(PYTHON) ./scripts/rewrite_uris_to_uuids.py 'tag:getty.edu,2019:digital:pipeline:provenance:REPLACE-WITH-UUID#' "${GETTY_PIPELINE_TMP_PATH}/uri_to_uuid_map.json"
+
+postprocessjson:
 	ls $(GETTY_PIPELINE_OUTPUT) | PYTHONPATH=`pwd` xargs -n 1 -P 8 -I '{}' $(PYTHON) ./scripts/coalesce_json.py "${GETTY_PIPELINE_OUTPUT}/{}"
 	find $(GETTY_PIPELINE_OUTPUT) -name '*.json' | PYTHONPATH=`pwd` xargs -n 256 -P 16 $(PYTHON) ./scripts/reorganize_json.py
 	find $(GETTY_PIPELINE_OUTPUT) -type d -empty -delete
@@ -71,15 +73,19 @@ pirdata:
 jsonlist:
 	find $(GETTY_PIPELINE_OUTPUT) -name '*.json' > $(GETTY_PIPELINE_TMP_PATH)/json_files.txt
 
-pir: pirdata jsonlist
+pir: pirdata postprocessjson jsonlist
 	cat $(GETTY_PIPELINE_TMP_PATH)/json_files.txt | PYTHONPATH=`pwd` $(PYTHON) ./scripts/generate_metadata_graph.py sales
 
 pirgraph: $(GETTY_PIPELINE_TMP_PATH)/pir.pdf
 	open -a Preview $(GETTY_PIPELINE_TMP_PATH)/pir.pdf
 
-knoedler:
+knoedlerdata:
+	mkdir -p $(GETTY_PIPELINE_TMP_PATH)/pipeline
 	QUIET=$(QUIET) GETTY_PIPELINE_DEBUG=$(DEBUG) GETTY_PIPELINE_LIMIT=$(LIMIT) $(PYTHON) ./knoedler.py
-# 	PYTHONPATH=`pwd` $(PYTHON) ./scripts/rewrite_uris_to_uuids.py 'tag:getty.edu,2019:digital:pipeline:knoedler:REPLACE-WITH-UUID#'
+	PYTHONPATH=`pwd` $(PYTHON) ./scripts/rewrite_uris_to_uuids.py 'tag:getty.edu,2019:digital:pipeline:knoedler:REPLACE-WITH-UUID#' "${GETTY_PIPELINE_TMP_PATH}/uri_to_uuid_map.json"
+
+knoedler: knoedlerdata postprocessjson jsonlist
+	cat $(GETTY_PIPELINE_TMP_PATH)/json_files.txt | PYTHONPATH=`pwd` $(PYTHON) ./scripts/generate_metadata_graph.py sales
 
 knoedlergraph: $(GETTY_PIPELINE_TMP_PATH)/knoedler.pdf
 	open -a Preview $(GETTY_PIPELINE_TMP_PATH)/knoedler.pdf
@@ -122,4 +128,4 @@ clean:
 	rm -f $(GETTY_PIPELINE_TMP_PATH)/sales-tree.data
 	rm -f "${GETTY_PIPELINE_TMP_PATH}/post_sale_rewrite_map.json"
 
-.PHONY: aata aatagraph knoedler knoedlergraph pir pirgraph test upload nt docker dockerimage dockertest fetch fetchaata fetchpir fetchknoedler jsonlist pirdata
+.PHONY: aata aatagraph knoedler knoedlergraph pir pirgraph test upload nt docker dockerimage dockertest fetch fetchaata fetchpir fetchknoedler jsonlist pirdata postprocessjson

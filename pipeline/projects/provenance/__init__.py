@@ -1254,7 +1254,9 @@ def add_physical_catalog_objects(data, location_codes):
 	catalog = get_crom_object(data['_catalog'])
 	cno = data['catalog_number']
 	owner_code = data['owner_code']
-	owner_name = location_codes[owner_code]
+	if owner_code not in location_codes:
+		warnings.warn(f'*** No owner defined for coe {owner_code}')
+	owner_name = location_codes.get(owner_code, owner_code)
 	copy = data['copy_number']
 	uri = pir_uri('CATALOG', cno, owner_code, copy)
 	data['uri'] = uri

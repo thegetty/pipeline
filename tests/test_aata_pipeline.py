@@ -176,7 +176,7 @@ class TestAATAPipelineOutput_Abstracts(unittest.TestCase):
 		self.assertIn('The Forbidden City in Beijing', abstract['content'])
 		self.assertEqual('http://vocab.getty.edu/aat/300026032', abstract['classified_as'][0]['id']) # abstract
 		self.assertEqual('AATA140375', abstract['identified_by'][0]['content'])
-		self.assertEqual('Local Number', abstract['identified_by'][0]['classified_as'][0]['_label'])
+		self.assertEqual('Owner-Assigned Number', abstract['identified_by'][0]['classified_as'][0]['_label'])
 		self.assertEqual('English', abstract['language'][0]['_label'])
 		self.assertEqual('LinguisticObject', abstract['type'])
 		
@@ -196,7 +196,7 @@ class TestAATAPipelineOutput_Abstracts(unittest.TestCase):
 		self.assertEqual(dict(identifiers), {
 			'Title': {'Secrets of the Forbidden City'},
 			'ISBN Identifier': {'1531703461', '9781531703462'},
-			'Local Number': {'AATA140375'},
+			'Owner-Assigned Number': {'AATA140375'},
 		})
 
 		about = defaultdict(set)

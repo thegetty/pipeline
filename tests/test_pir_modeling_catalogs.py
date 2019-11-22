@@ -20,7 +20,7 @@ class PIRModelingTest_Catalog(TestProvenancePipelineOutput):
 		'''
 		output = self.run_pipeline('catalogs')
 		objects = output['model-object']
-		events = output['model-event']
+		events = output['model-activity']
 		los = output['model-lo']
 		self.assertEqual(len(objects), 2)
 		self.assertEqual(len(events), 1)

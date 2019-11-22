@@ -1273,8 +1273,7 @@ def populate_auction_catalog(data):
 	
 	if not sno:
 		warnings.warn(f'Setting empty identifier on {catalog.id}')
-	warnings.warn(f'Change catalog star_record_no classification to SystemIdentifier')
-	catalog.identified_by = vocab.LocalNumber(ident='', content=sno) # TODO: change to vocab.SystemIdentifier
+	catalog.identified_by = vocab.SystemIdentifier(ident='', content=sno)
 	notes = data.get('notes')
 	if notes:
 		note = vocab.Note(ident='', content=parent['notes'])

@@ -20,7 +20,7 @@ class PIRModelingTest_EventLocation(TestProvenancePipelineOutput):
 		'''
 		output = self.run_pipeline('event_location')
 
-		events = output['model-event']
+		events = output['model-activity']
 		places = output['model-place']
 		self.assertEqual(len(events), 1)
 		self.assertEqual(len(places), 3)

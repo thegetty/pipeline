@@ -1416,7 +1416,7 @@ class ProvenancePipeline(PipelineBase):
 		)
 		if serialize:
 			# write SALES data
-			self.add_serialization_chain(graph, auction_events.output, model=self.models['Event'], use_memory_writer=False)
+			self.add_serialization_chain(graph, auction_events.output, model=self.models['Activity'], use_memory_writer=False)
 		return auction_events
 
 	def add_procurement_chain(self, graph, acquisitions, serialize=True):

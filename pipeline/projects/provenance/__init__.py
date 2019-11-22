@@ -90,6 +90,46 @@ IGNORE_HOUSE_AUTHNAMES = CaseFoldingSet(('Anonymous',))
 
 #mark - utility functions and classes
 
+def setup_static_instances():
+	'''
+	These are instances that are used statically in the code. For example, when we
+	provide attribution of an identifier to Getty, or use a Lugt number, we need to
+	serialize the related Group or Person record for that attribution, even if it does
+	not appear in the source data.
+	'''
+	GETTY_GRI_URI = pir_uri('ORGANIZATION', 'LOCATION-CODE', 'JPGM')
+	lugt_ulan = 500321736
+	gri_ulan = 500115990
+	LUGT_URI = pir_uri('PERSON', 'ULAN', lugt_ulan)
+	gri = model.Group(ident=GETTY_GRI_URI, label='Getty Research Institute')
+	gri.identified_by = vocab.PrimaryName(ident='', content='Getty Research Institute')
+	gri.exact_match = model.BaseResource(ident=f'http://vocab.getty.edu/ulan/{gri_ulan}')
+	lugt = model.Person(ident=LUGT_URI, label='Frits Lugt')
+	lugt.identified_by = vocab.PrimaryName(ident='', content='Frits Lugt')
+	lugt.exact_match = model.BaseResource(ident=f'http://vocab.getty.edu/ulan/{lugt_ulan}')
+	return {
+		'Group': {
+			'gri': gri
+		},
+		'Person': {
+			'lugt': lugt
+		}
+	}
+STATIC_INSTANCES = setup_static_instances()
+
+class GraphListSource:
+	'''
+	Act as a bonobo graph source node for a set of crom objects.
+	Yields the supplied objects wrapped in data dicts.
+	'''
+	def __init__(self, values, *args, **kwargs):
+		super().__init__(*args, **kwargs)
+		self.values = values
+
+	def __call__(self):
+		for v in self.values:
+			yield add_crom_data({}, v)
+
 def acceptable_person_auth_name(auth_name):
 	if not auth_name:
 		return False
@@ -137,7 +177,7 @@ def auction_event_location(data):
 	'''
 	specific_name = data.get('specific_loc')
 	city_name = data.get('city_of_sale')
-	country_name = data.get('country_auth_1')
+	country_name = data.get('country_auth')
 
 	parts = [v for v in (specific_name, city_name, country_name) if v is not None]
 	loc = parse_location(*parts, uri_base=UID_TAG_PREFIX, types=('Place', 'City', 'Country'))
@@ -266,6 +306,7 @@ class AddAuctionOfLot(Configurable):
 	problematic_records = Service('problematic_records')
 	auction_locations = Service('auction_locations')
 	auction_houses = Service('auction_houses')
+	non_auctions = Service('non_auctions')
 	def __init__(self, *args, **kwargs):
 		self.lot_cache = {}
 		super().__init__(*args, **kwargs)
@@ -400,7 +441,7 @@ class AddAuctionOfLot(Configurable):
 		lot.used_specific_object = coll
 		data['_lot_object_set'] = add_crom_data(data={}, what=coll)
 
-	def __call__(self, data, auction_houses, auction_locations, problematic_records):
+	def __call__(self, data, non_auctions, auction_houses, auction_locations, problematic_records):
 		'''Add modeling data for the auction of a lot of objects.'''
 		ask_price = data.get('ask_price', {}).get('ask_price')
 		if ask_price:
@@ -418,6 +459,11 @@ class AddAuctionOfLot(Configurable):
 			pprint.pprint({k: v for k, v in data.items() if v != ''})
 			raise
 		cno, lno, date = lot_object_key
+		if cno in non_auctions:
+			# the records in this sales catalog do not represent auction sales, so should
+			# be skipped.
+			return
+
 		shared_lot_number = self.shared_lot_number_from_lno(lno)
 		uid, uri = self.shared_lot_number_ids(cno, lno, date)
 		data['uid'] = uid
@@ -425,9 +471,11 @@ class AddAuctionOfLot(Configurable):
 
 		lot = vocab.Auction(ident=data['uri'])
 		lot_id = f'{cno} {shared_lot_number} ({date})'
+		lot_object_id = f'{cno} {lno} ({date})'
 		lot_label = f'Auction of Lot {lot_id}'
 		lot._label = lot_label
 		data['lot_id'] = lot_id
+		data['lot_object_id'] = lot_object_id
 
 		for problem_key, problem in problematic_records.get('lots', []):
 			# TODO: this is inefficient, but will probably be OK so long as the number
@@ -455,7 +503,7 @@ class AddAuctionOfLot(Configurable):
 		tx = vocab.Procurement(ident=tx_uri)
 		tx._label = f'Procurement of Lot {cno} {lots} ({date})'
 		lot.caused = tx
-		tx_data = {}
+		tx_data = {'uri': tx_uri}
 
 		if multi:
 			tx_data['multi_lot_tx'] = lots
@@ -651,7 +699,7 @@ def add_acquisition(data, buyers, sellers, location_codes, make_la_person):
 	# TODO: `annotation` here is from add_physical_catalog_objects
 # 	paym.referred_to_by = annotation
 
-	data['_acquisition'] = {}
+	data['_acquisition'] = {'uri': acq_id}
 	add_crom_data(data=data['_acquisition'], what=acq)
 
 	final_owner_data = data.get('_final_org')
@@ -694,7 +742,7 @@ def add_acquisition(data, buyers, sellers, location_codes, make_la_person):
 			else:
 				# not enough information to identify this person uniquely, so use the source location in the input file
 				owner_record['uri'] = pir_uri('PERSON', 'PI_REC_NO', data['pi_record_no'], f'{rev_name}-{seq_no+1}')
-			if not name:
+			if not name and not auth_name:
 				warnings.warn(f'*** No name for {rev_name}: {owner_record}')
 				pprint.pprint(owner_record)
 			if name:
@@ -800,7 +848,7 @@ def add_bidding(data, buyers):
 				data['_procurements'] = []
 			data['_procurements'].append(add_crom_data(data={}, what=tx))
 
-		data['_bidding'] = {}
+		data['_bidding'] = {'uri': bidding_id}
 		add_crom_data(data=data['_bidding'], what=all_bids)
 		yield data
 	else:
@@ -854,11 +902,12 @@ def genre_instance(value, vocab_instance_map):
 		return instance
 	return None
 
-def populate_destruction_events(data, note, destruction_types_map):
+def populate_destruction_events(data, note, *, type_map, location=None):
+	destruction_types_map = type_map
 	hmo = get_crom_object(data)
 	title = data.get('title')
 
-	r = re.compile(r'Destroyed(?: (?:by|during) (\w+))?(?: in (\d{4})[.]?)?')
+	r = re.compile(r'[Dd]estroyed(?: (?:by|during) (\w+))?(?: in (\d{4})[.]?)?')
 	m = r.search(note)
 	if m:
 		method = m.group(1)
@@ -871,7 +920,6 @@ def populate_destruction_events(data, note, destruction_types_map):
 			ts = timespan_from_outer_bounds(begin, end)
 			ts.identified_by = model.Name(ident='', content=year)
 			d.timespan = ts
-		hmo.destroyed_by = d
 
 		if method:
 			with suppress(KeyError, AttributeError):
@@ -880,6 +928,17 @@ def populate_destruction_events(data, note, destruction_types_map):
 				event = model.Event(label=f'{method.capitalize()} event causing the destruction of “{title}”')
 				event.classified_as = type
 				d.caused_by = event
+
+		if location:
+			current = parse_location_name(location, uri_base=UID_TAG_PREFIX)
+			base_uri = hmo.id + '-Place,'
+			place_data = make_la_place(current, base_uri=base_uri)
+			place = get_crom_object(place_data)
+			if place:
+				data['_locations'].append(place_data)
+				d.took_place_at = place
+
+		hmo.destroyed_by = d
 
 @use('post_sale_map')
 @use('unique_catalogs')
@@ -907,6 +966,7 @@ def populate_object(data, post_sale_map, unique_catalogs, vocab_instance_map, de
 	lot = AddAuctionOfLot.shared_lot_number_from_lno(lno)
 	now_key = (cno, lot, date) # the current key for this object; may be associated later with prev and post object keys
 
+	data['_locations'] = []
 	record = _populate_object_catalog_record(data, parent, lot, cno, parent['pi_record_no'])
 	_populate_object_visual_item(data, vocab_instance_map)
 	_populate_object_destruction(data, parent, destruction_types_map)
@@ -933,10 +993,10 @@ def _populate_object_catalog_record(data, parent, lot, cno, rec_num):
 	catalog = vocab.AuctionCatalogText(ident=catalog_uri)
 	
 	record_uri = pir_uri('CATALOG', cno, 'RECORD', rec_num)
-	lot_id = parent['lot_id']
-	record = model.LinguisticObject(ident=record_uri, label=f'Sale recorded in catalog: {lot_id} (record number {rec_num})') # TODO: needs classification
+	lot_object_id = parent['lot_object_id']
+	record = model.LinguisticObject(ident=record_uri, label=f'Sale recorded in catalog: {lot_object_id} (record number {rec_num})') # TODO: needs classification
 	record_data	= {'uri': record_uri}
-	record_data['identifiers'] = [model.Name(ident='', content=f'Record of sale {lot_id}')]
+	record_data['identifiers'] = [model.Name(ident='', content=f'Record of sale {lot_object_id}')]
 	record.part_of = catalog
 
 	data['_sale_record_text'] = add_crom_data(data=record_data, what=record)
@@ -944,16 +1004,16 @@ def _populate_object_catalog_record(data, parent, lot, cno, rec_num):
 
 def _populate_object_destruction(data, parent, destruction_types_map):
 	notes = parent.get('auction_of_lot', {}).get('lot_notes')
-	if notes and notes.startswith('Destroyed'):
-		populate_destruction_events(data, notes, destruction_types_map)
+	if notes and notes.lower().startswith('destroyed'):
+		populate_destruction_events(data, notes, type_map=destruction_types_map)
 
 def _populate_object_visual_item(data, vocab_instance_map):
 	hmo = get_crom_object(data)
 	title = data.get('title')
-	vidata = {}
 
 	vi_id = hmo.id + '-VisualItem'
 	vi = model.VisualItem(ident=vi_id)
+	vidata = {'uri': vi_id}
 	if title:
 		vidata['label'] = f'Visual work of “{title}”'
 		sales_record = get_crom_object(data['_sale_record_text'])
@@ -992,9 +1052,14 @@ def _populate_object_present_location(data, now_key, destruction_types_map):
 	location = data.get('present_location')
 	if location:
 		loc = location.get('geog')
+		note = location.get('note')
 		if loc:
-			if 'Destroyed ' in loc:
-				populate_destruction_events(data, loc, destruction_types_map)
+			if 'destroyed ' in loc.lower():
+				populate_destruction_events(data, loc, type_map=destruction_types_map)
+			elif isinstance(note, str) and 'destroyed ' in note.lower():
+				# the object was destroyed, so any "present location" data is actually
+				# an indication of the location of destruction.
+				populate_destruction_events(data, note, type_map=destruction_types_map, location=loc)
 			else:
 				# TODO: if `parse_location_name` fails, still preserve the location string somehow
 				current = parse_location_name(loc, uri_base=UID_TAG_PREFIX)
@@ -1028,11 +1093,10 @@ def _populate_object_present_location(data, now_key, destruction_types_map):
 				owner_data = make_la_org(owner_data)
 				owner = get_crom_object(owner_data)
 				owner.residence = place
-				data['_locations'] = [place_data]
+				data['_locations'].append(place_data)
 				data['_final_org'] = owner_data
 		else:
 			pass # there is no present location place string
-		note = location.get('note')
 		if note:
 			pass
 			# TODO: the acquisition_note needs to be attached as a Note to the final post owner acquisition
@@ -1053,7 +1117,7 @@ def _populate_object_notes(data, parent, unique_catalogs):
 
 	inscription = data.get('inscription')
 	if inscription:
-		hmo.carries = vocab.Note(ident='', content=inscription)
+		hmo.referred_to_by = vocab.InscriptionStatement(ident='', content=inscription)
 
 def _populate_object_prev_post_sales(data, this_key, post_sale_map):
 	post_sales = data.get('post_sale', [])
@@ -1167,17 +1231,22 @@ def add_pir_artists(data, *, make_la_person):
 
 #mark - Physical Catalogs
 
-def add_auction_catalog(data):
+@use('non_auctions')
+def add_auction_catalog(data, non_auctions):
 	'''Add modeling for auction catalogs as linguistic objects'''
 	cno = data['catalog_number']
-	key = f'CATALOG-{cno}'
 
-	cdata = {'uid': key, 'uri': pir_uri('CATALOG', cno)}
-	catalog = vocab.AuctionCatalogText(ident=cdata['uri'])
-	catalog._label = f'Sale Catalog {cno}'
+	non_auction_flag = data.get('non_auction_flag')
+	if non_auction_flag:
+		non_auctions[cno] = non_auction_flag
+	else:
+		key = f'CATALOG-{cno}'
+		cdata = {'uid': key, 'uri': pir_uri('CATALOG', cno)}
+		catalog = vocab.AuctionCatalogText(ident=cdata['uri'])
+		catalog._label = f'Sale Catalog {cno}'
 
-	data['_catalog'] = add_crom_data(data=cdata, what=catalog)
-	return data
+		data['_catalog'] = add_crom_data(data=cdata, what=catalog)
+		yield data
 
 @use('location_codes')
 def add_physical_catalog_objects(data, location_codes):
@@ -1239,6 +1308,21 @@ def add_physical_catalog_owners(data, location_codes, unique_catalogs):
 
 #mark - Physical Catalogs - Informational Catalogs
 
+def lugt_number_id(content):
+	lugt_number = str(content)
+	lugt_id = vocab.LocalNumber(ident='', label=f'Lugt Number: {lugt_number}', content=lugt_number)
+	assignment = model.AttributeAssignment(ident='')
+	assignment.carried_out_by = STATIC_INSTANCES['Person']['lugt']
+	lugt_id.assigned_by = assignment
+	return lugt_id
+
+def gri_number_id(content):
+	catalog_id = vocab.LocalNumber(ident='', content=content)
+	assignment = model.AttributeAssignment(ident='')
+	assignment.carried_out_by = STATIC_INSTANCES['Group']['gri']
+	catalog_id.assigned_by = assignment
+	return catalog_id
+
 def populate_auction_catalog(data):
 	'''Add modeling data for an auction catalog'''
 	d = {k: v for k, v in data.items()}
@@ -1249,14 +1333,15 @@ def populate_auction_catalog(data):
 	for lugt_no in parent.get('lugt', {}).values():
 		if not lugt_no:
 			warnings.warn(f'Setting empty identifier on {catalog.id}')
-		lugt_number = str(lugt_no)
-		catalog.identified_by = model.Identifier(ident='', label=f"Lugt Number: {lugt_number}", content=lugt_number)
+		catalog.identified_by = lugt_number_id(lugt_no)
+
 	if not cno:
 		warnings.warn(f'Setting empty identifier on {catalog.id}')
-	catalog.identified_by = vocab.LocalNumber(ident='', content=cno)
+	catalog.identified_by = gri_number_id(cno)
+	
 	if not sno:
 		warnings.warn(f'Setting empty identifier on {catalog.id}')
-	catalog.identified_by = vocab.LocalNumber(ident='', content=sno)
+	catalog.identified_by = vocab.SystemNumber(ident='', content=sno)
 	notes = data.get('notes')
 	if notes:
 		note = vocab.Note(ident='', content=parent['notes'])
@@ -1312,6 +1397,7 @@ class ProvenancePipeline(PipelineBase):
 			'unique_catalogs': {},
 			'post_sale_map': {},
 			'auction_houses': {},
+			'non_auctions': {},
 			'auction_locations': {},
 		})
 		return services
@@ -1386,8 +1472,7 @@ class ProvenancePipeline(PipelineBase):
 						'properties': (
 							'city_of_sale',
 							'sale_location',
-							'country_auth_1',
-							'country_auth_2',
+							'country_auth',
 							'specific_loc')},
 				}
 			),
@@ -1399,7 +1484,7 @@ class ProvenancePipeline(PipelineBase):
 		)
 		if serialize:
 			# write SALES data
-			self.add_serialization_chain(graph, auction_events.output, model=self.models['Event'], use_memory_writer=False)
+			self.add_serialization_chain(graph, auction_events.output, model=self.models['Activity'], use_memory_writer=False)
 		return auction_events
 
 	def add_procurement_chain(self, graph, acquisitions, serialize=True):
@@ -1460,7 +1545,6 @@ class ProvenancePipeline(PipelineBase):
 
 		if serialize:
 			# write SALES data
-			self.add_serialization_chain(graph, acqs.output, model=self.models['Acquisition'])
 			self.add_serialization_chain(graph, refs.output, model=self.models['LinguisticObject'])
 			self.add_serialization_chain(graph, bids.output, model=self.models['Activity'])
 			self.add_serialization_chain(graph, orgs.output, model=self.models['Group'])
@@ -1840,7 +1924,15 @@ class ProvenancePipeline(PipelineBase):
 		if not services:
 			services = self.get_services(**options)
 
-		start = timeit.default_timer()
+		print('Serializing static instances...', file=sys.stderr)
+		for model, instances in STATIC_INSTANCES.items():
+			g = bonobo.Graph()
+			nodes = self.serializer_nodes_for_model(model=model, use_memory_writer=False)
+			values = instances.values()
+			source = g.add_chain(GraphListSource(values))
+			self.add_serialization_chain(g, source.output, model=self.models[model], use_memory_writer=False)
+			self.run_graph(g, services={})
+
 		print('Running graph component 1...', file=sys.stderr)
 		graph1 = self.get_graph_1(**options)
 		self.run_graph(graph1, services=services)
@@ -1849,7 +1941,52 @@ class ProvenancePipeline(PipelineBase):
 		graph2 = self.get_graph_2(**options)
 		self.run_graph(graph2, services=services)
 
-		print(f'Pipeline runtime: {timeit.default_timer() - start}', file=sys.stderr)
+	def generate_prev_post_sales_data(self, counter, post_map):
+		singles = {k for k in counter if counter[k] == 1}
+		multiples = {k for k in counter if counter[k] > 1}
+
+		total = 0
+		mapped = 0
+
+		g = self.load_sales_tree()
+		for src, dst in post_map.items():
+			total += 1
+			if dst in singles:
+				mapped += 1
+				g.add_edge(src, dst)
+# 			elif dst in multiples:
+# 				print(f'  {src} maps to a MULTI-OBJECT lot')
+# 			else:
+# 				print(f'  {src} maps to an UNKNOWN lot')
+# 		print(f'mapped {mapped}/{total} objects to a previous sale', file=sys.stderr)
+
+		large_components = set(g.largest_component_canonical_keys(10))
+		dot = graphviz.Digraph()
+
+		node_id = lambda n: f'n{n!s}'
+		for n, i in g.nodes.items():
+			key, _ = g.canonical_key(n)
+			if key in large_components:
+				dot.node(node_id(i), str(n))
+
+		post_sale_rewrite_map = self.load_prev_post_sales_data()
+# 		print('Rewrite output files, replacing the following URIs:')
+		for src, dst in g:
+			canonical, steps = g.canonical_key(src)
+			src_uri = pir_uri('OBJECT', *src)
+			dst_uri = pir_uri('OBJECT', *canonical)
+# 			print(f's/ {src_uri:<100} / {dst_uri:<100} /')
+			post_sale_rewrite_map[src_uri] = dst_uri
+			if canonical in large_components:
+				i = node_id(g.nodes[src])
+				j = node_id(g.nodes[dst])
+				dot.edge(i, j, f'{steps} steps')
+
+		self.persist_prev_post_sales_data(post_sale_rewrite_map)
+		
+		dot_filename = os.path.join(settings.pipeline_tmp_path, 'sales.dot')
+		dot.save(filename=dot_filename)
+		self.persist_sales_tree(g)
 
 
 class ProvenanceFilePipeline(ProvenancePipeline):
@@ -1881,75 +2018,41 @@ class ProvenanceFilePipeline(ProvenancePipeline):
 		self.writers += nodes
 		return nodes
 
-	def merge_post_sale_objects(self, counter, post_map):
-		singles = {k for k in counter if counter[k] == 1}
-		multiples = {k for k in counter if counter[k] > 1}
-
-		total = 0
-		mapped = 0
-
-		rewrite_map_filename = os.path.join(settings.pipeline_tmp_path, 'post_sale_rewrite_map.json')
+	def persist_sales_tree(self, g):
 		sales_tree_filename = os.path.join(settings.pipeline_tmp_path, 'sales-tree.data')
+		with open(sales_tree_filename, 'w') as f:
+			g.dump(f)
 
+	def load_sales_tree(self):
+		sales_tree_filename = os.path.join(settings.pipeline_tmp_path, 'sales-tree.data')
 		if os.path.exists(sales_tree_filename):
 			with open(sales_tree_filename) as f:
 				g = SalesTree.load(f)
 		else:
 			g = SalesTree()
+		return g
 
-		for src, dst in post_map.items():
-			total += 1
-			if dst in singles:
-				mapped += 1
-				g.add_edge(src, dst)
-			elif dst in multiples:
-				print(f'  {src} maps to a MULTI-OBJECT lot')
-			else:
-				print(f'  {src} maps to an UNKNOWN lot')
-		print(f'mapped {mapped}/{total} objects to a previous sale', file=sys.stderr)
-
-		large_components = set(g.largest_component_canonical_keys(10))
-		dot = graphviz.Digraph()
-
-		node_id = lambda n: f'n{n!s}'
-		for n, i in g.nodes.items():
-			key, _ = g.canonical_key(n)
-			if key in large_components:
-				dot.node(node_id(i), str(n))
-
+	def load_prev_post_sales_data(self):
+		rewrite_map_filename = os.path.join(settings.pipeline_tmp_path, 'post_sale_rewrite_map.json')
 		post_sale_rewrite_map = {}
 		if os.path.exists(rewrite_map_filename):
 			with open(rewrite_map_filename, 'r') as f:
 				with suppress(json.decoder.JSONDecodeError):
 					post_sale_rewrite_map = json.load(f)
-# 		print('Rewrite output files, replacing the following URIs:')
-		for src, dst in g:
-			canonical, steps = g.canonical_key(src)
-			src_uri = pir_uri('OBJECT', *src)
-			dst_uri = pir_uri('OBJECT', *canonical)
-# 			print(f's/ {src_uri:<100} / {dst_uri:<100} /')
-			post_sale_rewrite_map[src_uri] = dst_uri
-			if canonical in large_components:
-				i = node_id(g.nodes[src])
-				j = node_id(g.nodes[dst])
-				dot.edge(i, j, f'{steps} steps')
+		return post_sale_rewrite_map
 
-		dot_filename = os.path.join(settings.pipeline_tmp_path, 'sales.dot')
-		dot.save(filename=dot_filename)
+	def persist_prev_post_sales_data(self, post_sale_rewrite_map):
+		rewrite_map_filename = os.path.join(settings.pipeline_tmp_path, 'post_sale_rewrite_map.json')
 		with open(rewrite_map_filename, 'w') as f:
 			json.dump(post_sale_rewrite_map, f)
 			print(f'Saved post-sales rewrite map to {rewrite_map_filename}')
-		with open(sales_tree_filename, 'w') as f:
-			g.dump(f)
-
-# 		r = JSONValueRewriter(post_sale_rewrite_map)
-# 		rewrite_output_files(r)
 
 	def run(self, **options):
 		'''Run the Provenance bonobo pipeline.'''
 		start = timeit.default_timer()
 		services = self.get_services(**options)
 		super().run(services=services, **options)
+		print(f'Pipeline runtime: {timeit.default_timer() - start}', file=sys.stderr)
 
 		count = len(self.writers)
 		for seq_no, w in enumerate(self.writers):
@@ -1961,6 +2064,6 @@ class ProvenanceFilePipeline(ProvenancePipeline):
 		print('Running post-processing of post-sale data...')
 		counter = services['lot_counter']
 		post_map = services['post_sale_map']
-		self.merge_post_sale_objects(counter, post_map)
+		self.generate_prev_post_sales_data(counter, post_map)
 		print(f'>>> {len(post_map)} post sales records')
 		print('Total runtime: ', timeit.default_timer() - start)

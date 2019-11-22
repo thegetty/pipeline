@@ -66,6 +66,7 @@ pirdata:
 	PYTHONPATH=`pwd` $(PYTHON) ./scripts/rewrite_uris_to_uuids.py 'tag:getty.edu,2019:digital:pipeline:provenance:REPLACE-WITH-UUID#' "${GETTY_PIPELINE_TMP_PATH}/uri_to_uuid_map.json"
 	ls $(GETTY_PIPELINE_OUTPUT) | PYTHONPATH=`pwd` xargs -n 1 -P 8 -I '{}' $(PYTHON) ./scripts/coalesce_json.py "${GETTY_PIPELINE_OUTPUT}/{}"
 	find $(GETTY_PIPELINE_OUTPUT) -name '*.json' | PYTHONPATH=`pwd` xargs -n 256 -P 16 $(PYTHON) ./scripts/reorganize_json.py
+	find $(GETTY_PIPELINE_OUTPUT) -type d -empty -delete
 
 jsonlist:
 	find $(GETTY_PIPELINE_OUTPUT) -name '*.json' > $(GETTY_PIPELINE_TMP_PATH)/json_files.txt
@@ -87,6 +88,7 @@ upload:
 	./upload_to_arches.py
 
 test:
+	mkdir -p $(GETTY_PIPELINE_TMP_PATH)/pipeline_tests
 	python3 -B setup.py test
 
 $(GETTY_PIPELINE_TMP_PATH)/aata.dot: aata.py

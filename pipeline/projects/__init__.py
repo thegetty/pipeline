@@ -2,6 +2,7 @@ import sys
 import pathlib
 import itertools
 import json
+import warnings
 
 from sqlalchemy import create_engine
 from sqlalchemy.engine.url import URL
@@ -48,7 +49,7 @@ class PipelineBase:
 			service = self._service_from_path(file)
 			if service:
 				if file.stem in services:
-					print(f'*** Project is overloading a shared service file: {file}')
+					warnings.warn(f'*** Project is overloading a shared service file: {file}')
 				services[file.stem] = service
 
 		return services

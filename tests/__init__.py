@@ -4,6 +4,30 @@ import hashlib
 import json
 import uuid
 import pprint
+import unittest
+from pathlib import Path
+
+from cromulent import model, reader
+from cromulent.model import factory
+from pipeline.util import CromObjectMerger
+from pipeline.projects.provenance import ProvenancePipeline
+from pipeline.projects.provenance.util import SalesTree
+from pipeline.nodes.basic import Serializer, AddArchesModel
+
+MODELS = {
+	'Acquisition': 'model-acquisition',
+	'Activity': 'model-activity',
+	'Event': 'model-event',
+	'Group': 'model-groups',
+	'HumanMadeObject': 'model-object',
+	'LinguisticObject': 'model-lo',
+	'Person': 'model-person',
+	'Place': 'model-place',
+	'Procurement': 'model-activity',
+	'Production': 'model-production',
+	'Set': 'model-set',
+	'VisualItem': 'model-visual-item'
+}
 
 class TestWriter():
 	'''
@@ -12,15 +36,19 @@ class TestWriter():
 	'''
 	def __init__(self):
 		self.output = {}
+		self.merger = CromObjectMerger()
 		super().__init__()
 
 	def __call__(self, data: dict, *args, **kwargs):
 		d = data['_OUTPUT']
+		dd = json.loads(d)
 		dr = data['_ARCHES_MODEL']
 		if dr not in self.output:
 			self.output[dr] = {}
 		uu = data.get('uuid')
-		if not uu and 'uri' in data:
+		if 'id' in dd:
+			uu = hashlib.sha256(dd['id'].encode('utf-8')).hexdigest()
+		elif not uu and 'uri' in data:
 			uu = hashlib.sha256(data['uri'].encode('utf-8')).hexdigest()
 # 			print(f'*** No UUID in top-level resource. Using a hash of top-level URI: {uu}')
 		if not uu:
@@ -30,7 +58,24 @@ class TestWriter():
 		fn = '%s.json' % uu
 		data = json.loads(d)
 		if fn in self.output[dr]:
-			self.output[dr][fn] = merge(self.output[dr][fn], data)
+			r = reader.Reader()
+			model_object = r.read(d)
+			merger = self.merger
+			content = self.output[dr][fn]
+			try:
+				m = r.read(content)
+				if m == model_object:
+					self.output[dr][fn] = data
+					return
+				else:
+					merger.merge(m, model_object)
+					self.output[dr][fn] = json.loads(factory.toString(m, False))
+					return
+			except model.DataError:
+				print(f'Exception caught while merging data from {fn}:')
+				print(d)
+				print(content)
+				raise
 		else:
 			self.output[dr][fn] = data
 
@@ -46,80 +91,106 @@ class TestWriter():
 		return self.process_output(self.output)
 
 
-def merge_lists(l, r):
+class ProvenanceTestPipeline(ProvenancePipeline):
 	'''
-	Given two lists `l` and `r`, return a generator of the combined items from both lists.
-
-	If any two items l' in l and r' in r are both `dict`s and have the same value for the
-	`id` key, they will be `merge`d and the resulting `dict` included in the results in
-	place of l' or r'.
+	Test Provenance pipeline subclass that allows using a custom Writer.
 	'''
-	identified = {}
-	all_items = l + r
-	other = []
-	for item in all_items:
-		try:
-			item_id = item['id']
-			if item_id in identified:
-				identified[item_id] += [item]
-			else:
-				identified[item_id] = [item]
-		except:
-			other.append(item)
+	def __init__(self, writer, input_path, catalogs, auction_events, contents, **kwargs):
+		super().__init__(input_path, catalogs, auction_events, contents, **kwargs)
+		self.writer = writer
+		self.prev_post_sales_map = {}
 
-	for ident, items in identified.items():
-		r = items[:]
-		while len(r) > 1:
-			a = r.pop(0)
-			b = r.pop(0)
-			m = merge(a, b)
-			r.insert(0, m)
-		yield from r
+	def serializer_nodes_for_model(self, *args, model=None, **kwargs):
+		nodes = []
+		if model:
+			nodes.append(AddArchesModel(model=model))
+		nodes.append(Serializer(compact=False))
+		nodes.append(self.writer)
+		return nodes
 
-	yield from other
+	def get_services(self):
+		services = super().get_services()
+		services.update({
+			'problematic_records': {},
+			'location_codes': {}
+		})
+		return services
 
-def merge(l, r):
+	def run(self, **options):
+		services = self.get_services(**options)
+		super().run(services=services, **options)
+
+		counter = services['lot_counter']
+		post_map = services['post_sale_map']
+		self.generate_prev_post_sales_data(counter, post_map)
+
+	def load_prev_post_sales_data(self):
+		return {}
+
+	def persist_prev_post_sales_data(self, post_sale_rewrite_map):
+		self.prev_post_sales_map = post_sale_rewrite_map
+
+	def load_sales_tree(self):
+		return SalesTree()
+
+	def persist_sales_tree(self, g):
+		self.sales_tree = g
+
+
+class TestProvenancePipelineOutput(unittest.TestCase):
 	'''
-	Given two items `l` and `r` of the same type, merge their contents and return the
-	result. Raise an exception if `l` and `r` are of differing types.
-
-	If the items are of type `dict`, recursively merge any values with shared keys, and
-	also include data from any non-shared keys. If `l` and `r` both have values for the
-	`id` key and they differ in value, raise an exception.
-
-	If the items are of type `list`, merge them with `merge_lists`.
-
-	If the items are of type `str` or `bytes`, return the value if `l` and `r` are equal.
-	Otherwise raise and exception.
+	Parse test CSV data and run the Provenance pipeline with the in-memory TestWriter.
+	Then verify that the serializations in the TestWriter object are what was expected.
 	'''
-	if l is None:
-		return r
-	if r is None:
-		return l
+	def setUp(self):
+		self.catalogs = {
+			'header_file': 'tests/data/pir/sales_catalogs_info_0.csv',
+			'files_pattern': 'tests/data/pir/empty.csv',
+		}
+		self.contents = {
+			'header_file': 'tests/data/pir/sales_contents_0.csv',
+			'files_pattern': 'tests/data/pir/empty.csv',
+		}
+		self.auction_events = {
+			'header_file': 'tests/data/pir/sales_descriptions_0.csv',
+			'files_pattern': 'tests/data/pir/empty.csv',
+		}
+		os.environ['QUIET'] = '1'
 
-	if not isinstance(l, type(r)):
-		pprint.pprint(l)
-		pprint.pprint(r)
-		raise Exception('bad data in json merge')
+	def tearDown(self):
+		pass
 
-	if isinstance(l, dict):
-		keys = set(list(l.keys()) + list(r.keys()))
-		intersection = {k for k in keys if k in l and k in r}
-		if 'id' in intersection:
-			lid = l['id']
-			rid = r['id']
-			if lid != rid:
-				pprint.pprint(l)
-				pprint.pprint(r)
-				raise Exception('attempt to merge two dicts with different ids: (%r, %r)' % (lid, rid))
-		return {k: merge(l.get(k), r.get(k)) for k in keys}
-	elif isinstance(l, list):
-		return list(merge_lists(l, r))
-	elif isinstance(l, (str, bytes)):
-		if l == r:
-			return l
-		else:
-			raise Exception('data conflict: %r <=> %r' % (l, r))
-	else:
-		raise NotImplementedError('unhandled type: %r' % (type(l)))
-	return l
+	def run_pipeline(self, test_name):
+		input_path = os.getcwd()
+		catalogs = self.catalogs.copy()
+		events = self.auction_events.copy()
+		contents = self.contents.copy()
+		
+		tests_path = Path(f'tests/data/pir/{test_name}')
+		catalog_files = list(tests_path.rglob('sales_catalogs_info*'))
+		event_files = list(tests_path.rglob('sales_descriptions*'))
+		content_files = list(tests_path.rglob('sales_contents*'))
+		
+		if catalog_files:
+			catalogs['files_pattern'] = str(tests_path / 'sales_catalogs_info*')
+
+		if event_files:
+			events['files_pattern'] = str(tests_path / 'sales_descriptions*')
+
+		if content_files:
+			contents['files_pattern'] = str(tests_path / 'sales_contents*')
+		
+		writer = TestWriter()
+		pipeline = ProvenanceTestPipeline(
+				writer,
+				input_path,
+				catalogs=catalogs,
+				auction_events=events,
+				contents=contents,
+				models=MODELS,
+				limit=100,
+				debug=True
+		)
+		pipeline.run()
+		self.prev_post_sales_map = pipeline.prev_post_sales_map
+		return writer.processed_output()

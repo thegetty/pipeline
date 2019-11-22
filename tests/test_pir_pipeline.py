@@ -72,10 +72,9 @@ class TestProvenancePipelineOutput(unittest.TestCase):
 		output = self.run_pipeline(models, input_path)
 
 		objects = output['model-object']
-		events = output['model-event']
 		los = output['model-lo']
 		people = output['model-person']
-		auctions = output['model-activity']
+		activities = output['model-activity']
 		groups = output['model-groups']
 		AUCTION_HOUSE_TYPE = 'http://vocab.getty.edu/aat/300417515'
 		houses = {k: h for k, h in groups.items()
@@ -84,9 +83,8 @@ class TestProvenancePipelineOutput(unittest.TestCase):
 		self.assertEqual(len(people), 3, 'expected count of people')
 		self.assertEqual(len(objects), 6, 'expected count of physical objects')
 		self.assertEqual(len(los), 4, 'expected count of linguistic objects')
-		self.assertEqual(len(auctions), 2, 'expected count of auctions')
+		self.assertEqual(len(activities), 3, 'expected count of activities')
 		self.assertEqual(len(houses), 1, 'expected count of auction houses')
-		self.assertEqual(len(events), 1, 'expected count of auction events')
 
 		object_types = {c['_label'] for o in objects.values() for c in o.get('classified_as', [])}
 		self.assertEqual(object_types, {'Auction Catalog', 'Painting'})
@@ -100,10 +98,10 @@ class TestProvenancePipelineOutput(unittest.TestCase):
 		key_119 = 'tag:getty.edu,2019:digital:pipeline:provenance:REPLACE-WITH-UUID#AUCTION,B-A139,LOT,0119,DATE,1774-05-31'
 		key_120 = 'tag:getty.edu,2019:digital:pipeline:provenance:REPLACE-WITH-UUID#AUCTION,B-A139,LOT,0120,DATE,1774-05-31'
 
-		auction_B_A139_0119 = auctions[key_119]
+		auction_B_A139_0119 = activities[key_119]
 		self.verify_auction(auction_B_A139_0119, event='B-A139', idents={'0119[a]', '0119[b]'})
 
-		auction_B_A139_0120 = auctions[key_120]
+		auction_B_A139_0120 = activities[key_120]
 		self.verify_auction(auction_B_A139_0120, event='B-A139', idents={'0120'})
 
 		house_names = {o['_label'] for o in houses.values()}
@@ -112,8 +110,9 @@ class TestProvenancePipelineOutput(unittest.TestCase):
 		self.assertEqual(house_names, {'Paul de Cock'})
 		self.assertEqual(house_types, {'Auction House (organization)'})
 
-		event_labels = {e['_label'] for e in events.values()}
-		carried_out_by = {h['id'] for e in events.values() for h in e.get('carried_out_by', [])}
+		events = [activities[k] for k in activities if k not in {key_119, key_120}]
+		event_labels = {e['_label'] for e in events}
+		carried_out_by = {h['id'] for e in events for h in e.get('carried_out_by', [])}
 		self.assertEqual(event_labels, {'Auction Event for B-A139'})
 		self.assertEqual(carried_out_by, house_ids)
 

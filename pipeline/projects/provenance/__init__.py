@@ -1263,7 +1263,7 @@ def populate_auction_catalog(data):
 	sno = parent['star_record_no']
 	catalog = get_crom_object(d)
 	for lugt_no in parent.get('lugt', {}).values():
-		if not content:
+		if not lugt_no:
 			warnings.warn(f'Setting empty identifier on {catalog.id}')
 		catalog.identified_by = lugt_number_id(lugt_no)
 
@@ -1273,7 +1273,7 @@ def populate_auction_catalog(data):
 	
 	if not sno:
 		warnings.warn(f'Setting empty identifier on {catalog.id}')
-	catalog.identified_by = vocab.SystemIdentifier(ident='', content=sno)
+	catalog.identified_by = vocab.SystemNumber(ident='', content=sno)
 	notes = data.get('notes')
 	if notes:
 		note = vocab.Note(ident='', content=parent['notes'])

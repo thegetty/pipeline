@@ -117,6 +117,30 @@ def record_id(data):
 	row = data['row_number']
 	return (book, page, row)
 
+def add_person_uri(data:dict):
+	# TODO: move this into MakeLinkedArtPerson
+	if 'authority' in data:
+		pass
+	else:
+		data['uri'] = knoedler_uri('Person', )
+
+	auth_name = data.get('authority')
+	if data.get('ulan'):
+		ulan = data['ulan']
+		key = f'PERSON-ULAN-{ulan}'
+		data['uri'] = knoedler_uri('PERSON', 'ULAN', ulan)
+		data['ulan'] = ulan
+	elif auth_name and '[' not in auth_name:
+		data['uri'] = knoedler_uri('PERSON', 'AUTHNAME', auth_name)
+		data['identifiers'] = [
+			vocab.PrimaryName(ident='', content=auth_name)
+		]
+	else:
+		# not enough information to identify this person uniquely, so use the source location in the input file
+		data['uri'] = knoedler_uri('PERSON', 'PI_REC_NO', data['parent_data']['pi_record_no'])
+
+	return data
+
 @use('make_la_lo')
 @use('make_la_hmo')
 def add_book(data: dict, make_la_hmo, make_la_lo):
@@ -209,22 +233,32 @@ def add_row(data: dict, make_la_lo):
 
 @use('vocab_type_map')
 def add_object(data: dict, vocab_type_map):
-	# pprint.pprint(data)
 	odata = data['object']
 	title = odata['title']
 	typestring = odata.get('object_type', '')
 
-# 	data['_consigner'] = None
+	try:
+		uri = knoedler_uri('Object', odata['knoedler_number'])
+	except:
+		uri = knoedler_uri('Object', 'Internal', data['pi_record_no'])
 	data['_object'] = {
-		'uri': knoedler_uri('Object', odata['knoedler_number']),
+		'uri': uri,
 		'title': title,
 	}
 	if typestring in vocab_type_map:
 		clsname = vocab_type_map.get(typestring, None)
 		otype = getattr(vocab, clsname)
 		data['_object']['object_type'] = otype
+	else:
+		data['_object']['object_type'] = model.HumanMadeObject
 
-	data['_artists'] = []
+	consigner = data['consigner']
+	if consigner:
+		data['_consigner'] = consigner
+
+# 	for a in data.get('_artists', []):
+# 		pprint.pprint(a)
+
 	return data
 
 def transaction_switch(data: dict):
@@ -272,8 +306,11 @@ class KnoedlerPipeline(PipelineBase):
 			GroupRepeatingKeys(
 				drop_empty=True,
 				mapping={
-					'artists': {
-						'postprocess': filter_empty_person,
+					'_artists': {
+						'postprocess': [
+							filter_empty_person,
+							lambda x, _: strip_key_prefix('artist_', x),
+						],
 						'prefixes': (
 							"artist_name",
 							"artist_authority",
@@ -283,6 +320,10 @@ class KnoedlerPipeline(PipelineBase):
 							"star_rec_no",
 							"artist_ulan")},
 					'purchase_seller': {
+						'postprocess': [
+							filter_empty_person,
+							lambda x, _: strip_key_prefix('purchase_seller_', x),
+						],
 						'prefixes': (
 							"purchase_seller_name",
 							"purchase_seller_loc",
@@ -293,6 +334,10 @@ class KnoedlerPipeline(PipelineBase):
 						)
 					},
 					'purchase_buyer': {
+						'postprocess': [
+							filter_empty_person,
+							lambda x, _: strip_key_prefix('purchase_buyer_', x),
+						],
 						'prefixes': (
 							"purchase_buyer_own",
 							"purchase_buyer_share",
@@ -331,6 +376,7 @@ class KnoedlerPipeline(PipelineBase):
 					)
 				},
 				'consigner': {
+					'postprocess': lambda x, _: strip_key_prefix('consign_', x),
 					'properties': (
 						"consign_no",
 						"consign_name",
@@ -487,26 +533,28 @@ class KnoedlerPipeline(PipelineBase):
 			add_object,
 			_input=rows.output
 		)
-		objects = graph.add_chain(
+		hmos = graph.add_chain(
 			ExtractKeyedValue(key='_object'),
 			MakeLinkedArtHumanMadeObject(),
 			_input=objects.output
 		)
 		people = graph.add_chain(
 			ExtractKeyedValue(key='_consigner'),
+			add_person_uri,
 			MakeLinkedArtPerson(),
 			_input=objects.output
 		)
 		artists = graph.add_chain(
 			ExtractKeyedValues(key='_artists'),
+			add_person_uri,
 			MakeLinkedArtPerson(),
 			_input=objects.output
 		)
 		if serialize:
-			self.add_serialization_chain(graph, objects.output, model=self.models['HumanMadeObject'])
+			self.add_serialization_chain(graph, hmos.output, model=self.models['HumanMadeObject'])
 			self.add_serialization_chain(graph, people.output, model=self.models['Person'])
 			self.add_serialization_chain(graph, artists.output, model=self.models['Person'])
-		return rows
+		return objects
 
 	def _construct_graph(self):
 		'''

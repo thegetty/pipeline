@@ -12,6 +12,7 @@ import datetime
 from collections import Counter, defaultdict, namedtuple
 from contextlib import suppress
 import inspect
+import urllib.parse
 
 import time
 import timeit
@@ -101,6 +102,133 @@ def filter_empty_person(data: dict, _):
 	else:
 		return None
 
+def knoedler_uri(*values):
+	'''Convert a set of identifying `values` into a URI'''
+	if values:
+		suffix = ','.join([urllib.parse.quote(str(v)) for v in values])
+		return UID_TAG_PREFIX + suffix
+	else:
+		suffix = str(uuid.uuid4())
+		return UID_TAG_PREFIX + suffix
+
+def record_id(data):
+	book = data['stock_book_no']
+	page = data['page_number']
+	row = data['row_number']
+	return (book, page, row)
+
+@use('make_la_lo')
+@use('make_la_hmo')
+def add_book(data: dict, make_la_hmo, make_la_lo):
+	book = data['book_record']
+	book_id, _, _ = record_id(book)
+	data['_physical_book'] = {
+		'uri': knoedler_uri('Book', book_id),
+		'object_type': vocab.Book,
+		'label': f'Knoedler Stock Book {book_id}',
+		'identifiers': [(book_id, vocab.LocalNumber(ident=''))],
+	}
+	make_la_hmo(data['_physical_book'])
+
+	data['_text_book'] = {
+		'uri': knoedler_uri('Text', 'Book', book_id),
+		'object_type': vocab.AccountBookText,
+		'label': f'Knoedler Stock Book {book_id}',
+		'identifiers': [(book_id, vocab.LocalNumber(ident=''))],
+		'carried_by': [data['_physical_book']]
+	}
+	make_la_lo(data['_text_book'])
+
+	return data
+
+@use('make_la_lo')
+@use('make_la_hmo')
+def add_page(data: dict, make_la_hmo, make_la_lo):
+	book = data['book_record']
+	book_id, page_id, _ = record_id(book)
+
+	d = vocab.SequencePosition()
+	d.value = page_id
+	d.unit = vocab.instances['numbers']
+
+	data['_physical_page'] = {
+		'uri': knoedler_uri('Book', book_id, 'Page', page_id),
+		'object_type': vocab.Page,
+		'label': f'Knoedler Stock Book {book_id}, Page {page_id}',
+		'identifiers': [(book_id, vocab.LocalNumber(ident=''))],
+		'part_of': [data['_physical_book']],
+	}
+	make_la_hmo(data['_physical_page'])
+	
+	data['_text_page'] = {
+		'uri': knoedler_uri('Text', 'Book', book_id, 'Page', page_id),
+		'object_type': vocab.AccountBookText,
+		'label': f'Knoedler Stock Book {book_id}, Page {page_id}',
+		'identifiers': [(page_id, vocab.LocalNumber(ident=''))],
+		'part_of': [data['_text_book']],
+		'carried_by': [data['_physical_page']],
+		'dimensions': [d] # TODO: add dimension handling to MakeLinkedArtLinguisticObject
+	}
+	if data.get('heading'):
+		# This is a transcription of the heading of the page
+		# Meaning it is part of the page linguistic object
+		data['_text_page']['heading'] = data['heading'] # TODO: add heading handling to MakeLinkedArtLinguisticObject
+	if data.get('subheading'):
+		# Transcription of the subheading of the page
+		data['_text_page']['subheading'] = data['subheading'] # TODO: add subheading handling to MakeLinkedArtLinguisticObject
+	make_la_lo(data['_text_page'])
+
+	return data
+
+@use('make_la_lo')
+def add_row(data: dict, make_la_lo):
+	book = data['book_record']
+	book_id, page_id, row_id = record_id(book)
+
+	d = vocab.SequencePosition()
+	d.value = row_id
+	d.unit = vocab.instances['numbers']
+	
+	notes = []
+	# TODO: add attributed star record number to row as a LocalNumber
+	for k in ('description', 'working_note', 'verbatim_notes'):
+		if book.get(k):
+			notes.append(vocab.Note(ident='', content=book[k]))
+
+	data['_text_row'] = {
+		'uri': knoedler_uri('Text', 'Book', book_id, 'Page', page_id, 'Row', row_id),
+		'label': f'Knoedler Stock Book {book_id}, Page {page_id}, Row {row_id}',
+		'identifiers': [(row_id, vocab.LocalNumber(ident=''))],
+		'part_of': [data['_text_page']],
+		'dimensions': [d], # TODO: add dimension handling to MakeLinkedArtLinguisticObject
+		'referred_to_by': notes,
+	}
+	make_la_lo(data['_text_row'])
+	
+	return data
+
+@use('vocab_type_map')
+def add_object(data: dict, vocab_type_map):
+	# pprint.pprint(data)
+	odata = data['object']
+	title = odata['title']
+	typestring = odata.get('object_type', '')
+
+# 	data['_consigner'] = None
+	data['_object'] = {
+		'uri': knoedler_uri('Object', odata['knoedler_number']),
+		'title': title,
+	}
+	if typestring in vocab_type_map:
+		clsname = vocab_type_map.get(typestring, None)
+		otype = getattr(vocab, clsname)
+		data['_object']['object_type'] = otype
+
+	data['_artists'] = []
+	return data
+
+def transaction_switch(data: dict):
+	return data
 
 
 #mark - Knoedler Pipeline class
@@ -131,16 +259,20 @@ class KnoedlerPipeline(PipelineBase):
 			# to avoid constructing new MakeLinkedArtPerson objects millions of times, this
 			# is passed around as a service to the functions and classes that require it.
 			'make_la_person': MakeLinkedArtPerson(),
+			'make_la_lo': MakeLinkedArtLinguisticObject(),
+			'make_la_hmo': MakeLinkedArtHumanMadeObject(),
 		})
 		return services
 
 	def add_sales_chain(self, graph, records, serialize=True):
 		'''Add transformation of sales records to the bonobo pipeline.'''
-		sales = graph.add_chain(
+		sales_records = graph.add_chain(
+# 			"star_record_no",
+# 			"pi_record_no",
 			GroupRepeatingKeys(
 				drop_empty=True,
 				mapping={
-					'_artists': {
+					'artists': {
 						'postprocess': filter_empty_person,
 						'prefixes': (
 							"artist_name",
@@ -150,6 +282,41 @@ class KnoedlerPipeline(PipelineBase):
 							"artist_attribution_mod_auth",
 							"star_rec_no",
 							"artist_ulan")},
+					'purchase_seller': {
+						'prefixes': (
+							"purchase_seller_name",
+							"purchase_seller_loc",
+							"purchase_seller_auth_name",
+							"purchase_seller_auth_loc",
+							"purchase_seller_auth_mod",
+							"purchase_seller_ulan",
+						)
+					},
+					'purchase_buyer': {
+						'prefixes': (
+							"purchase_buyer_own",
+							"purchase_buyer_share",
+							"purchase_buyer_ulan",
+						)
+					},
+					'prev_own': {
+						'prefixes': (
+							"prev_own",
+							"prev_own_loc",
+							"prev_own_ulan",
+						)
+					},
+					'sale_buyer': {
+						'prefixes': (
+							"sale_buyer_name",
+							"sale_buyer_loc",
+							"sale_buyer_mod",
+							"sale_buyer_auth_name",
+							"sale_buyer_auth_addr",
+							"sale_buyer_auth_mod",
+							"sale_buyer_ulan",
+						)
+					}
 				}
 			),
 			GroupKeys(mapping={
@@ -162,179 +329,184 @@ class KnoedlerPipeline(PipelineBase):
 						"present_loc_note",
 						"present_loc_ulan",
 					)
+				},
+				'consigner': {
+					'properties': (
+						"consign_no",
+						"consign_name",
+						"consign_loc",
+						"consign_ulan",
+					)
+				},
+				'object': {
+					'properties': (
+						"knoedler_number",
+						"title",
+						"subject",
+						"genre",
+						"object_type",
+						"materials",
+						"dimensions",
+					)
+				},
+				'sale_date': {
+					'postprocess': lambda x, _: strip_key_prefix('sale_date_', x),
+					'properties': (
+						"sale_date_year",
+						"sale_date_month",
+						"sale_date_day",
+					)
+				},
+				'entry_date': {
+					'postprocess': lambda x, _: strip_key_prefix('entry_date_', x),
+					'properties': (
+						"entry_date_year",
+						"entry_date_month",
+						"entry_date_day",
+					)
+				},
+				'purchase': {
+					'properties': (
+						"purch_amount",
+						"purch_currency",
+						"purch_note",
+					)
+				},
+				'knoedler_purchase': {
+					'properties': (
+						"knoedpurch_amt",
+						"knoedpurch_curr",
+						"knoedpurch_note",
+					)
+				},
+				'knoedler_share': {
+					'properties': (
+						"knoedshare_amt",
+						"knoedshare_curr",
+						"knoedshare_note",
+					)
+				},
+				'price': {
+					'properties': (
+						"price_amount",
+						"price_currency",
+						"price_note",
+					)
+				},
+				'book_record': {
+					'properties': (
+						"stock_book_no",
+						"page_number",
+						"row_number",
+						"description",
+						"folio",
+						"link",
+						"heading",
+						"subheading",
+						"verbatim_notes",
+						"working_note",
+						"transaction",
+					)
+				},
+				'post_owner': {
+					'properties': (
+						"post_owner",
+						"post_owner_ulan",
+					)
 				}
 			}),
-# 			"star_record_no
-# 			"pi_record_no"
-# 			"stock_book_no
-# 			"knoedler_number"
-# 			"page_number
-# 			"row_number
-# 			"consign_no
-# 			"consign_name"
-# 			"consign_loc"
-# 			"consign_ulan"
-# 			"title"
-# 			"description"
-# 			"subject"
-# 			"genre"
-# 			"object_type"
-# 			"materials"
-# 			"dimensions"
-# 			"entry_date_year
-# 			"entry_date_month
-# 			"entry_date_day
-# 			"sale_date_year
-# 			"sale_date_month
-# 			"sale_date_day
-# 			"purch_amount"
-# 			"purch_currency"
-# 			"purch_note"
-# 			"knoedpurch_amt"
-# 			"knoedpurch_curr"
-# 			"knoedpurch_note"
-# 			"price_amount"
-# 			"price_currency"
-# 			"price_note"
-# 			"knoedshare_amt"
-# 			"knoedshare_curr"
-# 			"knoedshare_note"
-# 			"purchase_seller_name_1"
-# 			"purchase_seller_loc_1"
-# 			"purchase_seller_auth_name_1"
-# 			"purchase_seller_auth_loc_1"
-# 			"purchase_seller_auth_mod_1"
-# 			"purchase_seller_ulan_1"
-# 			"purchase_seller_name_2"
-# 			"purchase_seller_loc_2"
-# 			"purchase_seller_auth_name_2"
-# 			"purchase_seller_auth_loc_2"
-# 			"purchase_seller_auth_mod_2"
-# 			"purchase_seller_ulan_2"
-# 			"purchase_buyer_own_1"
-# 			"purchase_buyer_share_1"
-# 			"purchase_buyer_ulan_1"
-# 			"purchase_buyer_own_2"
-# 			"purchase_buyer_share_2"
-# 			"purchase_buyer_ulan_2"
-# 			"purchase_buyer_own_3"
-# 			"purchase_buyer_share_3"
-# 			"purchase_buyer_ulan_3"
-# 			"transaction"
-# 			"sale_buyer_name_1"
-# 			"sale_buyer_loc_1"
-# 			"sale_buyer_mod_1"
-# 			"sale_buyer_auth_name_1"
-# 			"sale_buyer_auth_addr_1"
-# 			"sale_buyer_auth_mod_1"
-# 			"sale_buyer_ulan_1"
-# 			"sale_buyer_name_2"
-# 			"sale_buyer_loc_2"
-# 			"sale_buyer_mod_2"
-# 			"sale_buyer_auth_name_2"
-# 			"sale_buyer_auth_addr_2"
-# 			"sale_buyer_auth_mod_2"
-# 			"sale_buyer_ulan_2"
-# 			"folio"
-# 			"prev_own_1"
-# 			"prev_own_loc_1"
-# 			"prev_own_ulan_1"
-# 			"prev_own_2"
-# 			"prev_own_loc_2"
-# 			"prev_own_ulan_2"
-# 			"prev_own_3"
-# 			"prev_own_loc_3"
-# 			"prev_own_ulan_3"
-# 			"prev_own_4"
-# 			"prev_own_loc_4"
-# 			"prev_own_ulan_4"
-# 			"prev_own_5"
-# 			"prev_own_loc_5"
-# 			"prev_own_ulan_5"
-# 			"prev_own_6"
-# 			"prev_own_loc_6"
-# 			"prev_own_ulan_6"
-# 			"prev_own_7"
-# 			"prev_own_loc_7"
-# 			"prev_own_ulan_7"
-# 			"prev_own_8"
-# 			"prev_own_loc_8"
-# 			"prev_own_ulan_8"
-# 			"prev_own_9"
-# 			"prev_own_loc_9"
-# 			"prev_own_ulan_9"
-# 			"post_owner"
-# 			"post_owner_ulan"
-# 			"working_note"
-# 			"verbatim_notes"
-# 			"link"
-# 			"main_heading"
-# 			"subheading"
-			Trace(name='foo'),
+# 			Trace(name='foo'),
 			_input=records.output
 		)
+		
+		books = self.add_book_chain(graph, sales_records)
+		pages = self.add_page_chain(graph, books)
+		rows = self.add_row_chain(graph, pages)
+		objects = self.add_object_chain(graph, rows)
+
+		tx = graph.add_chain(
+			transaction_switch,
+			_input=objects.output
+		)			
+
 # 		if serialize:
-# 			self.add_serialization_chain(graph, sales.output, model=self.models['Activity'])
-		return sales
+# 			self.add_serialization_chain(graph, books.output, model=self.models['Activity'])
+		return tx
 
-	def add_places_chain(self, graph, auction_events, serialize=True):
-		'''Add extraction and serialization of locations.'''
-		places = graph.add_chain(
-			ExtractKeyedValues(key='_locations'),
-			RecursiveExtractKeyedValue(key='part_of'),
-			_input=auction_events.output
+	def add_book_chain(self, graph, sales_records, serialize=True):
+		books = graph.add_chain(
+			add_book,
+			_input=sales_records.output
+		)
+		phys = graph.add_chain(
+			ExtractKeyedValue(key='_physical_book'),
+			_input=books.output
+		)
+		text = graph.add_chain(
+			ExtractKeyedValue(key='_text_book'),
+			_input=books.output
 		)
 		if serialize:
-			# write OBJECTS data
-			self.add_serialization_chain(graph, places.output, model=self.models['Place'])
-		return places
+			self.add_serialization_chain(graph, phys.output, model=self.models['HumanMadeObject'])
+			self.add_serialization_chain(graph, text.output, model=self.models['LinguisticObject'])
+		return books
 
-	def add_auction_houses_chain(self, graph, auction_events, serialize=True):
-		'''Add modeling of the auction houses related to an auction event.'''
-		houses = graph.add_chain(
-			ExtractKeyedValues(key='auction_house'),
-			MakeLinkedArtAuctionHouseOrganization(),
-			_input=auction_events.output
+	def add_page_chain(self, graph, books, serialize=True):
+		pages = graph.add_chain(
+			add_page,
+			_input=books.output
+		)
+		phys = graph.add_chain(
+			ExtractKeyedValue(key='_physical_page'),
+			_input=pages.output
+		)
+		text = graph.add_chain(
+			ExtractKeyedValue(key='_text_page'),
+			_input=pages.output
 		)
 		if serialize:
-			# write OBJECTS data
-			self.add_serialization_chain(graph, houses.output, model=self.models['Group'])
-		return houses
+			self.add_serialization_chain(graph, phys.output, model=self.models['HumanMadeObject'])
+			self.add_serialization_chain(graph, text.output, model=self.models['LinguisticObject'])
+		return pages
 
-	def add_visual_item_chain(self, graph, objects, serialize=True):
-		'''Add transformation of visual items to the bonobo pipeline.'''
-		items = graph.add_chain(
-			ExtractKeyedValue(key='_visual_item'),
-			MakeLinkedArtRecord(),
+	def add_row_chain(self, graph, pages, serialize=True):
+		rows = graph.add_chain(
+			add_row,
+			_input=pages.output
+		)
+		text = graph.add_chain(
+			ExtractKeyedValue(key='_text_row'),
+			_input=rows.output
+		)
+		if serialize:
+			self.add_serialization_chain(graph, text.output, model=self.models['LinguisticObject'])
+		return rows
+
+	def add_object_chain(self, graph, rows, serialize=True):
+		objects = graph.add_chain(
+			add_object,
+			_input=rows.output
+		)
+		objects = graph.add_chain(
+			ExtractKeyedValue(key='_object'),
+			MakeLinkedArtHumanMadeObject(),
 			_input=objects.output
 		)
-		if serialize:
-			# write VISUAL ITEMS data
-			self.add_serialization_chain(graph, items.output, model=self.models['VisualItem'], use_memory_writer=False)
-		return items
-
-	def add_record_text_chain(self, graph, objects, serialize=True):
-		'''Add transformation of record texts to the bonobo pipeline.'''
-		texts = graph.add_chain(
-			ExtractKeyedValue(key='_sale_record_text'),
-			MakeLinkedArtLinguisticObject(),
-			_input=objects.output
-		)
-		if serialize:
-			# write RECORD data
-			self.add_serialization_chain(graph, texts.output, model=self.models['LinguisticObject'])
-		return texts
-
-	def add_people_chain(self, graph, objects, serialize=True):
-		'''Add transformation of artists records to the bonobo pipeline.'''
 		people = graph.add_chain(
+			ExtractKeyedValue(key='_consigner'),
+			MakeLinkedArtPerson(),
+			_input=objects.output
+		)
+		artists = graph.add_chain(
 			ExtractKeyedValues(key='_artists'),
+			MakeLinkedArtPerson(),
 			_input=objects.output
 		)
 		if serialize:
-			# write PEOPLE data
+			self.add_serialization_chain(graph, objects.output, model=self.models['HumanMadeObject'])
 			self.add_serialization_chain(graph, people.output, model=self.models['Person'])
-		return people
+			self.add_serialization_chain(graph, artists.output, model=self.models['Person'])
+		return rows
 
 	def _construct_graph(self):
 		'''

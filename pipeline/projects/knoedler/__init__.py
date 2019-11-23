@@ -119,11 +119,6 @@ def record_id(data):
 
 def add_person_uri(data:dict):
 	# TODO: move this into MakeLinkedArtPerson
-	if 'authority' in data:
-		pass
-	else:
-		data['uri'] = knoedler_uri('Person', )
-
 	auth_name = data.get('authority')
 	if data.get('ulan'):
 		ulan = data['ulan']
@@ -138,6 +133,25 @@ def add_person_uri(data:dict):
 	else:
 		# not enough information to identify this person uniquely, so use the source location in the input file
 		data['uri'] = knoedler_uri('PERSON', 'PI_REC_NO', data['parent_data']['pi_record_no'])
+
+	return data
+
+def add_group_uri(data:dict):
+	# TODO: move this into MakeLinkedArtOrganization
+	auth_name = data.get('authority')
+	if data.get('ulan'):
+		ulan = data['ulan']
+		key = f'GROUP-ULAN-{ulan}'
+		data['uri'] = knoedler_uri('GROUP', 'ULAN', ulan)
+		data['ulan'] = ulan
+	elif auth_name and '[' not in auth_name:
+		data['uri'] = knoedler_uri('GROUP', 'AUTHNAME', auth_name)
+		data['identifiers'] = [
+			vocab.PrimaryName(ident='', content=auth_name)
+		]
+	else:
+		# not enough information to identify this person uniquely, so use the source location in the input file
+		data['uri'] = knoedler_uri('GROUP', 'PI_REC_NO', data['parent_data']['pi_record_no'])
 
 	return data
 
@@ -232,7 +246,8 @@ def add_row(data: dict, make_la_lo):
 	return data
 
 @use('vocab_type_map')
-def add_object(data: dict, vocab_type_map):
+@use('make_la_org')
+def add_object(data: dict, make_la_org, vocab_type_map):
 	odata = data['object']
 	title = odata['title']
 	typestring = odata.get('object_type', '')
@@ -244,6 +259,7 @@ def add_object(data: dict, vocab_type_map):
 	data['_object'] = {
 		'uri': uri,
 		'title': title,
+		'identifiers': [],
 	}
 	if typestring in vocab_type_map:
 		clsname = vocab_type_map.get(typestring, None)
@@ -254,10 +270,15 @@ def add_object(data: dict, vocab_type_map):
 
 	consigner = data['consigner']
 	if consigner:
+		add_group_uri(consigner)
+		make_la_org(consigner)
+		consigner_num = consigner['no']
+		consigner_id = vocab.LocalNumber(ident='', label=f'Consigned number: {consigner_num}', content=consigner_num)
+		assignment = model.AttributeAssignment(ident='')
+		assignment.carried_out_by = get_crom_object(consigner)
+		consigner_id.assigned_by = assignment
+		data['_object']['identifiers'].append(consigner_id)
 		data['_consigner'] = consigner
-
-# 	for a in data.get('_artists', []):
-# 		pprint.pprint(a)
 
 	return data
 
@@ -295,6 +316,7 @@ class KnoedlerPipeline(PipelineBase):
 			'make_la_person': MakeLinkedArtPerson(),
 			'make_la_lo': MakeLinkedArtLinguisticObject(),
 			'make_la_hmo': MakeLinkedArtHumanMadeObject(),
+			'make_la_org': MakeLinkedArtOrganization(),
 		})
 		return services
 
@@ -461,7 +483,6 @@ class KnoedlerPipeline(PipelineBase):
 					)
 				}
 			}),
-# 			Trace(name='foo'),
 			_input=records.output
 		)
 		
@@ -538,10 +559,8 @@ class KnoedlerPipeline(PipelineBase):
 			MakeLinkedArtHumanMadeObject(),
 			_input=objects.output
 		)
-		people = graph.add_chain(
+		consigners = graph.add_chain(
 			ExtractKeyedValue(key='_consigner'),
-			add_person_uri,
-			MakeLinkedArtPerson(),
 			_input=objects.output
 		)
 		artists = graph.add_chain(
@@ -552,7 +571,7 @@ class KnoedlerPipeline(PipelineBase):
 		)
 		if serialize:
 			self.add_serialization_chain(graph, hmos.output, model=self.models['HumanMadeObject'])
-			self.add_serialization_chain(graph, people.output, model=self.models['Person'])
+			self.add_serialization_chain(graph, consigners.output, model=self.models['Group'])
 			self.add_serialization_chain(graph, artists.output, model=self.models['Person'])
 		return objects
 

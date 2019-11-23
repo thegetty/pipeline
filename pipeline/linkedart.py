@@ -63,8 +63,10 @@ class MakeLinkedArtRecord:
 					else:
 						note = vocab.Note(content=content)
 						note.classified_as = itype
-			else:
+			elif isinstance(notedata, str):
 				note = vocab.Note(content=notedata)
+			else:
+				note = notedata
 			thing.referred_to_by = note
 
 		for identifier in data.get('identifiers', []):

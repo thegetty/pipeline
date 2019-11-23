@@ -282,16 +282,31 @@ class MakeLinkedArtHumanMadeObject(MakeLinkedArtRecord):
 class MakeLinkedArtAbstract(MakeLinkedArtLinguisticObject):
 	pass
 
-class MakeLinkedArtOrganization(MakeLinkedArtRecord):
+class MakeLinkedArtAgent(MakeLinkedArtRecord):
 	def set_properties(self, data, thing):
 		super().set_properties(data, thing)
-		with suppress(KeyError):
-			thing._label = str(data['label'])
-
 		with suppress(ValueError, TypeError):
 			ulan = int(data.get('ulan'))
 			if ulan:
 				thing.exact_match = model.BaseResource(ident=f'http://vocab.getty.edu/ulan/{ulan}')
+
+		if 'name' in data:
+			title_type = model.Type(ident='http://vocab.getty.edu/aat/300417193', label='Title')
+			name = data['name']
+			if isinstance(name, str):
+				set_la_name(thing, name, title_type, set_label=True)
+			elif isinstance(name, (list, tuple)):
+				value, *properties = name
+				n = model.Name(ident='', content=value)
+				n.classified_as = title_type
+				self.set_lo_properties(n, *properties)
+				thing.identified_by = n
+
+class MakeLinkedArtOrganization(MakeLinkedArtAgent):
+	def set_properties(self, data, thing):
+		super().set_properties(data, thing)
+		with suppress(KeyError):
+			thing._label = str(data['label'])
 
 		if 'events' in data:
 			for event in data['events']:
@@ -353,16 +368,11 @@ def ymd_to_label(year, month, day):
 		return f'{month_name} {year}'
 
 
-class MakeLinkedArtPerson(MakeLinkedArtRecord):
+class MakeLinkedArtPerson(MakeLinkedArtAgent):
 	def set_properties(self, data, who):
 		super().set_properties(data, who)
 		with suppress(KeyError):
 			who._label = str(data['label'])
-
-		with suppress(ValueError, TypeError):
-			ulan = int(data.get('ulan'))
-			if ulan:
-				who.exact_match = model.BaseResource(ident=f'http://vocab.getty.edu/ulan/{ulan}')
 
 		for ns in ['aat_nationality_1', 'aat_nationality_2','aat_nationality_3']:
 			# add nationality

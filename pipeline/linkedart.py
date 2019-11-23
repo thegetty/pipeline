@@ -230,6 +230,11 @@ class MakeLinkedArtLinguisticObject(MakeLinkedArtRecord):
 			parent = get_crom_object(parent_data)
 			thing.part_of = parent
 
+		for carrier in data.get('carried_by', []):
+			hmo = get_crom_object(carrier)
+			thing.carried_by = hmo
+
+
 	def __call__(self, data: dict):
 		if 'object_type' not in data:
 			data['object_type'] = model.LinguisticObject
@@ -254,6 +259,15 @@ class MakeLinkedArtHumanMadeObject(MakeLinkedArtRecord):
 				n.classified_as = title_type
 				self.set_lo_properties(n, *properties)
 				thing.identified_by = n
+
+		parents = data.get('part_of', [])
+		for parent_data in parents:
+			parent = get_crom_object(parent_data)
+			thing.part_of = parent
+
+		for carried in data.get('carries', []):
+			lo = get_crom_object(carried)
+			thing.carries = lo
 
 		for coll in data.get('member_of', []):
 			thing.member_of = coll

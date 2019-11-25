@@ -1866,7 +1866,7 @@ class ProvenancePipeline(PipelineBase):
 		print('Serializing static instances...', file=sys.stderr)
 		for model, instances in STATIC_INSTANCES.items():
 			g = bonobo.Graph()
-			nodes = self.serializer_nodes_for_model(model=model, use_memory_writer=False)
+			nodes = self.serializer_nodes_for_model(model=self.models[model], use_memory_writer=False)
 			values = instances.values()
 			source = g.add_chain(GraphListSource(values))
 			self.add_serialization_chain(g, source.output, model=self.models[model], use_memory_writer=False)

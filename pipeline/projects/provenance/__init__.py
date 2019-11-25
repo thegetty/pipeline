@@ -162,6 +162,16 @@ def add_auction_event(data):
 	data['uid'] = uid
 	data['uri'] = uri
 	add_crom_data(data=data, what=auction)
+	catalog = get_crom_object(data['_catalog'])
+
+	record_uri = pir_uri('AUCTION-EVENT', 'CATALOGNUMBER', cno, 'RECORD')
+	label = f'Record of auction event from catalog {cno}'
+	record = model.LinguisticObject(ident=record_uri, label=label) # TODO: needs classification
+	record_data	= {'uri': record_uri}
+	record_data['identifiers'] = [model.Name(ident='', content=label)]
+	record.part_of = catalog
+
+	data['_record'] = add_crom_data(data=record_data, what=record)
 	return data
 
 #mark - Places
@@ -231,7 +241,7 @@ def populate_auction_event(data, auction_locations):
 	auction.subject_of = catalog
 	return data
 
-def add_auction_house_data(a):
+def add_auction_house_data(a, event_record):
 	'''Add modeling data for an auction house organization.'''
 	catalog = a.get('_catalog')
 
@@ -248,9 +258,9 @@ def add_auction_house_data(a):
 		house = vocab.AuctionHouseOrg(ident=a['uri'])
 	elif auth_name and auth_name not in IGNORE_HOUSE_AUTHNAMES:
 		a['uri'] = pir_uri('AUCTION-HOUSE', 'AUTHNAME', auth_name)
-		a['identifiers'].append(
-			vocab.PrimaryName(ident='', content=auth_name)
-		)
+		pname = vocab.PrimaryName(ident='', content=auth_name)
+		pname.referred_to_by = event_record
+		a['identifiers'].append(pname)
 		house = vocab.AuctionHouseOrg(ident=a['uri'])
 	else:
 		# not enough information to identify this house uniquely, so use the source location in the input file
@@ -260,7 +270,7 @@ def add_auction_house_data(a):
 	name = a.get('auc_house_name') or a.get('name')
 	if name:
 		n = model.Name(ident='', content=name)
-		n.referred_to_by = catalog
+		n.referred_to_by = event_record
 		a['identifiers'].append(n)
 		a['label'] = name
 	else:
@@ -276,16 +286,17 @@ def add_auction_houses(data, auction_houses):
 	event.
 	'''
 	auction = get_crom_object(data)
+	event_record = get_crom_object(data['_record'])
 	catalog = data['_catalog']['_LOD_OBJECT']
 	d = data.copy()
 	houses = data.get('auction_house', [])
 	cno = data['catalog_number']
 
 	house_objects = []
-
+	event_record = get_crom_object(data['_record'])
 	for h in houses:
 		h['_catalog'] = catalog
-		add_auction_house_data(copy_source_information(h, data))
+		add_auction_house_data(copy_source_information(h, data), event_record)
 		house = get_crom_object(h)
 		auction.carried_out_by = house
 		if auction_houses:

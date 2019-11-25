@@ -524,7 +524,7 @@ def add_crom_price(data, _):
 	return data
 
 @use('make_la_person')
-def add_person(data: dict, rec_id, *, make_la_person):
+def add_person(data: dict, sales_record, rec_id, *, make_la_person):
 	'''
 	Add modeling data for people, based on properties of the supplied `data` dict.
 
@@ -544,9 +544,9 @@ def add_person(data: dict, rec_id, *, make_la_person):
 		data['ulan'] = ulan
 	elif acceptable_person_auth_name(auth_name) and not auth_name_q:
 		data['uri'] = pir_uri('PERSON', 'AUTHNAME', auth_name)
-		data['identifiers'] = [
-			vocab.PrimaryName(ident='', content=auth_name) # NOTE: most of these are also vocab.SortName, but not 100%, so witholding that assertion for now
-		]
+		name = vocab.PrimaryName(ident='', content=auth_name) # NOTE: most of these are also vocab.SortName, but not 100%, so witholding that assertion for now
+		name.referred_to_by = sales_record
+		data['identifiers'] = [name]
 	else:
 		# not enough information to identify this person uniquely, so use the source location in the input file
 		data['uri'] = pir_uri('PERSON', 'PI_REC_NO', data['pi_record_no'], rec_id)
@@ -554,7 +554,8 @@ def add_person(data: dict, rec_id, *, make_la_person):
 	names = []
 	for name_string in sorted(set([data[k] for k in ('auth_name', 'name') if k in data and data[k]])):
 		if name_string:
-			names.append((name_string,))
+			names.append((name_string, {'referred_to_by': [sales_record]}))
+
 	if names:
 		data['names'] = names
 		data['label'] = names[0][0]
@@ -576,6 +577,7 @@ def final_owner_procurement(final_owner, current_tx, hmo, current_ts):
 @use('make_la_person')
 def add_acquisition(data, buyers, sellers, make_la_person=None):
 	'''Add modeling of an acquisition as a transfer of title from the seller to the buyer'''
+	sales_record = get_crom_object(data['_record'])
 	hmo = get_crom_object(data)
 	parent = data['parent_data']
 # 	transaction = parent['transaction']
@@ -671,9 +673,9 @@ def add_acquisition(data, buyers, sellers, make_la_person=None):
 				owner_record['ulan'] = ulan
 			elif acceptable_person_auth_name(auth_name):
 				owner_record['uri'] = pir_uri('PERSON', 'AUTHNAME', auth_name)
-				owner_record['identifiers'] = [
-					vocab.PrimaryName(ident='', content=auth_name) # NOTE: most of these are also vocab.SortName, but not 100%, so witholding that assertion for now
-				]
+				pname = vocab.PrimaryName(ident='', content=auth_name) # NOTE: most of these are also vocab.SortName, but not 100%, so witholding that assertion for now
+				pname.referred_to_by = sales_record
+				owner_record['identifiers'] = [pname]
 			else:
 				# not enough information to identify this person uniquely, so use the source location in the input file
 				owner_record['uri'] = pir_uri('PERSON', 'PI_REC_NO', data['pi_record_no'], f'{rev_name}-{seq_no+1}')
@@ -681,7 +683,7 @@ def add_acquisition(data, buyers, sellers, make_la_person=None):
 				warnings.warn(f'*** No name for {rev_name}: {owner_record}')
 				pprint.pprint(owner_record)
 			if name:
-				owner_record['names'] = [(name,)]
+				owner_record['names'] = [(name,{'referred_to_by': [sales_record]})]
 			owner_record['label'] = name
 			# TODO: handle other fields of owner_record: own_auth_d, own_auth_l, own_auth_q, own_ques, own_so
 			make_la_person(owner_record)
@@ -794,14 +796,29 @@ def add_bidding(data, buyers):
 def add_acquisition_or_bidding(data, *, make_la_person):
 	'''Determine if this record has an acquisition or bidding, and add appropriate modeling'''
 	parent = data['parent_data']
+	sales_record = get_crom_object(data['_record'])
 	transaction = parent['transaction']
 	transaction = transaction.replace('[?]', '').rstrip()
 
-	buyers = [add_person(copy_source_information(p, parent), f'buyer_{i+1}', make_la_person=make_la_person) for i, p in enumerate(parent['buyer'])]
+	buyers = [
+		add_person(
+			copy_source_information(p, parent),
+			sales_record,
+			f'buyer_{i+1}',
+			make_la_person=make_la_person
+		) for i, p in enumerate(parent['buyer'])
+	]
 
 	# TODO: is this the right set of transaction types to represent acquisition?
 	if transaction in ('Sold', 'Vendu', 'Verkauft', 'Bought In'):
-		sellers = [add_person(copy_source_information(p, parent), f'seller_{i+1}', make_la_person=make_la_person) for i, p in enumerate(parent['seller'])]
+		sellers = [
+			add_person(
+				copy_source_information(p, parent),
+				sales_record,
+				f'seller_{i+1}',
+				make_la_person=make_la_person
+			) for i, p in enumerate(parent['seller'])
+		]
 		yield from add_acquisition(data, buyers, sellers, make_la_person)
 	elif transaction in ('Unknown', 'Unbekannt', 'Inconnue', 'Withdrawn', 'Non Vendu', ''):
 		yield from add_bidding(data, buyers)
@@ -933,7 +950,7 @@ def _populate_object_catalog_record(data, parent, lot, cno, rec_num):
 	record_data['identifiers'] = [model.Name(ident='', content=f'Record of sale {lot_object_id}')]
 	record.part_of = catalog
 
-	data['_sale_record_text'] = add_crom_data(data=record_data, what=record)
+	data['_record'] = add_crom_data(data=record_data, what=record)
 	return record
 
 def _populate_object_destruction(data, parent, destruction_types_map):
@@ -950,7 +967,7 @@ def _populate_object_visual_item(data, vocab_instance_map):
 	vidata = {'uri': vi_id}
 	if title:
 		vidata['label'] = f'Visual work of “{title}”'
-		sales_record = get_crom_object(data['_sale_record_text'])
+		sales_record = get_crom_object(data['_record'])
 		vidata['names'] = [(title,{'referred_to_by': [sales_record]})]
 
 	genre = genre_instance(data.get('genre'), vocab_instance_map)
@@ -964,14 +981,14 @@ def _populate_object_statements(data):
 	materials = data.get('materials')
 	if materials:
 		matstmt = vocab.MaterialStatement(ident='', content=materials)
-		sales_record = get_crom_object(data['_sale_record_text'])
+		sales_record = get_crom_object(data['_record'])
 		matstmt.referred_to_by = sales_record
 		hmo.referred_to_by = matstmt
 
 	dimstr = data.get('dimensions')
 	if dimstr:
 		dimstmt = vocab.DimensionStatement(ident='', content=dimstr)
-		sales_record = get_crom_object(data['_sale_record_text'])
+		sales_record = get_crom_object(data['_record'])
 		dimstmt.referred_to_by = sales_record
 		hmo.referred_to_by = dimstmt
 		for dim in extract_physical_dimensions(dimstr):
@@ -1740,7 +1757,7 @@ class ProvenancePipeline(PipelineBase):
 	def add_record_text_chain(self, graph, objects, serialize=True):
 		'''Add transformation of record texts to the bonobo pipeline.'''
 		texts = graph.add_chain(
-			ExtractKeyedValue(key='_sale_record_text'),
+			ExtractKeyedValue(key='_record'),
 			MakeLinkedArtLinguisticObject(),
 			_input=objects.output
 		)

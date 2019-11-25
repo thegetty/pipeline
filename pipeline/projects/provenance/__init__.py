@@ -683,9 +683,19 @@ def add_acquisition(data, buyers, sellers, make_la_person=None):
 			if name:
 				owner_record['names'] = [(name,)]
 			owner_record['label'] = name
-			# TODO: handle other fields of owner_record: own_auth_d, own_auth_l, own_auth_q, own_ques, own_so
 			make_la_person(owner_record)
 			owner = get_crom_object(owner_record)
+			
+			# TODO: handle other fields of owner_record: own_auth_d, own_auth_q, own_ques, own_so
+			
+			if owner_record.get('own_auth_l'):
+				loc = owner_record['own_auth_l']
+				current = parse_location_name(loc, uri_base=UID_TAG_PREFIX)
+				place_data = make_la_place(current)
+				place = get_crom_object(place_data)
+				owner.residence = place
+				data['_owner_locations'].append(place_data)
+			
 			if '_other_owners' not in data:
 				data['_other_owners'] = []
 			data['_other_owners'].append(owner_record)
@@ -802,6 +812,7 @@ def add_acquisition_or_bidding(data, *, make_la_person):
 	# TODO: is this the right set of transaction types to represent acquisition?
 	if transaction in ('Sold', 'Vendu', 'Verkauft', 'Bought In'):
 		sellers = [add_person(copy_source_information(p, parent), f'seller_{i+1}', make_la_person=make_la_person) for i, p in enumerate(parent['seller'])]
+		data['_owner_locations'] = []
 		yield from add_acquisition(data, buyers, sellers, make_la_person)
 	elif transaction in ('Unknown', 'Unbekannt', 'Inconnue', 'Withdrawn', 'Non Vendu', ''):
 		yield from add_bidding(data, buyers)
@@ -1466,11 +1477,16 @@ class ProvenancePipeline(PipelineBase):
 			ExtractKeyedValue(key='_bidding'),
 			_input=bid_acqs.output
 		)
+		places = graph.add_chain(
+			ExtractKeyedValues(key='_owner_locations'),
+			_input=bid_acqs.output
+		)
 
 		if serialize:
 			# write SALES data
 			self.add_serialization_chain(graph, bids.output, model=self.models['Activity'])
 			self.add_serialization_chain(graph, orgs.output, model=self.models['Group'])
+			self.add_serialization_chain(graph, places.output, model=self.models['Place'])
 		return bid_acqs
 
 	def add_sales_chain(self, graph, records, serialize=True):

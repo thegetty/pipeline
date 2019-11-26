@@ -1099,8 +1099,11 @@ def add_object_type(data, vocab_type_map):
 			obj = vocab.make_multitype_obj(*types, ident=data['uri'])
 			add_crom_data(data=data, what=obj)
 		else:
-			warnings.warn(f'*** No object type for {typestring!r}')
+			warnings.warn(f'*** Not all object types matched for {typestring!r}')
 			add_crom_data(data=data, what=model.HumanMadeObject(ident=data['uri']))
+	else:
+		warnings.warn(f'*** No object type for {typestring!r}')
+		add_crom_data(data=data, what=model.HumanMadeObject(ident=data['uri']))
 
 	parent = data['parent_data']
 	coll_data = parent.get('_lot_object_set')

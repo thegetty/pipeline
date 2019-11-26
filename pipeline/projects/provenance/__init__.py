@@ -548,34 +548,33 @@ def add_person(data: dict, sales_record, rec_id, *, make_la_person):
 
 	auth_name = data.get('auth_name')
 	auth_name_q = '?' in data.get('auth_nameq', '')
-	auth_name_handled = False
+	
 	if ulan:
 		key = f'PERSON-ULAN-{ulan}'
-		data['uid'] = key
 		data['uri'] = pir_uri('PERSON', 'ULAN', ulan)
 		data['ulan'] = ulan
-	elif acceptable_person_auth_name(auth_name) and not auth_name_q:
+		data['uid'] = key
+	elif acceptable_person_auth_name(auth_name):
 		data['uri'] = pir_uri('PERSON', 'AUTHNAME', auth_name)
-		name = vocab.PrimaryName(ident='', content=auth_name) # NOTE: most of these are also vocab.SortName, but not 100%, so witholding that assertion for now
-		name.referred_to_by = sales_record
-		data['identifiers'] = [name]
-		auth_name_handled = True
 	else:
 		# not enough information to identify this person uniquely, so use the source location in the input file
+# 			warnings.warn(f'*** Person without a ulan or authority name: {a}')
 		data['uri'] = pir_uri('PERSON', 'PI_REC_NO', data['pi_record_no'], rec_id)
 
-	names = []
-	for name_string in sorted(set([data[k] for k in ('auth_name', 'name') if k in data and data[k]])):
-		if name_string == auth_name and auth_name_handled:
-			continue
-		if name_string:
-			names.append((name_string, {'referred_to_by': [sales_record]}))
+	
+	if acceptable_person_auth_name(auth_name):
+		data['label'] = auth_name
+		pname = vocab.PrimaryName(ident='', content=auth_name) # NOTE: most of these are also vocab.SortName, but not 100%, so witholding that assertion for now
+		pname.referred_to_by = sales_record
+		data['identifiers'] = [pname]
 
-	if names:
-		data['names'] = names
-		data['label'] = names[0][0]
-	else:
-		data['label'] = '(Anonymous person)'
+	name = data.get('name')
+	if name:
+		data['names'] = [(name, {'referred_to_by': [sales_record]})]
+		if 'label' not in data:
+			data['label'] = name
+	if 'label' not in data:
+		data['label'] = '(Anonymous)'
 
 	make_la_person(data)
 	return data
@@ -1179,17 +1178,15 @@ def add_pir_artists(data, *, make_la_person):
 			pname.referred_to_by = sales_record
 			a['identifiers'] = [pname]
 
-		try:
-			name = a.get('artist_name')
-			if name:
-				if not artist_label:
-					artist_label = f'artist “{name}”'
-				a['names'] = [(name,{'referred_to_by': [sales_record]})]
-				if 'label' not in a:
-					a['label'] = name
-		except KeyError:
+		name = a.get('artist_name')
+		if name:
+			if not artist_label:
+				artist_label = f'artist “{name}”'
+			a['names'] = [(name, {'referred_to_by': [sales_record]})]
 			if 'label' not in a:
-				a['label'] = '(Anonymous artist)'
+				a['label'] = name
+		if 'label' not in a:
+			a['label'] = '(Anonymous)'
 
 		if not artist_label:
 			artist_label = 'anonymous artist'

@@ -1092,6 +1092,15 @@ def add_object_type(data, vocab_type_map):
 		clsname = vocab_type_map.get(typestring, None)
 		otype = getattr(vocab, clsname)
 		add_crom_data(data=data, what=otype(ident=data['uri']))
+	elif ';' in typestring:
+		parts = [s.strip() for s in typestring.split(';')]
+		if all([s in vocab_type_map for s in parts]):
+			types = [getattr(vocab, vocab_type_map[s]) for s in parts]
+			obj = vocab.make_multitype_obj(*types, ident=data['uri'])
+			add_crom_data(data=data, what=obj)
+		else:
+			warnings.warn(f'*** Not all object types matched for {typestring!r}')
+			add_crom_data(data=data, what=model.HumanMadeObject(ident=data['uri']))
 	else:
 		warnings.warn(f'*** No object type for {typestring!r}')
 		add_crom_data(data=data, what=model.HumanMadeObject(ident=data['uri']))

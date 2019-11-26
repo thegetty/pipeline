@@ -1158,7 +1158,8 @@ def add_pir_artists(data, *, make_la_person):
 				if 'label' not in a:
 					a['label'] = name
 		except KeyError:
-			a['label'] = '(Anonymous artist)'
+			if not names:
+				a['label'] = '(Anonymous artist)'
 
 		if not artist_label:
 			artist_label = 'anonymous artist'

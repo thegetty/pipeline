@@ -548,6 +548,7 @@ def add_person(data: dict, sales_record, rec_id, *, make_la_person):
 
 	auth_name = data.get('auth_name')
 	auth_name_q = '?' in data.get('auth_nameq', '')
+	auth_name_handled = False
 	if ulan:
 		key = f'PERSON-ULAN-{ulan}'
 		data['uid'] = key
@@ -558,12 +559,15 @@ def add_person(data: dict, sales_record, rec_id, *, make_la_person):
 		name = vocab.PrimaryName(ident='', content=auth_name) # NOTE: most of these are also vocab.SortName, but not 100%, so witholding that assertion for now
 		name.referred_to_by = sales_record
 		data['identifiers'] = [name]
+		auth_name_handled = True
 	else:
 		# not enough information to identify this person uniquely, so use the source location in the input file
 		data['uri'] = pir_uri('PERSON', 'PI_REC_NO', data['pi_record_no'], rec_id)
 
 	names = []
 	for name_string in sorted(set([data[k] for k in ('auth_name', 'name') if k in data and data[k]])):
+		if name_string == auth_name and auth_name_handled:
+			continue
 		if name_string:
 			names.append((name_string, {'referred_to_by': [sales_record]}))
 
@@ -1166,27 +1170,26 @@ def add_pir_artists(data, *, make_la_person):
 # 			warnings.warn(f'*** Person without a ulan or authority name: {a}')
 			a['uri'] = pir_uri('PERSON', 'PI_REC_NO', data['pi_record_no'], f'artist-{seq_no+1}')
 
-		names = []
+		sales_record = get_crom_object(data['_record'])
 		artist_label = None
 		if acceptable_person_auth_name(auth_name):
 			a['label'] = auth_name
 			artist_label = f'artist “{auth_name}”'
-			a['identifiers'] = [
-				vocab.PrimaryName(ident='', content=auth_name) # NOTE: most of these are also vocab.SortName, but not 100%, so witholding that assertion for now
-			]
-			names.append(auth_name)
+			pname = vocab.PrimaryName(ident='', content=auth_name) # NOTE: most of these are also vocab.SortName, but not 100%, so witholding that assertion for now
+			pname.referred_to_by = sales_record
+			a['identifiers'] = [pname]
 
 		try:
-			name = a['label']
+			name = a.get('artist_name')
 			if name:
 				if not artist_label:
 					artist_label = f'artist “{name}”'
-				names.append(auth_name)
-				a['names'] = [(name,)]
+				a['names'] = [(name,{'referred_to_by': [sales_record]})]
 				if 'label' not in a:
 					a['label'] = name
 		except KeyError:
-			a['label'] = '(Anonymous artist)'
+			if 'label' not in a:
+				a['label'] = '(Anonymous artist)'
 
 		if not artist_label:
 			artist_label = 'anonymous artist'
@@ -1196,8 +1199,7 @@ def add_pir_artists(data, *, make_la_person):
 		subevent_id = event_id + f'-{seq_no}'
 		subevent = model.Production(ident=subevent_id)
 		event.part = subevent
-		if names:
-			name = names[0]
+		if artist_label:
 			subevent._label = f'Production sub-event for {artist_label}'
 		subevent.carried_out_by = person
 	return data

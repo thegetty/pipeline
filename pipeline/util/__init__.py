@@ -18,6 +18,8 @@ import pipeline.io.arches
 from cromulent import model, vocab
 from cromulent.model import factory, BaseResource
 
+UNKNOWN_DIMENSION = 'http://vocab.getty.edu/aat/300055642'
+
 # Dimension = namedtuple("Dimension", [
 # 	'value',	# numeric value
 # 	'unit',		# unit
@@ -236,6 +238,9 @@ class CromObjectMerger:
 						unidentified.append(v)
 				except AttributeError:
 					unidentified.append(v)
+		if len(identified) > 1 and UNKNOWN_DIMENSION in identified:
+			# drop the Unknown physical dimension (300055642)
+			del(identified[UNKNOWN_DIMENSION])
 
 	def set_or_merge(self, obj, p, *values):
 		if p == 'type':

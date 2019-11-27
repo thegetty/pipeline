@@ -162,6 +162,16 @@ def add_auction_event(data):
 	data['uid'] = uid
 	data['uri'] = uri
 	add_crom_data(data=data, what=auction)
+	catalog = get_crom_object(data['_catalog'])
+
+	record_uri = pir_uri('AUCTION-EVENT', 'CATALOGNUMBER', cno, 'RECORD')
+	label = f'Record of auction event from catalog {cno}'
+	record = model.LinguisticObject(ident=record_uri, label=label) # TODO: needs classification
+	record_data	= {'uri': record_uri}
+	record_data['identifiers'] = [model.Name(ident='', content=label)]
+	record.part_of = catalog
+
+	data['_record'] = add_crom_data(data=record_data, what=record)
 	return data
 
 #mark - Places
@@ -231,7 +241,7 @@ def populate_auction_event(data, auction_locations):
 	auction.subject_of = catalog
 	return data
 
-def add_auction_house_data(a):
+def add_auction_house_data(a, event_record):
 	'''Add modeling data for an auction house organization.'''
 	catalog = a.get('_catalog')
 
@@ -248,9 +258,9 @@ def add_auction_house_data(a):
 		house = vocab.AuctionHouseOrg(ident=a['uri'])
 	elif auth_name and auth_name not in IGNORE_HOUSE_AUTHNAMES:
 		a['uri'] = pir_uri('AUCTION-HOUSE', 'AUTHNAME', auth_name)
-		a['identifiers'].append(
-			vocab.PrimaryName(ident='', content=auth_name)
-		)
+		pname = vocab.PrimaryName(ident='', content=auth_name)
+		pname.referred_to_by = event_record
+		a['identifiers'].append(pname)
 		house = vocab.AuctionHouseOrg(ident=a['uri'])
 	else:
 		# not enough information to identify this house uniquely, so use the source location in the input file
@@ -260,7 +270,7 @@ def add_auction_house_data(a):
 	name = a.get('auc_house_name') or a.get('name')
 	if name:
 		n = model.Name(ident='', content=name)
-		n.referred_to_by = catalog
+		n.referred_to_by = event_record
 		a['identifiers'].append(n)
 		a['label'] = name
 	else:
@@ -276,16 +286,17 @@ def add_auction_houses(data, auction_houses):
 	event.
 	'''
 	auction = get_crom_object(data)
+	event_record = get_crom_object(data['_record'])
 	catalog = data['_catalog']['_LOD_OBJECT']
 	d = data.copy()
 	houses = data.get('auction_house', [])
 	cno = data['catalog_number']
 
 	house_objects = []
-
+	event_record = get_crom_object(data['_record'])
 	for h in houses:
 		h['_catalog'] = catalog
-		add_auction_house_data(copy_source_information(h, data))
+		add_auction_house_data(copy_source_information(h, data), event_record)
 		house = get_crom_object(h)
 		auction.carried_out_by = house
 		if auction_houses:
@@ -533,7 +544,7 @@ def add_crom_price(data, parent, services):
 	return data
 
 @use('make_la_person')
-def add_person(data: dict, rec_id, *, make_la_person):
+def add_person(data: dict, sales_record, rec_id, *, make_la_person):
 	'''
 	Add modeling data for people, based on properties of the supplied `data` dict.
 
@@ -546,29 +557,33 @@ def add_person(data: dict, rec_id, *, make_la_person):
 
 	auth_name = data.get('auth_name')
 	auth_name_q = '?' in data.get('auth_nameq', '')
+	
 	if ulan:
 		key = f'PERSON-ULAN-{ulan}'
-		data['uid'] = key
 		data['uri'] = pir_uri('PERSON', 'ULAN', ulan)
 		data['ulan'] = ulan
-	elif acceptable_person_auth_name(auth_name) and not auth_name_q:
+		data['uid'] = key
+	elif acceptable_person_auth_name(auth_name):
 		data['uri'] = pir_uri('PERSON', 'AUTHNAME', auth_name)
-		data['identifiers'] = [
-			vocab.PrimaryName(ident='', content=auth_name) # NOTE: most of these are also vocab.SortName, but not 100%, so witholding that assertion for now
-		]
 	else:
 		# not enough information to identify this person uniquely, so use the source location in the input file
+# 			warnings.warn(f'*** Person without a ulan or authority name: {a}')
 		data['uri'] = pir_uri('PERSON', 'PI_REC_NO', data['pi_record_no'], rec_id)
 
-	names = []
-	for name_string in sorted(set([data[k] for k in ('auth_name', 'name') if k in data and data[k]])):
-		if name_string:
-			names.append((name_string,))
-	if names:
-		data['names'] = names
-		data['label'] = names[0][0]
-	else:
-		data['label'] = '(Anonymous person)'
+	
+	if acceptable_person_auth_name(auth_name):
+		data['label'] = auth_name
+		pname = vocab.PrimaryName(ident='', content=auth_name) # NOTE: most of these are also vocab.SortName, but not 100%, so witholding that assertion for now
+		pname.referred_to_by = sales_record
+		data['identifiers'] = [pname]
+
+	name = data.get('name')
+	if name:
+		data['names'] = [(name, {'referred_to_by': [sales_record]})]
+		if 'label' not in data:
+			data['label'] = name
+	if 'label' not in data:
+		data['label'] = '(Anonymous)'
 
 	make_la_person(data)
 	return data
@@ -585,6 +600,7 @@ def final_owner_procurement(final_owner, current_tx, hmo, current_ts):
 @use('make_la_person')
 def add_acquisition(data, buyers, sellers, make_la_person=None):
 	'''Add modeling of an acquisition as a transfer of title from the seller to the buyer'''
+	sales_record = get_crom_object(data['_record'])
 	hmo = get_crom_object(data)
 	parent = data['parent_data']
 # 	transaction = parent['transaction']
@@ -680,9 +696,9 @@ def add_acquisition(data, buyers, sellers, make_la_person=None):
 				owner_record['ulan'] = ulan
 			elif acceptable_person_auth_name(auth_name):
 				owner_record['uri'] = pir_uri('PERSON', 'AUTHNAME', auth_name)
-				owner_record['identifiers'] = [
-					vocab.PrimaryName(ident='', content=auth_name) # NOTE: most of these are also vocab.SortName, but not 100%, so witholding that assertion for now
-				]
+				pname = vocab.PrimaryName(ident='', content=auth_name) # NOTE: most of these are also vocab.SortName, but not 100%, so witholding that assertion for now
+				pname.referred_to_by = sales_record
+				owner_record['identifiers'] = [pname]
 			else:
 				# not enough information to identify this person uniquely, so use the source location in the input file
 				owner_record['uri'] = pir_uri('PERSON', 'PI_REC_NO', data['pi_record_no'], f'{rev_name}-{seq_no+1}')
@@ -690,7 +706,7 @@ def add_acquisition(data, buyers, sellers, make_la_person=None):
 				warnings.warn(f'*** No name for {rev_name}: {owner_record}')
 				pprint.pprint(owner_record)
 			if name:
-				owner_record['names'] = [(name,)]
+				owner_record['names'] = [(name,{'referred_to_by': [sales_record]})]
 			owner_record['label'] = name
 			make_la_person(owner_record)
 			owner = get_crom_object(owner_record)
@@ -813,14 +829,29 @@ def add_bidding(data, buyers):
 def add_acquisition_or_bidding(data, *, make_la_person):
 	'''Determine if this record has an acquisition or bidding, and add appropriate modeling'''
 	parent = data['parent_data']
+	sales_record = get_crom_object(data['_record'])
 	transaction = parent['transaction']
 	transaction = transaction.replace('[?]', '').rstrip()
 
-	buyers = [add_person(copy_source_information(p, parent), f'buyer_{i+1}', make_la_person=make_la_person) for i, p in enumerate(parent['buyer'])]
+	buyers = [
+		add_person(
+			copy_source_information(p, parent),
+			sales_record,
+			f'buyer_{i+1}',
+			make_la_person=make_la_person
+		) for i, p in enumerate(parent['buyer'])
+	]
 
 	# TODO: is this the right set of transaction types to represent acquisition?
 	if transaction in ('Sold', 'Vendu', 'Verkauft', 'Bought In'):
-		sellers = [add_person(copy_source_information(p, parent), f'seller_{i+1}', make_la_person=make_la_person) for i, p in enumerate(parent['seller'])]
+		sellers = [
+			add_person(
+				copy_source_information(p, parent),
+				sales_record,
+				f'seller_{i+1}',
+				make_la_person=make_la_person
+			) for i, p in enumerate(parent['seller'])
+		]
 		data['_owner_locations'] = []
 		yield from add_acquisition(data, buyers, sellers, make_la_person)
 	elif transaction in ('Unknown', 'Unbekannt', 'Inconnue', 'Withdrawn', 'Non Vendu', ''):
@@ -953,7 +984,7 @@ def _populate_object_catalog_record(data, parent, lot, cno, rec_num):
 	record_data['identifiers'] = [model.Name(ident='', content=f'Record of sale {lot_object_id}')]
 	record.part_of = catalog
 
-	data['_sale_record_text'] = add_crom_data(data=record_data, what=record)
+	data['_record'] = add_crom_data(data=record_data, what=record)
 	return record
 
 def _populate_object_destruction(data, parent, destruction_types_map):
@@ -970,7 +1001,7 @@ def _populate_object_visual_item(data, vocab_instance_map):
 	vidata = {'uri': vi_id}
 	if title:
 		vidata['label'] = f'Visual work of “{title}”'
-		sales_record = get_crom_object(data['_sale_record_text'])
+		sales_record = get_crom_object(data['_record'])
 		vidata['names'] = [(title,{'referred_to_by': [sales_record]})]
 
 	genre = genre_instance(data.get('genre'), vocab_instance_map)
@@ -984,14 +1015,14 @@ def _populate_object_statements(data):
 	materials = data.get('materials')
 	if materials:
 		matstmt = vocab.MaterialStatement(ident='', content=materials)
-		sales_record = get_crom_object(data['_sale_record_text'])
+		sales_record = get_crom_object(data['_record'])
 		matstmt.referred_to_by = sales_record
 		hmo.referred_to_by = matstmt
 
 	dimstr = data.get('dimensions')
 	if dimstr:
 		dimstmt = vocab.DimensionStatement(ident='', content=dimstr)
-		sales_record = get_crom_object(data['_sale_record_text'])
+		sales_record = get_crom_object(data['_record'])
 		dimstmt.referred_to_by = sales_record
 		hmo.referred_to_by = dimstmt
 		for dim in extract_physical_dimensions(dimstr):
@@ -1156,27 +1187,24 @@ def add_pir_artists(data, *, make_la_person):
 # 			warnings.warn(f'*** Person without a ulan or authority name: {a}')
 			a['uri'] = pir_uri('PERSON', 'PI_REC_NO', data['pi_record_no'], f'artist-{seq_no+1}')
 
-		names = []
+		sales_record = get_crom_object(data['_record'])
 		artist_label = None
 		if acceptable_person_auth_name(auth_name):
 			a['label'] = auth_name
 			artist_label = f'artist “{auth_name}”'
-			a['identifiers'] = [
-				vocab.PrimaryName(ident='', content=auth_name) # NOTE: most of these are also vocab.SortName, but not 100%, so witholding that assertion for now
-			]
-			names.append(auth_name)
+			pname = vocab.PrimaryName(ident='', content=auth_name) # NOTE: most of these are also vocab.SortName, but not 100%, so witholding that assertion for now
+			pname.referred_to_by = sales_record
+			a['identifiers'] = [pname]
 
-		try:
-			name = a['label']
-			if name:
-				if not artist_label:
-					artist_label = f'artist “{name}”'
-				names.append(auth_name)
-				a['names'] = [(name,)]
-				if 'label' not in a:
-					a['label'] = name
-		except KeyError:
-			a['label'] = '(Anonymous artist)'
+		name = a.get('artist_name')
+		if name:
+			if not artist_label:
+				artist_label = f'artist “{name}”'
+			a['names'] = [(name, {'referred_to_by': [sales_record]})]
+			if 'label' not in a:
+				a['label'] = name
+		if 'label' not in a:
+			a['label'] = '(Anonymous)'
 
 		if not artist_label:
 			artist_label = 'anonymous artist'
@@ -1186,8 +1214,7 @@ def add_pir_artists(data, *, make_la_person):
 		subevent_id = event_id + f'-{seq_no}'
 		subevent = model.Production(ident=subevent_id)
 		event.part = subevent
-		if names:
-			name = names[0]
+		if artist_label:
 			subevent._label = f'Production sub-event for {artist_label}'
 		subevent.carried_out_by = person
 	return data
@@ -1774,7 +1801,7 @@ class ProvenancePipeline(PipelineBase):
 	def add_record_text_chain(self, graph, objects, serialize=True):
 		'''Add transformation of record texts to the bonobo pipeline.'''
 		texts = graph.add_chain(
-			ExtractKeyedValue(key='_sale_record_text'),
+			ExtractKeyedValue(key='_record'),
 			MakeLinkedArtLinguisticObject(),
 			_input=objects.output
 		)

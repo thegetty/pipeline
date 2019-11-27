@@ -513,12 +513,21 @@ class AddAuctionOfLot(Configurable):
 		add_crom_data(data=data, what=lot)
 		yield data
 
-def add_crom_price(data, _):
+def add_crom_price(data, parent, services):
 	'''
 	Add modeling data for `MonetaryAmount`, `StartingPrice`, or `EstimatedPrice`,
 	based on properties of the supplied `data` dict.
 	'''
-	amnt = extract_monetary_amount(data)
+	currencies = services['currencies']
+	region_currencies = services['region_currencies']
+	cno = parent['catalog_number']
+	region, _ = cno.split('-', 1)
+	if region in region_currencies:
+		c = currencies.copy()
+		c.update(region_currencies[region])
+		amnt = extract_monetary_amount(data, currency_mapping=c)
+	else:
+		amnt = extract_monetary_amount(data, currency_mapping=currencies)
 	if amnt:
 		add_crom_data(data=data, what=amnt)
 	return data
@@ -1498,7 +1507,7 @@ class ProvenancePipeline(PipelineBase):
 			self.add_serialization_chain(graph, places.output, model=self.models['Place'])
 		return bid_acqs
 
-	def add_sales_chain(self, graph, records, serialize=True):
+	def add_sales_chain(self, graph, records, services, serialize=True):
 		'''Add transformation of sales records to the bonobo pipeline.'''
 		sales = graph.add_chain(
 			GroupRepeatingKeys(
@@ -1538,7 +1547,7 @@ class ProvenancePipeline(PipelineBase):
 							'sell_auth_mod_a',
 							'sell_ulan')},
 					'price': {
-						'postprocess': add_crom_price,
+						'postprocess': lambda d, p: add_crom_price(d, p, services),
 						'prefixes': (
 							'price_amount',
 							'price_currency',
@@ -1663,21 +1672,21 @@ class ProvenancePipeline(PipelineBase):
 						'post_owner',
 						'portal')},
 				'estimated_price': {
-					'postprocess': add_crom_price,
+					'postprocess': lambda d, p: add_crom_price(d, p, services),
 					'properties': (
 						'est_price',
 						'est_price_curr',
 						'est_price_desc',
 						'est_price_so')},
 				'start_price': {
-					'postprocess': add_crom_price,
+					'postprocess': lambda d, p: add_crom_price(d, p, services),
 					'properties': (
 						'start_price',
 						'start_price_curr',
 						'start_price_desc',
 						'start_price_so')},
 				'ask_price': {
-					'postprocess': add_crom_price,
+					'postprocess': lambda d, p: add_crom_price(d, p, services),
 					'properties': (
 						'ask_price',
 						'ask_price_curr',
@@ -1785,7 +1794,7 @@ class ProvenancePipeline(PipelineBase):
 			self.add_serialization_chain(graph, people.output, model=self.models['Person'])
 		return people
 
-	def _construct_graph(self, single_graph=False):
+	def _construct_graph(self, single_graph=False, services=None):
 		'''
 		Construct bonobo.Graph object(s) for the entire pipeline.
 
@@ -1829,7 +1838,7 @@ class ProvenancePipeline(PipelineBase):
 				CurriedCSVReader(fs='fs.data.provenance', limit=self.limit),
 				AddFieldNames(field_names=self.contents_headers),
 			)
-			sales = self.add_sales_chain(g, contents_records, serialize=True)
+			sales = self.add_sales_chain(g, contents_records, services, serialize=True)
 			_ = self.add_single_object_lot_tracking_chain(g, sales)
 			_ = self.add_lot_set_chain(g, sales, serialize=True)
 			objects = self.add_object_chain(g, sales, serialize=True)
@@ -1847,23 +1856,23 @@ class ProvenancePipeline(PipelineBase):
 			self.graph_1 = graph1
 			self.graph_2 = graph2
 
-	def get_graph(self):
+	def get_graph(self, **kwargs):
 		'''Return a single bonobo.Graph object for the entire pipeline.'''
 		if not self.graph_0:
-			self._construct_graph(single_graph=True)
+			self._construct_graph(single_graph=True, **kwargs)
 
 		return self.graph_0
 
-	def get_graph_1(self):
+	def get_graph_1(self, **kwargs):
 		'''Construct the bonobo pipeline to fully transform Provenance data from CSV to JSON-LD.'''
 		if not self.graph_1:
-			self._construct_graph()
+			self._construct_graph(**kwargs)
 		return self.graph_1
 
-	def get_graph_2(self):
+	def get_graph_2(self, **kwargs):
 		'''Construct the bonobo pipeline to fully transform Provenance data from CSV to JSON-LD.'''
 		if not self.graph_2:
-			self._construct_graph()
+			self._construct_graph(**kwargs)
 		return self.graph_2
 
 	def run(self, services=None, **options):
@@ -1882,11 +1891,11 @@ class ProvenancePipeline(PipelineBase):
 			self.run_graph(g, services={})
 
 		print('Running graph component 1...', file=sys.stderr)
-		graph1 = self.get_graph_1(**options)
+		graph1 = self.get_graph_1(**options, services=services)
 		self.run_graph(graph1, services=services)
 
 		print('Running graph component 2...', file=sys.stderr)
-		graph2 = self.get_graph_2(**options)
+		graph2 = self.get_graph_2(**options, services=services)
 		self.run_graph(graph2, services=services)
 
 	def generate_prev_post_sales_data(self, counter, post_map):

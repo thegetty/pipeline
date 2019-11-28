@@ -1228,7 +1228,7 @@ def add_pir_artists(data, *, attribution_group_types, make_la_person):
 				assignment = model.AttributeAssignment(ident=f'In the style of {artist_label}')
 				event.attributed_by = assignment
 				assignment.assigned_property = "influenced_by"
-				assignment.property_classified_as = vocab.instances['style of']
+# 				assignment.property_classified_as = vocab.instances['style of']
 				assignment.assigned = person
 				continue
 			elif GROUP_MODS & mods:

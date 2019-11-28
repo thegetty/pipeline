@@ -8,6 +8,9 @@ import uuid
 import pprint
 
 from tests import TestWriter, ProvenanceTestPipeline
+from cromulent import vocab
+
+vocab.add_attribute_assignment_check()
 
 class TestProvenancePipelineOutput(unittest.TestCase):
 	'''

@@ -12,6 +12,9 @@ from pathlib import Path
 import warnings
 
 from tests import TestProvenancePipelineOutput
+from cromulent import vocab
+
+vocab.add_attribute_assignment_check()
 
 class PIRModelingTest_MultiLot(TestProvenancePipelineOutput):
 	def test_modeling_for_multi_lot_procurements(self):

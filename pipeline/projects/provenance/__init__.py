@@ -662,8 +662,9 @@ def add_acquisition(data, buyers, sellers, make_la_person=None):
 	data['_acquisition'] = {'uri': acq_id}
 	add_crom_data(data=data['_acquisition'], what=acq)
 
-	final_owner_data = data.get('_final_org')
+	final_owner_data = data.get('_final_org', [])
 	if final_owner_data:
+		data['_organizations'].append(final_owner_data)
 		final_owner = get_crom_object(final_owner_data)
 		tx = final_owner_procurement(final_owner, current_tx, hmo, ts)
 		data['_procurements'].append(add_crom_data(data={}, what=tx))
@@ -810,6 +811,7 @@ def add_bidding(data, buyers):
 
 		final_owner_data = data.get('_final_org')
 		if final_owner_data:
+			data['_organizations'].append(final_owner_data)
 			final_owner = get_crom_object(final_owner_data)
 			ts = lot.timespan
 			hmo = get_crom_object(data)
@@ -1154,10 +1156,12 @@ def add_object_type(data, vocab_type_map):
 
 	return data
 
+@use('attribution_group_types')
 @use('make_la_person')
-def add_pir_artists(data, *, make_la_person):
+def add_pir_artists(data, *, attribution_group_types, make_la_person):
 	'''Add modeling for artists as people involved in the production of an object'''
 	hmo = get_crom_object(data)
+	data['_organizations'] = []
 	try:
 		hmo_label = f'“{hmo._label}”'
 	except AttributeError:
@@ -1170,7 +1174,6 @@ def add_pir_artists(data, *, make_la_person):
 
 	data['_artists'] = artists
 	for seq_no, a in enumerate(artists):
-		# TODO: handle attrib_mod_auth field
 		ulan = None
 		with suppress(ValueError, TypeError):
 			ulan = int(a.get('artist_ulan'))
@@ -1211,11 +1214,47 @@ def add_pir_artists(data, *, make_la_person):
 
 		make_la_person(a)
 		person = get_crom_object(a)
+		
+		mod = a.get('attrib_mod_auth')
+		if mod:
+			mods = {m.lower().strip() for m in mod.split(';')}
+			
+			# TODO: this should probably be in its own JSON service file:
+			STYLE_OF = {'dans la manière de', 'dans le genre de', 'dans le goùt de', 'gout de', 'dans le style de', 'de la manière de', 'à la maniere de', 'genre', 'genre de', 'imitation de', 'maniere', 'maniere de', 'style de', 'style', 'sur la mode de', 'manner of', 'imitation of', 'style of', 'in the manner of', 'style', 'Geschmack von', 'imitation nach', 'stil'}
+			
+			GROUP_TYPES = set(attribution_group_types.values())
+			GROUP_MODS = {k for k, v in attribution_group_types.items() if v in GROUP_TYPES}
+			if STYLE_OF & mods:
+				assignment = model.AttributeAssignment(ident=f'In the style of {artist_label}')
+				event.attributed_by = assignment
+				assignment.assigned_property = "influenced_by"
+				assignment.property_classified_as = vocab.instances['style of']
+				assignment.assigned = person
+				continue
+			elif GROUP_MODS & mods:
+				mod_name = list(GROUP_MODS & mods)[0] # TODO: use all matching types?
+				clsname = attribution_group_types[mod_name]
+				cls = getattr(vocab, clsname)
+				style_prod_uri = event_id + f'-style-{seq_no}'
+				group_label = f'{clsname} of {artist_label}'
+				group = cls(ident=a['uri'] + '-{clsname}', label=group_label)
+				formation = model.Formation(ident='', label=f'')
+				formation.influenced_by = person
+				group.formed_by = formation
+				data['_organizations'].append(add_crom_data({}, group))
+				subevent_id = event_id + f'-{seq_no}'
+				subevent = model.Production(ident=subevent_id, label=f'Production sub-event for {group_label}')
+				event.part = subevent
+				subevent.carried_out_by = group
+				continue
+			else:
+				print(f'UNHANDLED attrib_mod_auth VALUE: {mod}')
+				pprint.pprint(a)
+				continue
+		
 		subevent_id = event_id + f'-{seq_no}'
-		subevent = model.Production(ident=subevent_id)
+		subevent = model.Production(ident=subevent_id, label=f'Production sub-event for {artist_label}')
 		event.part = subevent
-		if artist_label:
-			subevent._label = f'Production sub-event for {artist_label}'
 		subevent.carried_out_by = person
 	return data
 
@@ -1515,7 +1554,7 @@ class ProvenancePipeline(PipelineBase):
 			_input=sales.output
 		)
 		orgs = graph.add_chain(
-			ExtractKeyedValue(key='_final_org'),
+			ExtractKeyedValues(key='_organizations'),
 			_input=bid_acqs.output
 		)
 		bids = graph.add_chain(

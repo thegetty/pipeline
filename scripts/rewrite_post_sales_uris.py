@@ -25,7 +25,8 @@ rewrite_map_filename = sys.argv[1]
 with open(rewrite_map_filename, 'r') as f:
 	post_sale_rewrite_map = json.load(f)
 	post_sale_rewrite_map = prev_post_sales_rewrite_map(post_sale_rewrite_map)
-	print('Post sales rewrite map:')
-	pprint.pprint(post_sale_rewrite_map)
+# 	print('Post sales rewrite map:')
+# 	pprint.pprint(post_sale_rewrite_map)
 	r = JSONValueRewriter(post_sale_rewrite_map)
 	rewrite_output_files(r, parallel=True)
+print('Done')

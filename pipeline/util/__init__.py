@@ -509,3 +509,20 @@ class CaseFoldingSet(set):
 
 	def __contains__(self, v):
 		return super().__contains__(v.casefold())
+
+def truncate_with_ellipsis(s, length=100):
+	'''
+	If the string is too long to represent as a title-like identifier, return a new,
+	truncated string with a trailing ellipsis that can be used as a title (with the
+	assumption that the long original value will be represented as a more suitable
+	string such as a description).
+	'''
+	if len(s) <= length:
+		return None
+	shorter = ' '.join(s[:length].split(' ')[0:-1]) + '…'
+	if len(shorter) == 1:
+		# breaking on spaces did not yield a shorter string;
+		# {s} must start with at least 100 non-space characters
+		shorter = s[:length-1] + '…'
+	return shorter
+

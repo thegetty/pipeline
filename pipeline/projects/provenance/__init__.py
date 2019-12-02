@@ -1156,12 +1156,15 @@ def add_object_type(data, vocab_type_map):
 
 	return data
 
+@use('attribution_modifiers')
 @use('attribution_group_types')
 @use('make_la_person')
-def add_pir_artists(data, *, attribution_group_types, make_la_person):
+def add_pir_artists(data, *, attribution_modifiers, attribution_group_types, make_la_person):
 	'''Add modeling for artists as people involved in the production of an object'''
 	hmo = get_crom_object(data)
 	data['_organizations'] = []
+	data['_original_objects'] = []
+	
 	try:
 		hmo_label = f'“{hmo._label}”'
 	except AttributeError:
@@ -1220,15 +1223,28 @@ def add_pir_artists(data, *, attribution_group_types, make_la_person):
 			mods = {m.lower().strip() for m in mod.split(';')}
 			
 			# TODO: this should probably be in its own JSON service file:
-			STYLE_OF = {'dans la manière de', 'dans le genre de', 'dans le goùt de', 'gout de', 'dans le style de', 'de la manière de', 'à la maniere de', 'genre', 'genre de', 'imitation de', 'maniere', 'maniere de', 'style de', 'style', 'sur la mode de', 'manner of', 'imitation of', 'style of', 'in the manner of', 'style', 'Geschmack von', 'imitation nach', 'stil'}
-			
+			STYLE_OF = set(attribution_modifiers['style of'])
+			FORMERLY_ATTRIBUTED_TO = set(attribution_modifiers['formerly attributed to'])
+			ATTRIBUTED_TO = set(attribution_modifiers['attributed to'])
+			COPY_AFTER = set(attribution_modifiers['copy after'])
+			PROBABLY = set(attribution_modifiers['probably by'])
+			POSSIBLY = set(attribution_modifiers['possibly by'])
+			UNCERTAIN = PROBABLY | POSSIBLY
+
 			GROUP_TYPES = set(attribution_group_types.values())
 			GROUP_MODS = {k for k, v in attribution_group_types.items() if v in GROUP_TYPES}
-			if STYLE_OF & mods:
-				assignment = model.AttributeAssignment(ident=f'In the style of {artist_label}')
+			
+			if 'or' in mods:
+				warnings.warn('Handle OR attribution modifier') # TODO: some way to model this uncertainty?
+			
+			if 'copy by' in mods:
+				# equivalent to no modifier
+				pass
+			elif STYLE_OF & mods:
+				assignment = model.AttributeAssignment(label=f'In the style of {artist_label}')
 				event.attributed_by = assignment
 				assignment.assigned_property = "influenced_by"
-# 				assignment.property_classified_as = vocab.instances['style of']
+# 				assignment.property_classified_as = vocab.instances['style of'] # TODO
 				assignment.assigned = person
 				continue
 			elif GROUP_MODS & mods:
@@ -1247,6 +1263,48 @@ def add_pir_artists(data, *, attribution_group_types, make_la_person):
 				event.part = subevent
 				subevent.carried_out_by = group
 				continue
+			elif (FORMERLY_ATTRIBUTED_TO | ATTRIBUTED_TO) & mods:
+				assignment = model.AttributeAssignment()
+				event.attributed_by = assignment
+				assignment.assigned_property = "carried_out_by"
+				if FORMERLY_ATTRIBUTED_TO & mods:
+					assignment._label = f'Formerly attributed to {artist_label}'
+					assignment.classified_as = vocab.instances['obsolete']
+				else:
+					assignment._label = f'Attributed to {artist_label}'
+				assignment.assigned = person
+				continue
+			elif UNCERTAIN & mods:
+				assignment = model.AttributeAssignment()
+				event.attributed_by = assignment
+				assignment.assigned_property = "carried_out_by"
+				if POSSIBLY & mods:
+					assignment.classified_as = vocab.instances['possibly by']
+					assignment._label = f'Possibly by {artist_label}'
+				else:
+					assignment.classified_as = vocab.instances['probably by']
+					assignment._label = f'Probably by {artist_label}'
+				assignment.assigned = person
+				continue
+			elif COPY_AFTER & mods:
+				cls = type(hmo)
+				original_id = hmo.id + '-Original'
+				original_label = f'Original of {hmo_label}'
+				original_hmo = cls(ident=original_id, label=original_label)
+				original_event_id = original_hmo.id + '-Production'
+				original_event = model.Production(ident=original_event_id, label=f'Production event for {original_label}')
+				original_hmo.produced_by = original_event
+
+				original_subevent_id = original_event_id + f'-{seq_no}'
+				original_subevent = model.Production(ident=original_subevent_id, label=f'Production sub-event for {artist_label}')
+				original_event.part = original_subevent
+				original_subevent.carried_out_by = person
+
+				event.influenced_by = original_hmo
+				data['_original_objects'].append(add_crom_data(data={}, what=original_hmo))
+				continue
+			elif 'or' in mods:
+				pass
 			else:
 				print(f'UNHANDLED attrib_mod_auth VALUE: {mod}')
 				pprint.pprint(a)
@@ -1784,9 +1842,14 @@ class ProvenancePipeline(PipelineBase):
 			_input=sales.output
 		)
 
+		original_objects = graph.add_chain(
+			ExtractKeyedValues(key='_original_objects'),
+			_input=objects.output
+		)
 		if serialize:
 			# write OBJECTS data
 			self.add_serialization_chain(graph, objects.output, model=self.models['HumanMadeObject'])
+			self.add_serialization_chain(graph, original_objects.output, model=self.models['HumanMadeObject'])
 
 		return objects
 

@@ -41,6 +41,7 @@ import pipeline.execution
 from pipeline.projects import PipelineBase
 from pipeline.projects.provenance.util import *
 from pipeline.util import \
+			truncate_with_ellipsis, \
 			CaseFoldingSet, \
 			RecursiveExtractKeyedValue, \
 			ExtractKeyedValue, \
@@ -966,6 +967,12 @@ def populate_object(data, post_sale_map, unique_catalogs, vocab_instance_map, de
 	if 'title' in data:
 		title = data['title']
 		del(data['title'])
+		shorter = truncate_with_ellipsis(title, 100)
+		if shorter:
+			description = vocab.Description(ident='', content=title)
+			description.referred_to_by = record
+			hmo.referred_to_by = description
+			title = shorter
 		t = vocab.PrimaryName(ident='', content=title)
 		t.classified_as = model.Type(ident='http://vocab.getty.edu/aat/300417193', label='Title')
 		t.referred_to_by = record
@@ -995,6 +1002,7 @@ def _populate_object_destruction(data, parent, destruction_types_map):
 def _populate_object_visual_item(data, vocab_instance_map):
 	hmo = get_crom_object(data)
 	title = data.get('title')
+	title = truncate_with_ellipsis(title, 100) or title
 
 	vi_id = hmo.id + '-VisualItem'
 	vi = model.VisualItem(ident=vi_id)

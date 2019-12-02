@@ -1279,10 +1279,10 @@ def add_pir_artists(data, *, attribution_modifiers, attribution_group_types, mak
 				event.attributed_by = assignment
 				assignment.assigned_property = "carried_out_by"
 				if POSSIBLY & mods:
-					assignment.classified_as = vocab.instances['possibly by']
+					assignment.classified_as = vocab.instances['possibly']
 					assignment._label = f'Possibly by {artist_label}'
 				else:
-					assignment.classified_as = vocab.instances['probably by']
+					assignment.classified_as = vocab.instances['probably']
 					assignment._label = f'Probably by {artist_label}'
 				assignment.assigned = person
 				continue

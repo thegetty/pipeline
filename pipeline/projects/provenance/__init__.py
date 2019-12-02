@@ -599,7 +599,7 @@ def final_owner_procurement(final_owner, current_tx, hmo, current_ts):
 	return tx
 
 @use('make_la_person')
-def add_acquisition(data, buyers, sellers, make_la_person=None):
+def add_acquisition(data, buyers, sellers, buy_sell_modifiers, make_la_person=None):
 	'''Add modeling of an acquisition as a transfer of title from the seller to the buyer'''
 	sales_record = get_crom_object(data['_record'])
 	hmo = get_crom_object(data)
@@ -635,12 +635,41 @@ def add_acquisition(data, buyers, sellers, make_la_person=None):
 	paym_label = f'multiple lots {multi}' if multi else object_label
 	paym = model.Payment(ident=payment_id, label=f'Payment for {paym_label}')
 
-	for seller in [get_crom_object(s) for s in sellers]:
-		paym.paid_to = seller
-		acq.transferred_title_from = seller
-	for buyer in [get_crom_object(b) for b in buyers]:
-		paym.paid_from = buyer
-		acq.transferred_title_to = buyer
+	THROUGH = set(buy_sell_modifiers['through'])
+	FOR = set(buy_sell_modifiers['for'])
+
+	for seller_data in sellers:
+		seller = get_crom_object(seller_data)
+		mod = seller_data.get('auth_mod_a', '')
+
+		if 'or' == mod:
+			warnings.warn('Handle OR buyer modifier') # TODO: some way to model this uncertainty?
+
+		if mod in THROUGH:
+			paym.paid_to = seller
+		elif mod in FOR:
+			acq.transferred_title_from = seller
+		else:
+			# covers non-modified as well as 'for'
+			paym.paid_to = seller
+			acq.transferred_title_from = seller
+
+	for buyer_data in buyers:
+		buyer = get_crom_object(buyer_data)
+		mod = buyer_data.get('auth_mod_a', '')
+		
+		if 'or' in mod:
+			# or/or others/or another
+			warnings.warn(f'Handle buyer modifier: {mod}') # TODO: some way to model this uncertainty?
+
+		if mod in THROUGH:
+			paym.paid_from = buyer
+		elif mod in FOR:
+			acq.transferred_title_to = buyer
+		else:
+			# covers non-modified as well as 'for'
+			paym.paid_from = buyer
+			acq.transferred_title_to = buyer
 
 	if len(amnts) > 1:
 		warnings.warn(f'Multiple Payment.paid_amount values for object {hmo.id} ({payment_id})')
@@ -660,8 +689,7 @@ def add_acquisition(data, buyers, sellers, make_la_person=None):
 	# TODO: `annotation` here is from add_physical_catalog_objects
 # 	paym.referred_to_by = annotation
 
-	data['_acquisition'] = {'uri': acq_id}
-	add_crom_data(data=data['_acquisition'], what=acq)
+	data['_acquisition'] = add_crom_data(data={'uri': acq_id}, what=acq)
 
 	final_owner_data = data.get('_final_org')
 	if final_owner_data:
@@ -826,8 +854,9 @@ def add_bidding(data, buyers):
 		pass
 		warnings.warn(f'*** No price data found for {parent["transaction"]!r} transaction')
 
+@use('buy_sell_modifiers')
 @use('make_la_person')
-def add_acquisition_or_bidding(data, *, make_la_person):
+def add_acquisition_or_bidding(data, *, buy_sell_modifiers, make_la_person):
 	'''Determine if this record has an acquisition or bidding, and add appropriate modeling'''
 	parent = data['parent_data']
 	sales_record = get_crom_object(data['_record'])
@@ -854,7 +883,7 @@ def add_acquisition_or_bidding(data, *, make_la_person):
 			) for i, p in enumerate(parent['seller'])
 		]
 		data['_owner_locations'] = []
-		yield from add_acquisition(data, buyers, sellers, make_la_person)
+		yield from add_acquisition(data, buyers, sellers, buy_sell_modifiers, make_la_person)
 	elif transaction in ('Unknown', 'Unbekannt', 'Inconnue', 'Withdrawn', 'Non Vendu', ''):
 		yield from add_bidding(data, buyers)
 	else:

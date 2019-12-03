@@ -646,11 +646,13 @@ def add_acquisition(data, buyers, sellers, buy_sell_modifiers, make_la_person=No
 			warnings.warn('Handle OR buyer modifier') # TODO: some way to model this uncertainty?
 
 		if mod in THROUGH:
+			acq.carried_out_by = seller
 			paym.paid_to = seller
 		elif mod in FOR:
 			acq.transferred_title_from = seller
 		else:
 			# covers non-modified
+			acq.carried_out_by = seller
 			paym.paid_to = seller
 			acq.transferred_title_from = seller
 
@@ -663,11 +665,13 @@ def add_acquisition(data, buyers, sellers, buy_sell_modifiers, make_la_person=No
 			warnings.warn(f'Handle buyer modifier: {mod}') # TODO: some way to model this uncertainty?
 
 		if mod in THROUGH:
+			acq.carried_out_by = buyer
 			paym.paid_from = buyer
 		elif mod in FOR:
 			acq.transferred_title_to = buyer
 		else:
 			# covers non-modified
+			acq.carried_out_by = buyer
 			paym.paid_from = buyer
 			acq.transferred_title_to = buyer
 

@@ -1240,11 +1240,14 @@ def add_pir_artists(data, *, attribution_modifiers, attribution_group_types, mak
 			if 'copy by' in mods:
 				# equivalent to no modifier
 				pass
+			elif ATTRIBUTED_TO & mods:
+				# equivalent to no modifier
+				pass
 			elif STYLE_OF & mods:
 				assignment = model.AttributeAssignment(label=f'In the style of {artist_label}')
 				event.attributed_by = assignment
 				assignment.assigned_property = "influenced_by"
-# 				assignment.property_classified_as = vocab.instances['style of'] # TODO
+				assignment.property_classified_as = vocab.instances['style of']
 				assignment.assigned = person
 				continue
 			elif GROUP_MODS & mods:
@@ -1253,33 +1256,30 @@ def add_pir_artists(data, *, attribution_modifiers, attribution_group_types, mak
 				cls = getattr(vocab, clsname)
 				style_prod_uri = event_id + f'-style-{seq_no}'
 				group_label = f'{clsname} of {artist_label}'
-				group = cls(ident=a['uri'] + '-{clsname}', label=group_label)
-				formation = model.Formation(ident='', label=f'')
+				group_id = a['uri'] + f'-{clsname}'
+				group = cls(ident=group_id, label=group_label)
+				formation = model.Formation(ident='', label=f'Formation of {group_label}')
 				formation.influenced_by = person
 				group.formed_by = formation
-				data['_organizations'].append(add_crom_data({}, group))
+				group_data = add_crom_data({'uri': group_id}, group)
+				data['_organizations'].append(group_data)
 				subevent_id = event_id + f'-{seq_no}'
 				subevent = model.Production(ident=subevent_id, label=f'Production sub-event for {group_label}')
 				event.part = subevent
 				subevent.carried_out_by = group
 				continue
-			elif (FORMERLY_ATTRIBUTED_TO | ATTRIBUTED_TO) & mods:
-				if FORMERLY_ATTRIBUTED_TO & mods:
-					assignment = vocab.ObsoleteAssignment()
-					assignment._label = f'Formerly attributed to {artist_label}'
-				else:
-					assignment = model.AttributeAssignment()
-					assignment._label = f'Attributed to {artist_label}'
+			elif FORMERLY_ATTRIBUTED_TO & mods:
+				assignment = vocab.ObsoleteAssignment(ident='', label=f'Formerly attributed to {artist_label}')
 				event.attributed_by = assignment
 				assignment.assigned_property = "carried_out_by"
 				assignment.assigned = person
 				continue
 			elif UNCERTAIN & mods:
 				if POSSIBLY & mods:
-					assignment = vocab.PossibleAssignment()
+					assignment = vocab.PossibleAssignment(ident='', label=f'Possibly attributed to {artist_label}')
 					assignment._label = f'Possibly by {artist_label}'
 				else:
-					assignment = vocab.ProbableAssignment()
+					assignment = vocab.ProbableAssignment(ident='', label=f'Probably attributed to {artist_label}')
 					assignment._label = f'Probably by {artist_label}'
 				event.attributed_by = assignment
 				assignment.assigned_property = "carried_out_by"

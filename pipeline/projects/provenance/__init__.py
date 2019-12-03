@@ -1264,26 +1264,25 @@ def add_pir_artists(data, *, attribution_modifiers, attribution_group_types, mak
 				subevent.carried_out_by = group
 				continue
 			elif (FORMERLY_ATTRIBUTED_TO | ATTRIBUTED_TO) & mods:
-				assignment = model.AttributeAssignment()
+				if FORMERLY_ATTRIBUTED_TO & mods:
+					assignment = vocab.ObsoleteAssignment()
+					assignment._label = f'Formerly attributed to {artist_label}'
+				else:
+					assignment = model.AttributeAssignment()
+					assignment._label = f'Attributed to {artist_label}'
 				event.attributed_by = assignment
 				assignment.assigned_property = "carried_out_by"
-				if FORMERLY_ATTRIBUTED_TO & mods:
-					assignment._label = f'Formerly attributed to {artist_label}'
-					assignment.classified_as = vocab.instances['obsolete']
-				else:
-					assignment._label = f'Attributed to {artist_label}'
 				assignment.assigned = person
 				continue
 			elif UNCERTAIN & mods:
-				assignment = model.AttributeAssignment()
-				event.attributed_by = assignment
-				assignment.assigned_property = "carried_out_by"
 				if POSSIBLY & mods:
-					assignment.classified_as = vocab.instances['possibly']
+					assignment = vocab.PossibleAssignment()
 					assignment._label = f'Possibly by {artist_label}'
 				else:
-					assignment.classified_as = vocab.instances['probably']
+					assignment = vocab.ProbableAssignment()
 					assignment._label = f'Probably by {artist_label}'
+				event.attributed_by = assignment
+				assignment.assigned_property = "carried_out_by"
 				assignment.assigned = person
 				continue
 			elif COPY_AFTER & mods:

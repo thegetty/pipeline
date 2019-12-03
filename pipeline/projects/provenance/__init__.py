@@ -824,8 +824,8 @@ def add_bidding(data, buyers):
 		add_crom_data(data=data['_bidding'], what=all_bids)
 		yield data
 	else:
-		pass
 		warnings.warn(f'*** No price data found for {parent["transaction"]!r} transaction')
+		yield data
 
 @use('make_la_person')
 def add_acquisition_or_bidding(data, *, make_la_person):

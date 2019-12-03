@@ -34,6 +34,7 @@ if __name__ == '__main__':
 
 #	factory.production_mode()
 	vocab.add_linked_art_boundary_check()
+	vocab.add_attribute_assignment_check()
 
 	print_dot = False
 	if 'dot' in sys.argv[1:]:

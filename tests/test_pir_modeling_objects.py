@@ -11,6 +11,9 @@ from pathlib import Path
 import warnings
 
 from tests import TestProvenancePipelineOutput
+from cromulent import vocab
+
+vocab.add_attribute_assignment_check()
 
 class PIRModelingTest_Objects(TestProvenancePipelineOutput):
 	def test_modeling_for_objects(self):

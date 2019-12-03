@@ -517,6 +517,8 @@ def truncate_with_ellipsis(s, length=100):
 	assumption that the long original value will be represented as a more suitable
 	string such as a description).
 	'''
+	if not isinstance(s, str):
+		return None
 	if len(s) <= length:
 		return None
 	shorter = ' '.join(s[:length].split(' ')[0:-1]) + '…'

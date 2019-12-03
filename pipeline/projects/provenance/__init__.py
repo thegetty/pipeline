@@ -799,7 +799,7 @@ def related_procurement(current_tx, hmo, current_ts=None, buyer=None, seller=Non
 			pacq.timespan = timespan_after(current_ts)
 	return tx
 
-def add_bidding(data, buyers):
+def add_bidding(data, buyers, buy_sell_modifiers):
 	'''Add modeling of bids that did not lead to an acquisition'''
 	parent = data['parent_data']
 	prices = parent['price']
@@ -814,6 +814,9 @@ def add_bidding(data, buyers):
 		all_bids = model.Activity(ident=bidding_id, label=f'Bidding on {cno} {lno} ({date})')
 
 		all_bids.part_of = lot
+
+		THROUGH = set(buy_sell_modifiers['through'])
+		FOR = set(buy_sell_modifiers['for'])
 
 		for seq_no, amnt in enumerate(amnts):
 			bid_id = hmo.id + f'-Bid-{seq_no}'
@@ -832,8 +835,16 @@ def add_bidding(data, buyers):
 
 			# TODO: there are often no buyers listed for non-sold records.
 			#       should we construct an anonymous person to carry out the bid?
-			for buyer in [get_crom_object(b) for b in buyers]:
-				bid.carried_out_by = buyer
+			for buyer_data in buyers:
+				buyer = get_crom_object(buyer_data)
+				mod = buyer_data.get('auth_mod_a', '')
+				if mod in THROUGH:
+					bid.carried_out_by = buyer
+				elif mod in FOR:
+					warnings.warn(f'buyer modifier {mod} for non-sale bidding: {cno} {lno} {date}')
+					pass
+				else:
+					bid.carried_out_by = buyer
 
 			all_bids.part = bid
 
@@ -885,7 +896,7 @@ def add_acquisition_or_bidding(data, *, buy_sell_modifiers, make_la_person):
 		data['_owner_locations'] = []
 		yield from add_acquisition(data, buyers, sellers, buy_sell_modifiers, make_la_person)
 	elif transaction in ('Unknown', 'Unbekannt', 'Inconnue', 'Withdrawn', 'Non Vendu', ''):
-		yield from add_bidding(data, buyers)
+		yield from add_bidding(data, buyers, buy_sell_modifiers)
 	else:
 		warnings.warn(f'Cannot create acquisition data for unknown transaction type: {transaction!r}')
 

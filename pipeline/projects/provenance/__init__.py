@@ -650,7 +650,7 @@ def add_acquisition(data, buyers, sellers, buy_sell_modifiers, make_la_person=No
 		elif mod in FOR:
 			acq.transferred_title_from = seller
 		else:
-			# covers non-modified as well as 'for'
+			# covers non-modified
 			paym.paid_to = seller
 			acq.transferred_title_from = seller
 
@@ -667,7 +667,7 @@ def add_acquisition(data, buyers, sellers, buy_sell_modifiers, make_la_person=No
 		elif mod in FOR:
 			acq.transferred_title_to = buyer
 		else:
-			# covers non-modified as well as 'for'
+			# covers non-modified
 			paym.paid_from = buyer
 			acq.transferred_title_to = buyer
 

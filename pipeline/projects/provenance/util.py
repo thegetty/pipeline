@@ -71,7 +71,7 @@ def add_pir_object_uri(data, parent):
 def prev_post_sales_rewrite_map(map_data):
 	post_sale_rewrite_map = map_data.copy()
 	also_rewrite = {}
-	also_rewrite_suffixes = ['Production', 'Destruction', 'VisualItem']
+	also_rewrite_suffixes = ['Production', 'Destruction', 'VisualItem', 'Original', 'Original-Production', 'Original-Production-1']
 	also_rewrite_suffixes += [f'Production-{i}' for i in range(6)]
 	for k, v in post_sale_rewrite_map.items():
 		for suffix in also_rewrite_suffixes:

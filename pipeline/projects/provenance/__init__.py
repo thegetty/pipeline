@@ -663,8 +663,9 @@ def add_acquisition(data, buyers, sellers, make_la_person=None):
 	data['_acquisition'] = {'uri': acq_id}
 	add_crom_data(data=data['_acquisition'], what=acq)
 
-	final_owner_data = data.get('_final_org')
+	final_owner_data = data.get('_final_org', [])
 	if final_owner_data:
+		data['_organizations'].append(final_owner_data)
 		final_owner = get_crom_object(final_owner_data)
 		tx = final_owner_procurement(final_owner, current_tx, hmo, ts)
 		data['_procurements'].append(add_crom_data(data={}, what=tx))
@@ -811,6 +812,7 @@ def add_bidding(data, buyers):
 
 		final_owner_data = data.get('_final_org')
 		if final_owner_data:
+			data['_organizations'].append(final_owner_data)
 			final_owner = get_crom_object(final_owner_data)
 			ts = lot.timespan
 			hmo = get_crom_object(data)
@@ -823,8 +825,8 @@ def add_bidding(data, buyers):
 		add_crom_data(data=data['_bidding'], what=all_bids)
 		yield data
 	else:
-		pass
 		warnings.warn(f'*** No price data found for {parent["transaction"]!r} transaction')
+		yield data
 
 @use('make_la_person')
 def add_acquisition_or_bidding(data, *, make_la_person):
@@ -1162,10 +1164,15 @@ def add_object_type(data, vocab_type_map):
 
 	return data
 
+@use('attribution_modifiers')
+@use('attribution_group_types')
 @use('make_la_person')
-def add_pir_artists(data, *, make_la_person):
+def add_pir_artists(data, *, attribution_modifiers, attribution_group_types, make_la_person):
 	'''Add modeling for artists as people involved in the production of an object'''
 	hmo = get_crom_object(data)
+	data['_organizations'] = []
+	data['_original_objects'] = []
+	
 	try:
 		hmo_label = f'“{hmo._label}”'
 	except AttributeError:
@@ -1178,7 +1185,6 @@ def add_pir_artists(data, *, make_la_person):
 
 	data['_artists'] = artists
 	for seq_no, a in enumerate(artists):
-		# TODO: handle attrib_mod_auth field
 		ulan = None
 		with suppress(ValueError, TypeError):
 			ulan = int(a.get('artist_ulan'))
@@ -1219,11 +1225,101 @@ def add_pir_artists(data, *, make_la_person):
 
 		make_la_person(a)
 		person = get_crom_object(a)
+		
+		mod = a.get('attrib_mod_auth')
+		if mod:
+			mods = {m.lower().strip() for m in mod.split(';')}
+			
+			# TODO: this should probably be in its own JSON service file:
+			STYLE_OF = set(attribution_modifiers['style of'])
+			FORMERLY_ATTRIBUTED_TO = set(attribution_modifiers['formerly attributed to'])
+			ATTRIBUTED_TO = set(attribution_modifiers['attributed to'])
+			COPY_AFTER = set(attribution_modifiers['copy after'])
+			PROBABLY = set(attribution_modifiers['probably by'])
+			POSSIBLY = set(attribution_modifiers['possibly by'])
+			UNCERTAIN = PROBABLY | POSSIBLY
+
+			GROUP_TYPES = set(attribution_group_types.values())
+			GROUP_MODS = {k for k, v in attribution_group_types.items() if v in GROUP_TYPES}
+			
+			if 'or' in mods:
+				warnings.warn('Handle OR attribution modifier') # TODO: some way to model this uncertainty?
+			
+			if 'copy by' in mods:
+				# equivalent to no modifier
+				pass
+			elif ATTRIBUTED_TO & mods:
+				# equivalent to no modifier
+				pass
+			elif STYLE_OF & mods:
+				assignment = model.AttributeAssignment(label=f'In the style of {artist_label}')
+				event.attributed_by = assignment
+				assignment.assigned_property = "influenced_by"
+				assignment.property_classified_as = vocab.instances['style of']
+				assignment.assigned = person
+				continue
+			elif GROUP_MODS & mods:
+				mod_name = list(GROUP_MODS & mods)[0] # TODO: use all matching types?
+				clsname = attribution_group_types[mod_name]
+				cls = getattr(vocab, clsname)
+				style_prod_uri = event_id + f'-style-{seq_no}'
+				group_label = f'{clsname} of {artist_label}'
+				group_id = a['uri'] + f'-{clsname}'
+				group = cls(ident=group_id, label=group_label)
+				formation = model.Formation(ident='', label=f'Formation of {group_label}')
+				formation.influenced_by = person
+				group.formed_by = formation
+				group_data = add_crom_data({'uri': group_id}, group)
+				data['_organizations'].append(group_data)
+				subevent_id = event_id + f'-{seq_no}'
+				subevent = model.Production(ident=subevent_id, label=f'Production sub-event for {group_label}')
+				event.part = subevent
+				subevent.carried_out_by = group
+				continue
+			elif FORMERLY_ATTRIBUTED_TO & mods:
+				assignment = vocab.ObsoleteAssignment(ident='', label=f'Formerly attributed to {artist_label}')
+				event.attributed_by = assignment
+				assignment.assigned_property = "carried_out_by"
+				assignment.assigned = person
+				continue
+			elif UNCERTAIN & mods:
+				if POSSIBLY & mods:
+					assignment = vocab.PossibleAssignment(ident='', label=f'Possibly attributed to {artist_label}')
+					assignment._label = f'Possibly by {artist_label}'
+				else:
+					assignment = vocab.ProbableAssignment(ident='', label=f'Probably attributed to {artist_label}')
+					assignment._label = f'Probably by {artist_label}'
+				event.attributed_by = assignment
+				assignment.assigned_property = "carried_out_by"
+				assignment.assigned = person
+				continue
+			elif COPY_AFTER & mods:
+				cls = type(hmo)
+				original_id = hmo.id + '-Original'
+				original_label = f'Original of {hmo_label}'
+				original_hmo = cls(ident=original_id, label=original_label)
+				original_event_id = original_hmo.id + '-Production'
+				original_event = model.Production(ident=original_event_id, label=f'Production event for {original_label}')
+				original_hmo.produced_by = original_event
+
+				original_subevent_id = original_event_id + f'-{seq_no}'
+				original_subevent = model.Production(ident=original_subevent_id, label=f'Production sub-event for {artist_label}')
+				original_event.part = original_subevent
+				original_subevent.carried_out_by = person
+
+				event.influenced_by = original_hmo
+				data['_original_objects'].append(add_crom_data(data={}, what=original_hmo))
+				continue
+			elif 'or' in mods:
+				pass
+			else:
+				print(f'UNHANDLED attrib_mod_auth VALUE: {mod}')
+				pprint.pprint(a)
+				continue
+		
 		subevent_id = event_id + f'-{seq_no}'
-		subevent = model.Production(ident=subevent_id)
+		subevent = model.Production(ident=subevent_id, label=f'Production sub-event for {artist_label}')
 		event.part = subevent
-		if artist_label:
-			subevent._label = f'Production sub-event for {artist_label}'
 		subevent.carried_out_by = person
 	return data
 
@@ -1523,7 +1619,7 @@ class ProvenancePipeline(PipelineBase):
 			_input=sales.output
 		)
 		orgs = graph.add_chain(
-			ExtractKeyedValue(key='_final_org'),
+			ExtractKeyedValues(key='_organizations'),
 			_input=bid_acqs.output
 		)
 		bids = graph.add_chain(
@@ -1753,9 +1849,14 @@ class ProvenancePipeline(PipelineBase):
 			_input=sales.output
 		)
 
+		original_objects = graph.add_chain(
+			ExtractKeyedValues(key='_original_objects'),
+			_input=objects.output
+		)
 		if serialize:
 			# write OBJECTS data
 			self.add_serialization_chain(graph, objects.output, model=self.models['HumanMadeObject'])
+			self.add_serialization_chain(graph, original_objects.output, model=self.models['HumanMadeObject'])
 
 		return objects
 

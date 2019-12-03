@@ -12,6 +12,9 @@ import warnings
 
 from pipeline.projects.provenance.util import pir_uri
 from tests import TestProvenancePipelineOutput
+from cromulent import vocab
+
+vocab.add_attribute_assignment_check()
 
 class PIRModelingTest_MultiArtist(TestProvenancePipelineOutput):
 	def test_modeling_for_multi_artists(self):

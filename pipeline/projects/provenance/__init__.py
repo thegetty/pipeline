@@ -643,6 +643,9 @@ def add_acquisition(data, buyers, sellers, buy_sell_modifiers, make_la_person=No
 		mod = seller_data.get('auth_mod_a', '')
 
 		if 'or' == mod:
+			mod_non_auth = seller_data.get('auth_mod')
+			if mod_non_auth:
+				acq.referred_to_by = vocab.Note(ident='', label=f'Seller modifier', content=mod_non_auth)
 			warnings.warn('Handle OR buyer modifier') # TODO: some way to model this uncertainty?
 
 		if mod in THROUGH:
@@ -662,8 +665,11 @@ def add_acquisition(data, buyers, sellers, buy_sell_modifiers, make_la_person=No
 		buyer = get_crom_object(buyer_data)
 		mod = buyer_data.get('auth_mod_a', '')
 		
-		if 'or' in mod:
+		if 'or' == mod:
 			# or/or others/or another
+			mod_non_auth = buyer_data.get('auth_mod')
+			if mod_non_auth:
+				acq.referred_to_by = vocab.Note(ident='', label=f'Buyer modifier', content=mod_non_auth)
 			warnings.warn(f'Handle buyer modifier: {mod}') # TODO: some way to model this uncertainty?
 
 		if mod in THROUGH:

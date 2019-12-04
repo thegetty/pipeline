@@ -74,6 +74,10 @@ class PIRModelingTest_AttributionModifiers(TestProvenancePipelineOutput):
 		pay_people = {p['_label'] for p in pay['paid_from']}
 		self.assertEqual(acq_people, pay_people)
 		self.assertEqual(acq_people, {'Raymond', 'Pond, Arthur'})
+
+		# the verbatim text of 'or' modifiers are preserved in notes attached to the acquisition; in this case, the sellers are 'or'
+		acq_notes = {n['content'] for n in acq['referred_to_by']}
+		self.assertEqual(acq_notes, {'or Orford, Robert Walpole, 1st Earl of', 'or Orford, Robert Walpole, 2nd Earl of'})
 		
 		# seller 'and' is modeled as a procurement with multiple records for both transferred_title_from and paid_to
 		s_and_obj = activities['tag:getty.edu,2019:digital:pipeline:provenance:REPLACE-WITH-UUID#AUCTION-TX,Br-1299,1815-06-10,0060']

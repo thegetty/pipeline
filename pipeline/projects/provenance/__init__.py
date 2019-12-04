@@ -1022,6 +1022,9 @@ def populate_object(data, post_sale_map, unique_catalogs, vocab_instance_map, de
 
 	if 'title' in data:
 		title = data['title']
+		if not hasattr(hmo, '_label'):
+			typestring = data.get('object_type', 'Object')
+			hmo._label = f'{typestring}: “{title}”'
 		del(data['title'])
 		shorter = truncate_with_ellipsis(title, 100)
 		if shorter:
@@ -1228,7 +1231,7 @@ def add_pir_artists(data, *, attribution_modifiers, attribution_group_types, mak
 	data['_original_objects'] = []
 	
 	try:
-		hmo_label = f'“{hmo._label}”'
+		hmo_label = f'{hmo._label}' # TODO: make this based on identifiers, not labels
 	except AttributeError:
 		hmo_label = 'object'
 	event_id = hmo.id + '-Production'

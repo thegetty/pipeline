@@ -167,10 +167,11 @@ def label_from_file(p):
 		return j.get('_label', '')
 
 app = Flask(__name__)
+output_path = pathlib.Path(settings.output_file_path)
 
 @app.route('/output/<string:model>/<path:file>')
 def render_file(model, file):
-	p = pathlib.Path('output') / model / file
+	p = output_path / model / file
 	with open(p, 'r') as fh:
 		j = json.load(fh)
 		title = j.get('_label', 'Model')
@@ -179,16 +180,16 @@ def render_file(model, file):
 
 @app.route('/output/<string:model>')
 def list_files(model):
-	p = pathlib.Path('output') / model
+	p = output_path / model
 	files = p.rglob('*.json')
-	items = sorted([(label_from_file(s) or str(s), s) for s in files])
+	items = sorted([(label_from_file(s) or str(s), s.relative_to(output_path.parent)) for s in files])
 	items_html = ''.join([f'<li><a href="/{s}">{label}</a></li>\n' for label, s in items])
 	return f'<ul>{items_html}</ul>'
 
 @app.route('/')
 def list_models():
-	p = pathlib.Path('output')
-	models = [s for s in p.glob('[0-9a-f]*')]
+	p = output_path
+	models = [s.relative_to(output_path.parent) for s in p.glob('[0-9a-f]*')]
 	names = {v: k for k, v in settings.arches_models.items()}
 	items = sorted([(names.get(s.name, s), s) for s in models])
 	items_html = ''.join([f'<li><a href="/{s}">{label}</a></li>\n' for label, s in items])

@@ -682,7 +682,7 @@ def add_acquisition(data, buyers, sellers, buy_sell_modifiers, make_la_person=No
 			# covers non-modified
 			acq.carried_out_by = buyer
 			acq.transferred_title_to = buyer
-			paym.carried_out_by = seller
+			paym.carried_out_by = buyer
 			paym.paid_from = buyer
 
 	if len(amnts) > 1:

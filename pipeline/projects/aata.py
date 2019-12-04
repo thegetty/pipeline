@@ -877,6 +877,7 @@ def filter_abstract_authors(data: dict):
 class AATAPipeline(PipelineBase):
 	'''Bonobo-based pipeline for transforming AATA data from XML into JSON-LD.'''
 	def __init__(self, input_path, abstracts_pattern, journals_pattern, series_pattern, **kwargs):
+		self.uid_tag_prefix = UID_TAG_PREFIX
 		super().__init__()
 		
 		vocab.register_vocab_class('VolumeNumber', {'parent': model.Identifier, 'id': '300265632', 'label': 'Volume'})

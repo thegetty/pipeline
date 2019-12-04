@@ -1,9 +1,12 @@
 import sys
 import pathlib
+import pprint
 import itertools
 import json
 import warnings
+from collections import defaultdict
 
+import urllib.parse
 from sqlalchemy import create_engine
 from sqlalchemy.engine.url import URL
 
@@ -11,14 +14,74 @@ import bonobo
 import settings
 
 import pipeline.execution
+from cromulent import model, vocab
 from pipeline.nodes.basic import \
 			AddArchesModel, \
 			Serializer
+
+class StaticInstanceHolder:
+	'''
+	This class wraps a dict that holds a set of crom objects, categorized by model name.
+	
+	Access to those objects is recorded, and at the end of a pipeline run, just those
+	objects that were accessed can be returned (to be serialized). This helps to avoid
+	serializing objects that are not relevant to a specific pipeline run (e.g. defined
+	for use in another dataset).
+	'''
+	def __init__(self, instances):
+		self.instances = instances
+		self.used = set()
+
+	def get_instance(self, model, name):
+		self.used.add((model, name))
+		return self.instances[model][name]
+
+	def used_instances(self):
+		used = defaultdict(dict)
+		for model, name in self.used:
+			used[model][name] = self.instances[model][name]
+		return used
 
 class PipelineBase:
 	def __init__(self):
 		self.project_name = None
 		self.input_path = None
+		self.static_instances = StaticInstanceHolder(self.setup_static_instances())
+
+	def make_uri(self, *values):
+		UID_TAG_PREFIX = self.uid_tag_prefix
+		if values:
+			suffix = ','.join([urllib.parse.quote(str(v)) for v in values])
+			return UID_TAG_PREFIX + suffix
+		else:
+			suffix = str(uuid.uuid4())
+			return UID_TAG_PREFIX + suffix
+
+	def setup_static_instances(self):
+		'''
+		These are instances that are used statically in the code. For example, when we
+		provide attribution of an identifier to Getty, or use a Lugt number, we need to
+		serialize the related Group or Person record for that attribution, even if it does
+		not appear in the source data.
+		'''
+		GETTY_GRI_URI = self.make_uri('ORGANIZATION', 'LOCATION-CODE', 'JPGM')
+		lugt_ulan = 500321736
+		gri_ulan = 500115990
+		LUGT_URI = self.make_uri('PERSON', 'ULAN', lugt_ulan)
+		gri = model.Group(ident=GETTY_GRI_URI, label='Getty Research Institute')
+		gri.identified_by = vocab.PrimaryName(ident='', content='Getty Research Institute')
+		gri.exact_match = model.BaseResource(ident=f'http://vocab.getty.edu/ulan/{gri_ulan}')
+		lugt = model.Person(ident=LUGT_URI, label='Frits Lugt')
+		lugt.identified_by = vocab.PrimaryName(ident='', content='Frits Lugt')
+		lugt.exact_match = model.BaseResource(ident=f'http://vocab.getty.edu/ulan/{lugt_ulan}')
+		return {
+			'Group': {
+				'gri': gri
+			},
+			'Person': {
+				'lugt': lugt
+			}
+		}
 
 	def _service_from_path(self, file):
 		if file.suffix == '.json':

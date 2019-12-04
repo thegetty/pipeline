@@ -58,22 +58,6 @@ class Builder:
 					"Phase": "event"
 				}	
 
-	def uri_to_link(self, uri, type):
-		if not type:
-			return None
-		model = settings.arches_models.get(type)
-		if not model:
-			print(f'*** no model found for {model}')
-			return None
-		mpath = self.path / model
-		if uri.startswith('urn:uuid:'):
-			uu = uri[9:]
-			with suppress(StopIteration):
-				file = next(mpath.rglob(f'{uu}.json'))
-				if file:
-					return f'/{file}'
-		return None
-
 	def normalize_string(self, s):
 		s = unidecode(s)
 		s = s.replace('"', "'")
@@ -93,7 +77,7 @@ class Builder:
 						file = next(mpath.rglob(f'{uu}.json'))
 						if file:
 							label = self.normalize_string(label_from_file(file))
-							link = f'/{file}'
+							link = f'/{file.relative_to(self.path.parent)}'
 			return label, link
 		elif uri.startswith('http://vocab.getty.edu/'):
 			uri = uri.replace('http://vocab.getty.edu/', '')

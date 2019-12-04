@@ -7,11 +7,17 @@ import uuid
 import pathlib
 import itertools
 import settings
+import pprint
+from unidecode import unidecode
+from contextlib import suppress
+from pipeline.util import truncate_with_ellipsis
 from flask import Flask, escape, request
 
 class Builder:
-	def __init__(self):
+	def __init__(self, path):
 		self.counter = itertools.count()
+		self.path = path
+		self.seen = set()
 		self.class_styles = {
 					"HumanMadeObject": "object",
 					"Place": "place",
@@ -52,20 +58,54 @@ class Builder:
 					"Phase": "event"
 				}	
 
-	def uri_to_label(self, uri):
+	def uri_to_link(self, uri, type):
+		if not type:
+			return None
+		model = settings.arches_models.get(type)
+		if not model:
+			print(f'*** no model found for {model}')
+			return None
+		mpath = self.path / model
 		if uri.startswith('urn:uuid:'):
-			return f'#{next(self.counter)}'
+			uu = uri[9:]
+			with suppress(StopIteration):
+				file = next(mpath.rglob(f'{uu}.json'))
+				if file:
+					return f'/{file}'
+		return None
+
+	def normalize_string(self, s):
+		s = unidecode(s)
+		s = s.replace('"', "'")
+		s = truncate_with_ellipsis(s, 40) or s
+		return s
+		
+	def uri_to_label_link(self, uri, type):
+		link = None
+		if uri.startswith('urn:uuid:'):
+			label = f'#{next(self.counter)}'
+			if type:
+				model = settings.arches_models.get(type)
+				if model:
+					mpath = self.path / model
+					uu = uri[9:]
+					with suppress(StopIteration):
+						file = next(mpath.rglob(f'{uu}.json'))
+						if file:
+							label = self.normalize_string(label_from_file(file))
+							link = f'/{file}'
+			return label, link
 		elif uri.startswith('http://vocab.getty.edu/'):
 			uri = uri.replace('http://vocab.getty.edu/', '')
 			uri = uri.replace('/', ': ')
-			return uri
+			return uri, link
 		elif uri.startswith('https://linked.art/example/'):
 			uri = uri.replace('https://linked.art/example/', '')
 			uri = uri.replace('/', '')
-			return uri
+			return uri, link
 		else:
 			print("Unhandled URI: %s" % uri)
-			return uri
+			return uri, link
 
 	def walk(self, js, curr_int, id_map, mermaid):
 		if isinstance(js, dict):
@@ -77,10 +117,14 @@ class Builder:
 				currid = "O%s" % curr_int
 				curr_int += 1
 				id_map[curr] = currid
-			lbl = self.uri_to_label(curr)
-			line = "%s(%s)" % (currid, lbl)
+			lbl, link = self.uri_to_label_link(curr, js.get('type'))
+			line = "%s(\"%s\")" % (currid, lbl)
 			if not line in mermaid:
 				mermaid.append(line)
+			if link:
+				line = f'click {currid} "{link}" "Link"'
+				if not line in mermaid:
+					mermaid.append(line)
 			t = js.get('type', '')
 			if t:
 				style = self.class_styles.get(t, '')
@@ -148,7 +192,7 @@ class Builder:
 <html>
 <head>
 	<title>{title}</title>
-<!-- 	<script src="/static/mermaid.min.js">​</script>​ -->
+<!-- 	<script src="/static/mermaid.min.js">y</script>y -->
 	<script src="https://linked.art/media/vendor/mermaid.min.js"></script>
 </head>
 <body>
@@ -175,7 +219,7 @@ def render_file(model, file):
 	with open(p, 'r') as fh:
 		j = json.load(fh)
 		title = j.get('_label', 'Model')
-		b = Builder()
+		b = Builder(output_path)
 		return b.write_html(j, title=title)
 
 @app.route('/output/<string:model>')

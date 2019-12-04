@@ -23,6 +23,7 @@ if len(sys.argv) > 1:
 else:
 	files = sorted(Path(output_file_path).rglob('*.json'))
 
+print('Reorganizing JSON files...')
 uuid_re = re.compile('[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}.json')
 for filename in files:
 	p = Path(filename)
@@ -40,3 +41,4 @@ for filename in files:
 	else:
 		pass
 # 		print(f'Already in the correct directory: {p}')
+print('Done')

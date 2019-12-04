@@ -42,13 +42,12 @@ class PIRModelingTest_AttributionModifiers(TestProvenancePipelineOutput):
 		# was "copy after" an original painting.
 		self.assertEqual(len(objects), 10)
 		
-		# there are 16 people:
+		# there are 15 people:
 		# 	"Pierre André Joseph Knyff" (seller)
 		# 	"Jeffrey, Henry" (seller)
 		# 	"Schgosdass" (artist, formerly attributed to)
 		# 	"HOLBEIN, HANS (THE YOUNGER)" (style of)
 		# 	"SAVERY (XAVERY)" (artist, attributed to)
-		# 	"Frits Lugt" (static instance emitted by the pipeline)
 		# 	"DYCK, ANTHONIE VAN" (copy after)
 		# 	"Simpson" (buyer)
 		# 	"POUSSIN, NICOLAS" (circle of)
@@ -59,15 +58,14 @@ class PIRModelingTest_AttributionModifiers(TestProvenancePipelineOutput):
 		# 	"Giot" (buyer)
 		# 	"H Sudn [?]" (seller)
 		# 	"CORNEILLE, JEAN BAPTISTE" (artist, possibly by)
-		self.assertEqual(len(people), 16)
+		self.assertEqual(len(people), 15)
 
-		# there are 5 groups:
-		# 	'Getty Research Institute' (static instance emitted by the pipeline)
+		# there are 4 groups:
 		# 	'FollowerGroup of artist “RUBENS, PETER PAUL”' (influencer of the formation of the "follower of" group)
 		# 	'School of artist “RUBENS, PETER PAUL”' (influencer of the formation of the "school of" group)
 		# 	'Workshop of artist “WEST, BENJAMIN”' (influencer of the formation of the "workshop of" group)
 		# 	'Circle of artist “POUSSIN, NICOLAS”' (influencer of the formation of the "circle of" group)
-		self.assertEqual(len(groups), 5)
+		self.assertEqual(len(groups), 4)
 		
 		# 'style of' modifiers use an AttributeAssignment that classifies the 'influenced_by' property as being 'Style of'
 		style_of_obj = objects['tag:getty.edu,2019:digital:pipeline:provenance:REPLACE-WITH-UUID#OBJECT,Br-A2493,0029%5Bb%5D,1800-03-01']

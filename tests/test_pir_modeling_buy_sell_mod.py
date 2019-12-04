@@ -36,8 +36,7 @@ class PIRModelingTest_AttributionModifiers(TestProvenancePipelineOutput):
 		# was "copy after" an original painting.
 		self.assertEqual(len(objects), 5)
 		
-		# there are 17 people:
-		# 	"Frits Lugt" (static instance emitted by the pipeline)
+		# there are 16 people:
 		# 	"DUBBELS, HENDRIK JACOBSZ." (artist)
 		# 	"RUBENS, PETER PAUL" (artist)
 		# 	"PANINI, GIOVANNI PAOLO" (artist)
@@ -54,7 +53,7 @@ class PIRModelingTest_AttributionModifiers(TestProvenancePipelineOutput):
 		# 	"Gent, G.W." (seller, and)
 		# 	"Mackey, Mrs." (seller, for)
 		# 	"Nelthorpe" (seller, through)
-		self.assertEqual(len(people), 17)
+		self.assertEqual(len(people), 16)
 
 		# buyer 'for'/'through' is modeled an AGENT who carries out the payment and acquisition, and a BUYER who pays for the object and to whom the object's title is transferred
 		b_ft_obj = activities['tag:getty.edu,2019:digital:pipeline:provenance:REPLACE-WITH-UUID#AUCTION-TX,Br-A450,1751-03-08,0044']

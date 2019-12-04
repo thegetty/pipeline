@@ -90,33 +90,6 @@ IGNORE_HOUSE_AUTHNAMES = CaseFoldingSet(('Anonymous',))
 
 #mark - utility functions and classes
 
-def setup_static_instances():
-	'''
-	These are instances that are used statically in the code. For example, when we
-	provide attribution of an identifier to Getty, or use a Lugt number, we need to
-	serialize the related Group or Person record for that attribution, even if it does
-	not appear in the source data.
-	'''
-	GETTY_GRI_URI = pir_uri('ORGANIZATION', 'LOCATION-CODE', 'JPGM')
-	lugt_ulan = 500321736
-	gri_ulan = 500115990
-	LUGT_URI = pir_uri('PERSON', 'ULAN', lugt_ulan)
-	gri = model.Group(ident=GETTY_GRI_URI, label='Getty Research Institute')
-	gri.identified_by = vocab.PrimaryName(ident='', content='Getty Research Institute')
-	gri.exact_match = model.BaseResource(ident=f'http://vocab.getty.edu/ulan/{gri_ulan}')
-	lugt = model.Person(ident=LUGT_URI, label='Frits Lugt')
-	lugt.identified_by = vocab.PrimaryName(ident='', content='Frits Lugt')
-	lugt.exact_match = model.BaseResource(ident=f'http://vocab.getty.edu/ulan/{lugt_ulan}')
-	return {
-		'Group': {
-			'gri': gri
-		},
-		'Person': {
-			'lugt': lugt
-		}
-	}
-STATIC_INSTANCES = setup_static_instances()
-
 class GraphListSource:
 	'''
 	Act as a bonobo graph source node for a set of crom objects.
@@ -1457,51 +1430,56 @@ def add_physical_catalog_owners(data, location_codes, unique_catalogs):
 
 #mark - Physical Catalogs - Informational Catalogs
 
-def lugt_number_id(content):
+def lugt_number_id(content, static_instances):
 	lugt_number = str(content)
 	lugt_id = vocab.LocalNumber(ident='', label=f'Lugt Number: {lugt_number}', content=lugt_number)
 	assignment = model.AttributeAssignment(ident='')
-	assignment.carried_out_by = STATIC_INSTANCES['Person']['lugt']
+	assignment.carried_out_by = static_instances.get_instance('Person', 'lugt')
 	lugt_id.assigned_by = assignment
 	return lugt_id
 
-def gri_number_id(content):
+def gri_number_id(content, static_instances):
 	catalog_id = vocab.LocalNumber(ident='', content=content)
 	assignment = model.AttributeAssignment(ident='')
-	assignment.carried_out_by = STATIC_INSTANCES['Group']['gri']
+	assignment.carried_out_by = static_instances.get_instance('Group', 'gri')
 	catalog_id.assigned_by = assignment
 	return catalog_id
 
-def populate_auction_catalog(data):
+class PopulateAuctionCatalog(Configurable):
 	'''Add modeling data for an auction catalog'''
-	d = {k: v for k, v in data.items()}
-	parent = data['parent_data']
-	cno = str(parent['catalog_number'])
-	sno = parent['star_record_no']
-	catalog = get_crom_object(d)
-	for lugt_no in parent.get('lugt', {}).values():
-		if not lugt_no:
-			warnings.warn(f'Setting empty identifier on {catalog.id}')
-		catalog.identified_by = lugt_number_id(lugt_no)
+	static_instances = Option(default="static_instances")
 
-	if not cno:
-		warnings.warn(f'Setting empty identifier on {catalog.id}')
-	catalog.identified_by = gri_number_id(cno)
+	def __call__(self, data):
+		d = {k: v for k, v in data.items()}
+		parent = data['parent_data']
+		cno = str(parent['catalog_number'])
+		sno = parent['star_record_no']
+		catalog = get_crom_object(d)
+		for lugt_no in parent.get('lugt', {}).values():
+			if not lugt_no:
+				warnings.warn(f'Setting empty identifier on {catalog.id}')
+			catalog.identified_by = lugt_number_id(lugt_no, self.static_instances)
+
+		if not cno:
+			warnings.warn(f'Setting empty identifier on {catalog.id}')
+		catalog.identified_by = gri_number_id(cno, self.static_instances)
 	
-	if not sno:
-		warnings.warn(f'Setting empty identifier on {catalog.id}')
-	catalog.identified_by = vocab.SystemNumber(ident='', content=sno)
-	notes = data.get('notes')
-	if notes:
-		note = vocab.Note(ident='', content=parent['notes'])
-		catalog.referred_to_by = note
-	return d
+		if not sno:
+			warnings.warn(f'Setting empty identifier on {catalog.id}')
+		catalog.identified_by = vocab.SystemNumber(ident='', content=sno)
+		notes = data.get('notes')
+		if notes:
+			note = vocab.Note(ident='', content=parent['notes'])
+			catalog.referred_to_by = note
+		return d
 
 #mark - Provenance Pipeline class
 
 class ProvenancePipeline(PipelineBase):
 	'''Bonobo-based pipeline for transforming Provenance data from CSV into JSON-LD.'''
 	def __init__(self, input_path, catalogs, auction_events, contents, **kwargs):
+		self.uid_tag_prefix = UID_TAG_PREFIX
+
 		vocab.register_instance('fire', {'parent': model.Type, 'id': '300068986', 'label': 'Fire'})
 		vocab.register_instance('animal', {'parent': model.Type, 'id': '300249395', 'label': 'Animal'})
 		vocab.register_instance('history', {'parent': model.Type, 'id': '300033898', 'label': 'History'})
@@ -1580,7 +1558,7 @@ class ProvenancePipeline(PipelineBase):
 		'''Add modeling of auction catalogs as linguistic objects.'''
 		los = graph.add_chain(
 			ExtractKeyedValue(key='_catalog'),
-			populate_auction_catalog,
+			PopulateAuctionCatalog(static_instances=self.static_instances),
 			_input=events.output
 		)
 		if serialize:
@@ -2074,15 +2052,6 @@ class ProvenancePipeline(PipelineBase):
 		if not services:
 			services = self.get_services(**options)
 
-		print('Serializing static instances...', file=sys.stderr)
-		for model, instances in STATIC_INSTANCES.items():
-			g = bonobo.Graph()
-			nodes = self.serializer_nodes_for_model(model=self.models[model], use_memory_writer=False)
-			values = instances.values()
-			source = g.add_chain(GraphListSource(values))
-			self.add_serialization_chain(g, source.output, model=self.models[model], use_memory_writer=False)
-			self.run_graph(g, services={})
-
 		print('Running graph component 1...', file=sys.stderr)
 		graph1 = self.get_graph_1(**options, services=services)
 		self.run_graph(graph1, services=services)
@@ -2090,6 +2059,15 @@ class ProvenancePipeline(PipelineBase):
 		print('Running graph component 2...', file=sys.stderr)
 		graph2 = self.get_graph_2(**options, services=services)
 		self.run_graph(graph2, services=services)
+
+		print('Serializing static instances...', file=sys.stderr)
+		for model, instances in self.static_instances.used_instances().items():
+			g = bonobo.Graph()
+			nodes = self.serializer_nodes_for_model(model=self.models[model], use_memory_writer=False)
+			values = instances.values()
+			source = g.add_chain(GraphListSource(values))
+			self.add_serialization_chain(g, source.output, model=self.models[model], use_memory_writer=False)
+			self.run_graph(g, services={})
 
 	def generate_prev_post_sales_data(self, counter, post_map):
 		singles = {k for k in counter if counter[k] == 1}

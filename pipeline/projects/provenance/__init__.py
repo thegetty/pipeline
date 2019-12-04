@@ -1231,7 +1231,7 @@ def add_pir_artists(data, *, attribution_modifiers, attribution_group_types, mak
 	data['_original_objects'] = []
 	
 	try:
-		hmo_label = f'{hmo._label}' # TODO: make this based on identifiers, not labels
+		hmo_label = f'{hmo._label}'
 	except AttributeError:
 		hmo_label = 'object'
 	event_id = hmo.id + '-Production'

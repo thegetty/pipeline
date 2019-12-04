@@ -56,13 +56,15 @@ class PIRModelingTest_AttributionModifiers(TestProvenancePipelineOutput):
 		# 	"Nelthorpe" (seller, through)
 		self.assertEqual(len(people), 17)
 
-		# buyer 'for'/'through' is modeled as a procurement with an acquisition transferred_title_to BUYER and carried_out_by AGENT, and a payment paid_from AGENT
+		# buyer 'for'/'through' is modeled an AGENT who carries out the payment and acquisition, and a BUYER who pays for the object and to whom the object's title is transferred
 		b_ft_obj = activities['tag:getty.edu,2019:digital:pipeline:provenance:REPLACE-WITH-UUID#AUCTION-TX,Br-A450,1751-03-08,0044']
 		acq = [p for p in b_ft_obj['part'] if p['type'] == 'Acquisition'][0]
 		pay = [p for p in b_ft_obj['part'] if p['type'] == 'Payment'][0]
 		self.assertIn('Ewing', {p['_label'] for p in acq['carried_out_by']})
 		self.assertEqual(acq['transferred_title_to'][0]['_label'], 'Gucht, van der')
-		self.assertEqual(pay['paid_from'][0]['_label'], 'Ewing')
+		self.assertEqual(pay['paid_from'][0]['_label'], 'Gucht, van der')
+		self.assertIn('Ewing', {p['_label'] for p in acq['carried_out_by']})
+		self.assertIn('Ewing', {p['_label'] for p in pay['carried_out_by']})
 
 		# buyer 'and' is modeled as a procurement with multiple records for both transferred_title_to and paid_from
 		b_and_obj = activities['tag:getty.edu,2019:digital:pipeline:provenance:REPLACE-WITH-UUID#AUCTION-TX,Br-A458,1751-06-13,0031']
@@ -82,13 +84,15 @@ class PIRModelingTest_AttributionModifiers(TestProvenancePipelineOutput):
 		self.assertEqual(acq_people, pay_people)
 		self.assertEqual(acq_people, {'Grey, Charles', 'Gent, G.W.'})
 
-		# seller 'for'/'through' is modeled as a procurement with an acquisition transferred_title_from SELLER and carried_out_by AGENT, and a payment paid_to AGENT
+		# seller 'for'/'through' is modeled an AGENT who carries out the payment and acquisition, and a SELLER who is paid for the object and from whom the object's title is transferred
 		s_ft_obj = activities['tag:getty.edu,2019:digital:pipeline:provenance:REPLACE-WITH-UUID#AUCTION-TX,Br-1344,1815-12-02,0075']
 		acq = [p for p in s_ft_obj['part'] if p['type'] == 'Acquisition'][0]
 		pay = [p for p in s_ft_obj['part'] if p['type'] == 'Payment'][0]
 		self.assertIn('Nelthorpe', {p['_label'] for p in acq['carried_out_by']})
 		self.assertEqual(acq['transferred_title_from'][0]['_label'], 'Mackey, Mrs.')
-		self.assertEqual(pay['paid_to'][0]['_label'], 'Nelthorpe')
+		self.assertEqual(pay['paid_to'][0]['_label'], 'Mackey, Mrs.')
+		self.assertIn('Nelthorpe', {p['_label'] for p in acq['carried_out_by']})
+		self.assertIn('Nelthorpe', {p['_label'] for p in pay['carried_out_by']})
 
 
 if __name__ == '__main__':

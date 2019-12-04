@@ -647,14 +647,16 @@ def add_acquisition(data, buyers, sellers, buy_sell_modifiers, make_la_person=No
 
 		if mod in THROUGH:
 			acq.carried_out_by = seller
-			paym.paid_to = seller
+			paym.carried_out_by = seller
 		elif mod in FOR:
 			acq.transferred_title_from = seller
+			paym.paid_to = seller
 		else:
 			# covers non-modified
 			acq.carried_out_by = seller
-			paym.paid_to = seller
 			acq.transferred_title_from = seller
+			paym.carried_out_by = seller
+			paym.paid_to = seller
 
 	for buyer_data in buyers:
 		buyer = get_crom_object(buyer_data)
@@ -666,14 +668,16 @@ def add_acquisition(data, buyers, sellers, buy_sell_modifiers, make_la_person=No
 
 		if mod in THROUGH:
 			acq.carried_out_by = buyer
-			paym.paid_from = buyer
+			paym.carried_out_by = buyer
 		elif mod in FOR:
 			acq.transferred_title_to = buyer
+			paym.paid_from = buyer
 		else:
 			# covers non-modified
 			acq.carried_out_by = buyer
-			paym.paid_from = buyer
 			acq.transferred_title_to = buyer
+			paym.carried_out_by = seller
+			paym.paid_from = buyer
 
 	if len(amnts) > 1:
 		warnings.warn(f'Multiple Payment.paid_amount values for object {hmo.id} ({payment_id})')
@@ -1354,10 +1358,10 @@ def add_pir_artists(data, *, attribution_modifiers, attribution_group_types, mak
 				event.influenced_by = original_hmo
 				data['_original_objects'].append(add_crom_data(data={}, what=original_hmo))
 				continue
-			elif 'or' in mods:
+			elif {'or', 'and'} & mods:
 				pass
 			else:
-				print(f'UNHANDLED attrib_mod_auth VALUE: {mod}')
+				print(f'UNHANDLED attrib_mod_auth VALUE: {mods}')
 				pprint.pprint(a)
 				continue
 		

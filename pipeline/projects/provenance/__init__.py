@@ -85,14 +85,12 @@ class PersonIdentity:
 	'''
 	Utility class to help assign records for people with properties such as `uri` and identifiers.
 	'''
-	def __init__(self):
+	def __init__(self, make_uri=None):
+		self.make_uri = make_uri or pir_uri
 		self.ignore_authnames = CaseFoldingSet(('NEW', 'NON-UNIQUE'))
-		pass
 	
 	def acceptable_auth_name(self, auth_name):
-		if not auth_name:
-			return False
-		if auth_name in self.ignore_authnames:
+		if not auth_name or auth_name in self.ignore_authnames:
 			return False
 		if '[' in auth_name:
 			return False
@@ -120,13 +118,9 @@ class PersonIdentity:
 				warnings.warn(f'*** No record identifier given for person identified only by pi_record_number {pi_rec_no}')
 				return ('PERSON', 'PI_REC_NO', pi_rec_no)
 
-	def get_uri(self, data:dict, **kwargs):
-		keys = self.uri_keys(data, **kwargs)
-		return pir_uri(*keys)
-
 	def add_uri(self, data:dict, **kwargs):
 		keys = self.uri_keys(data, **kwargs)
-		data['uri'] = pir_uri(*keys)
+		data['uri'] = self.make_uri(*keys)
 
 	def add_names(self, data:dict, referrer=None, role=None):
 		'''

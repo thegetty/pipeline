@@ -62,16 +62,8 @@ from pipeline.util.cleaners import \
 from pipeline.io.file import MergingFileWriter
 from pipeline.io.memory import MergingMemoryWriter
 # from pipeline.io.arches import ArchesWriter
-from pipeline.linkedart import \
-			add_crom_data, \
-			get_crom_object, \
-			MakeLinkedArtRecord, \
-			MakeLinkedArtLinguisticObject, \
-			MakeLinkedArtHumanMadeObject, \
-			MakeLinkedArtAuctionHouseOrganization, \
-			MakeLinkedArtOrganization, \
-			MakeLinkedArtPerson, \
-			make_la_place
+import pipeline.linkedart
+from pipeline.linkedart import add_crom_data, get_crom_object
 from pipeline.io.csv import CurriedCSVReader
 from pipeline.nodes.basic import \
 			AddFieldNames, \
@@ -182,7 +174,7 @@ def populate_auction_event(data, auction_locations):
 	# gets stored in the `auction_locations` object to be used in the second graph component
 	# which uses the data to associate the place with auction lots.
 	base_uri = pir_uri('AUCTION-EVENT', 'CATALOGNUMBER', cno, 'PLACE')
-	place_data = make_la_place(current, base_uri=base_uri)
+	place_data = pipeline.linkedart.make_la_place(current, base_uri=base_uri)
 	place = get_crom_object(place_data)
 	if place:
 		data['_locations'] = [place_data]
@@ -733,7 +725,7 @@ def add_acquisition(data, buyers, sellers, buy_sell_modifiers, make_la_person=No
 			if owner_record.get('own_auth_l'):
 				loc = owner_record['own_auth_l']
 				current = parse_location_name(loc, uri_base=UID_TAG_PREFIX)
-				place_data = make_la_place(current)
+				place_data = pipeline.linkedart.make_la_place(current)
 				place = get_crom_object(place_data)
 				owner.residence = place
 				data['_owner_locations'].append(place_data)
@@ -947,7 +939,7 @@ def populate_destruction_events(data, note, *, type_map, location=None):
 		if location:
 			current = parse_location_name(location, uri_base=UID_TAG_PREFIX)
 			base_uri = hmo.id + '-Place,'
-			place_data = make_la_place(current, base_uri=base_uri)
+			place_data = pipeline.linkedart.make_la_place(current, base_uri=base_uri)
 			place = get_crom_object(place_data)
 			if place:
 				data['_locations'].append(place_data)
@@ -1111,10 +1103,10 @@ def _populate_object_present_location(data, now_key, destruction_types_map):
 					}
 
 				base_uri = hmo.id + '-Place,'
-				place_data = make_la_place(current, base_uri=base_uri)
+				place_data = pipeline.linkedart.make_la_place(current, base_uri=base_uri)
 				place = get_crom_object(place_data)
 
-				make_la_org = MakeLinkedArtOrganization()
+				make_la_org = pipeline.linkedart.MakeLinkedArtOrganization()
 				owner_data = make_la_org(owner_data)
 				owner = get_crom_object(owner_data)
 				owner.residence = place
@@ -1519,7 +1511,7 @@ class ProvenancePipeline(PipelineBase):
 		services.update({
 			# to avoid constructing new MakeLinkedArtPerson objects millions of times, this
 			# is passed around as a service to the functions and classes that require it.
-			'make_la_person': MakeLinkedArtPerson(),
+			'make_la_person': pipeline.linkedart.MakeLinkedArtPerson(),
 			'lot_counter': Counter(),
 			'unique_catalogs': {},
 			'post_sale_map': {},
@@ -1533,7 +1525,7 @@ class ProvenancePipeline(PipelineBase):
 		'''Add modeling of physical copies of auction catalogs.'''
 		groups = graph.add_chain(
 			ExtractKeyedValue(key='_owner'),
-			MakeLinkedArtOrganization(),
+			pipeline.linkedart.MakeLinkedArtOrganization(),
 			_input=catalogs.output
 		)
 		if serialize:
@@ -1879,7 +1871,7 @@ class ProvenancePipeline(PipelineBase):
 			ExtractKeyedValue(key='_object'),
 			add_object_type,
 			populate_object,
-			MakeLinkedArtHumanMadeObject(),
+			pipeline.linkedart.MakeLinkedArtHumanMadeObject(),
 			add_pir_artists,
 			_input=sales.output
 		)
@@ -1922,7 +1914,7 @@ class ProvenancePipeline(PipelineBase):
 		'''Add modeling of the auction houses related to an auction event.'''
 		houses = graph.add_chain(
 			ExtractKeyedValues(key='auction_house'),
-			MakeLinkedArtAuctionHouseOrganization(),
+			pipeline.linkedart.MakeLinkedArtAuctionHouseOrganization(),
 			_input=auction_events.output
 		)
 		if serialize:
@@ -1934,7 +1926,7 @@ class ProvenancePipeline(PipelineBase):
 		'''Add transformation of visual items to the bonobo pipeline.'''
 		items = graph.add_chain(
 			ExtractKeyedValue(key='_visual_item'),
-			MakeLinkedArtRecord(),
+			pipeline.linkedart.MakeLinkedArtRecord(),
 			_input=objects.output
 		)
 		if serialize:
@@ -1946,7 +1938,7 @@ class ProvenancePipeline(PipelineBase):
 		'''Add transformation of record texts to the bonobo pipeline.'''
 		texts = graph.add_chain(
 			ExtractKeyedValue(key='_record'),
-			MakeLinkedArtLinguisticObject(),
+			pipeline.linkedart.MakeLinkedArtLinguisticObject(),
 			_input=objects.output
 		)
 		if serialize:

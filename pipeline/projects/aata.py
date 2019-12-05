@@ -14,7 +14,7 @@ import lxml.etree
 from sqlalchemy import create_engine
 from langdetect import detect
 import urllib.parse
-
+from datetime import datetime
 import bonobo
 from bonobo.config import Configurable, Option, use
 from bonobo.constants import NOT_MODIFIED
@@ -253,8 +253,8 @@ def _xml_extract_journal(e):
 			year = datenode.findtext('./sort_year')
 			
 			if year:
-				begin = ymd_to_datetime(year, month, None, which='begin')
-				end = ymd_to_datetime(year, month, None, which='end')
+				begin = datetime.strptime(ymd_to_datetime(year, month, None, which='begin'), "%Y-%m-%dT%H:%M:%S")
+				end = datetime.strptime(ymd_to_datetime(year, month, None, which='end'), "%Y-%m-%dT%H:%M:%S")
 				ts = timespan_from_outer_bounds(begin, end)
 				# TODO: attach ts to the issue somehow
 			elif month:

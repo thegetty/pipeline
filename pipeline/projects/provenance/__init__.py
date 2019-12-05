@@ -77,10 +77,95 @@ from pipeline.util.rewriting import rewrite_output_files, JSONValueRewriter
 PROBLEMATIC_RECORD_URI = 'tag:getty.edu,2019:digital:pipeline:provenance:ProblematicRecord'
 CSV_SOURCE_COLUMNS = ['pi_record_no', 'catalog_number']
 
-IGNORE_PERSON_AUTHNAMES = CaseFoldingSet(('NEW', 'NON-UNIQUE'))
 IGNORE_HOUSE_AUTHNAMES = CaseFoldingSet(('Anonymous',))
 
 #mark - utility functions and classes
+
+class PersonIdentity:
+	'''
+	Utility class to help assign records for people with properties such as `uri` and identifiers.
+	'''
+	def __init__(self):
+		self.ignore_authnames = CaseFoldingSet(('NEW', 'NON-UNIQUE'))
+		pass
+	
+	def acceptable_auth_name(self, auth_name):
+		if not auth_name:
+			return False
+		if auth_name in self.ignore_authnames:
+			return False
+		if '[' in auth_name:
+			return False
+		return True
+
+	def uri_keys(self, data:dict, record_id=None):
+		ulan = None
+		with suppress(ValueError, TypeError):
+			ulan = int(data.get('ulan'))
+
+		auth_name = data.get('auth_name')
+		auth_name_q = '?' in data.get('auth_nameq', '')
+	
+		if ulan:
+			key = f'PERSON-ULAN-{ulan}'
+			return ('PERSON', 'ULAN', ulan)
+		elif self.acceptable_auth_name(auth_name):
+			return ('PERSON', 'AUTHNAME', auth_name)
+		else:
+			# not enough information to identify this person uniquely, so use the source location in the input file
+			pi_rec_no = data['pi_record_no']
+			if record_id:
+				return ('PERSON', 'PI_REC_NO', pi_rec_no, record_id)
+			else:
+				warnings.warn(f'*** No record identifier given for person identified only by pi_record_number {pi_rec_no}')
+				return ('PERSON', 'PI_REC_NO', pi_rec_no)
+
+	def get_uri(self, data:dict, **kwargs):
+		keys = self.uri_keys(data, **kwargs)
+		return pir_uri(*keys)
+
+	def add_uri(self, data:dict, **kwargs):
+		keys = self.uri_keys(data, **kwargs)
+		data['uri'] = pir_uri(*keys)
+
+	def add_names(self, data:dict, referrer=None, role=None):
+		'''
+		Based on the presence of `auth_name` and/or `name` fields in `data`, sets the
+		`label`, `names`, and `identifier` keys to appropriate strings/`model.Identifier`
+		values.
+		
+		If the `role` string is given (e.g. 'artist'), also sets the `role_label` key
+		to a value (e.g. 'artist “RUBENS, PETER PAUL”').
+		'''
+		auth_name = data.get('auth_name')
+		role_label = None
+		if self.acceptable_auth_name(auth_name):
+			if role:
+				role_label = f'{role} “{auth_name}”'
+			data['label'] = auth_name
+			pname = vocab.PrimaryName(ident='', content=auth_name) # NOTE: most of these are also vocab.SortName, but not 100%, so witholding that assertion for now
+			if referrer:
+				pname.referred_to_by = referrer
+			data['identifiers'] = [pname]
+
+		name = data.get('name')
+		if name:
+			if role and not role_label:
+				role_label = f'{role} “{name}”'
+			if referrer:
+				data['names'] = [(name, {'referred_to_by': [referrer]})]
+			else:
+				data['names'] = [name]
+			if 'label' not in data:
+				data['label'] = name
+		if 'label' not in data:
+			data['label'] = '(Anonymous)'
+
+		if role and not role_label:
+			role_label = f'anonymous {role}'
+
+		if role:
+			data['role_label'] = role_label
 
 class GraphListSource:
 	'''
@@ -94,15 +179,6 @@ class GraphListSource:
 	def __call__(self):
 		for v in self.values:
 			yield add_crom_data({}, v)
-
-def acceptable_person_auth_name(auth_name):
-	if not auth_name:
-		return False
-	if auth_name in IGNORE_PERSON_AUTHNAMES:
-		return False
-	if '[' in auth_name:
-		return False
-	return True
 
 def copy_source_information(dst: dict, src: dict):
 	for k in CSV_SOURCE_COLUMNS:
@@ -517,39 +593,10 @@ def add_person(data: dict, sales_record, rec_id, *, make_la_person):
 	This function adds properties to `data` before calling
 	`pipeline.linkedart.MakeLinkedArtPerson` to construct the model objects.
 	'''
-	ulan = None
-	with suppress(ValueError, TypeError):
-		ulan = int(data.get('ulan'))
-
-	auth_name = data.get('auth_name')
-	auth_name_q = '?' in data.get('auth_nameq', '')
 	
-	if ulan:
-		key = f'PERSON-ULAN-{ulan}'
-		data['uri'] = pir_uri('PERSON', 'ULAN', ulan)
-		data['ulan'] = ulan
-		data['uid'] = key
-	elif acceptable_person_auth_name(auth_name):
-		data['uri'] = pir_uri('PERSON', 'AUTHNAME', auth_name)
-	else:
-		# not enough information to identify this person uniquely, so use the source location in the input file
-# 			warnings.warn(f'*** Person without a ulan or authority name: {a}')
-		data['uri'] = pir_uri('PERSON', 'PI_REC_NO', data['pi_record_no'], rec_id)
-
-	
-	if acceptable_person_auth_name(auth_name):
-		data['label'] = auth_name
-		pname = vocab.PrimaryName(ident='', content=auth_name) # NOTE: most of these are also vocab.SortName, but not 100%, so witholding that assertion for now
-		pname.referred_to_by = sales_record
-		data['identifiers'] = [pname]
-
-	name = data.get('name')
-	if name:
-		data['names'] = [(name, {'referred_to_by': [sales_record]})]
-		if 'label' not in data:
-			data['label'] = name
-	if 'label' not in data:
-		data['label'] = '(Anonymous)'
+	pi = PersonIdentity()
+	pi.add_uri(data, record_id=rec_id)
+	pi.add_names(data, referrer=sales_record)
 
 	make_la_person(data)
 	return data
@@ -693,30 +740,15 @@ def add_acquisition(data, buyers, sellers, buy_sell_modifiers, make_la_person=No
 				# some records seem to have metadata (source information, location, or notes) but no other fields set
 				# these should not constitute actual records of a prev/post owner.
 				continue
-			auth_name = owner_record.get('own_auth')
-			name = owner_record.get('own')
-			ulan = None
-			with suppress(ValueError, TypeError):
-				ulan = int(owner_record.get('own_ulan'))
-			if ulan:
-				key = f'PERSON-ULAN-{ulan}'
-				owner_record['uid'] = key
-				owner_record['uri'] = pir_uri('PERSON', 'ULAN', ulan)
-				owner_record['ulan'] = ulan
-			elif acceptable_person_auth_name(auth_name):
-				owner_record['uri'] = pir_uri('PERSON', 'AUTHNAME', auth_name)
-				pname = vocab.PrimaryName(ident='', content=auth_name) # NOTE: most of these are also vocab.SortName, but not 100%, so witholding that assertion for now
-				pname.referred_to_by = sales_record
-				owner_record['identifiers'] = [pname]
-			else:
-				# not enough information to identify this person uniquely, so use the source location in the input file
-				owner_record['uri'] = pir_uri('PERSON', 'PI_REC_NO', data['pi_record_no'], f'{rev_name}-{seq_no+1}')
-			if not name and not auth_name:
-				warnings.warn(f'*** No name for {rev_name}: {owner_record}')
-				pprint.pprint(owner_record)
-			if name:
-				owner_record['names'] = [(name,{'referred_to_by': [sales_record]})]
-			owner_record['label'] = name
+			owner_record.update({
+				'pi_record_no': data['pi_record_no'],
+				'ulan': owner_record['own_ulan'],
+				'auth_name': owner_record['own_auth'],
+				'name': owner_record['own']
+			})
+			pi = PersonIdentity()
+			pi.add_uri(owner_record, record_id=f'{rev_name}-{seq_no+1}')
+			pi.add_names(owner_record, referrer=sales_record, role='artist')
 			make_la_person(owner_record)
 			owner = get_crom_object(owner_record)
 			
@@ -1206,45 +1238,23 @@ def add_pir_artists(data, *, attribution_modifiers, attribution_group_types, mak
 	artists = data.get('_artists', [])
 
 	data['_artists'] = artists
+	sales_record = get_crom_object(data['_record'])
 	for seq_no, a in enumerate(artists):
 		ulan = None
 		with suppress(ValueError, TypeError):
 			ulan = int(a.get('artist_ulan'))
 		auth_name = a.get('art_authority')
-		if ulan:
-			key = f'PERSON-ULAN-{ulan}'
-			a['uri'] = pir_uri('PERSON', 'ULAN', ulan)
-			a['ulan'] = ulan
-			a['uid'] = key
-		elif acceptable_person_auth_name(auth_name):
-			a['uri'] = pir_uri('PERSON', 'AUTHNAME', auth_name)
-		else:
-			# not enough information to identify this person uniquely, so use the source location in the input file
-# 			warnings.warn(f'*** Person without a ulan or authority name: {a}')
-			a['uri'] = pir_uri('PERSON', 'PI_REC_NO', data['pi_record_no'], f'artist-{seq_no+1}')
 
-		sales_record = get_crom_object(data['_record'])
-		artist_label = None
-		if acceptable_person_auth_name(auth_name):
-			a['label'] = auth_name
-			artist_label = f'artist “{auth_name}”'
-			pname = vocab.PrimaryName(ident='', content=auth_name) # NOTE: most of these are also vocab.SortName, but not 100%, so witholding that assertion for now
-			pname.referred_to_by = sales_record
-			a['identifiers'] = [pname]
-
-		name = a.get('artist_name')
-		if name:
-			if not artist_label:
-				artist_label = f'artist “{name}”'
-			a['names'] = [(name, {'referred_to_by': [sales_record]})]
-			if 'label' not in a:
-				a['label'] = name
-		if 'label' not in a:
-			a['label'] = '(Anonymous)'
-
-		if not artist_label:
-			artist_label = 'anonymous artist'
-
+		a.update({
+			'pi_record_no': data['pi_record_no'],
+			'ulan': a['artist_ulan'],
+			'auth_name': a['art_authority'],
+			'name': a['artist_name']
+		})
+		pi = PersonIdentity()
+		pi.add_uri(a, record_id=f'artist-{seq_no+1}')
+		pi.add_names(a, referrer=sales_record, role='artist')
+		artist_label = a.get('role_label')
 		make_la_person(a)
 		person = get_crom_object(a)
 		

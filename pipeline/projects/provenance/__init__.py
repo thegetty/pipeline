@@ -96,6 +96,18 @@ class PersonIdentity:
 			return False
 		return True
 
+	def is_anonymous(self, data:dict):
+		auth_name = data.get('auth_name')
+		if auth_name:
+			return '[ANONYMOUS' in auth_name
+		elif data.get('name'):
+			return False
+
+		with suppress(ValueError, TypeError):
+			if int(data.get('ulan')):
+				return False
+		return True
+
 	def uri_keys(self, data:dict, record_id=None):
 		ulan = None
 		with suppress(ValueError, TypeError):
@@ -1232,21 +1244,31 @@ def add_pir_artists(data, *, attribution_modifiers, attribution_group_types, mak
 
 	artists = data.get('_artists', [])
 
-	data['_artists'] = artists
 	sales_record = get_crom_object(data['_record'])
-	for seq_no, a in enumerate(artists):
-		ulan = None
-		with suppress(ValueError, TypeError):
-			ulan = int(a.get('artist_ulan'))
-		auth_name = a.get('art_authority')
-
+	pi = PersonIdentity()
+	
+	for a in artists:
 		a.update({
 			'pi_record_no': data['pi_record_no'],
 			'ulan': a['artist_ulan'],
 			'auth_name': a['art_authority'],
 			'name': a['artist_name']
 		})
-		pi = PersonIdentity()
+
+	def is_or_anon(data:dict):
+		if not pi.is_anonymous(data):
+			return False
+		mods = {m.lower().strip() for m in data.get('attrib_mod_auth', '').split(';')}
+		return 'or' in mods
+	or_anon_records = [is_or_anon(a) for a in artists]
+	uncertain_attribution = any(or_anon_records)
+	for seq_no, a in enumerate(artists):
+		attrib_assignment_classes = [model.AttributeAssignment]
+		if uncertain_attribution:
+			attrib_assignment_classes.append(vocab.PossibleAssignment)
+		if is_or_anon(a):
+			# do not model the "or anonymous" records; they turn into uncertainty on the other records
+			continue
 		pi.add_uri(a, record_id=f'artist-{seq_no+1}')
 		pi.add_names(a, referrer=sales_record, role='artist')
 		artist_label = a.get('role_label')
@@ -1279,9 +1301,9 @@ def add_pir_artists(data, *, attribution_modifiers, attribution_group_types, mak
 				# equivalent to no modifier
 				pass
 			elif STYLE_OF & mods:
-				assignment = model.AttributeAssignment(label=f'In the style of {artist_label}')
+				assignment = vocab.make_multitype_obj(*attrib_assignment_classes, ident='', label=f'In the style of {artist_label}')
 				event.attributed_by = assignment
-				assignment.assigned_property = "influenced_by"
+				assignment.assigned_property = 'influenced_by'
 				assignment.property_classified_as = vocab.instances['style of']
 				assignment.assigned = person
 				continue
@@ -1298,29 +1320,43 @@ def add_pir_artists(data, *, attribution_modifiers, attribution_group_types, mak
 				group.formed_by = formation
 				group_data = add_crom_data({'uri': group_id}, group)
 				data['_organizations'].append(group_data)
+
 				subevent_id = event_id + f'-{seq_no}'
 				subevent = model.Production(ident=subevent_id, label=f'Production sub-event for {group_label}')
-				event.part = subevent
 				subevent.carried_out_by = group
+				
+				if uncertain_attribution:
+					assignment = vocab.make_multitype_obj(*attrib_assignment_classes, ident='', label=f'Possibly attributed to {group_label}')
+					event.attributed_by = assignment
+					assignment.assigned_property = 'part'
+					assignment.assigned = subevent
+				else:
+					event.part = subevent
 				continue
 			elif FORMERLY_ATTRIBUTED_TO & mods:
+				# the {uncertain_attribution} flag does not apply to this branch, because this branch is not making a statement
+				# about a previous attribution. the uncertainty applies only to the current attribution.
 				assignment = vocab.ObsoleteAssignment(ident='', label=f'Formerly attributed to {artist_label}')
 				event.attributed_by = assignment
-				assignment.assigned_property = "carried_out_by"
+				assignment.assigned_property = 'carried_out_by'
 				assignment.assigned = person
 				continue
 			elif UNCERTAIN & mods:
 				if POSSIBLY & mods:
-					assignment = vocab.PossibleAssignment(ident='', label=f'Possibly attributed to {artist_label}')
+					attrib_assignment_classes.append(vocab.PossibleAssignment)
+					assignment = vocab.make_multitype_obj(*attrib_assignment_classes, ident='', label=f'Possibly attributed to {artist_label}')
 					assignment._label = f'Possibly by {artist_label}'
 				else:
-					assignment = vocab.ProbableAssignment(ident='', label=f'Probably attributed to {artist_label}')
+					attrib_assignment_classes.append(vocab.ProbableAssignment)
+					assignment = vocab.make_multitype_obj(*attrib_assignment_classes, ident='', label=f'Probably attributed to {artist_label}')
 					assignment._label = f'Probably by {artist_label}'
 				event.attributed_by = assignment
-				assignment.assigned_property = "carried_out_by"
+				assignment.assigned_property = 'carried_out_by'
 				assignment.assigned = person
 				continue
 			elif COPY_AFTER & mods:
+				# the {uncertain_attribution} flag does not apply to this branch, because this branch is not making a statement
+				# about the artist of the work, but about the artist of the original work that this work is a copy of.
 				cls = type(hmo)
 				original_id = hmo.id + '-Original'
 				original_label = f'Original of {hmo_label}'
@@ -1346,8 +1382,15 @@ def add_pir_artists(data, *, attribution_modifiers, attribution_group_types, mak
 		
 		subevent_id = event_id + f'-{seq_no}'
 		subevent = model.Production(ident=subevent_id, label=f'Production sub-event for {artist_label}')
-		event.part = subevent
 		subevent.carried_out_by = person
+		if uncertain_attribution:
+			assignment = vocab.make_multitype_obj(*attrib_assignment_classes, ident='', label=f'Possibly attributed to {artist_label}')
+			event.attributed_by = assignment
+			assignment.assigned_property = 'part'
+			assignment.assigned = subevent
+		else:
+			event.part = subevent
+	data['_artists'] = [a for a in artists if not is_or_anon(a)]
 	return data
 
 #mark - Physical Catalogs

@@ -256,6 +256,7 @@ def populate_auction_event(data, auction_locations):
 	ts = timespan_from_outer_bounds(
 		begin=begin,
 		end=end,
+		inclusive=True
 	)
 	if begin and end:
 		ts.identified_by = model.Name(ident='', content=f'{begin} to {end}')

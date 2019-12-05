@@ -12,6 +12,9 @@ import warnings
 from contextlib import suppress
 
 from tests import TestProvenancePipelineOutput
+from cromulent import vocab
+
+vocab.add_attribute_assignment_check()
 
 class PIRModelingTest_EventLocation(TestProvenancePipelineOutput):
 	def test_modeling_for_event_locations(self):

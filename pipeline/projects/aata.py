@@ -14,7 +14,7 @@ import lxml.etree
 from sqlalchemy import create_engine
 from langdetect import detect
 import urllib.parse
-
+from datetime import datetime
 import bonobo
 from bonobo.config import Configurable, Option, use
 from bonobo.constants import NOT_MODIFIED
@@ -253,8 +253,8 @@ def _xml_extract_journal(e):
 			year = datenode.findtext('./sort_year')
 			
 			if year:
-				begin = ymd_to_datetime(year, month, None, which='begin')
-				end = ymd_to_datetime(year, month, None, which='end')
+				begin = datetime.strptime(ymd_to_datetime(year, month, None, which='begin'), "%Y-%m-%dT%H:%M:%S")
+				end = datetime.strptime(ymd_to_datetime(year, month, None, which='end'), "%Y-%m-%dT%H:%M:%S")
 				ts = timespan_from_outer_bounds(begin, end)
 				# TODO: attach ts to the issue somehow
 			elif month:
@@ -877,6 +877,7 @@ def filter_abstract_authors(data: dict):
 class AATAPipeline(PipelineBase):
 	'''Bonobo-based pipeline for transforming AATA data from XML into JSON-LD.'''
 	def __init__(self, input_path, abstracts_pattern, journals_pattern, series_pattern, **kwargs):
+		self.uid_tag_prefix = UID_TAG_PREFIX
 		super().__init__()
 		
 		vocab.register_vocab_class('VolumeNumber', {'parent': model.Identifier, 'id': '300265632', 'label': 'Volume'})

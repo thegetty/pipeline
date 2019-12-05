@@ -8,6 +8,9 @@ import uuid
 import pprint
 
 from tests import TestWriter, ProvenanceTestPipeline
+from cromulent import vocab
+
+vocab.add_attribute_assignment_check()
 
 class TestProvenancePipelineOutput(unittest.TestCase):
 	'''
@@ -93,7 +96,7 @@ class TestProvenancePipelineOutput(unittest.TestCase):
 		self.assertEqual(lo_types, {'Auction Catalog'})
 
 		people_names = {o['_label'] for o in people.values()}
-		self.assertEqual(people_names, {'Frits Lugt', '(Anonymous artist)', 'GILLEMANS, JAN PAUWEL', 'VINCKEBOONS, DAVID'})
+		self.assertEqual(people_names, {'Frits Lugt', '[Anonymous]', 'GILLEMANS, JAN PAUWEL', 'VINCKEBOONS, DAVID'})
 
 		key_119 = 'tag:getty.edu,2019:digital:pipeline:provenance:REPLACE-WITH-UUID#AUCTION,B-A139,LOT,0119,DATE,1774-05-31'
 		key_120 = 'tag:getty.edu,2019:digital:pipeline:provenance:REPLACE-WITH-UUID#AUCTION,B-A139,LOT,0120,DATE,1774-05-31'

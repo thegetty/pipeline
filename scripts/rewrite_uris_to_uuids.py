@@ -68,4 +68,4 @@ r = UUIDRewriter(prefix, map_file)
 rewrite_output_files(r, update_filename=True, verify_uuid=True)
 if map_file:
 	r.persist_map()
-
+print('Done')

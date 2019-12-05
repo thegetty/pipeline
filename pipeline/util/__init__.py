@@ -18,6 +18,8 @@ import pipeline.io.arches
 from cromulent import model, vocab
 from cromulent.model import factory, BaseResource
 
+UNKNOWN_DIMENSION = 'http://vocab.getty.edu/aat/300055642'
+
 # Dimension = namedtuple("Dimension", [
 # 	'value',	# numeric value
 # 	'unit',		# unit
@@ -236,6 +238,9 @@ class CromObjectMerger:
 						unidentified.append(v)
 				except AttributeError:
 					unidentified.append(v)
+		if len(identified) > 1 and UNKNOWN_DIMENSION in identified:
+			# drop the Unknown physical dimension (300055642)
+			del(identified[UNKNOWN_DIMENSION])
 
 	def set_or_merge(self, obj, p, *values):
 		if p == 'type':
@@ -449,7 +454,60 @@ def strip_key_prefix(prefix, value):
 			d[k] = v
 	return d
 
-def timespan_from_outer_bounds(begin=None, end=None):
+
+def label_for_timespan_range(begin, end, inclusive=False):
+	'''
+	Returns a human-readable string for labeling the timespan with the given bounds.
+	
+	The {inclusive} indicates if the upper bound given by {end} is inclusive or exclusive.
+	
+	If {end} is exclusive, the label will take this into account in creating a
+	human-readable string. For example, if the upper bound was '2019-12-01', exclusive,
+	the human-readable label should indicate the timespan ending at the end of November.
+	'''
+	if begin == end:
+		return begin
+	
+	if isinstance(begin, datetime.datetime):
+		begin = begin.strftime("%Y-%m-%d")
+	if isinstance(end, datetime.datetime):
+		end = end.strftime("%Y-%m-%d")
+
+	from_y, from_m, from_d = map(int, begin.split('-'))
+	to_y, to_m, to_d = map(int, end.split('-'))
+	if inclusive:
+		maxday = calendar.monthrange(to_y, to_m)[1]
+		if from_y == to_y and from_m == to_m and from_d == 1 and to_d == maxday:
+			# 1 month range
+			return '%04d-%02d' % (from_y, from_m)
+		elif from_y == to_y and from_m == 1 and to_m == 12 and from_d == 1 and to_d == 31:
+			# 1 year range
+			return str(from_y)
+		else:
+			return f'{begin} to {end}'
+	else:
+		if from_y == to_y and from_m == to_m and from_d == to_d - 1:
+			# 1 day range
+			return begin
+		elif from_y == to_y and from_m == to_m - 1 and from_d == to_d and to_d == 1:
+			# 1 month range
+			return '%04d-%02d' % (from_y, from_m)
+		elif from_y == to_y - 1 and from_m == to_m and to_m == 1 and from_d == to_d and to_d == 1:
+			# 1 year range
+			return str(from_y)
+		else:
+			to_d -= 1
+			if to_d == 0:
+				to_m -= 1
+				if to_m == 0:
+					to_m = 12
+					to_y -= 1
+				to_d = calendar.monthrange(to_y, to_m)[1]
+			end = '%04d-%02d-%02d' % (to_y, to_m, to_d)
+			return f'{begin} to {end}'
+
+
+def timespan_from_outer_bounds(begin=None, end=None, inclusive=False):
 	'''
 	Return a `TimeSpan` based on the (optional) `begin` and `end` date strings.
 
@@ -458,14 +516,11 @@ def timespan_from_outer_bounds(begin=None, end=None):
 	if begin or end:
 		ts = model.TimeSpan(ident='')
 		if begin and end:
-			ts._label = f'{begin} to {end}'
-			ts.identified_by = model.Name(ident='', content=ts._label)
+			ts._label = label_for_timespan_range(begin, end, inclusive=inclusive)
 		elif begin:
 			ts._label = f'{begin} onwards'
-			ts.identified_by = model.Name(ident='', content=ts._label)
 		elif end:
 			ts._label = f'up to {end}'
-			ts.identified_by = model.Name(ident='', content=ts._label)
 
 		if begin is not None:
 			try:
@@ -480,6 +535,8 @@ def timespan_from_outer_bounds(begin=None, end=None):
 			try:
 				if not isinstance(end, datetime.datetime):
 					end = dateutil.parser.parse(end)
+				if inclusive:
+					end += datetime.timedelta(days=1)
 				end = end.strftime("%Y-%m-%dT%H:%M:%SZ")
 				ts.end_of_the_end = end
 			except ValueError:
@@ -504,3 +561,22 @@ class CaseFoldingSet(set):
 
 	def __contains__(self, v):
 		return super().__contains__(v.casefold())
+
+def truncate_with_ellipsis(s, length=100):
+	'''
+	If the string is too long to represent as a title-like identifier, return a new,
+	truncated string with a trailing ellipsis that can be used as a title (with the
+	assumption that the long original value will be represented as a more suitable
+	string such as a description).
+	'''
+	if not isinstance(s, str):
+		return None
+	if len(s) <= length:
+		return None
+	shorter = ' '.join(s[:length].split(' ')[0:-1]) + '…'
+	if len(shorter) == 1:
+		# breaking on spaces did not yield a shorter string;
+		# {s} must start with at least 100 non-space characters
+		shorter = s[:length-1] + '…'
+	return shorter
+

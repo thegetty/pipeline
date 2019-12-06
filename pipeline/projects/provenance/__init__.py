@@ -1699,7 +1699,7 @@ class ProvenancePipeline(PipelineBase):
 
 		if serialize:
 			# write SALES data
-			self.add_serialization_chain(graph, bids.output, model=self.models['Activity'])
+			self.add_serialization_chain(graph, bids.output, model=self.models['Bidding'])
 			self.add_serialization_chain(graph, orgs.output, model=self.models['Group'])
 			self.add_serialization_chain(graph, places.output, model=self.models['Place'])
 		return bid_acqs
@@ -1894,7 +1894,7 @@ class ProvenancePipeline(PipelineBase):
 		)
 		if serialize:
 			# write SALES data
-			self.add_serialization_chain(graph, sales.output, model=self.models['Activity'])
+			self.add_serialization_chain(graph, sales.output, model=self.models['AuctionOfLot'])
 		return sales
 
 	def add_single_object_lot_tracking_chain(self, graph, sales):

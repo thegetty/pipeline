@@ -782,7 +782,7 @@ def related_procurement(current_tx, hmo, current_ts=None, buyer=None, seller=Non
 	and if the timespan `current_ts` is given, has temporal data to that effect. If
 	`previous` is `False`, this relationship is reversed.
 	'''
-	tx = vocab.Procurement(ident='')
+	tx = vocab.Procurement()
 	if current_tx:
 		if previous:
 			tx.ends_before_the_start_of = current_tx

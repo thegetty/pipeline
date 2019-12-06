@@ -940,6 +940,7 @@ def populate_destruction_events(data, note, *, type_map, location=None):
 	destruction_types_map = type_map
 	hmo = get_crom_object(data)
 	title = data.get('title')
+	short_title = truncate_with_ellipsis(title, 100) or title
 
 	r = re.compile(r'[Dd]estroyed(?: (?:by|during) (\w+))?(?: in (\d{4})[.]?)?')
 	m = r.search(note)
@@ -947,7 +948,7 @@ def populate_destruction_events(data, note, *, type_map, location=None):
 		method = m.group(1)
 		year = m.group(2)
 		dest_id = hmo.id + '-Destruction'
-		d = model.Destruction(ident=dest_id, label=f'Destruction of “{title}”')
+		d = model.Destruction(ident=dest_id, label=f'Destruction of “{short_title}”')
 		d.referred_to_by = vocab.Note(ident='', content=note)
 		if year is not None:
 			begin, end = date_cleaner(year)
@@ -959,7 +960,7 @@ def populate_destruction_events(data, note, *, type_map, location=None):
 			with suppress(KeyError, AttributeError):
 				type_name = destruction_types_map[method.lower()]
 				type = vocab.instances[type_name]
-				event = model.Event(label=f'{method.capitalize()} event causing the destruction of “{title}”')
+				event = model.Event(label=f'{method.capitalize()} event causing the destruction of “{short_title}”')
 				event.classified_as = type
 				d.caused_by = event
 				data['_events'].append(add_crom_data(data={}, what=event))

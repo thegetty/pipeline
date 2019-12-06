@@ -962,6 +962,7 @@ def populate_destruction_events(data, note, *, type_map, location=None):
 				event = model.Event(label=f'{method.capitalize()} event causing the destruction of “{title}”')
 				event.classified_as = type
 				d.caused_by = event
+				data['_events'].append(add_crom_data(data={}, what=event))
 
 		if location:
 			current = parse_location_name(location, uri_base=UID_TAG_PREFIX)
@@ -1001,6 +1002,7 @@ def populate_object(data, post_sale_map, unique_catalogs, vocab_instance_map, de
 	now_key = (cno, lot, date) # the current key for this object; may be associated later with prev and post object keys
 
 	data['_locations'] = []
+	data['_events'] = []
 	record = _populate_object_catalog_record(data, parent, lot, cno, parent['pi_record_no'])
 	_populate_object_visual_item(data, vocab_instance_map)
 	_populate_object_destruction(data, parent, destruction_types_map)
@@ -1916,8 +1918,15 @@ class ProvenancePipeline(PipelineBase):
 			ExtractKeyedValues(key='_original_objects'),
 			_input=objects.output
 		)
+
+		events = graph.add_chain(
+			ExtractKeyedValues(key='_events'),
+			_input=objects.output
+		)
+
 		if serialize:
 			# write OBJECTS data
+			self.add_serialization_chain(graph, events.output, model=self.models['Event'])
 			self.add_serialization_chain(graph, objects.output, model=self.models['HumanMadeObject'])
 			self.add_serialization_chain(graph, original_objects.output, model=self.models['HumanMadeObject'])
 

@@ -41,6 +41,7 @@ import pipeline.execution
 from pipeline.projects import PipelineBase
 from pipeline.projects.provenance.util import *
 from pipeline.util import \
+			GraphListSource, \
 			truncate_with_ellipsis, \
 			CaseFoldingSet, \
 			RecursiveExtractKeyedValue, \
@@ -172,19 +173,6 @@ class PersonIdentity:
 
 		if role:
 			data['role_label'] = role_label
-
-class GraphListSource:
-	'''
-	Act as a bonobo graph source node for a set of crom objects.
-	Yields the supplied objects wrapped in data dicts.
-	'''
-	def __init__(self, values, *args, **kwargs):
-		super().__init__(*args, **kwargs)
-		self.values = values
-
-	def __call__(self):
-		for v in self.values:
-			yield add_crom_data({}, v)
 
 def copy_source_information(dst: dict, src: dict):
 	for k in CSV_SOURCE_COLUMNS:

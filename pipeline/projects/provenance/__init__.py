@@ -275,7 +275,7 @@ def populate_auction_event(data, auction_locations):
 	if ts:
 		auction.timespan = ts
 
-	auction.subject_of = catalog
+	auction.referred_to_by = catalog
 	return data
 
 def add_auction_house_data(a, event_record):

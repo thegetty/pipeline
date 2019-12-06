@@ -25,18 +25,26 @@ class PIRModelingTest_MultiLot(TestProvenancePipelineOutput):
 		output = self.run_pipeline('multilot')
 
 		objects = output['model-object']
+		auctions = list(output['model-auction-of-lot'].values())
 		activities = list(output['model-activity'].values())
-		self.assertEqual(len(activities), 3)
+		self.assertEqual(len(activities), 1)
+		self.assertEqual(len(auctions), 2)
 		
 		by_type = {k: list(v) for k,v in groupby(activities, key=lambda a: a['classified_as'][0]['_label'])}
-		self.assertEqual(sorted(by_type.keys()), ['Auction of Lot', 'Procurement'])
-		
-		# there are 2 lots and 1 procurement
-		self.assertEqual(len(by_type['Auction of Lot']), 2)
-		self.assertEqual(len(by_type['Procurement']), 1)
+		self.assertEqual(sorted(by_type.keys()), ['Procurement'])
 
-		lots = by_type['Auction of Lot']
+		# there are 2 lots and 1 procurement
+		self.assertEqual(len(by_type['Procurement']), 1)
 		procurement = by_type['Procurement'][0]
+
+
+		by_type = {k: list(v) for k,v in groupby(auctions, key=lambda a: a['classified_as'][0]['_label'])}
+		self.assertEqual(sorted(by_type.keys()), ['Auction of Lot'])
+		self.assertEqual(len(by_type['Auction of Lot']), 2)
+		lots = by_type['Auction of Lot']
+
+
+
 
 		# procurement has 1 payment and 2 acquisitions
 		parts = procurement['part']

@@ -15,6 +15,8 @@ from pipeline.projects.provenance.util import SalesTree
 from pipeline.nodes.basic import Serializer, AddArchesModel
 
 MODELS = {
+	'Bidding': 'model-bidding',
+	'AuctionOfLot': 'model-auction-of-lot',
 	'Acquisition': 'model-acquisition',
 	'Activity': 'model-activity',
 	'Event': 'model-event',

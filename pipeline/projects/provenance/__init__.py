@@ -765,7 +765,7 @@ def add_acquisition(data, buyers, sellers, buy_sell_modifiers, make_la_person=No
 
 			own_info_source = owner_record.get('own_so')
 			if own_info_source:
-				note = vocab.SourceStatement(content=own_info_source, label=source_label)
+				note = vocab.SourceStatement(ident='', content=own_info_source, label=source_label)
 				tx.referred_to_by = note
 
 			ptx_data = tx_data.copy()
@@ -790,9 +790,9 @@ def related_procurement(current_tx, hmo, current_ts=None, buyer=None, seller=Non
 			tx.starts_after_the_end_of = current_tx
 	modifier_label = 'Previous' if previous else 'Subsequent'
 	try:
-		pacq = model.Acquisition(label=f'{modifier_label} Acquisition of: “{hmo._label}”')
+		pacq = model.Acquisition(ident='', label=f'{modifier_label} Acquisition of: “{hmo._label}”')
 	except AttributeError:
-		pacq = model.Acquisition(label=f'{modifier_label} Acquisition')
+		pacq = model.Acquisition(ident='', label=f'{modifier_label} Acquisition')
 	pacq.transferred_title_of = hmo
 	if buyer:
 		pacq.transferred_title_to = buyer

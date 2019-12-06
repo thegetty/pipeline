@@ -275,7 +275,7 @@ def populate_auction_event(data, auction_locations):
 	if ts:
 		auction.timespan = ts
 
-	auction.subject_of = catalog
+	auction.referred_to_by = catalog
 	return data
 
 def add_auction_house_data(a, event_record):
@@ -940,6 +940,7 @@ def populate_destruction_events(data, note, *, type_map, location=None):
 	destruction_types_map = type_map
 	hmo = get_crom_object(data)
 	title = data.get('title')
+	short_title = truncate_with_ellipsis(title, 100) or title
 
 	r = re.compile(r'[Dd]estroyed(?: (?:by|during) (\w+))?(?: in (\d{4})[.]?)?')
 	m = r.search(note)
@@ -947,7 +948,7 @@ def populate_destruction_events(data, note, *, type_map, location=None):
 		method = m.group(1)
 		year = m.group(2)
 		dest_id = hmo.id + '-Destruction'
-		d = model.Destruction(ident=dest_id, label=f'Destruction of “{title}”')
+		d = model.Destruction(ident=dest_id, label=f'Destruction of “{short_title}”')
 		d.referred_to_by = vocab.Note(ident='', content=note)
 		if year is not None:
 			begin, end = date_cleaner(year)
@@ -959,9 +960,10 @@ def populate_destruction_events(data, note, *, type_map, location=None):
 			with suppress(KeyError, AttributeError):
 				type_name = destruction_types_map[method.lower()]
 				type = vocab.instances[type_name]
-				event = model.Event(label=f'{method.capitalize()} event causing the destruction of “{title}”')
+				event = model.Event(label=f'{method.capitalize()} event causing the destruction of “{short_title}”')
 				event.classified_as = type
 				d.caused_by = event
+				data['_events'].append(add_crom_data(data={}, what=event))
 
 		if location:
 			current = parse_location_name(location, uri_base=UID_TAG_PREFIX)
@@ -1001,6 +1003,7 @@ def populate_object(data, post_sale_map, unique_catalogs, vocab_instance_map, de
 	now_key = (cno, lot, date) # the current key for this object; may be associated later with prev and post object keys
 
 	data['_locations'] = []
+	data['_events'] = []
 	record = _populate_object_catalog_record(data, parent, lot, cno, parent['pi_record_no'])
 	_populate_object_visual_item(data, vocab_instance_map)
 	_populate_object_destruction(data, parent, destruction_types_map)
@@ -1696,7 +1699,7 @@ class ProvenancePipeline(PipelineBase):
 
 		if serialize:
 			# write SALES data
-			self.add_serialization_chain(graph, bids.output, model=self.models['Activity'])
+			self.add_serialization_chain(graph, bids.output, model=self.models['Bidding'])
 			self.add_serialization_chain(graph, orgs.output, model=self.models['Group'])
 			self.add_serialization_chain(graph, places.output, model=self.models['Place'])
 		return bid_acqs
@@ -1891,7 +1894,7 @@ class ProvenancePipeline(PipelineBase):
 		)
 		if serialize:
 			# write SALES data
-			self.add_serialization_chain(graph, sales.output, model=self.models['Activity'])
+			self.add_serialization_chain(graph, sales.output, model=self.models['AuctionOfLot'])
 		return sales
 
 	def add_single_object_lot_tracking_chain(self, graph, sales):
@@ -1916,8 +1919,15 @@ class ProvenancePipeline(PipelineBase):
 			ExtractKeyedValues(key='_original_objects'),
 			_input=objects.output
 		)
+
+		events = graph.add_chain(
+			ExtractKeyedValues(key='_events'),
+			_input=objects.output
+		)
+
 		if serialize:
 			# write OBJECTS data
+			self.add_serialization_chain(graph, events.output, model=self.models['Event'])
 			self.add_serialization_chain(graph, objects.output, model=self.models['HumanMadeObject'])
 			self.add_serialization_chain(graph, original_objects.output, model=self.models['HumanMadeObject'])
 

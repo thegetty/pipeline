@@ -1519,6 +1519,7 @@ class ProvenancePipeline(PipelineBase):
 	'''Bonobo-based pipeline for transforming Provenance data from CSV into JSON-LD.'''
 	def __init__(self, input_path, catalogs, auction_events, contents, **kwargs):
 		self.uid_tag_prefix = UID_TAG_PREFIX
+		self.project_name = 'provenance'
 
 		vocab.register_instance('fire', {'parent': model.Type, 'id': '300068986', 'label': 'Fire'})
 		vocab.register_instance('animal', {'parent': model.Type, 'id': '300249395', 'label': 'Animal'})
@@ -1526,7 +1527,6 @@ class ProvenancePipeline(PipelineBase):
 		vocab.register_vocab_class('AuctionCatalog', {'parent': model.HumanMadeObject, 'id': '300026068', 'label': 'Auction Catalog', 'metatype': 'work type'})
 
 		super().__init__()
-		self.project_name = 'provenance'
 		self.graph_0 = None
 		self.graph_1 = None
 		self.graph_2 = None

@@ -44,7 +44,6 @@ class StaticInstanceHolder:
 
 class PipelineBase:
 	def __init__(self):
-		self.project_name = None
 		self.input_path = None
 		self.static_instances = StaticInstanceHolder(self.setup_static_instances())
 
@@ -74,14 +73,16 @@ class PipelineBase:
 		lugt = model.Person(ident=LUGT_URI, label='Frits Lugt')
 		lugt.identified_by = vocab.PrimaryName(ident='', content='Frits Lugt')
 		lugt.exact_match = model.BaseResource(ident=f'http://vocab.getty.edu/ulan/{lugt_ulan}')
-		return {
+		instances = defaultdict(dict)
+		instances.update({
 			'Group': {
 				'gri': gri
 			},
 			'Person': {
 				'lugt': lugt
 			}
-		}
+		})
+		return instances
 
 	def _service_from_path(self, file):
 		if file.suffix == '.json':

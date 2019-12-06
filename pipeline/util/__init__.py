@@ -17,6 +17,7 @@ import settings
 import pipeline.io.arches
 from cromulent import model, vocab
 from cromulent.model import factory, BaseResource
+from pipeline.linkedart import add_crom_data
 
 UNKNOWN_DIMENSION = 'http://vocab.getty.edu/aat/300055642'
 
@@ -579,4 +580,17 @@ def truncate_with_ellipsis(s, length=100):
 		# {s} must start with at least 100 non-space characters
 		shorter = s[:length-1] + '…'
 	return shorter
+
+class GraphListSource:
+	'''
+	Act as a bonobo graph source node for a set of crom objects.
+	Yields the supplied objects wrapped in data dicts.
+	'''
+	def __init__(self, values, *args, **kwargs):
+		super().__init__(*args, **kwargs)
+		self.values = values
+
+	def __call__(self):
+		for v in self.values:
+			yield add_crom_data({}, v)
 

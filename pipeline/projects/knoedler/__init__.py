@@ -34,6 +34,7 @@ from cromulent.extract import extract_physical_dimensions, extract_monetary_amou
 import pipeline.execution
 from pipeline.projects import PipelineBase
 from pipeline.util import \
+			GraphListSource, \
 			CaseFoldingSet, \
 			RecursiveExtractKeyedValue, \
 			ExtractKeyedValue, \
@@ -640,6 +641,15 @@ class KnoedlerPipeline(PipelineBase):
 		print('Running graph...', file=sys.stderr)
 		graph = self.get_graph(**options)
 		self.run_graph(graph, services=services)
+
+		print('Serializing static instances...', file=sys.stderr)
+		for model, instances in self.static_instances.used_instances().items():
+			g = bonobo.Graph()
+			nodes = self.serializer_nodes_for_model(model=self.models[model], use_memory_writer=False)
+			values = instances.values()
+			source = g.add_chain(GraphListSource(values))
+			self.add_serialization_chain(g, source.output, model=self.models[model], use_memory_writer=False)
+			self.run_graph(g, services={})
 
 
 class KnoedlerFilePipeline(KnoedlerPipeline):

@@ -155,95 +155,111 @@ def add_group_uri(data:dict):
 
 	return data
 
-@use('make_la_lo')
-@use('make_la_hmo')
-def add_book(data: dict, make_la_hmo, make_la_lo):
-	book = data['book_record']
-	book_id, _, _ = record_id(book)
-	data['_physical_book'] = {
-		'uri': knoedler_uri('Book', book_id),
-		'object_type': vocab.Book,
-		'label': f'Knoedler Stock Book {book_id}',
-		'identifiers': [(book_id, vocab.LocalNumber(ident=''))],
-	}
-	make_la_hmo(data['_physical_book'])
+def knoedler_number_id(content, static_instances):
+	k_id = vocab.LocalNumber(ident='', content=content)
+	assignment = model.AttributeAssignment(ident='')
+	assignment.carried_out_by = static_instances.get_instance('Group', 'knoedler')
+	k_id.assigned_by = assignment
+	return k_id
 
-	data['_text_book'] = {
-		'uri': knoedler_uri('Text', 'Book', book_id),
-		'object_type': vocab.AccountBookText,
-		'label': f'Knoedler Stock Book {book_id}',
-		'identifiers': [(book_id, vocab.LocalNumber(ident=''))],
-		'carried_by': [data['_physical_book']]
-	}
-	make_la_lo(data['_text_book'])
-
-	return data
-
-@use('make_la_lo')
-@use('make_la_hmo')
-def add_page(data: dict, make_la_hmo, make_la_lo):
-	book = data['book_record']
-	book_id, page_id, _ = record_id(book)
-
-	d = vocab.SequencePosition()
-	d.value = page_id
-	d.unit = vocab.instances['numbers']
-
-	data['_physical_page'] = {
-		'uri': knoedler_uri('Book', book_id, 'Page', page_id),
-		'object_type': vocab.Page,
-		'label': f'Knoedler Stock Book {book_id}, Page {page_id}',
-		'identifiers': [(book_id, vocab.LocalNumber(ident=''))],
-		'part_of': [data['_physical_book']],
-	}
-	make_la_hmo(data['_physical_page'])
+class AddBook(Configurable):
+	make_la_lo = Service('make_la_lo')
+	make_la_hmo = Service('make_la_hmo')
+	static_instances = Option(default="static_instances")
 	
-	data['_text_page'] = {
-		'uri': knoedler_uri('Text', 'Book', book_id, 'Page', page_id),
-		'object_type': vocab.AccountBookText,
-		'label': f'Knoedler Stock Book {book_id}, Page {page_id}',
-		'identifiers': [(page_id, vocab.LocalNumber(ident=''))],
-		'part_of': [data['_text_book']],
-		'carried_by': [data['_physical_page']],
-		'dimensions': [d] # TODO: add dimension handling to MakeLinkedArtLinguisticObject
-	}
-	if data.get('heading'):
-		# This is a transcription of the heading of the page
-		# Meaning it is part of the page linguistic object
-		data['_text_page']['heading'] = data['heading'] # TODO: add heading handling to MakeLinkedArtLinguisticObject
-	if data.get('subheading'):
-		# Transcription of the subheading of the page
-		data['_text_page']['subheading'] = data['subheading'] # TODO: add subheading handling to MakeLinkedArtLinguisticObject
-	make_la_lo(data['_text_page'])
+	def __call__(self, data:dict, make_la_lo, make_la_hmo):
+		book = data['book_record']
+		book_id, _, _ = record_id(book)
+		data['_physical_book'] = {
+			'uri': knoedler_uri('Book', book_id),
+			'object_type': vocab.Book,
+			'label': f'Knoedler Stock Book {book_id}',
+			'identifiers': [knoedler_number_id(book_id, self.static_instances)],
+		}
+		make_la_hmo(data['_physical_book'])
 
-	return data
+		data['_text_book'] = {
+			'uri': knoedler_uri('Text', 'Book', book_id),
+			'object_type': vocab.AccountBookText,
+			'label': f'Knoedler Stock Book {book_id}',
+			'identifiers': [knoedler_number_id(book_id, self.static_instances)],
+			'carried_by': [data['_physical_book']]
+		}
+		make_la_lo(data['_text_book'])
 
-@use('make_la_lo')
-def add_row(data: dict, make_la_lo):
-	book = data['book_record']
-	book_id, page_id, row_id = record_id(book)
+		return data
 
-	d = vocab.SequencePosition()
-	d.value = row_id
-	d.unit = vocab.instances['numbers']
+class AddPage(Configurable):
+	make_la_lo = Service('make_la_lo')
+	make_la_hmo = Service('make_la_hmo')
+	static_instances = Option(default="static_instances")
 	
-	notes = []
-	# TODO: add attributed star record number to row as a LocalNumber
-	for k in ('description', 'working_note', 'verbatim_notes'):
-		if book.get(k):
-			notes.append(vocab.Note(ident='', content=book[k]))
+	def __call__(self, data:dict, make_la_lo, make_la_hmo):
+		book = data['book_record']
+		book_id, page_id, _ = record_id(book)
 
-	data['_text_row'] = {
-		'uri': knoedler_uri('Text', 'Book', book_id, 'Page', page_id, 'Row', row_id),
-		'label': f'Knoedler Stock Book {book_id}, Page {page_id}, Row {row_id}',
-		'identifiers': [(row_id, vocab.LocalNumber(ident=''))],
-		'part_of': [data['_text_page']],
-		'dimensions': [d], # TODO: add dimension handling to MakeLinkedArtLinguisticObject
-		'referred_to_by': notes,
-	}
-	make_la_lo(data['_text_row'])
+		d = vocab.SequencePosition()
+		d.value = page_id
+		d.unit = vocab.instances['numbers']
+
+		data['_physical_page'] = {
+			'uri': knoedler_uri('Book', book_id, 'Page', page_id),
+			'object_type': vocab.Page,
+			'label': f'Knoedler Stock Book {book_id}, Page {page_id}',
+			'identifiers': [knoedler_number_id(book_id, self.static_instances)],
+			'part_of': [data['_physical_book']],
+		}
+		make_la_hmo(data['_physical_page'])
 	
-	return data
+		data['_text_page'] = {
+			'uri': knoedler_uri('Text', 'Book', book_id, 'Page', page_id),
+			'object_type': vocab.AccountBookText,
+			'label': f'Knoedler Stock Book {book_id}, Page {page_id}',
+			'identifiers': [(page_id, vocab.LocalNumber(ident=''))],
+			'part_of': [data['_text_book']],
+			'carried_by': [data['_physical_page']],
+			'dimensions': [d] # TODO: add dimension handling to MakeLinkedArtLinguisticObject
+		}
+		if data.get('heading'):
+			# This is a transcription of the heading of the page
+			# Meaning it is part of the page linguistic object
+			data['_text_page']['heading'] = data['heading'] # TODO: add heading handling to MakeLinkedArtLinguisticObject
+		if data.get('subheading'):
+			# Transcription of the subheading of the page
+			data['_text_page']['subheading'] = data['subheading'] # TODO: add subheading handling to MakeLinkedArtLinguisticObject
+		make_la_lo(data['_text_page'])
+
+		return data
+
+class AddRow(Configurable):
+	make_la_lo = Service('make_la_lo')
+	static_instances = Option(default="static_instances")
+	
+	def __call__(self, data:dict, make_la_lo):
+		book = data['book_record']
+		book_id, page_id, row_id = record_id(book)
+
+		d = vocab.SequencePosition()
+		d.value = row_id
+		d.unit = vocab.instances['numbers']
+	
+		notes = []
+		# TODO: add attributed star record number to row as a LocalNumber
+		for k in ('description', 'working_note', 'verbatim_notes'):
+			if book.get(k):
+				notes.append(vocab.Note(ident='', content=book[k]))
+
+		data['_text_row'] = {
+			'uri': knoedler_uri('Text', 'Book', book_id, 'Page', page_id, 'Row', row_id),
+			'label': f'Knoedler Stock Book {book_id}, Page {page_id}, Row {row_id}',
+			'identifiers': [(row_id, vocab.LocalNumber(ident=''))],
+			'part_of': [data['_text_page']],
+			'dimensions': [d], # TODO: add dimension handling to MakeLinkedArtLinguisticObject
+			'referred_to_by': notes,
+		}
+		make_la_lo(data['_text_row'])
+	
+		return data
 
 @use('vocab_type_map')
 @use('make_la_org')
@@ -291,8 +307,10 @@ def transaction_switch(data: dict):
 class KnoedlerPipeline(PipelineBase):
 	'''Bonobo-based pipeline for transforming Knoedler data from CSV into JSON-LD.'''
 	def __init__(self, input_path, data, **kwargs):
-		super().__init__()
+		self.uid_tag_prefix = UID_TAG_PREFIX
 		self.project_name = 'knoedler'
+
+		super().__init__()
 		self.graph = None
 		self.models = kwargs.get('models', settings.arches_models)
 		self.header_file = data['header_file']
@@ -305,6 +323,21 @@ class KnoedlerPipeline(PipelineBase):
 		with fs.open(self.header_file, newline='') as csvfile:
 			r = csv.reader(csvfile)
 			self.headers = [v.lower() for v in next(r)]
+
+	def setup_static_instances(self):
+		instances = super().setup_static_instances()
+
+		knoedler_ulan = 500304270
+		knoedler_name = 'M. Knoedler & Co.'
+		KNOEDLER_URI = self.make_uri('ORGANIZATION', 'ULAN', str(knoedler_ulan))
+		knoedler = model.Group(ident=KNOEDLER_URI, label=knoedler_name)
+		knoedler.identified_by = vocab.PrimaryName(ident='', content=knoedler_name)
+		knoedler.exact_match = model.BaseResource(ident=f'http://vocab.getty.edu/ulan/{knoedler_ulan}')
+		
+		instances['Group'].update({
+			'knoedler': knoedler
+		})
+		return instances
 
 	# Set up environment
 	def get_services(self):
@@ -502,7 +535,8 @@ class KnoedlerPipeline(PipelineBase):
 
 	def add_book_chain(self, graph, sales_records, serialize=True):
 		books = graph.add_chain(
-			add_book,
+# 			add_book,
+			AddBook(static_instances=self.static_instances),
 			_input=sales_records.output
 		)
 		phys = graph.add_chain(
@@ -520,7 +554,7 @@ class KnoedlerPipeline(PipelineBase):
 
 	def add_page_chain(self, graph, books, serialize=True):
 		pages = graph.add_chain(
-			add_page,
+			AddPage(static_instances=self.static_instances),
 			_input=books.output
 		)
 		phys = graph.add_chain(
@@ -538,7 +572,7 @@ class KnoedlerPipeline(PipelineBase):
 
 	def add_row_chain(self, graph, pages, serialize=True):
 		rows = graph.add_chain(
-			add_row,
+			AddRow(static_instances=self.static_instances),
 			_input=pages.output
 		)
 		text = graph.add_chain(

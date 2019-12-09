@@ -34,8 +34,8 @@ class PIRModelingTest_Catalog(TestProvenancePipelineOutput):
 		lingobj_ids = set([l['id'] for l in los.values()])
 		self.assertEqual(catalogs, lingobj_ids)
 
-		# the auction event is the subject of the catalog linguistic object
-		event_subjects = set([s['id'] for e in events.values() for s in e['subject_of']])
+		# the auction event is referred to by the catalog linguistic object
+		event_subjects = set([s['id'] for e in events.values() for s in e['referred_to_by']])
 		self.assertEqual(catalogs, event_subjects)
 
 

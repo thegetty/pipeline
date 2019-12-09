@@ -9,6 +9,8 @@ arches_models = {
 	'Procurement': '08ad7e74-da48-4720-9e3f-ad5577d0d57c',
 	'Series': 'd537c62e-720a-467f-ac88-9f0b53b14dd8',
 	"Activity": "24c45975-3955-11e9-80f0-a4d18cec433a",
+	'AuctionOfLot': 'eefeaef2-f90f-4213-9749-37e6625cb5b5',
+	'Bidding': '145a379c-af1e-4149-a2e9-9a40659b4326',
 	"HumanMadeObject": "2486c17d-2e42-11e9-bd33-a4d18cec433a",
 	"LinguisticObject": "41a41e47-2e42-11e9-b5ee-a4d18cec433a",
 	"Organization": "edbee5e8-2e41-11e9-bc39-a4d18cec433a",

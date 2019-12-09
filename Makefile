@@ -67,7 +67,10 @@ pirdata:
 
 postprocessjson:
 	ls $(GETTY_PIPELINE_OUTPUT) | PYTHONPATH=`pwd` xargs -n 1 -P 8 -I '{}' $(PYTHON) ./scripts/coalesce_json.py "${GETTY_PIPELINE_OUTPUT}/{}"
+	PYTHONPATH=`pwd` $(PYTHON) ./scripts/remove_meaningless_ids.py
+	# Reorganizing JSON files...
 	find $(GETTY_PIPELINE_OUTPUT) -name '*.json' | PYTHONPATH=`pwd` xargs -n 256 -P 16 $(PYTHON) ./scripts/reorganize_json.py
+	# Done
 	find $(GETTY_PIPELINE_OUTPUT) -type d -empty -delete
 
 jsonlist:

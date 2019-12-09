@@ -15,6 +15,8 @@ from pipeline.projects.provenance.util import SalesTree
 from pipeline.nodes.basic import Serializer, AddArchesModel
 
 MODELS = {
+	'Bidding': 'model-bidding',
+	'AuctionOfLot': 'model-auction-of-lot',
 	'Acquisition': 'model-acquisition',
 	'Activity': 'model-activity',
 	'Event': 'model-event',
@@ -96,6 +98,7 @@ class ProvenanceTestPipeline(ProvenancePipeline):
 	Test Provenance pipeline subclass that allows using a custom Writer.
 	'''
 	def __init__(self, writer, input_path, catalogs, auction_events, contents, **kwargs):
+		self.uid_tag_prefix	= 'tag:getty.edu,2019:digital:pipeline:TESTS:REPLACE-WITH-UUID#'
 		super().__init__(input_path, catalogs, auction_events, contents, **kwargs)
 		self.writer = writer
 		self.prev_post_sales_map = {}

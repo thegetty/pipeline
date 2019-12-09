@@ -75,11 +75,6 @@ from pipeline.nodes.basic import \
 			Trace
 from pipeline.util.rewriting import rewrite_output_files, JSONValueRewriter
 
-PROBLEMATIC_RECORD_URI = 'tag:getty.edu,2019:digital:pipeline:provenance:ProblematicRecord'
-CSV_SOURCE_COLUMNS = ['pi_record_no', 'catalog_number']
-
-IGNORE_HOUSE_AUTHNAMES = CaseFoldingSet(('Anonymous',))
-
 #mark - utility functions and classes
 
 class PersonIdentity:
@@ -174,12 +169,6 @@ class PersonIdentity:
 		if role:
 			data['role_label'] = role_label
 
-def copy_source_information(dst: dict, src: dict):
-	for k in CSV_SOURCE_COLUMNS:
-		with suppress(KeyError):
-			dst[k] = src[k]
-	return dst
-
 class ProvenanceUtilityHelper:
 	'''
 	Project-specific code for accessing and interpreting sales data.
@@ -187,6 +176,15 @@ class ProvenanceUtilityHelper:
 	def __init__(self):
 		# TODO: does this handle all the cases of data packed into the lot_number string that need to be stripped?
 		self.shared_lot_number_re = re.compile(r'(\[[a-z]\])')
+		self.ignore_house_authnames = CaseFoldingSet(('Anonymous',))
+		self.csv_source_columns = ['pi_record_no', 'catalog_number']
+		self.problematic_record_uri = 'tag:getty.edu,2019:digital:pipeline:provenance:ProblematicRecord'
+
+	def copy_source_information(self, dst: dict, src: dict):
+		for k in self.csv_source_columns:
+			with suppress(KeyError):
+				dst[k] = src[k]
+		return dst
 
 	def auction_event_for_catalog_number(self, catalog_number):
 		'''
@@ -354,6 +352,7 @@ class PopulateAuctionEvent(Configurable):
 		return data
 
 class AddAuctionHouses(Configurable):
+	helper = Option(required=True)
 	auction_houses = Service('auction_houses')
 	
 	def add_auction_house_data(self, a, event_record):
@@ -371,7 +370,7 @@ class AddAuctionHouses(Configurable):
 			a['uri'] = pir_uri('AUCTION-HOUSE', 'ULAN', ulan)
 			a['ulan'] = ulan
 			house = vocab.AuctionHouseOrg(ident=a['uri'])
-		elif auth_name and auth_name not in IGNORE_HOUSE_AUTHNAMES:
+		elif auth_name and auth_name not in self.helper.ignore_house_authnames:
 			a['uri'] = pir_uri('AUCTION-HOUSE', 'AUTHNAME', auth_name)
 			pname = vocab.PrimaryName(ident='', content=auth_name)
 			pname.referred_to_by = event_record
@@ -410,7 +409,7 @@ class AddAuctionHouses(Configurable):
 		event_record = get_crom_object(data['_record'])
 		for h in houses:
 			h['_catalog'] = catalog
-			self.add_auction_house_data(copy_source_information(h, data), event_record)
+			self.add_auction_house_data(self.helper.copy_source_information(h, data), event_record)
 			house = get_crom_object(h)
 			auction.carried_out_by = house
 			if auction_houses:
@@ -501,7 +500,7 @@ class AddAuctionOfLot(Configurable):
 			# filter these out from subsequent modeling of auction lots.
 			return
 
-		copy_source_information(data['_object'], data)
+		self.helper.copy_source_information(data['_object'], data)
 
 		auction_data = data['auction_of_lot']
 		try:
@@ -538,7 +537,7 @@ class AddAuctionOfLot(Configurable):
 				note = model.LinguisticObject(ident='', content=problem)
 				note.classified_as = vocab.instances["brief text"]
 				note.classified_as = model.Type(
-					ident=PROBLEMATIC_RECORD_URI,
+					ident=self.helper.problematic_record_uri,
 					label='Problematic Record'
 				)
 				lot.referred_to_by = note
@@ -586,6 +585,7 @@ def add_crom_price(data, parent, services):
 	return data
 
 class AddAcquisitionOrBidding(Configurable):
+	helper = Option(required=True)
 	buy_sell_modifiers = Service('buy_sell_modifiers')
 	make_la_person = Service('make_la_person')
 
@@ -888,7 +888,7 @@ class AddAcquisitionOrBidding(Configurable):
 
 		buyers = [
 			self.add_person(
-				copy_source_information(p, parent),
+				self.helper.copy_source_information(p, parent),
 				sales_record,
 				f'buyer_{i+1}',
 				make_la_person=make_la_person
@@ -899,7 +899,7 @@ class AddAcquisitionOrBidding(Configurable):
 		if transaction in ('Sold', 'Vendu', 'Verkauft', 'Bought In'):
 			sellers = [
 				self.add_person(
-					copy_source_information(p, parent),
+					self.helper.copy_source_information(p, parent),
 					sales_record,
 					f'seller_{i+1}',
 					make_la_person=make_la_person
@@ -1223,7 +1223,7 @@ def add_object_type(data, vocab_type_map):
 
 	return data
 
-class AddPIRArtists(Configurable):
+class AddArtists(Configurable):
 	attribution_modifiers = Service('attribution_modifiers')
 	attribution_group_types = Service('attribution_group_types')
 	make_la_person = Service('make_la_person')
@@ -1647,7 +1647,7 @@ class ProvenancePipeline(PipelineBase):
 			),
 			add_auction_catalog,
 			AddAuctionEvent(helper=self.helper),
-			AddAuctionHouses(),
+			AddAuctionHouses(helper=self.helper),
 			PopulateAuctionEvent(),
 			_input=records.output
 		)
@@ -1692,7 +1692,7 @@ class ProvenancePipeline(PipelineBase):
 	def add_acquisitions_chain(self, graph, sales, serialize=True):
 		'''Add modeling of the acquisitions and bidding on lots being auctioned.'''
 		bid_acqs = graph.add_chain(
-			AddAcquisitionOrBidding(),
+			AddAcquisitionOrBidding(helper=self.helper),
 			_input=sales.output
 		)
 		orgs = graph.add_chain(
@@ -1922,7 +1922,7 @@ class ProvenancePipeline(PipelineBase):
 			add_object_type,
 			PopulateObject(helper=self.helper),
 			pipeline.linkedart.MakeLinkedArtHumanMadeObject(),
-			AddPIRArtists(),
+			AddArtists(),
 			_input=sales.output
 		)
 

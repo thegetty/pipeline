@@ -180,35 +180,110 @@ def copy_source_information(dst: dict, src: dict):
 			dst[k] = src[k]
 	return dst
 
-def auction_event_for_catalog_number(catalog_number):
+class ProvenanceUtilityHelper:
 	'''
-	Return a `vocab.AuctionEvent` object and its associated 'uid' key and URI, based on
-	the supplied `catalog_number`.
+	Project-specific code for accessing and interpreting sales data.
 	'''
-	uid = f'AUCTION-EVENT-CATALOGNUMBER-{catalog_number}'
-	uri = pir_uri('AUCTION-EVENT', 'CATALOGNUMBER', catalog_number)
-	auction = vocab.AuctionEvent(ident=uri)
-	auction._label = f"Auction Event for {catalog_number}"
-	return auction, uid, uri
+	def __init__(self):
+		# TODO: does this handle all the cases of data packed into the lot_number string that need to be stripped?
+		self.shared_lot_number_re = re.compile(r'(\[[a-z]\])')
 
-def add_auction_event(data):
-	'''Add modeling for an auction event based on properties of the supplied `data` dict.'''
-	cno = data['catalog_number']
-	auction, uid, uri = auction_event_for_catalog_number(cno)
-	data['uid'] = uid
-	data['uri'] = uri
-	add_crom_data(data=data, what=auction)
-	catalog = get_crom_object(data['_catalog'])
+	def auction_event_for_catalog_number(self, catalog_number):
+		'''
+		Return a `vocab.AuctionEvent` object and its associated 'uid' key and URI, based on
+		the supplied `catalog_number`.
+		'''
+		uid = f'AUCTION-EVENT-CATALOGNUMBER-{catalog_number}'
+		uri = pir_uri('AUCTION-EVENT', 'CATALOGNUMBER', catalog_number)
+		auction = vocab.AuctionEvent(ident=uri)
+		auction._label = f"Auction Event for {catalog_number}"
+		return auction, uid, uri
 
-	record_uri = pir_uri('AUCTION-EVENT', 'CATALOGNUMBER', cno, 'RECORD')
-	label = f'Record of auction event from catalog {cno}'
-	record = model.LinguisticObject(ident=record_uri, label=label) # TODO: needs classification
-	record_data	= {'uri': record_uri}
-	record_data['identifiers'] = [model.Name(ident='', content=label)]
-	record.part_of = catalog
+	def shared_lot_number_from_lno(self, lno):
+		'''
+		Given a `lot_number` value which identifies an object in a group, strip out the
+		object-specific content, returning an identifier for the entire lot.
 
-	data['_record'] = add_crom_data(data=record_data, what=record)
-	return data
+		For example, strip the object identifier suffixes such as '[a]':
+
+		'0001[a]' -> '0001'
+		'''
+		m = self.shared_lot_number_re.search(lno)
+		if m:
+			return lno.replace(m.group(1), '')
+		return lno
+
+	def transaction_uri_for_lot(self, data, prices):
+		'''
+		Return a URI representing the procurement which the object (identified by the
+		supplied data) is a part of. This may identify just the lot being sold or, in the
+		case of multiple lots being bought for a single price, a single procurement that
+		encompasses multiple acquisitions that span different lots.
+		'''
+		cno, lno, date = object_key(data)
+		shared_lot_number = self.shared_lot_number_from_lno(lno)
+		for p in prices:
+			n = p.get('price_note')
+			if n and n.startswith('for lots '):
+				return pir_uri('AUCTION-TX-MULTI', cno, date, n[9:])
+		return pir_uri('AUCTION-TX', cno, date, shared_lot_number)
+
+	def lots_in_transaction(self, data, prices):
+		'''
+		Return a string that represents the lot numbers that are a part of the procurement
+		related to the supplied data.
+		'''
+		_, lno, _ = object_key(data)
+		shared_lot_number = self.shared_lot_number_from_lno(lno)
+		for p in prices:
+			n = p.get('price_note')
+			if n and n.startswith('for lots '):
+				return n[9:]
+		return shared_lot_number
+
+	def shared_lot_number_ids(self, cno, lno, date):
+		'''
+		Return a tuple of a UID string and a URI for the lot identified by the supplied
+		data which identifies a specific object in that lot.
+		'''
+		shared_lot_number = self.shared_lot_number_from_lno(lno)
+		uid = f'AUCTION-{cno}-LOT-{shared_lot_number}-DATE-{date}'
+		uri = pir_uri('AUCTION', cno, 'LOT', shared_lot_number, 'DATE', date)
+		return uid, uri
+
+	@staticmethod
+	def transaction_contains_multiple_lots(data, prices):
+		'''
+		Return `True` if the procurement related to the supplied data represents a
+		transaction of multiple lots with a single payment, `False` otherwise.
+		'''
+		for p in prices:
+			n = p.get('price_note')
+			if n and n.startswith('for lots '):
+				return True
+		return False
+
+class AddAuctionEvent(Configurable):
+	helper = Option(required=True)
+	
+	def __call__(self, data:dict):
+		'''Add modeling for an auction event based on properties of the supplied `data` dict.'''
+		cno = data['catalog_number']
+		auction, uid, uri = self.helper.auction_event_for_catalog_number(cno)
+		data['uid'] = uid
+		data['uri'] = uri
+		add_crom_data(data=data, what=auction)
+		catalog = get_crom_object(data['_catalog'])
+
+		record_uri = pir_uri('AUCTION-EVENT', 'CATALOGNUMBER', cno, 'RECORD')
+		label = f'Record of auction event from catalog {cno}'
+		record = model.LinguisticObject(ident=record_uri, label=label) # TODO: needs classification
+		record_data	= {'uri': record_uri}
+		record_data['identifiers'] = [model.Name(ident='', content=label)]
+		record.part_of = catalog
+
+		data['_record'] = add_crom_data(data=record_data, what=record)
+		return data
 
 #mark - Auction Events
 
@@ -343,15 +418,12 @@ class AddAuctionHouses(Configurable):
 		auction_houses[cno] = house_objects
 		return d
 
-
 #mark - Auction of Lot
 
 class AddAuctionOfLot(Configurable):
 	'''Add modeling data for the auction of a lot of objects.'''
 
-	# TODO: does this handle all the cases of data packed into the lot_number string that need to be stripped?
-	shared_lot_number_re = re.compile(r'(\[[a-z]\])')
-
+	helper = Option(required=True)
 	problematic_records = Service('problematic_records')
 	auction_locations = Service('auction_locations')
 	auction_houses = Service('auction_houses')
@@ -359,21 +431,6 @@ class AddAuctionOfLot(Configurable):
 	def __init__(self, *args, **kwargs):
 		self.lot_cache = {}
 		super().__init__(*args, **kwargs)
-
-	@staticmethod
-	def shared_lot_number_from_lno(lno):
-		'''
-		Given a `lot_number` value which identifies an object in a group, strip out the
-		object-specific content, returning an identifier for the entire lot.
-
-		For example, strip the object identifier suffixes such as '[a]':
-
-		'0001[a]' -> '0001'
-		'''
-		m = AddAuctionOfLot.shared_lot_number_re.search(lno)
-		if m:
-			return lno.replace(m.group(1), '')
-		return lno
 
 	@staticmethod
 	def set_lot_auction_houses(lot, cno, auction_houses):
@@ -407,64 +464,10 @@ class AddAuctionOfLot(Configurable):
 			ts.identified_by = model.Name(ident='', content=date)
 			lot.timespan = ts
 
-	@staticmethod
-	def shared_lot_number_ids(cno, lno, date):
-		'''
-		Return a tuple of a UID string and a URI for the lot identified by the supplied
-		data which identifies a specific object in that lot.
-		'''
-		shared_lot_number = AddAuctionOfLot.shared_lot_number_from_lno(lno)
-		uid = f'AUCTION-{cno}-LOT-{shared_lot_number}-DATE-{date}'
-		uri = pir_uri('AUCTION', cno, 'LOT', shared_lot_number, 'DATE', date)
-		return uid, uri
-
-	@staticmethod
-	def transaction_contains_multiple_lots(data, prices):
-		'''
-		Return `True` if the procurement related to the supplied data represents a
-		transaction of multiple lots with a single payment, `False` otherwise.
-		'''
-		for p in prices:
-			n = p.get('price_note')
-			if n and n.startswith('for lots '):
-				return True
-		return False
-
-	@staticmethod
-	def lots_in_transaction(data, prices):
-		'''
-		Return a string that represents the lot numbers that are a part of the procurement
-		related to the supplied data.
-		'''
-		_, lno, _ = object_key(data)
-		shared_lot_number = AddAuctionOfLot.shared_lot_number_from_lno(lno)
-		for p in prices:
-			n = p.get('price_note')
-			if n and n.startswith('for lots '):
-				return n[9:]
-		return shared_lot_number
-
-	@staticmethod
-	def transaction_uri_for_lot(data, prices):
-		'''
-		Return a URI representing the procurement which the object (identified by the
-		supplied data) is a part of. This may identify just the lot being sold or, in the
-		case of multiple lots being bought for a single price, a single procurement that
-		encompasses multiple acquisitions that span different lots.
-		'''
-		cno, lno, date = object_key(data)
-		shared_lot_number = AddAuctionOfLot.shared_lot_number_from_lno(lno)
-		for p in prices:
-			n = p.get('price_note')
-			if n and n.startswith('for lots '):
-				return pir_uri('AUCTION-TX-MULTI', cno, date, n[9:])
-		return pir_uri('AUCTION-TX', cno, date, shared_lot_number)
-
-	@staticmethod
-	def set_lot_notes(lot, auction_data):
+	def set_lot_notes(self, lot, auction_data):
 		'''Associate notes with the auction lot.'''
 		cno, lno, _ = object_key(auction_data)
-		auction, _, _ = auction_event_for_catalog_number(cno)
+		auction, _, _ = self.helper.auction_event_for_catalog_number(cno)
 		notes = auction_data.get('lot_notes')
 		if notes:
 			note_id = lot.id + '-LotNotes'
@@ -478,7 +481,7 @@ class AddAuctionOfLot(Configurable):
 	def set_lot_objects(self, lot, cno, lno, data):
 		'''Associate the set of objects with the auction lot.'''
 		coll = vocab.AuctionLotSet(ident=f'{data["uri"]}-Set')
-		shared_lot_number = self.shared_lot_number_from_lno(lno)
+		shared_lot_number = self.helper.shared_lot_number_from_lno(lno)
 		coll._label = f'Auction Lot {cno} {shared_lot_number}'
 		est_price = data.get('estimated_price')
 		if est_price:
@@ -513,8 +516,8 @@ class AddAuctionOfLot(Configurable):
 			# be skipped.
 			return
 
-		shared_lot_number = self.shared_lot_number_from_lno(lno)
-		uid, uri = self.shared_lot_number_ids(cno, lno, date)
+		shared_lot_number = self.helper.shared_lot_number_from_lno(lno)
+		uid, uri = self.helper.shared_lot_number_ids(cno, lno, date)
 		data['uid'] = uid
 		data['uri'] = uri
 
@@ -546,9 +549,9 @@ class AddAuctionOfLot(Configurable):
 		self.set_lot_notes(lot, auction_data)
 		self.set_lot_objects(lot, cno, lno, data)
 
-		tx_uri = AddAuctionOfLot.transaction_uri_for_lot(auction_data, data.get('price', []))
-		lots = AddAuctionOfLot.lots_in_transaction(auction_data, data.get('price', []))
-		multi = AddAuctionOfLot.transaction_contains_multiple_lots(auction_data, data.get('price', []))
+		tx_uri = self.helper.transaction_uri_for_lot(auction_data, data.get('price', []))
+		lots = self.helper.lots_in_transaction(auction_data, data.get('price', []))
+		multi = self.helper.transaction_contains_multiple_lots(auction_data, data.get('price', []))
 		tx = vocab.Procurement(ident=tx_uri)
 		tx._label = f'Procurement of Lot {cno} {lots} ({date})'
 		lot.caused = tx
@@ -582,46 +585,46 @@ def add_crom_price(data, parent, services):
 		add_crom_data(data=data, what=amnt)
 	return data
 
-def related_procurement(current_tx, hmo, current_ts=None, buyer=None, seller=None, previous=False):
-	'''
-	Returns a new `vocab.Procurement` object (and related acquisition) that is temporally
-	related to the supplied procurement and associated data. The new procurement is for
-	the given object, and has the given buyer and seller (both optional).
-
-	If the `previous` flag is `True`, the new procurement is occurs before `current_tx`,
-	and if the timespan `current_ts` is given, has temporal data to that effect. If
-	`previous` is `False`, this relationship is reversed.
-	'''
-	tx = vocab.Procurement()
-	if current_tx:
-		if previous:
-			tx.ends_before_the_start_of = current_tx
-		else:
-			tx.starts_after_the_end_of = current_tx
-	modifier_label = 'Previous' if previous else 'Subsequent'
-	try:
-		pacq = model.Acquisition(ident='', label=f'{modifier_label} Acquisition of: “{hmo._label}”')
-	except AttributeError:
-		pacq = model.Acquisition(ident='', label=f'{modifier_label} Acquisition')
-	pacq.transferred_title_of = hmo
-	if buyer:
-		pacq.transferred_title_to = buyer
-	if seller:
-		pacq.transferred_title_from = seller
-	tx.part = pacq
-	if current_ts:
-		if previous:
-			pacq.timespan = timespan_before(current_ts)
-		else:
-			pacq.timespan = timespan_after(current_ts)
-	return tx
-
 class AddAcquisitionOrBidding(Configurable):
 	buy_sell_modifiers = Service('buy_sell_modifiers')
 	make_la_person = Service('make_la_person')
 
+	def related_procurement(self, current_tx, hmo, current_ts=None, buyer=None, seller=None, previous=False):
+		'''
+		Returns a new `vocab.Procurement` object (and related acquisition) that is temporally
+		related to the supplied procurement and associated data. The new procurement is for
+		the given object, and has the given buyer and seller (both optional).
+
+		If the `previous` flag is `True`, the new procurement is occurs before `current_tx`,
+		and if the timespan `current_ts` is given, has temporal data to that effect. If
+		`previous` is `False`, this relationship is reversed.
+		'''
+		tx = vocab.Procurement()
+		if current_tx:
+			if previous:
+				tx.ends_before_the_start_of = current_tx
+			else:
+				tx.starts_after_the_end_of = current_tx
+		modifier_label = 'Previous' if previous else 'Subsequent'
+		try:
+			pacq = model.Acquisition(ident='', label=f'{modifier_label} Acquisition of: “{hmo._label}”')
+		except AttributeError:
+			pacq = model.Acquisition(ident='', label=f'{modifier_label} Acquisition')
+		pacq.transferred_title_of = hmo
+		if buyer:
+			pacq.transferred_title_to = buyer
+		if seller:
+			pacq.transferred_title_from = seller
+		tx.part = pacq
+		if current_ts:
+			if previous:
+				pacq.timespan = timespan_before(current_ts)
+			else:
+				pacq.timespan = timespan_after(current_ts)
+		return tx
+
 	def final_owner_procurement(self, final_owner, current_tx, hmo, current_ts):
-		tx = related_procurement(current_tx, hmo, current_ts, buyer=final_owner)
+		tx = self.related_procurement(current_tx, hmo, current_ts, buyer=final_owner)
 		try:
 			object_label = hmo._label
 			tx._label = f'Procurement leading to the currently known location of “{object_label}”'
@@ -729,7 +732,7 @@ class AddAcquisitionOrBidding(Configurable):
 		if '_procurements' not in data:
 			data['_procurements'] = []
 		data['_procurements'] += [add_crom_data(data={}, what=current_tx)]
-	# 	lot_uid, lot_uri = AddAuctionOfLot.shared_lot_number_ids(cno, lno)
+	# 	lot_uid, lot_uri = helper.shared_lot_number_ids(cno, lno)
 		# TODO: `annotation` here is from add_physical_catalog_objects
 	# 	paym.referred_to_by = annotation
 
@@ -784,7 +787,7 @@ class AddAcquisitionOrBidding(Configurable):
 					data['_other_owners'] = []
 				data['_other_owners'].append(owner_record)
 
-				tx = related_procurement(current_tx, hmo, ts, buyer=owner, previous=rev)
+				tx = self.related_procurement(current_tx, hmo, ts, buyer=owner, previous=rev)
 
 				own_info_source = owner_record.get('own_so')
 				if own_info_source:
@@ -912,18 +915,20 @@ class AddAcquisitionOrBidding(Configurable):
 #mark - Single Object Lot Tracking
 
 class TrackLotSizes(Configurable):
+	helper = Option(required=True)
 	lot_counter = Service('lot_counter')
 
 	def __call__(self, data, lot_counter):
 		auction_data = data['auction_of_lot']
 		cno, lno, date = object_key(auction_data)
-		lot = AddAuctionOfLot.shared_lot_number_from_lno(lno)
+		lot = self.helper.shared_lot_number_from_lno(lno)
 		key = (cno, lot, date)
 		lot_counter[key] += 1
 
 #mark - Auction of Lot - Physical Object
 
 class PopulateObject(Configurable):
+	helper = Option(required=True)
 	post_sale_map = Service('post_sale_map')
 	unique_catalogs = Service('unique_catalogs')
 	vocab_instance_map = Service('vocab_instance_map')
@@ -1123,7 +1128,7 @@ class PopulateObject(Configurable):
 			for sale_record in sales_data:
 				pcno = sale_record.get('cat')
 				plno = sale_record.get('lot')
-				plot = AddAuctionOfLot.shared_lot_number_from_lno(plno)
+				plot = self.helper.shared_lot_number_from_lno(plno)
 				pdate = implode_date(sale_record, '')
 				if pcno and plot and pdate:
 					that_key = (pcno, plot, pdate)
@@ -1153,7 +1158,7 @@ class PopulateObject(Configurable):
 		cno = auction_data['catalog_number']
 		lno = auction_data['lot_number']
 		date = implode_date(auction_data, 'lot_sale_')
-		lot = AddAuctionOfLot.shared_lot_number_from_lno(lno)
+		lot = self.helper.shared_lot_number_from_lno(lno)
 		now_key = (cno, lot, date) # the current key for this object; may be associated later with prev and post object keys
 
 		data['_locations'] = []
@@ -1187,7 +1192,6 @@ class PopulateObject(Configurable):
 			data['identifiers'].append(t)
 
 		return data
-
 
 @use('vocab_type_map')
 def add_object_type(data, vocab_type_map):
@@ -1463,27 +1467,26 @@ def add_physical_catalog_owners(data, location_codes, unique_catalogs):
 	unique_catalogs[uri].add(uri)
 	return data
 
-
 #mark - Physical Catalogs - Informational Catalogs
-
-def lugt_number_id(content, static_instances):
-	lugt_number = str(content)
-	lugt_id = vocab.LocalNumber(ident='', label=f'Lugt Number: {lugt_number}', content=lugt_number)
-	assignment = model.AttributeAssignment(ident='')
-	assignment.carried_out_by = static_instances.get_instance('Person', 'lugt')
-	lugt_id.assigned_by = assignment
-	return lugt_id
-
-def gri_number_id(content, static_instances):
-	catalog_id = vocab.LocalNumber(ident='', content=content)
-	assignment = model.AttributeAssignment(ident='')
-	assignment.carried_out_by = static_instances.get_instance('Group', 'gri')
-	catalog_id.assigned_by = assignment
-	return catalog_id
 
 class PopulateAuctionCatalog(Configurable):
 	'''Add modeling data for an auction catalog'''
 	static_instances = Option(default="static_instances")
+
+	def lugt_number_id(self, content):
+		lugt_number = str(content)
+		lugt_id = vocab.LocalNumber(ident='', label=f'Lugt Number: {lugt_number}', content=lugt_number)
+		assignment = model.AttributeAssignment(ident='')
+		assignment.carried_out_by = self.static_instances.get_instance('Person', 'lugt')
+		lugt_id.assigned_by = assignment
+		return lugt_id
+
+	def gri_number_id(self, content):
+		catalog_id = vocab.LocalNumber(ident='', content=content)
+		assignment = model.AttributeAssignment(ident='')
+		assignment.carried_out_by = self.static_instances.get_instance('Group', 'gri')
+		catalog_id.assigned_by = assignment
+		return catalog_id
 
 	def __call__(self, data):
 		d = {k: v for k, v in data.items()}
@@ -1494,11 +1497,11 @@ class PopulateAuctionCatalog(Configurable):
 		for lugt_no in parent.get('lugt', {}).values():
 			if not lugt_no:
 				warnings.warn(f'Setting empty identifier on {catalog.id}')
-			catalog.identified_by = lugt_number_id(lugt_no, self.static_instances)
+			catalog.identified_by = self.lugt_number_id(lugt_no)
 
 		if not cno:
 			warnings.warn(f'Setting empty identifier on {catalog.id}')
-		catalog.identified_by = gri_number_id(cno, self.static_instances)
+		catalog.identified_by = self.gri_number_id(cno)
 	
 		if not sno:
 			warnings.warn(f'Setting empty identifier on {catalog.id}')
@@ -1523,6 +1526,8 @@ class ProvenancePipeline(PipelineBase):
 
 		super().__init__()
 		self.project_name = 'provenance'
+		self.helper = ProvenanceUtilityHelper()
+
 		self.graph_0 = None
 		self.graph_1 = None
 		self.graph_2 = None
@@ -1604,6 +1609,7 @@ class ProvenancePipeline(PipelineBase):
 
 	def add_auction_events_chain(self, graph, records, serialize=True):
 		'''Add modeling of auction events.'''
+		helper = ProvenanceUtilityHelper()
 		auction_events = graph.add_chain(
 			GroupRepeatingKeys(
 				drop_empty=True,
@@ -1640,7 +1646,7 @@ class ProvenancePipeline(PipelineBase):
 				}
 			),
 			add_auction_catalog,
-			add_auction_event,
+			AddAuctionEvent(helper=self.helper),
 			AddAuctionHouses(),
 			PopulateAuctionEvent(),
 			_input=records.output
@@ -1894,7 +1900,7 @@ class ProvenancePipeline(PipelineBase):
 						'ask_price_curr',
 						'ask_price_so')},
 			}),
-			AddAuctionOfLot(),
+			AddAuctionOfLot(helper=self.helper),
 			_input=records.output
 		)
 		if serialize:
@@ -1904,7 +1910,7 @@ class ProvenancePipeline(PipelineBase):
 
 	def add_single_object_lot_tracking_chain(self, graph, sales):
 		small_lots = graph.add_chain(
-			TrackLotSizes(),
+			TrackLotSizes(helper=self.helper),
 			_input=sales.output
 		)
 		return small_lots
@@ -1914,7 +1920,7 @@ class ProvenancePipeline(PipelineBase):
 		objects = graph.add_chain(
 			ExtractKeyedValue(key='_object'),
 			add_object_type,
-			PopulateObject(),
+			PopulateObject(helper=self.helper),
 			pipeline.linkedart.MakeLinkedArtHumanMadeObject(),
 			AddPIRArtists(),
 			_input=sales.output
@@ -2158,7 +2164,6 @@ class ProvenancePipeline(PipelineBase):
 		dot_filename = os.path.join(settings.pipeline_tmp_path, 'sales.dot')
 		dot.save(filename=dot_filename)
 		self.persist_sales_tree(g)
-
 
 class ProvenanceFilePipeline(ProvenancePipeline):
 	'''

@@ -102,14 +102,14 @@ class PipelineBase:
 
 		common_path = pathlib.Path(settings.pipeline_common_service_files_path)
 		print(f'Common path: {common_path}')
-		for file in common_path.rglob('*'):
+		for file in common_path.glob('*'):
 			service = self._service_from_path(file)
 			if service:
 				services[file.stem] = service
 
 		proj_path = pathlib.Path(settings.pipeline_project_service_files_path(self.project_name))
 		print(f'Project path: {proj_path}')
-		for file in proj_path.rglob('*'):
+		for file in proj_path.glob('*'):
 			service = self._service_from_path(file)
 			if service:
 				if file.stem in services:

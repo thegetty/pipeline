@@ -2,86 +2,94 @@ import warnings
 import pprint
 from contextlib import suppress
 
-from bonobo.config import Option, Configurable, use
+from bonobo.config import Option, Service, Configurable, use
 
 from cromulent import model, vocab
 
-from pipeline.projects.provenance.util import pir_uri
 from pipeline.linkedart import add_crom_data, get_crom_object
 
 #mark - Physical Catalogs
 
-@use('non_auctions')
-def add_auction_catalog(data, non_auctions):
-	'''Add modeling for auction catalogs as linguistic objects'''
-	cno = data['catalog_number']
+class AddAuctionCatalog(Configurable):
+	helper = Option(required=True)
+	non_auctions = Service('non_auctions')
+	
+	def __call__(self, data:dict, non_auctions):
+		'''Add modeling for auction catalogs as linguistic objects'''
+		cno = data['catalog_number']
 
-	non_auction_flag = data.get('non_auction_flag')
-	if non_auction_flag:
-		non_auctions[cno] = non_auction_flag
-	else:
-		key = f'CATALOG-{cno}'
-		cdata = {'uid': key, 'uri': pir_uri('CATALOG', cno)}
-		catalog = vocab.AuctionCatalogText(ident=cdata['uri'])
-		catalog._label = f'Sale Catalog {cno}'
+		non_auction_flag = data.get('non_auction_flag')
+		if non_auction_flag:
+			non_auctions[cno] = non_auction_flag
+		else:
+			key = f'CATALOG-{cno}'
+			cdata = {'uid': key, 'uri': self.helper.make_proj_uri('CATALOG', cno)}
+			catalog = vocab.AuctionCatalogText(ident=cdata['uri'])
+			catalog._label = f'Sale Catalog {cno}'
 
-		data['_catalog'] = add_crom_data(data=cdata, what=catalog)
-		yield data
+			data['_catalog'] = add_crom_data(data=cdata, what=catalog)
+			yield data
 
-def add_physical_catalog_objects(data):
-	'''Add modeling for physical copies of an auction catalog'''
-	catalog = get_crom_object(data['_catalog'])
-	cno = data['catalog_number']
-	owner = data['owner_code']
-	copy = data['copy_number']
-	uri = pir_uri('CATALOG', cno, owner, copy)
-	data['uri'] = uri
-	labels = [f'Sale Catalog {cno}', f'owned by “{owner}”']
-	if copy:
-		labels.append(f'copy {copy}')
-	catalogObject = vocab.AuctionCatalog(ident=uri, label=', '.join(labels))
-	info = data.get('annotation_info')
-	if info:
-		catalogObject.referred_to_by = vocab.Note(ident='', content=info)
-	catalogObject.carries = catalog
+class AddPhysicalCatalogObjects(Configurable):
+	helper = Option(required=True)
 
-	add_crom_data(data=data, what=catalogObject)
-	return data
+	def __call__(self, data:dict):
+		'''Add modeling for physical copies of an auction catalog'''
+		catalog = get_crom_object(data['_catalog'])
+		cno = data['catalog_number']
+		owner = data['owner_code']
+		copy = data['copy_number']
+		uri = self.helper.make_proj_uri('CATALOG', cno, owner, copy)
+		data['uri'] = uri
+		labels = [f'Sale Catalog {cno}', f'owned by “{owner}”']
+		if copy:
+			labels.append(f'copy {copy}')
+		catalogObject = vocab.AuctionCatalog(ident=uri, label=', '.join(labels))
+		info = data.get('annotation_info')
+		if info:
+			catalogObject.referred_to_by = vocab.Note(ident='', content=info)
+		catalogObject.carries = catalog
 
-@use('location_codes')
-@use('unique_catalogs')
-def add_physical_catalog_owners(data, location_codes, unique_catalogs):
-	'''Add information about the ownership of a physical copy of an auction catalog'''
-	# Add the URI of this physical catalog to `unique_catalogs`. This data will be used
-	# later to figure out which catalogs can be uniquely identified by a catalog number
-	# and owner code (e.g. for owners who do not have multiple copies of a catalog).
-	cno = data['catalog_number']
-	owner_code = data['owner_code']
-	owner_name = None
-	with suppress(KeyError):
-		owner_name = location_codes[owner_code]
-		owner_uri = pir_uri('ORGANIZATION', 'LOCATION-CODE', owner_code)
-		data['_owner'] = {
-			'label': owner_name,
-			'uri': owner_uri,
-			'identifiers': [
-				model.Name(ident='', content=owner_name),
-				model.Identifier(ident='', content=str(owner_code))
-			],
-		}
-		owner = model.Group(ident=owner_uri)
-		add_crom_data(data['_owner'], owner)
-		if not owner_code:
-			warnings.warn(f'Setting empty identifier on {owner.id}')
-		add_crom_data(data=data['_owner'], what=owner)
-		catalog = get_crom_object(data)
-		catalog.current_owner = owner
+		add_crom_data(data=data, what=catalogObject)
+		return data
 
-	uri = pir_uri('CATALOG', cno, owner_code, None)
-	if uri not in unique_catalogs:
-		unique_catalogs[uri] = set()
-	unique_catalogs[uri].add(uri)
-	return data
+class AddPhysicalCatalogOwners(Configurable):
+	helper = Option(required=True)
+	location_codes = Service('location_codes')
+	unique_catalogs = Service('unique_catalogs')
+
+	def __call__(self, data:dict, location_codes, unique_catalogs):
+		'''Add information about the ownership of a physical copy of an auction catalog'''
+		# Add the URI of this physical catalog to `unique_catalogs`. This data will be used
+		# later to figure out which catalogs can be uniquely identified by a catalog number
+		# and owner code (e.g. for owners who do not have multiple copies of a catalog).
+		cno = data['catalog_number']
+		owner_code = data['owner_code']
+		owner_name = None
+		with suppress(KeyError):
+			owner_name = location_codes[owner_code]
+			owner_uri = self.helper.make_proj_uri('ORGANIZATION', 'LOCATION-CODE', owner_code)
+			data['_owner'] = {
+				'label': owner_name,
+				'uri': owner_uri,
+				'identifiers': [
+					model.Name(ident='', content=owner_name),
+					model.Identifier(ident='', content=str(owner_code))
+				],
+			}
+			owner = model.Group(ident=owner_uri)
+			add_crom_data(data['_owner'], owner)
+			if not owner_code:
+				warnings.warn(f'Setting empty identifier on {owner.id}')
+			add_crom_data(data=data['_owner'], what=owner)
+			catalog = get_crom_object(data)
+			catalog.current_owner = owner
+
+		uri = self.helper.make_proj_uri('CATALOG', cno, owner_code, None)
+		if uri not in unique_catalogs:
+			unique_catalogs[uri] = set()
+		unique_catalogs[uri].add(uri)
+		return data
 
 #mark - Physical Catalogs - Informational Catalogs
 

@@ -9,7 +9,6 @@ from cromulent import model, vocab
 from cromulent.extract import extract_physical_dimensions
 
 import pipeline.execution
-from pipeline.projects.provenance.util import pir_uri
 from pipeline.util import implode_date, timespan_from_outer_bounds
 from pipeline.util.cleaners import \
 			parse_location_name, \
@@ -100,12 +99,11 @@ class PopulateObject(Configurable):
 		data['_visual_item'] = add_crom_data(data=vidata, what=vi)
 		hmo.shows = vi
 
-	@staticmethod
-	def _populate_object_catalog_record(data:dict, parent, lot, cno, rec_num):
-		catalog_uri = pir_uri('CATALOG', cno)
+	def _populate_object_catalog_record(self, data:dict, parent, lot, cno, rec_num):
+		catalog_uri = self.helper.make_proj_uri('CATALOG', cno)
 		catalog = vocab.AuctionCatalogText(ident=catalog_uri)
 
-		record_uri = pir_uri('CATALOG', cno, 'RECORD', rec_num)
+		record_uri = self.helper.make_proj_uri('CATALOG', cno, 'RECORD', rec_num)
 		lot_object_id = parent['lot_object_id']
 		record = model.LinguisticObject(ident=record_uri, label=f'Sale recorded in catalog: {lot_object_id} (record number {rec_num})') # TODO: needs classification
 		record_data	= {'uri': record_uri}
@@ -172,13 +170,13 @@ class PopulateObject(Configurable):
 							ulan = int(location.get('insi'))
 						if ulan:
 							owner_data['ulan'] = ulan
-							owner_data['uri'] = pir_uri('ORGANIZATION', 'ULAN', ulan)
+							owner_data['uri'] = self.helper.make_proj_uri('ORGANIZATION', 'ULAN', ulan)
 						else:
-							owner_data['uri'] = pir_uri('ORGANIZATION', 'NAME', inst, 'PLACE', loc)
+							owner_data['uri'] = self.helper.make_proj_uri('ORGANIZATION', 'NAME', inst, 'PLACE', loc)
 					else:
 						owner_data = {
 							'label': '(Anonymous organization)',
-							'uri': pir_uri('ORGANIZATION', 'PRESENT-OWNER', *now_key),
+							'uri': self.helper.make_proj_uri('ORGANIZATION', 'PRESENT-OWNER', *now_key),
 						}
 
 					base_uri = hmo.id + '-Place,'
@@ -204,7 +202,7 @@ class PopulateObject(Configurable):
 			hand_note_content = note['hand_note']
 			owner = note.get('hand_note_so')
 			cno = parent['auction_of_lot']['catalog_number']
-			catalog_uri = pir_uri('CATALOG', cno, owner, None)
+			catalog_uri = self.helper.make_proj_uri('CATALOG', cno, owner, None)
 			catalogs = unique_catalogs.get(catalog_uri)
 			note = vocab.Note(ident='', content=hand_note_content)
 			hmo.referred_to_by = note

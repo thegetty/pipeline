@@ -52,15 +52,6 @@ class AATAUtilityHelper(UtilityHelper):
 	def __init__(self, project_name):
 		super().__init__(project_name)
 
-def aata_uri(*values):
-	'''Convert a set of identifying `values` into a URI'''
-	if values:
-		suffix = ','.join([urllib.parse.quote(str(v)) for v in values])
-		return UID_TAG_PREFIX + suffix
-	else:
-		suffix = str(uuid.uuid4())
-		return UID_TAG_PREFIX + suffix
-
 def language_object_from_code(code, language_code_map):
 	'''
 	Given a three-letter language code (which are mostly drawn from ISO639-2, with some

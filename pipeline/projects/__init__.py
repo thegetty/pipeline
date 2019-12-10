@@ -141,3 +141,27 @@ class PipelineBase:
 		else:
 			e = pipeline.execution.GraphExecutor(graph, services)
 			e.run()
+
+class UtilityHelper:
+	def __init__(self, project_name):
+		self.project_name = project_name
+		self.proj_prefix = f'tag:getty.edu,2019:digital:pipeline:{project_name}:REPLACE-WITH-UUID#'
+		self.shared_prefix = f'project_nametag:getty.edu,2019:digital:pipeline:REPLACE-WITH-UUID#'
+
+	def make_proj_uri(self, *values):
+		'''Convert a set of identifying `values` into a URI'''
+		if values:
+			suffix = ','.join([urllib.parse.quote(str(v)) for v in values])
+			return self.proj_prefix + suffix
+		else:
+			suffix = str(uuid.uuid4())
+			return self.proj_prefix + suffix
+
+	def make_shared_uri(self, *values):
+		'''Convert a set of identifying `values` into a URI'''
+		if values:
+			suffix = ','.join([urllib.parse.quote(str(v)) for v in values])
+			return self.shared_prefix + suffix
+		else:
+			suffix = str(uuid.uuid4())
+			return self.shared_prefix + suffix

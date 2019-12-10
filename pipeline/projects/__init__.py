@@ -43,19 +43,11 @@ class StaticInstanceHolder:
 		return used
 
 class PipelineBase:
-	def __init__(self):
+	def __init__(self, *, helper):
 		self.project_name = None
 		self.input_path = None
+		self.helper = helper
 		self.static_instances = StaticInstanceHolder(self.setup_static_instances())
-
-	def make_uri(self, *values):
-		UID_TAG_PREFIX = self.uid_tag_prefix
-		if values:
-			suffix = ','.join([urllib.parse.quote(str(v)) for v in values])
-			return UID_TAG_PREFIX + suffix
-		else:
-			suffix = str(uuid.uuid4())
-			return UID_TAG_PREFIX + suffix
 
 	def setup_static_instances(self):
 		'''
@@ -64,10 +56,10 @@ class PipelineBase:
 		serialize the related Group or Person record for that attribution, even if it does
 		not appear in the source data.
 		'''
-		GETTY_GRI_URI = self.make_uri('ORGANIZATION', 'LOCATION-CODE', 'JPGM')
+		GETTY_GRI_URI = self.helper.make_proj_uri('ORGANIZATION', 'LOCATION-CODE', 'JPGM')
 		lugt_ulan = 500321736
 		gri_ulan = 500115990
-		LUGT_URI = self.make_uri('PERSON', 'ULAN', lugt_ulan)
+		LUGT_URI = self.helper.make_proj_uri('PERSON', 'ULAN', lugt_ulan)
 		gri = model.Group(ident=GETTY_GRI_URI, label='Getty Research Institute')
 		gri.identified_by = vocab.PrimaryName(ident='', content='Getty Research Institute')
 		gri.exact_match = model.BaseResource(ident=f'http://vocab.getty.edu/ulan/{gri_ulan}')

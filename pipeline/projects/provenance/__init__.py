@@ -167,8 +167,8 @@ class ProvenanceUtilityHelper(UtilityHelper):
 	'''
 	Project-specific code for accessing and interpreting sales data.
 	'''
-	def __init__(self):
-		super().__init__('provenance')
+	def __init__(self, project_name):
+		super().__init__(project_name)
 		# TODO: does this handle all the cases of data packed into the lot_number string that need to be stripped?
 		self.shared_lot_number_re = re.compile(r'(\[[a-z]\])')
 		self.ignore_house_authnames = CaseFoldingSet(('Anonymous',))
@@ -296,6 +296,8 @@ class TrackLotSizes(Configurable):
 class ProvenancePipeline(PipelineBase):
 	'''Bonobo-based pipeline for transforming Provenance data from CSV into JSON-LD.'''
 	def __init__(self, input_path, catalogs, auction_events, contents, **kwargs):
+		project_name = 'provenance'
+		helper = ProvenanceUtilityHelper(project_name)
 		self.uid_tag_prefix = UID_TAG_PREFIX
 
 		vocab.register_instance('fire', {'parent': model.Type, 'id': '300068986', 'label': 'Fire'})
@@ -303,9 +305,8 @@ class ProvenancePipeline(PipelineBase):
 		vocab.register_instance('history', {'parent': model.Type, 'id': '300033898', 'label': 'History'})
 		vocab.register_vocab_class('AuctionCatalog', {'parent': model.HumanMadeObject, 'id': '300026068', 'label': 'Auction Catalog', 'metatype': 'work type'})
 
-		super().__init__()
-		self.project_name = 'provenance'
-		self.helper = ProvenanceUtilityHelper()
+		super().__init__(helper=helper)
+		self.project_name = project_name
 
 		self.graph_0 = None
 		self.graph_1 = None

@@ -28,10 +28,7 @@ from bonobo.constants import NOT_MODIFIED
 import settings
 
 from cromulent import model, vocab
-from cromulent.model import factory
-from cromulent.extract import extract_physical_dimensions, extract_monetary_amount
 
-import pipeline.execution
 from pipeline.projects import PipelineBase
 from pipeline.util import \
 			GraphListSource, \
@@ -40,18 +37,7 @@ from pipeline.util import \
 			ExtractKeyedValue, \
 			ExtractKeyedValues, \
 			MatchingFiles, \
-			identity, \
-			implode_date, \
-			timespan_before, \
-			timespan_after, \
-			replace_key_pattern, \
-			strip_key_prefix, \
-			timespan_from_outer_bounds
-from pipeline.util.cleaners import \
-			parse_location, \
-			parse_location_name, \
-			date_parse, \
-			date_cleaner
+			strip_key_prefix
 from pipeline.io.file import MergingFileWriter
 from pipeline.io.memory import MergingMemoryWriter
 # from pipeline.io.arches import ArchesWriter
@@ -75,8 +61,30 @@ from pipeline.nodes.basic import \
 			Trace
 from pipeline.util.rewriting import rewrite_output_files, JSONValueRewriter
 
-PROJECT_NAME = "knoedler"
-UID_TAG_PREFIX = f'tag:getty.edu,2019:digital:pipeline:{PROJECT_NAME}:REPLACE-WITH-UUID#'
+class KnoedlerUtilityHelper:
+	'''
+	Project-specific code for accessing and interpreting sales data.
+	'''
+	def __init__(self, uid_prefix, static_instances):
+		self.uid_tag_prefix = uid_prefix
+		self.static_instances = static_instances
+
+	def knoedler_number_id(self, content):
+		k_id = vocab.LocalNumber(ident='', content=content)
+		assignment = model.AttributeAssignment(ident='')
+		assignment.carried_out_by = self.static_instances.get_instance('Group', 'knoedler')
+		k_id.assigned_by = assignment
+		return k_id
+
+	def make_uri(self, *values):
+		'''Convert a set of identifying `values` into a URI'''
+		if values:
+			suffix = ','.join([urllib.parse.quote(str(v)) for v in values])
+			return self.uid_tag_prefix + suffix
+		else:
+			suffix = str(uuid.uuid4())
+			return self.uid_tag_prefix + suffix
+
 
 
 
@@ -103,87 +111,77 @@ def filter_empty_person(data: dict, _):
 	else:
 		return None
 
-def knoedler_uri(*values):
-	'''Convert a set of identifying `values` into a URI'''
-	if values:
-		suffix = ','.join([urllib.parse.quote(str(v)) for v in values])
-		return UID_TAG_PREFIX + suffix
-	else:
-		suffix = str(uuid.uuid4())
-		return UID_TAG_PREFIX + suffix
-
 def record_id(data):
 	book = data['stock_book_no']
 	page = data['page_number']
 	row = data['row_number']
 	return (book, page, row)
 
-def add_person_uri(data:dict):
-	# TODO: move this into MakeLinkedArtPerson
-	auth_name = data.get('authority')
-	if data.get('ulan'):
-		ulan = data['ulan']
-		key = f'PERSON-ULAN-{ulan}'
-		data['uri'] = knoedler_uri('PERSON', 'ULAN', ulan)
-		data['ulan'] = ulan
-	elif auth_name and '[' not in auth_name:
-		data['uri'] = knoedler_uri('PERSON', 'AUTHNAME', auth_name)
-		data['identifiers'] = [
-			vocab.PrimaryName(ident='', content=auth_name)
-		]
-	else:
-		# not enough information to identify this person uniquely, so use the source location in the input file
-		data['uri'] = knoedler_uri('PERSON', 'PI_REC_NO', data['parent_data']['pi_record_no'])
+class AddPersonURI(Configurable):
+	helper = Option(required=True)
 
-	return data
+	def __call__(self, data:dict):
+		# TODO: move this into MakeLinkedArtPerson
+		auth_name = data.get('authority')
+		if data.get('ulan'):
+			ulan = data['ulan']
+			data['uri'] = self.helper.make_uri('PERSON', 'ULAN', ulan)
+			data['ulan'] = ulan
+		elif auth_name and '[' not in auth_name:
+			data['uri'] = self.helper.make_uri('PERSON', 'AUTHNAME', auth_name)
+			data['identifiers'] = [
+				vocab.PrimaryName(ident='', content=auth_name)
+			]
+		else:
+			# not enough information to identify this person uniquely, so use the source location in the input file
+			data['uri'] = self.helper.make_uri('PERSON', 'PI_REC_NO', data['parent_data']['pi_record_no'])
 
-def add_group_uri(data:dict):
-	# TODO: move this into MakeLinkedArtOrganization
-	auth_name = data.get('authority')
-	if data.get('ulan'):
-		ulan = data['ulan']
-		key = f'GROUP-ULAN-{ulan}'
-		data['uri'] = knoedler_uri('GROUP', 'ULAN', ulan)
-		data['ulan'] = ulan
-	elif auth_name and '[' not in auth_name:
-		data['uri'] = knoedler_uri('GROUP', 'AUTHNAME', auth_name)
-		data['identifiers'] = [
-			vocab.PrimaryName(ident='', content=auth_name)
-		]
-	else:
-		# not enough information to identify this person uniquely, so use the source location in the input file
-		data['uri'] = knoedler_uri('GROUP', 'PI_REC_NO', data['parent_data']['pi_record_no'])
+		return data
 
-	return data
+class AddGroupURI(Configurable):
+	helper = Option(required=True)
 
-def knoedler_number_id(content, static_instances):
-	k_id = vocab.LocalNumber(ident='', content=content)
-	assignment = model.AttributeAssignment(ident='')
-	assignment.carried_out_by = static_instances.get_instance('Group', 'knoedler')
-	k_id.assigned_by = assignment
-	return k_id
+	def __call__(self, data:dict):
+		# TODO: move this into MakeLinkedArtOrganization
+		auth_name = data.get('authority')
+		if data.get('ulan'):
+			ulan = data['ulan']
+			key = f'GROUP-ULAN-{ulan}'
+			data['uri'] = self.helper.make_uri('GROUP', 'ULAN', ulan)
+			data['ulan'] = ulan
+		elif auth_name and '[' not in auth_name:
+			data['uri'] = self.helper.make_uri('GROUP', 'AUTHNAME', auth_name)
+			data['identifiers'] = [
+				vocab.PrimaryName(ident='', content=auth_name)
+			]
+		else:
+			# not enough information to identify this person uniquely, so use the source location in the input file
+			data['uri'] = self.helper.make_uri('GROUP', 'PI_REC_NO', data['parent_data']['pi_record_no'])
+
+		return data
 
 class AddBook(Configurable):
+	helper = Option(required=True)
 	make_la_lo = Service('make_la_lo')
 	make_la_hmo = Service('make_la_hmo')
 	static_instances = Option(default="static_instances")
-	
+
 	def __call__(self, data:dict, make_la_lo, make_la_hmo):
 		book = data['book_record']
 		book_id, _, _ = record_id(book)
 		data['_physical_book'] = {
-			'uri': knoedler_uri('Book', book_id),
+			'uri': self.helper.make_uri('Book', book_id),
 			'object_type': vocab.Book,
 			'label': f'Knoedler Stock Book {book_id}',
-			'identifiers': [knoedler_number_id(book_id, self.static_instances)],
+			'identifiers': [self.helper.knoedler_number_id(book_id)],
 		}
 		make_la_hmo(data['_physical_book'])
 
 		data['_text_book'] = {
-			'uri': knoedler_uri('Text', 'Book', book_id),
+			'uri': self.helper.make_uri('Text', 'Book', book_id),
 			'object_type': vocab.AccountBookText,
 			'label': f'Knoedler Stock Book {book_id}',
-			'identifiers': [knoedler_number_id(book_id, self.static_instances)],
+			'identifiers': [self.helper.knoedler_number_id(book_id)],
 			'carried_by': [data['_physical_book']]
 		}
 		make_la_lo(data['_text_book'])
@@ -191,10 +189,11 @@ class AddBook(Configurable):
 		return data
 
 class AddPage(Configurable):
+	helper = Option(required=True)
 	make_la_lo = Service('make_la_lo')
 	make_la_hmo = Service('make_la_hmo')
 	static_instances = Option(default="static_instances")
-	
+
 	def __call__(self, data:dict, make_la_lo, make_la_hmo):
 		book = data['book_record']
 		book_id, page_id, _ = record_id(book)
@@ -204,16 +203,16 @@ class AddPage(Configurable):
 		d.unit = vocab.instances['numbers']
 
 		data['_physical_page'] = {
-			'uri': knoedler_uri('Book', book_id, 'Page', page_id),
+			'uri': self.helper.make_uri('Book', book_id, 'Page', page_id),
 			'object_type': vocab.Page,
 			'label': f'Knoedler Stock Book {book_id}, Page {page_id}',
-			'identifiers': [knoedler_number_id(book_id, self.static_instances)],
+			'identifiers': [self.helper.knoedler_number_id(book_id)],
 			'part_of': [data['_physical_book']],
 		}
 		make_la_hmo(data['_physical_page'])
-	
+
 		data['_text_page'] = {
-			'uri': knoedler_uri('Text', 'Book', book_id, 'Page', page_id),
+			'uri': self.helper.make_uri('Text', 'Book', book_id, 'Page', page_id),
 			'object_type': vocab.AccountBookText,
 			'label': f'Knoedler Stock Book {book_id}, Page {page_id}',
 			'identifiers': [(page_id, vocab.LocalNumber(ident=''))],
@@ -233,9 +232,10 @@ class AddPage(Configurable):
 		return data
 
 class AddRow(Configurable):
+	helper = Option(required=True)
 	make_la_lo = Service('make_la_lo')
 	static_instances = Option(default="static_instances")
-	
+
 	def __call__(self, data:dict, make_la_lo):
 		book = data['book_record']
 		book_id, page_id, row_id = record_id(book)
@@ -243,7 +243,7 @@ class AddRow(Configurable):
 		d = vocab.SequencePosition()
 		d.value = row_id
 		d.unit = vocab.instances['numbers']
-	
+
 		notes = []
 		# TODO: add attributed star record number to row as a LocalNumber
 		for k in ('description', 'working_note', 'verbatim_notes'):
@@ -251,7 +251,7 @@ class AddRow(Configurable):
 				notes.append(vocab.Note(ident='', content=book[k]))
 
 		data['_text_row'] = {
-			'uri': knoedler_uri('Text', 'Book', book_id, 'Page', page_id, 'Row', row_id),
+			'uri': self.helper.make_uri('Text', 'Book', book_id, 'Page', page_id, 'Row', row_id),
 			'label': f'Knoedler Stock Book {book_id}, Page {page_id}, Row {row_id}',
 			'identifiers': [(row_id, vocab.LocalNumber(ident=''))],
 			'part_of': [data['_text_page']],
@@ -259,48 +259,53 @@ class AddRow(Configurable):
 			'referred_to_by': notes,
 		}
 		make_la_lo(data['_text_row'])
-	
+
 		return data
 
-@use('vocab_type_map')
-@use('make_la_org')
-def add_object(data: dict, make_la_org, vocab_type_map):
-	odata = data['object']
-	title = odata['title']
-	typestring = odata.get('object_type', '')
+class AddObject(Configurable):
+	helper = Option(required=True)
+	make_la_org = Service('make_la_org')
+	vocab_type_map = Service('vocab_type_map')
 
-	try:
-		uri = knoedler_uri('Object', odata['knoedler_number'])
-	except:
-		uri = knoedler_uri('Object', 'Internal', data['pi_record_no'])
-	data['_object'] = {
-		'uri': uri,
-		'title': title,
-		'identifiers': [],
-	}
-	if typestring in vocab_type_map:
-		clsname = vocab_type_map.get(typestring, None)
-		otype = getattr(vocab, clsname)
-		data['_object']['object_type'] = otype
-	else:
-		data['_object']['object_type'] = model.HumanMadeObject
+	def __call__(self, data:dict, *, vocab_type_map, make_la_org):
+		odata = data['object']
+		title = odata['title']
+		typestring = odata.get('object_type', '')
 
-	consigner = data['consigner']
-	if consigner:
-		add_group_uri(consigner)
-		make_la_org(consigner)
-		consigner_num = consigner['no']
-		consigner_id = vocab.LocalNumber(ident='', label=f'Consigned number: {consigner_num}', content=consigner_num)
-		assignment = model.AttributeAssignment(ident='')
-		assignment.carried_out_by = get_crom_object(consigner)
-		consigner_id.assigned_by = assignment
-		data['_object']['identifiers'].append(consigner_id)
-		data['_consigner'] = consigner
+		try:
+			uri = self.helper.make_uri('Object', odata['knoedler_number'])
+		except:
+			uri = self.helper.make_uri('Object', 'Internal', data['pi_record_no'])
+		data['_object'] = {
+			'uri': uri,
+			'title': title,
+			'identifiers': [],
+		}
+		if typestring in vocab_type_map:
+			clsname = vocab_type_map.get(typestring, None)
+			otype = getattr(vocab, clsname)
+			data['_object']['object_type'] = otype
+		else:
+			data['_object']['object_type'] = model.HumanMadeObject
 
-	return data
+		add_group_uri = AddGroupURI(helper=self.helper)
+		consigner = data['consigner']
+		if consigner:
+			add_group_uri(consigner)
+			make_la_org(consigner)
+			consigner_num = consigner['no']
+			consigner_id = vocab.LocalNumber(ident='', label=f'Consigned number: {consigner_num}', content=consigner_num)
+			assignment = model.AttributeAssignment(ident='')
+			assignment.carried_out_by = get_crom_object(consigner)
+			consigner_id.assigned_by = assignment
+			data['_object']['identifiers'].append(consigner_id)
+			data['_consigner'] = consigner
 
-def transaction_switch(data: dict):
-	return data
+		return data
+
+class TransactionSwitch:
+	def __call__(self, data:dict):
+		return data
 
 
 #mark - Knoedler Pipeline class
@@ -308,10 +313,11 @@ def transaction_switch(data: dict):
 class KnoedlerPipeline(PipelineBase):
 	'''Bonobo-based pipeline for transforming Knoedler data from CSV into JSON-LD.'''
 	def __init__(self, input_path, data, **kwargs):
-		self.uid_tag_prefix = UID_TAG_PREFIX
+		self.uid_tag_prefix = f'tag:getty.edu,2019:digital:pipeline:knoedler:REPLACE-WITH-UUID#'
 		self.project_name = 'knoedler'
 
 		super().__init__()
+		self.helper = KnoedlerUtilityHelper(self.uid_tag_prefix, self.static_instances)
 		self.graph = None
 		self.models = kwargs.get('models', settings.arches_models)
 		self.header_file = data['header_file']
@@ -334,7 +340,7 @@ class KnoedlerPipeline(PipelineBase):
 		knoedler = model.Group(ident=KNOEDLER_URI, label=knoedler_name)
 		knoedler.identified_by = vocab.PrimaryName(ident='', content=knoedler_name)
 		knoedler.exact_match = model.BaseResource(ident=f'http://vocab.getty.edu/ulan/{knoedler_ulan}')
-		
+
 		instances['Group'].update({
 			'knoedler': knoedler
 		})
@@ -519,16 +525,16 @@ class KnoedlerPipeline(PipelineBase):
 			}),
 			_input=records.output
 		)
-		
+
 		books = self.add_book_chain(graph, sales_records)
 		pages = self.add_page_chain(graph, books)
 		rows = self.add_row_chain(graph, pages)
 		objects = self.add_object_chain(graph, rows)
 
 		tx = graph.add_chain(
-			transaction_switch,
+			TransactionSwitch(),
 			_input=objects.output
-		)			
+		)
 
 # 		if serialize:
 # 			self.add_serialization_chain(graph, books.output, model=self.models['Activity'])
@@ -537,7 +543,7 @@ class KnoedlerPipeline(PipelineBase):
 	def add_book_chain(self, graph, sales_records, serialize=True):
 		books = graph.add_chain(
 # 			add_book,
-			AddBook(static_instances=self.static_instances),
+			AddBook(static_instances=self.static_instances, helper=self.helper),
 			_input=sales_records.output
 		)
 		phys = graph.add_chain(
@@ -555,7 +561,7 @@ class KnoedlerPipeline(PipelineBase):
 
 	def add_page_chain(self, graph, books, serialize=True):
 		pages = graph.add_chain(
-			AddPage(static_instances=self.static_instances),
+			AddPage(static_instances=self.static_instances, helper=self.helper),
 			_input=books.output
 		)
 		phys = graph.add_chain(
@@ -573,7 +579,7 @@ class KnoedlerPipeline(PipelineBase):
 
 	def add_row_chain(self, graph, pages, serialize=True):
 		rows = graph.add_chain(
-			AddRow(static_instances=self.static_instances),
+			AddRow(static_instances=self.static_instances, helper=self.helper),
 			_input=pages.output
 		)
 		text = graph.add_chain(
@@ -586,7 +592,7 @@ class KnoedlerPipeline(PipelineBase):
 
 	def add_object_chain(self, graph, rows, serialize=True):
 		objects = graph.add_chain(
-			add_object,
+			AddObject(helper=self.helper),
 			_input=rows.output
 		)
 		hmos = graph.add_chain(
@@ -600,7 +606,7 @@ class KnoedlerPipeline(PipelineBase):
 		)
 		artists = graph.add_chain(
 			ExtractKeyedValues(key='_artists'),
-			add_person_uri,
+			AddPersonURI(helper=self.helper),
 			MakeLinkedArtPerson(),
 			_input=objects.output
 		)

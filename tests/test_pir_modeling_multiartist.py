@@ -10,7 +10,6 @@ import inspect
 from pathlib import Path
 import warnings
 
-from pipeline.projects.provenance.util import pir_uri
 from tests import TestProvenancePipelineOutput
 from cromulent import vocab
 

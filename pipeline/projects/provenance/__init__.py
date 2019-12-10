@@ -38,7 +38,7 @@ from cromulent.model import factory
 from cromulent.extract import extract_physical_dimensions, extract_monetary_amount
 
 import pipeline.execution
-from pipeline.projects import PipelineBase
+from pipeline.projects import PipelineBase, UtilityHelper
 from pipeline.projects.provenance.util import *
 from pipeline.util import \
 			GraphListSource, \
@@ -75,8 +75,8 @@ class PersonIdentity:
 	'''
 	Utility class to help assign records for people with properties such as `uri` and identifiers.
 	'''
-	def __init__(self, make_uri=None):
-		self.make_uri = make_uri or pir_uri
+	def __init__(self, *, make_uri):
+		self.make_uri = make_uri
 		self.ignore_authnames = CaseFoldingSet(('NEW', 'NON-UNIQUE'))
 
 	def acceptable_auth_name(self, auth_name):
@@ -163,17 +163,18 @@ class PersonIdentity:
 		if role:
 			data['role_label'] = role_label
 
-class ProvenanceUtilityHelper:
+class ProvenanceUtilityHelper(UtilityHelper):
 	'''
 	Project-specific code for accessing and interpreting sales data.
 	'''
-	def __init__(self):
+	def __init__(self, project_name):
+		super().__init__(project_name)
 		# TODO: does this handle all the cases of data packed into the lot_number string that need to be stripped?
 		self.shared_lot_number_re = re.compile(r'(\[[a-z]\])')
 		self.ignore_house_authnames = CaseFoldingSet(('Anonymous',))
 		self.csv_source_columns = ['pi_record_no', 'catalog_number']
 		self.problematic_record_uri = 'tag:getty.edu,2019:digital:pipeline:provenance:ProblematicRecord'
-		self.person_identity = PersonIdentity()
+		self.person_identity = PersonIdentity(make_uri=self.make_proj_uri)
 		self.uid_tag_prefix = UID_TAG_PREFIX
 
 	def copy_source_information(self, dst: dict, src: dict):
@@ -182,14 +183,13 @@ class ProvenanceUtilityHelper:
 				dst[k] = src[k]
 		return dst
 
-	@staticmethod
-	def auction_event_for_catalog_number(catalog_number):
+	def auction_event_for_catalog_number(self, catalog_number):
 		'''
 		Return a `vocab.AuctionEvent` object and its associated 'uid' key and URI, based on
 		the supplied `catalog_number`.
 		'''
 		uid = f'AUCTION-EVENT-CATALOGNUMBER-{catalog_number}'
-		uri = pir_uri('AUCTION-EVENT', 'CATALOGNUMBER', catalog_number)
+		uri = self.make_proj_uri('AUCTION-EVENT', 'CATALOGNUMBER', catalog_number)
 		auction = vocab.AuctionEvent(ident=uri)
 		auction._label = f"Auction Event for {catalog_number}"
 		return auction, uid, uri
@@ -220,8 +220,8 @@ class ProvenanceUtilityHelper:
 		for p in prices:
 			n = p.get('price_note')
 			if n and n.startswith('for lots '):
-				return pir_uri('AUCTION-TX-MULTI', cno, date, n[9:])
-		return pir_uri('AUCTION-TX', cno, date, shared_lot_number)
+				return self.make_proj_uri('AUCTION-TX-MULTI', cno, date, n[9:])
+		return self.make_proj_uri('AUCTION-TX', cno, date, shared_lot_number)
 
 	def lots_in_transaction(self, data, prices):
 		'''
@@ -243,7 +243,7 @@ class ProvenanceUtilityHelper:
 		'''
 		shared_lot_number = self.shared_lot_number_from_lno(lno)
 		uid = f'AUCTION-{cno}-LOT-{shared_lot_number}-DATE-{date}'
-		uri = pir_uri('AUCTION', cno, 'LOT', shared_lot_number, 'DATE', date)
+		uri = self.make_proj_uri('AUCTION', cno, 'LOT', shared_lot_number, 'DATE', date)
 		return uid, uri
 
 	@staticmethod
@@ -296,15 +296,17 @@ class TrackLotSizes(Configurable):
 class ProvenancePipeline(PipelineBase):
 	'''Bonobo-based pipeline for transforming Provenance data from CSV into JSON-LD.'''
 	def __init__(self, input_path, catalogs, auction_events, contents, **kwargs):
+		project_name = 'provenance'
+		helper = ProvenanceUtilityHelper(project_name)
+		self.uid_tag_prefix = UID_TAG_PREFIX
 
 		vocab.register_instance('fire', {'parent': model.Type, 'id': '300068986', 'label': 'Fire'})
 		vocab.register_instance('animal', {'parent': model.Type, 'id': '300249395', 'label': 'Animal'})
 		vocab.register_instance('history', {'parent': model.Type, 'id': '300033898', 'label': 'History'})
 		vocab.register_vocab_class('AuctionCatalog', {'parent': model.HumanMadeObject, 'id': '300026068', 'label': 'Auction Catalog', 'metatype': 'work type'})
 
-		self.project_name = 'provenance'
-		self.helper = ProvenanceUtilityHelper()
-		super().__init__()
+		super().__init__(helper=helper)
+		self.project_name = project_name
 
 		self.graph_0 = None
 		self.graph_1 = None
@@ -363,9 +365,9 @@ class ProvenancePipeline(PipelineBase):
 	def add_physical_catalogs_chain(self, graph, records, serialize=True):
 		'''Add modeling of physical copies of auction catalogs.'''
 		catalogs = graph.add_chain(
-			pipeline.projects.provenance.catalogs.add_auction_catalog,
-			pipeline.projects.provenance.catalogs.add_physical_catalog_objects,
-			pipeline.projects.provenance.catalogs.add_physical_catalog_owners,
+			pipeline.projects.provenance.catalogs.AddAuctionCatalog(helper=self.helper),
+			pipeline.projects.provenance.catalogs.AddPhysicalCatalogObjects(helper=self.helper),
+			pipeline.projects.provenance.catalogs.AddPhysicalCatalogOwners(helper=self.helper),
 			_input=records.output
 		)
 		if serialize:
@@ -422,7 +424,7 @@ class ProvenancePipeline(PipelineBase):
 							'specific_loc')},
 				}
 			),
-			pipeline.projects.provenance.catalogs.add_auction_catalog,
+			pipeline.projects.provenance.catalogs.AddAuctionCatalog(helper=self.helper),
 			pipeline.projects.provenance.events.AddAuctionEvent(helper=self.helper),
 			pipeline.projects.provenance.events.AddAuctionHouses(helper=self.helper),
 			pipeline.projects.provenance.events.PopulateAuctionEvent(helper=self.helper),
@@ -636,7 +638,7 @@ class ProvenancePipeline(PipelineBase):
 						'lot_sale_mod',
 						'lot_notes')},
 				'_object': {
-					'postprocess': add_pir_object_uri,
+					'postprocess': add_pir_object_uri_factory(self.helper),
 					'properties': (
 						'title',
 						'title_modifier',
@@ -927,8 +929,8 @@ class ProvenancePipeline(PipelineBase):
 # 		print('Rewrite output files, replacing the following URIs:')
 		for src, dst in g:
 			canonical, steps = g.canonical_key(src)
-			src_uri = pir_uri('OBJECT', *src)
-			dst_uri = pir_uri('OBJECT', *canonical)
+			src_uri = self.helper.make_proj_uri('OBJECT', *src)
+			dst_uri = self.helper.make_proj_uri('OBJECT', *canonical)
 # 			print(f's/ {src_uri:<100} / {dst_uri:<100} /')
 			post_sale_rewrite_map[src_uri] = dst_uri
 			if canonical in large_components:

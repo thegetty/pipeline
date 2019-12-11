@@ -986,7 +986,7 @@ class AATAPipeline(PipelineBase):
 		)
 		if serialize:
 			# write ORGANIZATIONS data
-			self.add_serialization_chain(graph, organizations.output, model=self.models['Organization'])
+			self.add_serialization_chain(graph, organizations.output, model=self.models['Group'])
 		return organizations
 
 	def _add_abstracts_graph(self, graph):

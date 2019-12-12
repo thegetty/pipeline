@@ -12,7 +12,8 @@ from pipeline.util import \
 		implode_date, \
 		timespan_from_outer_bounds, \
 		timespan_before, \
-		timespan_after
+		timespan_after, \
+		CaseFoldingSet
 from pipeline.util.cleaners import parse_location_name
 import pipeline.linkedart
 from pipeline.linkedart import add_crom_data, get_crom_object
@@ -169,6 +170,7 @@ class AddAcquisitionOrBidding(Configurable):
 	helper = Option(required=True)
 	buy_sell_modifiers = Service('buy_sell_modifiers')
 	make_la_person = Service('make_la_person')
+	transaction_types = Service('transaction_types')
 
 	@staticmethod
 	def related_procurement(current_tx, hmo, current_ts=None, buyer=None, seller=None, previous=False):
@@ -460,7 +462,7 @@ class AddAcquisitionOrBidding(Configurable):
 		make_la_person(data)
 		return data
 
-	def __call__(self, data:dict, buy_sell_modifiers, make_la_person):
+	def __call__(self, data:dict, buy_sell_modifiers, make_la_person, transaction_types):
 		'''Determine if this record has an acquisition or bidding, and add appropriate modeling'''
 		parent = data['parent_data']
 		sales_record = get_crom_object(data['_record'])
@@ -476,8 +478,9 @@ class AddAcquisitionOrBidding(Configurable):
 			) for i, p in enumerate(parent['buyer'])
 		]
 
-		# TODO: is this the right set of transaction types to represent acquisition?
-		if transaction in ('Sold', 'Vendu', 'Verkauft', 'Bought In'):
+		SOLD = CaseFoldingSet(transaction_types['sold'])
+		UNSOLD = CaseFoldingSet(transaction_types['unsold'])
+		if transaction in SOLD:
 			sellers = [
 				self.add_person(
 					self.helper.copy_source_information(p, parent),
@@ -488,7 +491,7 @@ class AddAcquisitionOrBidding(Configurable):
 			]
 			data['_owner_locations'] = []
 			yield from self.add_acquisition(data, buyers, sellers, buy_sell_modifiers, make_la_person)
-		elif transaction in ('Unknown', 'Unbekannt', 'Inconnue', 'Withdrawn', 'Non Vendu', ''):
+		elif transaction in UNSOLD:
 			yield from self.add_bidding(data, buyers, buy_sell_modifiers)
 		else:
 			warnings.warn(f'Cannot create acquisition data for unknown transaction type: {transaction!r}')

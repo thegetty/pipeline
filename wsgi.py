@@ -68,16 +68,12 @@ class Builder:
 		link = None
 		if uri.startswith('urn:uuid:'):
 			label = f'#{next(self.counter)}'
-			if type:
-				model = settings.arches_models.get(type)
-				if model:
-					mpath = self.path / model
-					uu = uri[9:]
-					with suppress(StopIteration):
-						file = next(mpath.rglob(f'{uu}.json'))
-						if file:
-							label = self.normalize_string(label_from_file(file))
-							link = f'/{file.relative_to(self.path.parent)}'
+			uu = uri[9:]
+			with suppress(StopIteration):
+				file = next(self.path.rglob(f'{uu}.json'))
+				if file:
+					label = self.normalize_string(label_from_file(file))
+					link = f'/{file.relative_to(self.path.parent)}'
 			return label, link
 		elif uri.startswith('http://vocab.getty.edu/'):
 			uri = uri.replace('http://vocab.getty.edu/', '')

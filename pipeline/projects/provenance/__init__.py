@@ -190,8 +190,8 @@ class ProvenanceUtilityHelper(UtilityHelper):
 		'''
 		uid = f'AUCTION-EVENT-CATALOGNUMBER-{catalog_number}'
 		uri = self.make_proj_uri('AUCTION-EVENT', 'CATALOGNUMBER', catalog_number)
-		auction = vocab.AuctionEvent(ident=uri)
-		auction._label = f"Auction Event for {catalog_number}"
+		label = f"Auction Event for {catalog_number}"
+		auction = vocab.AuctionEvent(ident=uri, label=label)
 		return auction, uid, uri
 
 	def shared_lot_number_from_lno(self, lno):

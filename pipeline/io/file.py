@@ -9,6 +9,7 @@ from bonobo.constants import NOT_MODIFIED
 from bonobo.config import Configurable, Option
 from pipeline.util import ExclusiveValue
 from cromulent import model, reader
+from cromulent.model import factory
 
 def filename_for(data: dict):
 	uu = data.get('uuid')
@@ -104,7 +105,7 @@ class MergingFileWriter(Configurable):
 					return m
 			except model.DataError:
 				print(f'Exception caught while merging data from {fn}:')
-				print(d)
+				print(factory.toString(model_object, False))
 				print(content)
 				raise
 		

@@ -285,7 +285,7 @@ class TestAATAPipelineOutput_Abstracts(unittest.TestCase):
 		models = {
 			'Person': 'model-person',
 			'LinguisticObject': 'model-lo',
-			'Organization': 'model-org',
+			'Group': 'model-groups',
 			'Journal': 'model-journal',
 			'Series': 'model-series',
 		}
@@ -294,7 +294,7 @@ class TestAATAPipelineOutput_Abstracts(unittest.TestCase):
 
 		lo_model = models['LinguisticObject']
 		people_model = models['Person']
-		orgs_model = models['Organization']
+		orgs_model = models['Group']
 
 		self.verify_model_counts_for_AATA140375(output, lo_model, people_model, orgs_model)
 		people_creation_events = self.verify_people_for_AATA140375(output, people_model)
@@ -327,7 +327,7 @@ class TestAATAPipelineOutput_Journals(unittest.TestCase):
 		models = {
 			'Person': 'model-person',
 			'LinguisticObject': 'model-lo',
-			'Organization': 'model-org',
+			'Group': 'model-org',
 			'Journal': 'model-journal',
 			'Series': 'model-series',
 		}

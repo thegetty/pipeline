@@ -17,6 +17,7 @@ import settings
 import pipeline.io.arches
 from cromulent import model, vocab
 from cromulent.model import factory, BaseResource
+from pipeline.linkedart import add_crom_data
 
 UNKNOWN_DIMENSION = 'http://vocab.getty.edu/aat/300055642'
 
@@ -473,8 +474,23 @@ def label_for_timespan_range(begin, end, inclusive=False):
 	if isinstance(end, datetime.datetime):
 		end = end.strftime("%Y-%m-%d")
 
-	from_y, from_m, from_d = map(int, begin.split('-'))
-	to_y, to_m, to_d = map(int, end.split('-'))
+
+	orig_begin = begin
+	orig_end = end
+	if begin.count('-') != 2:
+		if not inclusive:
+			raise Exception(f'truncated date strings must operate in inclusive mode in label_for_timespan_range: {begin}')
+		begin = implode_date(dict(zip(('year', 'month', 'day'), (begin.split('-', 3) + ['', '', ''])[:3])), clamp='begin')
+	if end.count('-') != 2:
+		if not inclusive:
+			raise Exception(f'truncated date strings must operate in inclusive mode in label_for_timespan_range: {end}')
+		end = implode_date(dict(zip(('year', 'month', 'day'), (end.split('-', 3) + ['', '', ''])[:3])), clamp='end' if inclusive else 'eoe')
+	
+	beginparts = list(map(int, begin.split('-')))
+	endparts = list(map(int, end.split('-')))
+
+	from_y, from_m, from_d = beginparts
+	to_y, to_m, to_d = endparts
 	if inclusive:
 		maxday = calendar.monthrange(to_y, to_m)[1]
 		if from_y == to_y and from_m == to_m and from_d == 1 and to_d == maxday:
@@ -484,7 +500,7 @@ def label_for_timespan_range(begin, end, inclusive=False):
 			# 1 year range
 			return str(from_y)
 		else:
-			return f'{begin} to {end}'
+			return f'{orig_begin} to {orig_end}'
 	else:
 		if from_y == to_y and from_m == to_m and from_d == to_d - 1:
 			# 1 day range
@@ -579,4 +595,17 @@ def truncate_with_ellipsis(s, length=100):
 		# {s} must start with at least 100 non-space characters
 		shorter = s[:length-1] + '…'
 	return shorter
+
+class GraphListSource:
+	'''
+	Act as a bonobo graph source node for a set of crom objects.
+	Yields the supplied objects wrapped in data dicts.
+	'''
+	def __init__(self, values, *args, **kwargs):
+		super().__init__(*args, **kwargs)
+		self.values = values
+
+	def __call__(self):
+		for v in self.values:
+			yield add_crom_data({}, v)
 

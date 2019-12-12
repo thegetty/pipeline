@@ -68,16 +68,12 @@ class Builder:
 		link = None
 		if uri.startswith('urn:uuid:'):
 			label = f'#{next(self.counter)}'
-			if type:
-				model = settings.arches_models.get(type)
-				if model:
-					mpath = self.path / model
-					uu = uri[9:]
-					with suppress(StopIteration):
-						file = next(mpath.rglob(f'{uu}.json'))
-						if file:
-							label = self.normalize_string(label_from_file(file))
-							link = f'/{file.relative_to(self.path.parent)}'
+			uu = uri[9:]
+			with suppress(StopIteration):
+				file = next(self.path.rglob(f'{uu}.json'))
+				if file:
+					label = self.normalize_string(label_from_file(file))
+					link = f'/{file.relative_to(self.path.parent)}'
 			return label, link
 		elif uri.startswith('http://vocab.getty.edu/'):
 			uri = uri.replace('http://vocab.getty.edu/', '')
@@ -217,7 +213,7 @@ def list_files(model):
 @app.route('/')
 def list_models():
 	p = output_path
-	models = [s.relative_to(output_path.parent) for s in p.glob('[0-9a-f]*')]
+	models = [s.relative_to(output_path.parent) for s in p.glob('*') if s.is_dir()]
 	names = {v: k for k, v in settings.arches_models.items()}
 	items = sorted([(names.get(s.name, s), s) for s in models])
 	items_html = ''.join([f'<li><a href="/{s}">{label}</a></li>\n' for label, s in items])

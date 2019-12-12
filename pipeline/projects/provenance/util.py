@@ -6,17 +6,9 @@ import json
 import warnings
 
 from pipeline.util import implode_date
+from pipeline.projects import UtilityHelper
 
 UID_TAG_PREFIX = 'tag:getty.edu,2019:digital:pipeline:provenance:REPLACE-WITH-UUID#'
-
-def pir_uri(*values):
-	'''Convert a set of identifying `values` into a URI'''
-	if values:
-		suffix = ','.join([urllib.parse.quote(str(v)) for v in values])
-		return UID_TAG_PREFIX + suffix
-	else:
-		suffix = str(uuid.uuid4())
-		return UID_TAG_PREFIX + suffix
 
 def filter_empty_person(data: dict, _):
 	'''
@@ -56,16 +48,19 @@ def object_key(data):
 	date = implode_date(data, 'lot_sale_')
 	return (cno, lno, date)
 
-def object_uri(data):
+def object_uri(data, helper):
 	key = object_key(data)
-	return pir_uri('OBJECT', *key)
+	return helper.make_proj_uri('OBJECT', *key)
 
-def add_pir_object_uri(data, parent):
+def add_pir_object_uri_factory(helper):
+	return lambda d, p: add_pir_object_uri(d, p, helper)
+
+def add_pir_object_uri(data, parent, helper):
 	'''
 	Set 'uri' keys in `data` based on its identifying properties, returning `data`.
 	'''
 	add_pir_record_ids(data, parent)
-	data['uri'] = object_uri(parent)
+	data['uri'] = object_uri(parent, helper)
 	return data
 
 def prev_post_sales_rewrite_map(map_data):
@@ -111,13 +106,14 @@ class SalesTree:
 		return i
 
 	def largest_component_canonical_keys(self, limit=None):
+		helper = UtilityHelper('provenance')
 		components = Counter()
 		for src in self.nodes.keys():
 			key, _ = self.canonical_key(src)
 			components[key] += 1
 # 		print(f'Post sales records connected component sizes (top {limit}):')
 		for key, count in components.most_common(limit):
-			uri = pir_uri('OBJECT', *key)
+			uri = helper.make_proj_uri('OBJECT', *key)
 # 			print(f'{count}\t{key!s:>40}\t\t{uri}')
 			yield key
 

@@ -544,7 +544,7 @@ class ProvenancePipeline(PipelineBase):
 							'sell_auth_mod_a',
 							'sell_ulan')},
 					'price': {
-						'postprocess': lambda d, p: add_crom_price(d, p, services),
+						'postprocess': lambda d, p: add_crom_price(d, p, services, add_citations=True),
 						'prefixes': (
 							'price_amount',
 							'price_currency',

@@ -495,3 +495,4 @@ class AddAcquisitionOrBidding(Configurable):
 			yield from self.add_bidding(data, buyers, buy_sell_modifiers)
 		else:
 			warnings.warn(f'Cannot create acquisition data for unknown transaction type: {transaction!r}')
+			yield data

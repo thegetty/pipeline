@@ -143,6 +143,18 @@ class AddAuctionOfLot(Configurable):
 				)
 				lot.referred_to_by = note
 
+
+		cite_content = []
+		if data.get('transaction_so'):
+			cite_content.append(data['transaction_so'])
+		if data.get('transaction_cite'):
+			cite_content.append(data['transaction_cite'])
+		if cite_content:
+			content = ', '.join(cite_content)
+			cite = vocab.BibliographyStatement(ident='', content=content, label='Source of transaction type')
+			cite.identified_by = model.Name(ident='', content='Source of transaction type')
+			lot.referred_to_by = cite
+
 		self.set_lot_auction_houses(lot, cno, auction_houses)
 		self.set_lot_location(lot, cno, auction_locations)
 		self.set_lot_date(lot, auction_data)
@@ -509,17 +521,6 @@ class AddAcquisitionOrBidding(Configurable):
 		sales_record = get_crom_object(data['_record'])
 		transaction = parent['transaction']
 		transaction = transaction.replace('[?]', '').rstrip()
-
-		cite = None
-		if parent.get('transaction_cite'):
-			content = parent.get('transaction_cite')
-			cite = vocab.BibliographyStatement(ident='', content=content)
-
-		source = None
-		if parent.get('transaction_so'):
-			content = parent.get('transaction_so')
-			# TODO: where are these codes define?
-			source = vocab.BibliographyStatement(ident='', content=content)
 
 		buyers = [
 			self.add_person(

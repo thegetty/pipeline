@@ -43,11 +43,12 @@ class StaticInstanceHolder:
 		return used
 
 class PipelineBase:
-	def __init__(self, *, helper):
-		self.project_name = None
+	def __init__(self, project_name, *, helper):
+		self.project_name = project_name
 		self.input_path = None
 		self.helper = helper
 		self.static_instances = StaticInstanceHolder(self.setup_static_instances())
+		helper.add_services(self.get_services())
 
 	def setup_static_instances(self):
 		'''
@@ -139,6 +140,18 @@ class UtilityHelper:
 		self.project_name = project_name
 		self.proj_prefix = f'tag:getty.edu,2019:digital:pipeline:{project_name}:REPLACE-WITH-UUID#'
 		self.shared_prefix = f'project_nametag:getty.edu,2019:digital:pipeline:REPLACE-WITH-UUID#'
+
+	def add_services(self, services):
+		'''
+		Called from PipelineBase.__init__, this is used for dependency
+		injection of services data.
+		
+		This would ordinarily go in UtilityHelper.__init__, but this object
+		is constructed before the pipeline object which is used to produce
+		the services dict. So the pipeline object injects the data in *its*
+		constructor instead.
+		'''
+		self.services = services
 
 	def make_proj_uri(self, *values):
 		'''Convert a set of identifying `values` into a URI'''

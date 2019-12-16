@@ -347,7 +347,7 @@ class AddAcquisitionOrBidding(Configurable):
 				amnt = get_crom_object(price)
 				content = self._price_note(price)
 				if content:
-					paym.referred_to_by = vocab.SalePriceStatement(ident='', content=content)
+					paym.referred_to_by = vocab.PriceStatement(ident='', content=content)
 
 		ts = tx_data.get('_date')
 		if ts:

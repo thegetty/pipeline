@@ -469,6 +469,17 @@ class AddAcquisitionOrBidding(Configurable):
 		transaction = parent['transaction']
 		transaction = transaction.replace('[?]', '').rstrip()
 
+		cite = None
+		if parent.get('transaction_cite'):
+			content = parent.get('transaction_cite')
+			cite = vocab.BibliographyStatement(ident='', content=content)
+
+		source = None
+		if parent.get('transaction_so'):
+			content = parent.get('transaction_so')
+			# TODO: where are these codes define?
+			source = vocab.BibliographyStatement(ident='', content=content)
+
 		buyers = [
 			self.add_person(
 				self.helper.copy_source_information(p, parent),

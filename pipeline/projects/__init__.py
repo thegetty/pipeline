@@ -210,7 +210,7 @@ class UtilityHelper:
 		if data.get('uri'):
 			placeargs['ident'] = data['uri']
 		elif label in unique_locations:
-			data['uri'] = self.make_proj_uri('UNIQUE-PLACE', label)
+			data['uri'] = self.make_proj_uri('PLACE', label)
 			placeargs['ident'] = data['uri']
 		elif base_uri:
 			data['uri'] = base_uri + urllib.parse.quote(label)

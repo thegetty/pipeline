@@ -11,7 +11,6 @@ from contextlib import suppress
 
 from settings import output_file_path
 from pipeline.util.rewriting import rewrite_output_files, JSONValueRewriter
-from pipeline.projects.provenance.util import prev_post_sales_rewrite_map
 
 class JSONIDRemovalRewriter:
 	def __init__(self):

@@ -43,6 +43,7 @@ from pipeline.projects.provenance.util import *
 from pipeline.util import \
 			GraphListSource, \
 			CaseFoldingSet, \
+			CromObjectMerger, \
 			RecursiveExtractKeyedValue, \
 			ExtractKeyedValue, \
 			ExtractKeyedValues, \
@@ -258,7 +259,7 @@ class ProvenanceUtilityHelper(UtilityHelper):
 				return True
 		return False
 
-def add_crom_price(data, parent, services):
+def add_crom_price(data, parent, services, add_citations=False):
 	'''
 	Add modeling data for `MonetaryAmount`, `StartingPrice`, or `EstimatedPrice`,
 	based on properties of the supplied `data` dict.
@@ -270,9 +271,9 @@ def add_crom_price(data, parent, services):
 	if region in region_currencies:
 		c = currencies.copy()
 		c.update(region_currencies[region])
-		amnt = extract_monetary_amount(data, currency_mapping=c)
+		amnt = extract_monetary_amount(data, currency_mapping=c, add_citations=add_citations)
 	else:
-		amnt = extract_monetary_amount(data, currency_mapping=currencies)
+		amnt = extract_monetary_amount(data, currency_mapping=currencies, add_citations=add_citations)
 	if amnt:
 		add_crom_data(data=data, what=amnt)
 	return data
@@ -477,6 +478,14 @@ class ProvenancePipeline(PipelineBase):
 			ExtractKeyedValues(key='_organizations'),
 			_input=bid_acqs.output
 		)
+		refs = graph.add_chain(
+			ExtractKeyedValues(key='_citation_references'),
+			_input=bid_acqs.output
+		)
+		acqs = graph.add_chain(
+			ExtractKeyedValue(key='_acquisition'),
+			_input=bid_acqs.output
+		)
 		bids = graph.add_chain(
 			ExtractKeyedValue(key='_bidding'),
 			_input=bid_acqs.output
@@ -488,6 +497,7 @@ class ProvenancePipeline(PipelineBase):
 
 		if serialize:
 			# write SALES data
+			self.add_serialization_chain(graph, refs.output, model=self.models['LinguisticObject'])
 			self.add_serialization_chain(graph, bids.output, model=self.models['Bidding'])
 			self.add_serialization_chain(graph, orgs.output, model=self.models['Group'])
 			self.add_serialization_chain(graph, places.output, model=self.models['Place'])
@@ -533,7 +543,7 @@ class ProvenancePipeline(PipelineBase):
 							'sell_auth_mod_a',
 							'sell_ulan')},
 					'price': {
-						'postprocess': lambda d, p: add_crom_price(d, p, services),
+						'postprocess': lambda d, p: add_crom_price(d, p, services, add_citations=True),
 						'prefixes': (
 							'price_amount',
 							'price_currency',
@@ -658,21 +668,21 @@ class ProvenancePipeline(PipelineBase):
 						'post_owner',
 						'portal')},
 				'estimated_price': {
-					'postprocess': lambda d, p: add_crom_price(d, p, services),
+					'postprocess': lambda d, p: add_crom_price(d, p, services, add_citations=True),
 					'properties': (
 						'est_price',
 						'est_price_curr',
 						'est_price_desc',
 						'est_price_so')},
 				'start_price': {
-					'postprocess': lambda d, p: add_crom_price(d, p, services),
+					'postprocess': lambda d, p: add_crom_price(d, p, services, add_citations=True),
 					'properties': (
 						'start_price',
 						'start_price_curr',
 						'start_price_desc',
 						'start_price_so')},
 				'ask_price': {
-					'postprocess': lambda d, p: add_crom_price(d, p, services),
+					'postprocess': lambda d, p: add_crom_price(d, p, services, add_citations=True),
 					'properties': (
 						'ask_price',
 						'ask_price_curr',

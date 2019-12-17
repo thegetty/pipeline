@@ -143,6 +143,18 @@ class AddAuctionOfLot(Configurable):
 				)
 				lot.referred_to_by = note
 
+
+		cite_content = []
+		if data.get('transaction_so'):
+			cite_content.append(data['transaction_so'])
+		if data.get('transaction_cite'):
+			cite_content.append(data['transaction_cite'])
+		if cite_content:
+			content = ', '.join(cite_content)
+			cite = vocab.BibliographyStatement(ident='', content=content, label='Source of transaction type')
+			cite.identified_by = model.Name(ident='', content='Source of transaction type')
+			lot.referred_to_by = cite
+
 		self.set_lot_auction_houses(lot, cno, auction_houses)
 		self.set_lot_location(lot, cno, auction_locations)
 		self.set_lot_date(lot, auction_data)
@@ -207,6 +219,45 @@ class AddAcquisitionOrBidding(Configurable):
 				pacq.timespan = timespan_after(current_ts)
 		return tx
 
+	def _price_note(self, price):
+		'''
+		For lots with multiple payment records, the first is asserted as the real payment.
+		The rest are turned into LinguisticObjects and associated with the payment as
+		`referred_to_by`. This function constructs the content for that LinguisticObject,
+		containing price, currency, citations, and notes.
+		'''
+		amnt = get_crom_object(price)
+		try:
+			value = amnt.value
+		except:
+			return None
+		
+		label = f'{value}'
+		if hasattr(amnt, 'currency'):
+			currency = amnt.currency
+			label = f'{value} {currency._label}'
+
+		notes = []
+		cites = []
+		if hasattr(amnt, 'referred_to_by'):
+			for ref in amnt.referred_to_by:
+				content = ref.content
+				classification = {c._label for c in ref.classified_as}
+				if 'Note' in classification:
+					notes.append(content)
+				else:
+					cites.append(content)
+		
+		strings = []
+		if notes:
+			strings.append(', '.join(notes))
+		if cites:
+			strings.append(', '.join(cites))
+		if strings:
+			content = '; '.join(strings)
+			label += f'; {content}'
+		return label
+
 	def final_owner_procurement(self, final_owner, current_tx, hmo, current_ts):
 		tx = self.related_procurement(current_tx, hmo, current_ts, buyer=final_owner)
 		try:
@@ -235,7 +286,6 @@ class AddAcquisitionOrBidding(Configurable):
 		except AttributeError:
 			object_label = '(object)'
 			acq_label = f'Acquisition of {cno} {lno} ({date})'
-		amnts = [get_crom_object(p) for p in prices]
 
 	# 	if not prices:
 	# 		print(f'*** No price data found for {transaction} transaction')
@@ -302,11 +352,14 @@ class AddAcquisitionOrBidding(Configurable):
 				paym.carried_out_by = buyer
 				paym.paid_from = buyer
 
-		if len(amnts) > 1:
-			warnings.warn(f'Multiple Payment.paid_amount values for object {hmo.id} ({payment_id})')
-		for amnt in amnts:
+		if prices:
+			amnt = get_crom_object(prices[0])
 			paym.paid_amount = amnt
-			break # TODO: sensibly handle multiplicity in paid amount data
+			for price in prices[1:]:
+				amnt = get_crom_object(price)
+				content = self._price_note(price)
+				if content:
+					paym.referred_to_by = vocab.PriceStatement(ident='', content=content)
 
 		ts = tx_data.get('_date')
 		if ts:
@@ -495,3 +548,4 @@ class AddAcquisitionOrBidding(Configurable):
 			yield from self.add_bidding(data, buyers, buy_sell_modifiers)
 		else:
 			warnings.warn(f'Cannot create acquisition data for unknown transaction type: {transaction!r}')
+			yield data

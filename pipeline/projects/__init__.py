@@ -15,6 +15,8 @@ import settings
 
 import pipeline.execution
 from cromulent import model, vocab
+from pipeline.util import CaseFoldingSet
+from pipeline.linkedart import add_crom_data, get_crom_object
 from pipeline.nodes.basic import \
 			AddArchesModel, \
 			Serializer
@@ -170,3 +172,57 @@ class UtilityHelper:
 		else:
 			suffix = str(uuid.uuid4())
 			return self.shared_prefix + suffix
+
+	def make_place(self, data:dict, base_uri=None):
+		'''
+		Given a dictionary representing data about a place, construct a model.Place object,
+		assign it as the crom data in the dictionary, and return the dictionary.
+
+		The dictionary keys used to construct the place object are:
+
+		- name
+		- type (one of: 'City' or 'Country')
+		- part_of (a recursive place dictionary)
+		'''
+		unique_locations = CaseFoldingSet(self.services.get('unique_locations', {}).get('place_names', []))
+		TYPES = {
+			'city': vocab.instances['city'],
+			'province': vocab.instances['province'],
+			'state': vocab.instances['province'],
+			'country': vocab.instances['nation'],
+		}
+
+		if data is None:
+			return None
+		type_name = data.get('type', 'place').lower()
+		name = data['name']
+		label = name
+		parent_data = data.get('part_of')
+
+		place_type = TYPES.get(type_name)
+		parent = None
+		if parent_data:
+			parent_data = self.make_place(parent_data, base_uri=base_uri)
+			parent = get_crom_object(parent_data)
+			label = f'{label}, {parent._label}'
+
+		placeargs = {'label': label}
+		if data.get('uri'):
+			placeargs['ident'] = data['uri']
+		elif label in unique_locations:
+			data['uri'] = self.make_proj_uri('UNIQUE-PLACE', label)
+			placeargs['ident'] = data['uri']
+		elif base_uri:
+			data['uri'] = base_uri + urllib.parse.quote(label)
+			placeargs['ident'] = data['uri']
+
+		p = model.Place(**placeargs)
+		if place_type:
+			p.classified_as = place_type
+		if name:
+			p.identified_by = model.Name(ident='', content=name)
+		else:
+			warnings.warn(f'Place with missing name on {p.id}')
+		if parent:
+			p.part_of = parent
+		return add_crom_data(data=data, what=p)

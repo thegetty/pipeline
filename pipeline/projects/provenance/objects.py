@@ -72,7 +72,7 @@ class PopulateObject(Configurable):
 			if location:
 				current = parse_location_name(location, uri_base=self.helper.uid_tag_prefix)
 				base_uri = hmo.id + '-Place,'
-				place_data = pipeline.linkedart.make_la_place(current, base_uri=base_uri)
+				place_data = self.helper.make_place(current, base_uri=base_uri)
 				place = get_crom_object(place_data)
 				if place:
 					data['_locations'].append(place_data)
@@ -180,7 +180,7 @@ class PopulateObject(Configurable):
 						}
 
 					base_uri = hmo.id + '-Place,'
-					place_data = pipeline.linkedart.make_la_place(current, base_uri=base_uri)
+					place_data = self.helper.make_place(current, base_uri=base_uri)
 					place = get_crom_object(place_data)
 
 					make_la_org = pipeline.linkedart.MakeLinkedArtOrganization()

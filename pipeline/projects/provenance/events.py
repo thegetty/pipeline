@@ -66,11 +66,11 @@ class PopulateAuctionEvent(Configurable):
 		location_data = data['location']
 		current = self.auction_event_location(location_data)
 
-		# make_la_place is called here instead of as a separate graph node because the Place object
+		# helper.make_place is called here instead of using make_la_place as a separate graph node because the Place object
 		# gets stored in the `auction_locations` object to be used in the second graph component
 		# which uses the data to associate the place with auction lots.
 		base_uri = self.helper.make_proj_uri('AUCTION-EVENT', 'CATALOGNUMBER', cno, 'PLACE')
-		place_data = pipeline.linkedart.make_la_place(current, base_uri=base_uri)
+		place_data = self.helper.make_place(current, base_uri=base_uri)
 		place = get_crom_object(place_data)
 		if place:
 			data['_locations'] = [place_data]

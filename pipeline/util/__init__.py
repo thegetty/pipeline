@@ -569,6 +569,9 @@ class CaseFoldingSet(set):
 			else:
 				self.add(v)
 
+	def __and__(self, value):
+		return {s for s in value if s in self}
+
 	def add(self, v):
 		super().add(v.casefold())
 

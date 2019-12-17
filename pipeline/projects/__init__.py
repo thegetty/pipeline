@@ -181,7 +181,7 @@ class UtilityHelper:
 		The dictionary keys used to construct the place object are:
 
 		- name
-		- type (one of: 'City' or 'Country')
+		- type (one of: 'City', 'State', 'Province', or 'Country')
 		- part_of (a recursive place dictionary)
 		'''
 		unique_locations = CaseFoldingSet(self.services.get('unique_locations', {}).get('place_names', []))

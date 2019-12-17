@@ -9,7 +9,7 @@ from cromulent import model, vocab
 from cromulent.extract import extract_physical_dimensions
 
 import pipeline.execution
-from pipeline.util import implode_date, timespan_from_outer_bounds
+from pipeline.util import implode_date, timespan_from_outer_bounds, CaseFoldingSet
 from pipeline.util.cleaners import \
 			parse_location_name, \
 			date_cleaner
@@ -371,15 +371,15 @@ class AddArtists(Configurable):
 
 			mod = a.get('attrib_mod_auth')
 			if mod:
-				mods = {m.lower().strip() for m in mod.split(';')}
+				mods = CaseFoldingSet({m.lower().strip() for m in mod.split(';')})
 
 				# TODO: this should probably be in its own JSON service file:
-				STYLE_OF = set(attribution_modifiers['style of'])
-				FORMERLY_ATTRIBUTED_TO = set(attribution_modifiers['formerly attributed to'])
-				ATTRIBUTED_TO = set(attribution_modifiers['attributed to'])
-				COPY_AFTER = set(attribution_modifiers['copy after'])
-				PROBABLY = set(attribution_modifiers['probably by'])
-				POSSIBLY = set(attribution_modifiers['possibly by'])
+				STYLE_OF = CaseFoldingSet(attribution_modifiers['style of'])
+				FORMERLY_ATTRIBUTED_TO = CaseFoldingSet(attribution_modifiers['formerly attributed to'])
+				ATTRIBUTED_TO = CaseFoldingSet(attribution_modifiers['attributed to'])
+				COPY_AFTER = CaseFoldingSet(attribution_modifiers['copy after'])
+				PROBABLY = CaseFoldingSet(attribution_modifiers['probably by'])
+				POSSIBLY = CaseFoldingSet(attribution_modifiers['possibly by'])
 				UNCERTAIN = PROBABLY | POSSIBLY
 
 				GROUP_TYPES = set(attribution_group_types.values())

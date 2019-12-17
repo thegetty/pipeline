@@ -466,7 +466,7 @@ class AddArtists(Configurable):
 					event.influenced_by = original_hmo
 					data['_original_objects'].append(add_crom_data(data={}, what=original_hmo))
 					continue
-				elif {'or', 'and'} & mods:
+				elif mods & {'or', 'and'}:
 					pass
 				else:
 					print(f'UNHANDLED attrib_mod_auth VALUE: {mods}')

@@ -14,7 +14,6 @@ from cromulent.model import factory
 
 from pipeline.util import CromObjectMerger
 from pipeline.util.rewriting import JSONValueRewriter
-from pipeline.projects.provenance.util import prev_post_sales_rewrite_map
 from tests import TestProvenancePipelineOutput
 from cromulent import vocab
 
@@ -23,7 +22,7 @@ vocab.add_attribute_assignment_check()
 class PIRModelingTest_PrevSaleMerge(TestProvenancePipelineOutput):
 	def merge_objects(self, objects):
 		rewrite_map_data = self.prev_post_sales_map
-		post_sale_rewrite_map = prev_post_sales_rewrite_map(rewrite_map_data)
+		post_sale_rewrite_map = rewrite_map_data
 		r = JSONValueRewriter(post_sale_rewrite_map)
 		for k in list(objects.keys()):
 			data = objects[k]

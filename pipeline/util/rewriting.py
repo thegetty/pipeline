@@ -95,13 +95,22 @@ def _rewrite_output_files(files, r, update_filename=False, **kwargs):
 		print(f'{i} files rewritten')
 
 class JSONValueRewriter:
-	def __init__(self, mapping):
+	def __init__(self, mapping, prefix=False):
 		self.mapping = mapping
+		self.prefix = prefix
 
 	def rewrite(self, d, *args, **kwargs):
 		with suppress(TypeError):
 			if d in self.mapping:
 				return self.mapping[d]
+			if self.prefix:
+				if isinstance(d, str):
+					prefixes = [k for k in self.mapping if len(k) < len(d) and k == d[:len(k)]]
+					if prefixes:
+						k = prefixes[0]
+						replace = self.mapping[k]
+						updated = replace + d[len(replace):]
+						return updated
 		if isinstance(d, dict):
 			return {k: self.rewrite(v, *args, **kwargs) for k, v in d.items()}
 		elif isinstance(d, list):

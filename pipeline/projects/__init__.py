@@ -140,10 +140,13 @@ class UtilityHelper:
 		self.proj_prefix = f'tag:getty.edu,2019:digital:pipeline:{project_name}:REPLACE-WITH-UUID#'
 		self.shared_prefix = f'project_nametag:getty.edu,2019:digital:pipeline:REPLACE-WITH-UUID#'
 
+	def make_uri_path(self, *values):
+		return ','.join([urllib.parse.quote(str(v)) for v in values])
+
 	def make_proj_uri(self, *values):
 		'''Convert a set of identifying `values` into a URI'''
 		if values:
-			suffix = ','.join([urllib.parse.quote(str(v)) for v in values])
+			suffix = self.make_uri_path(*values)
 			return self.proj_prefix + suffix
 		else:
 			suffix = str(uuid.uuid4())
@@ -152,7 +155,7 @@ class UtilityHelper:
 	def make_shared_uri(self, *values):
 		'''Convert a set of identifying `values` into a URI'''
 		if values:
-			suffix = ','.join([urllib.parse.quote(str(v)) for v in values])
+			suffix = self.make_uri_path(*values)
 			return self.shared_prefix + suffix
 		else:
 			suffix = str(uuid.uuid4())

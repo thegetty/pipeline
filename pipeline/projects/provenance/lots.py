@@ -422,7 +422,7 @@ class AddAcquisitionOrBidding(Configurable):
 		if owner_record.get('own_auth_l'):
 			loc = owner_record['own_auth_l']
 			current = parse_location_name(loc, uri_base=self.helper.uid_tag_prefix)
-			place_data = pipeline.linkedart.make_la_place(current)
+			place_data = self.helper.make_place(current)
 			place = get_crom_object(place_data)
 			owner.residence = place
 			data['_owner_locations'].append(place_data)

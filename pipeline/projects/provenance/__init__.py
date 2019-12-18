@@ -307,8 +307,7 @@ class ProvenancePipeline(PipelineBase):
 		vocab.register_instance('history', {'parent': model.Type, 'id': '300033898', 'label': 'History'})
 		vocab.register_vocab_class('AuctionCatalog', {'parent': model.HumanMadeObject, 'id': '300026068', 'label': 'Auction Catalog', 'metatype': 'work type'})
 
-		super().__init__(helper=helper)
-		self.project_name = project_name
+		super().__init__(project_name, helper=helper)
 
 		self.graph_0 = None
 		self.graph_1 = None

@@ -23,8 +23,8 @@ import settings
 class Pipeline(PipelineBase):
 	'''Bonobo-based pipeline for transforming Knoedler data into JSON-LD.'''
 	def __init__(self, output_path, **kwargs):
-		super().__init__()
-		self.project_name = 'knoedler'
+		project_name = 'knoedler'
+		super().__init__(project_name)
 		self.graph = None
 		self.models = kwargs.get('models', settings.arches_models)
 		self.pack_size = kwargs.get('pack_size')

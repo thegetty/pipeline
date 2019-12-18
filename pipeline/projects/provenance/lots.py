@@ -441,6 +441,26 @@ class AddAcquisitionOrBidding(Configurable):
 		ptx_data = tx_data.copy()
 		data['_procurements'].append(add_crom_data(data=ptx_data, what=tx))
 
+	def add_non_sale_sellers(self, data:dict, sellers):
+		hmo = get_crom_object(data)
+		parent = data['parent_data']
+		auction_data = parent['auction_of_lot']
+		cno, lno, date = object_key(auction_data)
+		lot = get_crom_object(parent)
+		ts = lot.timespan
+
+		own_info_source = f'Listed as the seller of object in {cno} {lno} ({date}) that was not sold'
+		note = vocab.SourceStatement(ident='', content=own_info_source)
+		prev_procurements = []
+		for seller_data in sellers:
+			seller = get_crom_object(seller_data)
+			tx = self.related_procurement(hmo, current_ts=ts, buyer=seller, previous=True)
+			tx._label = f'Procurement leading to the ownership of {hmo._label}'
+			tx.referred_to_by = note
+			prev_procurements.append(add_crom_data(data={}, what=tx))
+		data['_procurements'] += prev_procurements
+		return prev_procurements
+
 	def add_bidding(self, data:dict, buyers, sellers, buy_sell_modifiers):
 		'''Add modeling of bids that did not lead to an acquisition'''
 		hmo = get_crom_object(data)
@@ -453,17 +473,7 @@ class AddAcquisitionOrBidding(Configurable):
 		lot = get_crom_object(parent)
 		ts = lot.timespan
 
-		ss_label = 'Source of information on history of the object prior to the current sale.'
-		own_info_source = f'Listed as the seller of object in {cno} {lno} ({date}) that was not sold'
-		note = vocab.SourceStatement(ident='', content=own_info_source, label=ss_label)
-		prev_procurements = []
-		for seller_data in sellers:
-			seller = get_crom_object(seller_data)
-			tx = self.related_procurement(hmo, current_ts=ts, buyer=seller, previous=True)
-			tx._label = f'Procurement leading to the ownership of {hmo._label}'
-			tx.referred_to_by = note
-			prev_procurements.append(add_crom_data(data={}, what=tx))
-		data['_procurements'] += prev_procurements
+		prev_procurements = self.add_non_sale_sellers(data, sellers)
 
 		if amnts:
 			bidding_id = hmo.id + '-Bidding'
@@ -572,5 +582,10 @@ class AddAcquisitionOrBidding(Configurable):
 		elif transaction in UNSOLD:
 			yield from self.add_bidding(data, buyers, sellers, buy_sell_modifiers)
 		else:
+			prev_procurements = self.add_non_sale_sellers(data, sellers)
+			lot = get_crom_object(parent)
+			for tx_data in prev_procurements:
+				tx = get_crom_object(tx_data)
+				tx.ends_before_the_start_of = lot
 			warnings.warn(f'Cannot create acquisition data for unknown transaction type: {transaction!r}')
 			yield data

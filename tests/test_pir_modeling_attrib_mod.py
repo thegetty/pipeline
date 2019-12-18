@@ -41,7 +41,7 @@ class PIRModelingTest_AttributionModifiers(TestProvenancePipelineOutput):
 		# was "copy after" an original painting.
 		self.assertEqual(len(objects), 10)
 		
-		# there are 15 people:
+		# there are 16 people:
 		# 	"Pierre André Joseph Knyff" (seller)
 		# 	"Jeffrey, Henry" (seller)
 		# 	"Schgosdass" (artist, formerly attributed to)
@@ -57,7 +57,8 @@ class PIRModelingTest_AttributionModifiers(TestProvenancePipelineOutput):
 		# 	"Giot" (buyer)
 		# 	"H Sudn [?]" (seller)
 		# 	"CORNEILLE, JEAN BAPTISTE" (artist, possibly by)
-		self.assertEqual(len(people), 15)
+		#   "Dr. S. (Berlin W 15, Kaiserallee 208)" (seller of an unsold transaction ("Unverkauft"))
+		self.assertEqual(len(people), 16)
 
 		# there are 4 groups:
 		# 	'FollowerGroup of artist “RUBENS, PETER PAUL”' (influencer of the formation of the "follower of" group)

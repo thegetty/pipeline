@@ -9,7 +9,7 @@ from cromulent import model, vocab
 from cromulent.extract import extract_physical_dimensions
 
 import pipeline.execution
-from pipeline.util import implode_date, timespan_from_outer_bounds
+from pipeline.util import implode_date, timespan_from_outer_bounds, CaseFoldingSet
 from pipeline.util.cleaners import \
 			parse_location_name, \
 			date_cleaner
@@ -371,15 +371,15 @@ class AddArtists(Configurable):
 
 			mod = a.get('attrib_mod_auth')
 			if mod:
-				mods = {m.lower().strip() for m in mod.split(';')}
+				mods = CaseFoldingSet({m.lower().strip() for m in mod.split(';')})
 
 				# TODO: this should probably be in its own JSON service file:
-				STYLE_OF = set(attribution_modifiers['style of'])
-				FORMERLY_ATTRIBUTED_TO = set(attribution_modifiers['formerly attributed to'])
-				ATTRIBUTED_TO = set(attribution_modifiers['attributed to'])
-				COPY_AFTER = set(attribution_modifiers['copy after'])
-				PROBABLY = set(attribution_modifiers['probably by'])
-				POSSIBLY = set(attribution_modifiers['possibly by'])
+				STYLE_OF = CaseFoldingSet(attribution_modifiers['style of'])
+				FORMERLY_ATTRIBUTED_TO = CaseFoldingSet(attribution_modifiers['formerly attributed to'])
+				ATTRIBUTED_TO = CaseFoldingSet(attribution_modifiers['attributed to'])
+				COPY_AFTER = CaseFoldingSet(attribution_modifiers['copy after'])
+				PROBABLY = CaseFoldingSet(attribution_modifiers['probably by'])
+				POSSIBLY = CaseFoldingSet(attribution_modifiers['possibly by'])
 				UNCERTAIN = PROBABLY | POSSIBLY
 
 				GROUP_TYPES = set(attribution_group_types.values())
@@ -414,7 +414,7 @@ class AddArtists(Configurable):
 					group_data = add_crom_data({'uri': group_id}, group)
 					data['_organizations'].append(group_data)
 
-					subevent_id = event_id + f'-{seq_no}'
+					subevent_id = event_id + f'-{seq_no}' # TODO: fix for the case of post-sales merging
 					subevent = model.Production(ident=subevent_id, label=f'Production sub-event for {group_label}')
 					subevent.carried_out_by = group
 
@@ -458,7 +458,7 @@ class AddArtists(Configurable):
 					original_event = model.Production(ident=original_event_id, label=f'Production event for {original_label}')
 					original_hmo.produced_by = original_event
 
-					original_subevent_id = original_event_id + f'-{seq_no}'
+					original_subevent_id = original_event_id + f'-{seq_no}' # TODO: fix for the case of post-sales merging
 					original_subevent = model.Production(ident=original_subevent_id, label=f'Production sub-event for {artist_label}')
 					original_event.part = original_subevent
 					original_subevent.carried_out_by = person
@@ -466,14 +466,15 @@ class AddArtists(Configurable):
 					event.influenced_by = original_hmo
 					data['_original_objects'].append(add_crom_data(data={}, what=original_hmo))
 					continue
-				elif {'or', 'and'} & mods:
+				elif mods & {'or', 'and'}:
 					pass
 				else:
 					print(f'UNHANDLED attrib_mod_auth VALUE: {mods}')
 					pprint.pprint(a)
 					continue
 
-			subevent_id = event_id + f'-{seq_no}'
+			subprod_path = self.helper.make_uri_path(*a["uri_keys"])
+			subevent_id = event_id + f'-{subprod_path}'
 			subevent = model.Production(ident=subevent_id, label=f'Production sub-event for {artist_label}')
 			subevent.carried_out_by = person
 			if uncertain_attribution:

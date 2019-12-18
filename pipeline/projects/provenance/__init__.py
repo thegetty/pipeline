@@ -123,6 +123,7 @@ class PersonIdentity:
 
 	def add_uri(self, data:dict, **kwargs):
 		keys = self.uri_keys(data, **kwargs)
+		data['uri_keys'] = keys
 		data['uri'] = self.make_uri(*keys)
 
 	def add_names(self, data:dict, referrer=None, role=None):

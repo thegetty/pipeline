@@ -480,7 +480,7 @@ class AddAcquisitionOrBidding(Configurable):
 			all_bids = model.Activity(ident=bidding_id, label=f'Bidding on {cno} {lno} ({date})')
 			for tx_data in prev_procurements:
 				tx = get_crom_object(tx_data)
-				tx.ends_before_the_start_of = all_bids
+				all_bids.starts_after_the_end_of = tx
 
 			all_bids.part_of = lot
 
@@ -586,6 +586,6 @@ class AddAcquisitionOrBidding(Configurable):
 			lot = get_crom_object(parent)
 			for tx_data in prev_procurements:
 				tx = get_crom_object(tx_data)
-				tx.ends_before_the_start_of = lot
+				lot.starts_after_the_end_of = tx
 			warnings.warn(f'Cannot create acquisition data for unknown transaction type: {transaction!r}')
 			yield data

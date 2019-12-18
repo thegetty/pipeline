@@ -23,6 +23,7 @@
 	"student of": "PupilGroup",
 	"disciple of": "PupilGroup",
 	"discipel van": "PupilGroup",
+	"pupil of": "PupilGroup",
 
 	"follower of": "FollowerGroup",
 	"volger van": "FollowerGroup"

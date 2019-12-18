@@ -58,10 +58,10 @@ class Builder:
 					"Phase": "event"
 				}	
 
-	def normalize_string(self, s):
+	def normalize_string(self, s, length=40):
 		s = unidecode(s)
 		s = s.replace('"', "'")
-		s = truncate_with_ellipsis(s, 40) or s
+		s = truncate_with_ellipsis(s, length) or s
 		return s
 		
 	def uri_to_label_link(self, uri, type):
@@ -139,7 +139,7 @@ class Builder:
 				else:
 					if type(v) in (str,):
 						# :|
-						v = "\"''%s''\""% v
+						v = "\"''%s''\""% self.normalize_string(v, 100)
 					line = "%s-- %s -->%s_%s(%s)" % (currid, k, currid, n, v)
 					if not line in mermaid:
 						mermaid.append(line)
@@ -207,7 +207,7 @@ def list_files(model):
 	p = output_path / model
 	files = p.rglob('*.json')
 	items = sorted([(label_from_file(s) or str(s), s.relative_to(output_path.parent)) for s in files])
-	items_html = ''.join([f'<li><a href="/{s}">{label}</a></li>\n' for label, s in items])
+	items_html = ''.join([f'<li><a href="/{s}">{truncate_with_ellipsis(label, 100) or label}</a></li>\n' for label, s in items])
 	return f'<ul>{items_html}</ul>'
 
 @app.route('/')

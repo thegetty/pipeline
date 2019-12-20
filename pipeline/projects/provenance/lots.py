@@ -341,14 +341,9 @@ class AddAcquisitionOrBidding(Configurable):
 			if mod in THROUGH:
 				acq.carried_out_by = buyer
 				paym.carried_out_by = buyer
-			elif mod in FOR:
-				acq.transferred_title_to = buyer
-				paym.paid_from = buyer
 			else:
-				# covers non-modified
-				acq.carried_out_by = buyer
+				# covers FOR modifiers and non-modified
 				acq.transferred_title_to = buyer
-				paym.carried_out_by = buyer
 				paym.paid_from = buyer
 
 		if prices:

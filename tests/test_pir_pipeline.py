@@ -97,7 +97,7 @@ class TestProvenancePipelineOutput(unittest.TestCase):
 		self.assertEqual(object_types, {'Auction Catalog', 'Painting'})
 
 		lo_types = {c['_label'] for o in los.values() for c in o.get('classified_as', [])}
-		self.assertEqual(lo_types, {'Auction Catalog'})
+		self.assertEqual(lo_types, {'Auction Catalog', 'Paragraph'})
 
 		people_names = {o['_label'] for o in people.values()}
 		self.assertEqual(people_names, {'Frits Lugt', '[Anonymous]', 'GILLEMANS, JAN PAUWEL', 'VINCKEBOONS, DAVID'})

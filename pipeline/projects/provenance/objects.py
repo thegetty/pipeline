@@ -100,15 +100,21 @@ class PopulateObject(Configurable):
 		hmo.shows = vi
 
 	def _populate_object_catalog_record(self, data:dict, parent, lot, cno, rec_num):
+		hmo = get_crom_object(data)
+
 		catalog_uri = self.helper.make_proj_uri('CATALOG', cno)
-		catalog = vocab.AuctionCatalogText(ident=catalog_uri)
+		catalog = vocab.AuctionCatalogText(ident=catalog_uri, label=f'Sale Catalog {cno}')
 
 		record_uri = self.helper.make_proj_uri('CATALOG', cno, 'RECORD', rec_num)
 		lot_object_id = parent['lot_object_id']
-		record = model.LinguisticObject(ident=record_uri, label=f'Sale recorded in catalog: {lot_object_id} (record number {rec_num})') # TODO: needs classification
+		record = vocab.ParagraphText(ident=record_uri, label=f'Sale recorded in catalog: {lot_object_id} (record number {rec_num})')
 		record_data	= {'uri': record_uri}
 		record_data['identifiers'] = [model.Name(ident='', content=f'Record of sale {lot_object_id}')]
 		record.part_of = catalog
+
+		if parent.get('transaction'):
+			record.referred_to_by = vocab.PropertyStatusStatement(ident='', label='Transaction type for sales record', content=parent['transaction'])
+		record.about = hmo
 
 		data['_record'] = add_crom_data(data=record_data, what=record)
 		return record

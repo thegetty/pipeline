@@ -24,8 +24,7 @@ class AddAuctionCatalog(Configurable):
 		else:
 			key = f'CATALOG-{cno}'
 			cdata = {'uid': key, 'uri': self.helper.make_proj_uri('CATALOG', cno)}
-			catalog = vocab.AuctionCatalogText(ident=cdata['uri'])
-			catalog._label = f'Sale Catalog {cno}'
+			catalog = vocab.AuctionCatalogText(ident=cdata['uri'], label=f'Sale Catalog {cno}')
 
 			data['_catalog'] = add_crom_data(data=cdata, what=catalog)
 			yield data

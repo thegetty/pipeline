@@ -27,14 +27,7 @@ class AddAuctionEvent(Configurable):
 		add_crom_data(data=data, what=auction)
 		catalog = get_crom_object(data['_catalog'])
 
-		record_uri = self.helper.make_proj_uri('AUCTION-EVENT', 'CATALOGNUMBER', cno, 'RECORD')
-		label = f'Record of auction event from catalog {cno}'
-		record = model.LinguisticObject(ident=record_uri, label=label) # TODO: needs classification
-		record_data	= {'uri': record_uri}
-		record_data['identifiers'] = [model.Name(ident='', content=label)]
-		record.part_of = catalog
-
-		data['_record'] = add_crom_data(data=record_data, what=record)
+		data['_record'] = data['_catalog']
 		return data
 
 class PopulateAuctionEvent(Configurable):

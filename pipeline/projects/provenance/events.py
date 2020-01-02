@@ -21,19 +21,13 @@ class AddAuctionEvent(Configurable):
 		'''Add modeling for an auction event based on properties of the supplied `data` dict.'''
 		cno = data['catalog_number']
 		auction, uid, uri = self.helper.auction_event_for_catalog_number(cno)
+		auction.identified_by = model.Name(ident='', content=auction._label)
 		data['uid'] = uid
 		data['uri'] = uri
 		add_crom_data(data=data, what=auction)
 		catalog = get_crom_object(data['_catalog'])
 
-		record_uri = self.helper.make_proj_uri('AUCTION-EVENT', 'CATALOGNUMBER', cno, 'RECORD')
-		label = f'Record of auction event from catalog {cno}'
-		record = model.LinguisticObject(ident=record_uri, label=label) # TODO: needs classification
-		record_data	= {'uri': record_uri}
-		record_data['identifiers'] = [model.Name(ident='', content=label)]
-		record.part_of = catalog
-
-		data['_record'] = add_crom_data(data=record_data, what=record)
+		data['_record'] = data['_catalog']
 		return data
 
 class PopulateAuctionEvent(Configurable):
@@ -65,11 +59,11 @@ class PopulateAuctionEvent(Configurable):
 		location_data = data['location']
 		current = self.auction_event_location(location_data)
 
-		# make_la_place is called here instead of as a separate graph node because the Place object
+		# helper.make_place is called here instead of using make_la_place as a separate graph node because the Place object
 		# gets stored in the `auction_locations` object to be used in the second graph component
 		# which uses the data to associate the place with auction lots.
 		base_uri = self.helper.make_proj_uri('AUCTION-EVENT', 'CATALOGNUMBER', cno, 'PLACE')
-		place_data = pipeline.linkedart.make_la_place(current, base_uri=base_uri)
+		place_data = self.helper.make_place(current, base_uri=base_uri)
 		place = get_crom_object(place_data)
 		if place:
 			data['_locations'] = [place_data]

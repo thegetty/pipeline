@@ -15,6 +15,8 @@ import settings
 
 import pipeline.execution
 from cromulent import model, vocab
+from pipeline.util import CaseFoldingSet
+from pipeline.linkedart import add_crom_data, get_crom_object
 from pipeline.nodes.basic import \
 			AddArchesModel, \
 			Serializer
@@ -43,10 +45,12 @@ class StaticInstanceHolder:
 		return used
 
 class PipelineBase:
-	def __init__(self, *, helper):
+	def __init__(self, project_name, *, helper):
+		self.project_name = project_name
 		self.input_path = None
 		self.helper = helper
 		self.static_instances = StaticInstanceHolder(self.setup_static_instances())
+		helper.add_services(self.get_services())
 
 	def setup_static_instances(self):
 		'''
@@ -141,10 +145,25 @@ class UtilityHelper:
 		self.proj_prefix = f'tag:getty.edu,2019:digital:pipeline:{project_name}:REPLACE-WITH-UUID#'
 		self.shared_prefix = f'project_nametag:getty.edu,2019:digital:pipeline:REPLACE-WITH-UUID#'
 
+	def add_services(self, services):
+		'''
+		Called from PipelineBase.__init__, this is used for dependency
+		injection of services data.
+		
+		This would ordinarily go in UtilityHelper.__init__, but this object
+		is constructed before the pipeline object which is used to produce
+		the services dict. So the pipeline object injects the data in *its*
+		constructor instead.
+		'''
+		self.services = services
+
+	def make_uri_path(self, *values):
+		return ','.join([urllib.parse.quote(str(v)) for v in values])
+
 	def make_proj_uri(self, *values):
 		'''Convert a set of identifying `values` into a URI'''
 		if values:
-			suffix = ','.join([urllib.parse.quote(str(v)) for v in values])
+			suffix = self.make_uri_path(*values)
 			return self.proj_prefix + suffix
 		else:
 			suffix = str(uuid.uuid4())
@@ -153,8 +172,62 @@ class UtilityHelper:
 	def make_shared_uri(self, *values):
 		'''Convert a set of identifying `values` into a URI'''
 		if values:
-			suffix = ','.join([urllib.parse.quote(str(v)) for v in values])
+			suffix = self.make_uri_path(*values)
 			return self.shared_prefix + suffix
 		else:
 			suffix = str(uuid.uuid4())
 			return self.shared_prefix + suffix
+
+	def make_place(self, data:dict, base_uri=None):
+		'''
+		Given a dictionary representing data about a place, construct a model.Place object,
+		assign it as the crom data in the dictionary, and return the dictionary.
+
+		The dictionary keys used to construct the place object are:
+
+		- name
+		- type (one of: 'City', 'State', 'Province', or 'Country')
+		- part_of (a recursive place dictionary)
+		'''
+		unique_locations = CaseFoldingSet(self.services.get('unique_locations', {}).get('place_names', []))
+		TYPES = {
+			'city': vocab.instances['city'],
+			'province': vocab.instances['province'],
+			'state': vocab.instances['province'],
+			'country': vocab.instances['nation'],
+		}
+
+		if data is None:
+			return None
+		type_name = data.get('type', 'place').lower()
+		name = data['name']
+		label = name
+		parent_data = data.get('part_of')
+
+		place_type = TYPES.get(type_name)
+		parent = None
+		if parent_data:
+			parent_data = self.make_place(parent_data, base_uri=base_uri)
+			parent = get_crom_object(parent_data)
+			label = f'{label}, {parent._label}'
+
+		placeargs = {'label': label}
+		if data.get('uri'):
+			placeargs['ident'] = data['uri']
+		elif label in unique_locations:
+			data['uri'] = self.make_proj_uri('PLACE', label)
+			placeargs['ident'] = data['uri']
+		elif base_uri:
+			data['uri'] = base_uri + urllib.parse.quote(label)
+			placeargs['ident'] = data['uri']
+
+		p = model.Place(**placeargs)
+		if place_type:
+			p.classified_as = place_type
+		if name:
+			p.identified_by = model.Name(ident='', content=name)
+		else:
+			warnings.warn(f'Place with missing name on {p.id}')
+		if parent:
+			p.part_of = parent
+		return add_crom_data(data=data, what=p)

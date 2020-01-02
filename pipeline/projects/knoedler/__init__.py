@@ -29,7 +29,7 @@ import settings
 
 from cromulent import model, vocab
 
-from pipeline.projects import PipelineBase
+from pipeline.projects import PipelineBase, UtilityHelper
 from pipeline.util import \
 			GraphListSource, \
 			CaseFoldingSet, \
@@ -61,11 +61,12 @@ from pipeline.nodes.basic import \
 			Trace
 from pipeline.util.rewriting import rewrite_output_files, JSONValueRewriter
 
-class KnoedlerUtilityHelper:
+class KnoedlerUtilityHelper(UtilityHelper):
 	'''
 	Project-specific code for accessing and interpreting sales data.
 	'''
-	def __init__(self, uid_prefix, static_instances):
+	def __init__(self, project_name, uid_prefix, static_instances=None):
+		super().__init__(project_name)
 		self.uid_tag_prefix = uid_prefix
 		self.static_instances = static_instances
 
@@ -314,10 +315,12 @@ class KnoedlerPipeline(PipelineBase):
 	'''Bonobo-based pipeline for transforming Knoedler data from CSV into JSON-LD.'''
 	def __init__(self, input_path, data, **kwargs):
 		self.uid_tag_prefix = f'tag:getty.edu,2019:digital:pipeline:knoedler:REPLACE-WITH-UUID#'
-		self.project_name = 'knoedler'
+		project_name = 'knoedler'
 
-		super().__init__()
-		self.helper = KnoedlerUtilityHelper(self.uid_tag_prefix, self.static_instances)
+		helper = KnoedlerUtilityHelper(project_name, self.uid_tag_prefix)
+		super().__init__(project_name, helper=helper)
+		helper.static_instances = self.static_instances
+		
 		self.graph = None
 		self.models = kwargs.get('models', settings.arches_models)
 		self.header_file = data['header_file']
@@ -336,7 +339,7 @@ class KnoedlerPipeline(PipelineBase):
 
 		knoedler_ulan = 500304270
 		knoedler_name = 'M. Knoedler & Co.'
-		KNOEDLER_URI = self.make_uri('ORGANIZATION', 'ULAN', str(knoedler_ulan))
+		KNOEDLER_URI = self.helper.make_uri('ORGANIZATION', 'ULAN', str(knoedler_ulan))
 		knoedler = model.Group(ident=KNOEDLER_URI, label=knoedler_name)
 		knoedler.identified_by = vocab.PrimaryName(ident='', content=knoedler_name)
 		knoedler.exact_match = model.BaseResource(ident=f'http://vocab.getty.edu/ulan/{knoedler_ulan}')

@@ -63,17 +63,6 @@ def add_pir_object_uri(data, parent, helper):
 	data['uri'] = object_uri(parent, helper)
 	return data
 
-def prev_post_sales_rewrite_map(map_data):
-	post_sale_rewrite_map = map_data.copy()
-	also_rewrite = {}
-	also_rewrite_suffixes = ['Production', 'Destruction', 'VisualItem', 'Original', 'Original-Production', 'Original-Production-1']
-	also_rewrite_suffixes += [f'Production-{i}' for i in range(6)]
-	for k, v in post_sale_rewrite_map.items():
-		for suffix in also_rewrite_suffixes:
-			also_rewrite[f'{k}-{suffix}'] = f'{v}-{suffix}'
-	post_sale_rewrite_map.update(also_rewrite)
-	return post_sale_rewrite_map
-
 class SalesTree:
 	'''
 	This class is used to represent the repeated sales of objects in provenance data.

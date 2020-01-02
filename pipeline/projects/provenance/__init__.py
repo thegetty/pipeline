@@ -43,6 +43,7 @@ from pipeline.projects.provenance.util import *
 from pipeline.util import \
 			GraphListSource, \
 			CaseFoldingSet, \
+			CromObjectMerger, \
 			RecursiveExtractKeyedValue, \
 			ExtractKeyedValue, \
 			ExtractKeyedValues, \
@@ -122,6 +123,7 @@ class PersonIdentity:
 
 	def add_uri(self, data:dict, **kwargs):
 		keys = self.uri_keys(data, **kwargs)
+		data['uri_keys'] = keys
 		data['uri'] = self.make_uri(*keys)
 
 	def add_names(self, data:dict, referrer=None, role=None):
@@ -190,8 +192,8 @@ class ProvenanceUtilityHelper(UtilityHelper):
 		'''
 		uid = f'AUCTION-EVENT-CATALOGNUMBER-{catalog_number}'
 		uri = self.make_proj_uri('AUCTION-EVENT', 'CATALOGNUMBER', catalog_number)
-		auction = vocab.AuctionEvent(ident=uri)
-		auction._label = f"Auction Event for {catalog_number}"
+		label = f"Auction Event for {catalog_number}"
+		auction = vocab.AuctionEvent(ident=uri, label=label)
 		return auction, uid, uri
 
 	def shared_lot_number_from_lno(self, lno):
@@ -258,7 +260,7 @@ class ProvenanceUtilityHelper(UtilityHelper):
 				return True
 		return False
 
-def add_crom_price(data, parent, services):
+def add_crom_price(data, parent, services, add_citations=False):
 	'''
 	Add modeling data for `MonetaryAmount`, `StartingPrice`, or `EstimatedPrice`,
 	based on properties of the supplied `data` dict.
@@ -270,9 +272,9 @@ def add_crom_price(data, parent, services):
 	if region in region_currencies:
 		c = currencies.copy()
 		c.update(region_currencies[region])
-		amnt = extract_monetary_amount(data, currency_mapping=c)
+		amnt = extract_monetary_amount(data, currency_mapping=c, add_citations=add_citations)
 	else:
-		amnt = extract_monetary_amount(data, currency_mapping=currencies)
+		amnt = extract_monetary_amount(data, currency_mapping=currencies, add_citations=add_citations)
 	if amnt:
 		add_crom_data(data=data, what=amnt)
 	return data
@@ -305,8 +307,7 @@ class ProvenancePipeline(PipelineBase):
 		vocab.register_instance('history', {'parent': model.Type, 'id': '300033898', 'label': 'History'})
 		vocab.register_vocab_class('AuctionCatalog', {'parent': model.HumanMadeObject, 'id': '300026068', 'label': 'Auction Catalog', 'metatype': 'work type'})
 
-		super().__init__(helper=helper)
-		self.project_name = project_name
+		super().__init__(project_name, helper=helper)
 
 		self.graph_0 = None
 		self.graph_1 = None
@@ -478,6 +479,14 @@ class ProvenancePipeline(PipelineBase):
 			ExtractKeyedValues(key='_organizations'),
 			_input=bid_acqs.output
 		)
+		refs = graph.add_chain(
+			ExtractKeyedValues(key='_citation_references'),
+			_input=bid_acqs.output
+		)
+		acqs = graph.add_chain(
+			ExtractKeyedValue(key='_acquisition'),
+			_input=bid_acqs.output
+		)
 		bids = graph.add_chain(
 			ExtractKeyedValue(key='_bidding'),
 			_input=bid_acqs.output
@@ -489,6 +498,7 @@ class ProvenancePipeline(PipelineBase):
 
 		if serialize:
 			# write SALES data
+			self.add_serialization_chain(graph, refs.output, model=self.models['LinguisticObject'])
 			self.add_serialization_chain(graph, bids.output, model=self.models['Bidding'])
 			self.add_serialization_chain(graph, orgs.output, model=self.models['Group'])
 			self.add_serialization_chain(graph, places.output, model=self.models['Place'])
@@ -534,7 +544,7 @@ class ProvenancePipeline(PipelineBase):
 							'sell_auth_mod_a',
 							'sell_ulan')},
 					'price': {
-						'postprocess': lambda d, p: add_crom_price(d, p, services),
+						'postprocess': lambda d, p: add_crom_price(d, p, services, add_citations=True),
 						'prefixes': (
 							'price_amount',
 							'price_currency',
@@ -659,21 +669,21 @@ class ProvenancePipeline(PipelineBase):
 						'post_owner',
 						'portal')},
 				'estimated_price': {
-					'postprocess': lambda d, p: add_crom_price(d, p, services),
+					'postprocess': lambda d, p: add_crom_price(d, p, services, add_citations=True),
 					'properties': (
 						'est_price',
 						'est_price_curr',
 						'est_price_desc',
 						'est_price_so')},
 				'start_price': {
-					'postprocess': lambda d, p: add_crom_price(d, p, services),
+					'postprocess': lambda d, p: add_crom_price(d, p, services, add_citations=True),
 					'properties': (
 						'start_price',
 						'start_price_curr',
 						'start_price_desc',
 						'start_price_so')},
 				'ask_price': {
-					'postprocess': lambda d, p: add_crom_price(d, p, services),
+					'postprocess': lambda d, p: add_crom_price(d, p, services, add_citations=True),
 					'properties': (
 						'ask_price',
 						'ask_price_curr',

@@ -891,7 +891,7 @@ class AATAPipeline(PipelineBase):
 		helper = AATAUtilityHelper(project_name)
 		self.uid_tag_prefix = UID_TAG_PREFIX
 
-		super().__init__(helper=helper)
+		super().__init__(project_name, helper=helper)
 		self.project_name = project_name
 
 		vocab.register_vocab_class('VolumeNumber', {'parent': model.Identifier, 'id': '300265632', 'label': 'Volume'})
@@ -986,7 +986,7 @@ class AATAPipeline(PipelineBase):
 		)
 		if serialize:
 			# write ORGANIZATIONS data
-			self.add_serialization_chain(graph, organizations.output, model=self.models['Organization'])
+			self.add_serialization_chain(graph, organizations.output, model=self.models['Group'])
 		return organizations
 
 	def _add_abstracts_graph(self, graph):

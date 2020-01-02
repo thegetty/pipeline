@@ -58,26 +58,22 @@ class Builder:
 					"Phase": "event"
 				}	
 
-	def normalize_string(self, s):
+	def normalize_string(self, s, length=40):
 		s = unidecode(s)
 		s = s.replace('"', "'")
-		s = truncate_with_ellipsis(s, 40) or s
+		s = truncate_with_ellipsis(s, length) or s
 		return s
 		
 	def uri_to_label_link(self, uri, type):
 		link = None
 		if uri.startswith('urn:uuid:'):
 			label = f'#{next(self.counter)}'
-			if type:
-				model = settings.arches_models.get(type)
-				if model:
-					mpath = self.path / model
-					uu = uri[9:]
-					with suppress(StopIteration):
-						file = next(mpath.rglob(f'{uu}.json'))
-						if file:
-							label = self.normalize_string(label_from_file(file))
-							link = f'/{file.relative_to(self.path.parent)}'
+			uu = uri[9:]
+			with suppress(StopIteration):
+				file = next(self.path.rglob(f'{uu}.json'))
+				if file:
+					label = self.normalize_string(label_from_file(file))
+					link = f'/{file.relative_to(self.path.parent)}'
 			return label, link
 		elif uri.startswith('http://vocab.getty.edu/'):
 			uri = uri.replace('http://vocab.getty.edu/', '')
@@ -143,7 +139,7 @@ class Builder:
 				else:
 					if type(v) in (str,):
 						# :|
-						v = "\"''%s''\""% v
+						v = "\"''%s''\""% self.normalize_string(v, 100)
 					line = "%s-- %s -->%s_%s(%s)" % (currid, k, currid, n, v)
 					if not line in mermaid:
 						mermaid.append(line)
@@ -211,13 +207,13 @@ def list_files(model):
 	p = output_path / model
 	files = p.rglob('*.json')
 	items = sorted([(label_from_file(s) or str(s), s.relative_to(output_path.parent)) for s in files])
-	items_html = ''.join([f'<li><a href="/{s}">{label}</a></li>\n' for label, s in items])
+	items_html = ''.join([f'<li><a href="/{s}">{truncate_with_ellipsis(label, 100) or label}</a></li>\n' for label, s in items])
 	return f'<ul>{items_html}</ul>'
 
 @app.route('/')
 def list_models():
 	p = output_path
-	models = [s.relative_to(output_path.parent) for s in p.glob('[0-9a-f]*')]
+	models = [s.relative_to(output_path.parent) for s in p.glob('*') if s.is_dir()]
 	names = {v: k for k, v in settings.arches_models.items()}
 	items = sorted([(names.get(s.name, s), s) for s in models])
 	items_html = ''.join([f'<li><a href="/{s}">{label}</a></li>\n' for label, s in items])

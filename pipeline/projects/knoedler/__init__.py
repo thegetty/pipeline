@@ -157,7 +157,7 @@ class AddGroupURI(Configurable):
 			]
 		else:
 			# not enough information to identify this person uniquely, so use the source location in the input file
-			data['uri'] = self.helper.make_uri('GROUP', 'PI_REC_NO', data['parent_data']['pi_record_no'])
+			data['uri'] = self.helper.make_uri('GROUP', 'PI_REC_NO', data['pi_record_no'])
 
 		return data
 
@@ -272,16 +272,22 @@ class AddObject(Configurable):
 		odata = data['object']
 		title = odata['title']
 		typestring = odata.get('object_type', '')
+		identifiers = []
+		data['_object'] = {
+			'title': title,
+			'identifiers': identifiers,
+		}
 
 		try:
-			uri = self.helper.make_uri('Object', odata['knoedler_number'])
+			knum = odata['knoedler_number']
+			uri_key	= ('Object', knum)
+			identifiers.append(self.helper.knoedler_number_id(knum))
 		except:
-			uri = self.helper.make_uri('Object', 'Internal', data['pi_record_no'])
-		data['_object'] = {
-			'uri': uri,
-			'title': title,
-			'identifiers': [],
-		}
+			uri_key = ('Object', 'Internal', data['pi_record_no'])
+		uri = self.helper.make_uri(*uri_key)
+		data['_object']['uri'] = uri
+		data['_object']['uri_key'] = uri_key
+
 		if typestring in vocab_type_map:
 			clsname = vocab_type_map.get(typestring, None)
 			otype = getattr(vocab, clsname)

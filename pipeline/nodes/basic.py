@@ -11,6 +11,7 @@ import itertools
 from contextlib import suppress
 from pipeline.util.cleaners import date_cleaner
 from cromulent import model
+from pipeline.linkedart import get_crom_object
 
 # ~~~~ Core Functions ~~~~
 
@@ -192,6 +193,12 @@ class Offset(Configurable):
 			return None
 		else:
 			return data
+
+class OnlyCromModeledRecords:
+	def __call__(self, data):
+		o = get_crom_object(data)
+		if o:
+			yield data
 
 class Trace(Configurable):
 	name = Option()

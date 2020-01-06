@@ -29,5 +29,12 @@
 		"Unbekannt",
 		"Unknown",
 		"Vendu ou Retiré"
+	],
+	"withdrawn": [
+		"Withdrawn [?]",
+		"Withdrawn",
+		"Retiré",
+		"Retiré [?]",
+		"Zurückgezogen"
 	]
 }

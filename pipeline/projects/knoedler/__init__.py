@@ -31,6 +31,9 @@ from cromulent import model, vocab
 
 from pipeline.projects import PipelineBase, UtilityHelper
 from pipeline.util import \
+			truncate_with_ellipsis, \
+			implode_date, \
+			timespan_from_outer_bounds, \
 			GraphListSource, \
 			CaseFoldingSet, \
 			RecursiveExtractKeyedValue, \
@@ -61,14 +64,103 @@ from pipeline.nodes.basic import \
 			Trace
 from pipeline.util.rewriting import rewrite_output_files, JSONValueRewriter
 
+class PersonIdentity:
+	'''
+	Utility class to help assign records for people with properties such as `uri` and identifiers.
+	'''
+	def __init__(self, *, make_uri):
+		self.make_uri = make_uri
+		self.ignore_authnames = CaseFoldingSet(('NEW', 'NON-UNIQUE'))
+
+	def acceptable_auth_name(self, auth_name):
+		if not auth_name or auth_name in self.ignore_authnames:
+			return False
+		if '[' in auth_name:
+			return False
+		return True
+
+	def uri_keys(self, data:dict, record_id=None):
+		ulan = None
+		with suppress(ValueError, TypeError):
+			ulan = int(data.get('ulan'))
+
+		auth_name = data.get('auth_name')
+		auth_name_q = '?' in data.get('auth_nameq', '')
+
+		if ulan:
+			return ('PERSON', 'ULAN', ulan)
+		elif self.acceptable_auth_name(auth_name):
+			return ('PERSON', 'AUTHNAME', auth_name)
+		else:
+			# not enough information to identify this person uniquely, so use the source location in the input file
+			pi_rec_no = data['pi_record_no']
+			if record_id:
+				return ('PERSON', 'PI_REC_NO', pi_rec_no, record_id)
+			else:
+				warnings.warn(f'*** No record identifier given for person identified only by pi_record_number {pi_rec_no}')
+				return ('PERSON', 'PI_REC_NO', pi_rec_no)
+
+	def add_uri(self, data:dict, **kwargs):
+		keys = self.uri_keys(data, **kwargs)
+		data['uri_keys'] = keys
+		data['uri'] = self.make_uri(*keys)
+
+	def add_names(self, data:dict, referrer=None, role=None):
+		'''
+		Based on the presence of `auth_name` and/or `name` fields in `data`, sets the
+		`label`, `names`, and `identifier` keys to appropriate strings/`model.Identifier`
+		values.
+
+		If the `role` string is given (e.g. 'artist'), also sets the `role_label` key
+		to a value (e.g. 'artist “RUBENS, PETER PAUL”').
+		'''
+		auth_name = data.get('auth_name')
+		role_label = None
+		if self.acceptable_auth_name(auth_name):
+			if role:
+				role_label = f'{role} “{auth_name}”'
+			data['label'] = auth_name
+			pname = vocab.PrimaryName(ident='', content=auth_name) # NOTE: most of these are also vocab.SortName, but not 100%, so witholding that assertion for now
+			if referrer:
+				pname.referred_to_by = referrer
+			data['identifiers'] = [pname]
+
+		name = data.get('name')
+		if name:
+			if role and not role_label:
+				role_label = f'{role} “{name}”'
+			if referrer:
+				data['names'] = [(name, {'referred_to_by': [referrer]})]
+			else:
+				data['names'] = [name]
+			if 'label' not in data:
+				data['label'] = name
+		if 'label' not in data:
+			data['label'] = '(Anonymous)'
+
+		if role and not role_label:
+			role_label = f'anonymous {role}'
+
+		if role:
+			data['role_label'] = role_label
+
 class KnoedlerUtilityHelper(UtilityHelper):
 	'''
 	Project-specific code for accessing and interpreting sales data.
 	'''
 	def __init__(self, project_name, uid_prefix, static_instances=None):
 		super().__init__(project_name)
+		self.person_identity = PersonIdentity(make_uri=self.make_proj_uri)
 		self.uid_tag_prefix = uid_prefix
 		self.static_instances = static_instances
+		self.csv_source_columns = ['pi_record_no']
+		self.make_la_person = MakeLinkedArtPerson()
+
+	def copy_source_information(self, dst: dict, src: dict):
+		for k in self.csv_source_columns:
+			with suppress(KeyError):
+				dst[k] = src[k]
+		return dst
 
 	def knoedler_number_id(self, content):
 		k_id = vocab.LocalNumber(ident='', content=content)
@@ -85,6 +177,21 @@ class KnoedlerUtilityHelper(UtilityHelper):
 		else:
 			suffix = str(uuid.uuid4())
 			return self.uid_tag_prefix + suffix
+
+	def add_person(self, data:dict, sales_record, rec_id):
+		'''
+		Add modeling data for people, based on properties of the supplied `data` dict.
+
+		This function adds properties to `data` before calling
+		`pipeline.linkedart.MakeLinkedArtPerson` to construct the model objects.
+		'''
+		pi = self.person_identity
+		pi.add_uri(data, record_id=rec_id)
+		pi.add_names(data, referrer=sales_record)
+
+		self.make_la_person(data)
+		return data
+
 
 
 
@@ -309,12 +416,125 @@ class AddObject(Configurable):
 				data['_object']['identifiers'].append(consigner_id)
 			data['_consigner'] = consigner
 
+		mlao = MakeLinkedArtHumanMadeObject()
+		mlao(data['_object'])
 		return data
 
 class TransactionSwitch:
 	def __call__(self, data:dict):
+		rec = data['book_record']
+		transaction = rec['transaction']
+		if transaction in ('Sold', 'Destroyed'):
+			yield {transaction: data}
+		else:
+			warnings.warn(f'TODO: handle transaction type {transaction}')
+
+class TransactionHandler:
+	def _procurement(self, data, date_key, participants, incoming):
+		date = implode_date(data[date_key])
+		rec = data['book_record']
+		pi_rec = data['pi_record_no']
+		book_id, page_id, row_id = record_id(rec)
+		sales_record = get_crom_object(data['_text_row'])
+
+		hmo = get_crom_object(data['_object'])
+		
+		dir = 'In' if incoming else 'Out'
+		dir_label = 'Incoming' if incoming else 'Outgoing'
+		tx_uri = self.helper.make_proj_uri('TX', dir, book_id, page_id, row_id)
+		tx = vocab.Procurement(ident=tx_uri)
+		tx._label = f'{dir_label} Procurement of {pi_rec} ({date})'
+		tx_data = add_crom_data(data={'uri': tx_uri}, what=tx)
+		self.set_date(tx, data, date_key)
+
+		acq_id = tx_uri + '-Acquisition'
+		acq = model.Acquisition(ident=acq_id, label=f'')
+		acq.transferred_title_of = hmo
+
+		role = 'seller' if incoming else 'buyer'
+		people = [
+			self.helper.add_person(
+				self.helper.copy_source_information(p, data),
+				sales_record,
+				f'{role}_{i+1}'
+			) for i, p in enumerate(participants)
+		]
+
+		knoedler = self.helper.static_instances.get_instance('Group', 'knoedler')
+		for person_data in people:
+			person = get_crom_object(person_data)
+			if incoming:
+				tx_from, tx_to = person, knoedler
+			else:
+				tx_from, tx_to = knoedler, person
+			acq.transferred_title_from = tx_from
+			acq.transferred_title_to = tx_to
+
+		tx.part = acq
+
+		for k in ('_procurements', '_people'):
+			if k not in data:
+				data[k] = []
+		data['_procurements'].append(tx_data)
+		data['_people'].extend(people)
+		return tx
+
+	def add_incoming_tx(self, data, make_la_person):
+		return self._procurement(data, 'entry_date', data['purchase_seller'], True)
+
+	def add_outgoing_tx(self, data, make_la_person):
+		return self._procurement(data, 'sale_date', data['sale_buyer'], False)
+
+	@staticmethod
+	def set_date(event, data, date_key, date_key_prefix=''):
+		'''Associate a timespan with the event.'''
+		date = implode_date(data[date_key], date_key_prefix)
+		if date:
+			begin = implode_date(data[date_key], date_key_prefix, clamp='begin')
+			end = implode_date(data[date_key], date_key_prefix, clamp='eoe')
+			bounds = [begin, end]
+		else:
+			bounds = []
+		if bounds:
+			ts = timespan_from_outer_bounds(*bounds)
+			ts.identified_by = model.Name(ident='', content=date)
+			event.timespan = ts
+
+class ModelDestruction(Configurable, TransactionHandler):
+	helper = Option(required=True)
+	make_la_person = Service('make_la_person')
+
+	def __call__(self, data:dict, make_la_person):
+		rec = data['book_record']
+		date = implode_date(data['sale_date'])
+		hmo = get_crom_object(data['_object'])
+
+		title = data['_object'].get('title')
+		short_title = truncate_with_ellipsis(title, 100) or title
+		dest_id = hmo.id + '-Destruction'
+		d = model.Destruction(ident=dest_id, label=f'Destruction of “{short_title}”')
+		if rec.get('verbatim_notes'):
+			d.referred_to_by = vocab.Note(ident='', content=rec['verbatim_notes'])
+		hmo.destroyed_by = d
+
+		tx = self.add_incoming_tx(data, make_la_person)
+		print(f'incoming transaction: {tx.id}')
 		return data
 
+class AddSaleAcquisitions(Configurable, TransactionHandler):
+	'''
+	Add Procurement/Acquisition modeling for a sold object. This includes an acquisition
+	TO Knoedler from seller(s), and another acquisition FROM Knoedler to buyer(s).
+	'''
+	helper = Option(required=True)
+	make_la_person = Service('make_la_person')
+
+	def __call__(self, data:dict, make_la_person):
+		in_tx = self.add_incoming_tx(data, make_la_person)
+		out_tx = self.add_outgoing_tx(data, make_la_person)
+		in_tx.ends_before_the_start_of = out_tx
+		out_tx.starts_after_the_end_of = in_tx
+		yield data
 
 #mark - Knoedler Pipeline class
 
@@ -546,8 +766,26 @@ class KnoedlerPipeline(PipelineBase):
 			_input=objects.output
 		)
 
-# 		if serialize:
-# 			self.add_serialization_chain(graph, books.output, model=self.models['Activity'])
+		sale = graph.add_chain(
+			ExtractKeyedValue(key='Sold'),
+			AddSaleAcquisitions(helper=self.helper),
+			_input=tx.output
+		)
+
+		destruction = graph.add_chain(
+			ExtractKeyedValue(key='Destroyed'),
+			ModelDestruction(helper=self.helper),
+			_input=tx.output
+		)
+
+		for branch in (sale, destruction):
+			procurement = graph.add_chain( ExtractKeyedValues(key='_procurements'), _input=branch.output )
+			people = graph.add_chain( ExtractKeyedValues(key='_people'), _input=branch.output )
+		
+			if serialize:
+				self.add_serialization_chain(graph, procurement.output, model=self.models['Procurement'])
+				self.add_serialization_chain(graph, people.output, model=self.models['Person'])
+
 		return tx
 
 	def add_book_chain(self, graph, sales_records, serialize=True):
@@ -607,7 +845,6 @@ class KnoedlerPipeline(PipelineBase):
 		)
 		hmos = graph.add_chain(
 			ExtractKeyedValue(key='_object'),
-			MakeLinkedArtHumanMadeObject(),
 			_input=objects.output
 		)
 		consigners = graph.add_chain(

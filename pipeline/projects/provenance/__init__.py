@@ -63,6 +63,7 @@ from pipeline.nodes.basic import \
 			GroupKeys, \
 			AddArchesModel, \
 			Serializer, \
+			OnlyCromModeledRecords, \
 			Trace
 from pipeline.util.rewriting import rewrite_output_files, JSONValueRewriter
 import pipeline.projects.provenance.events
@@ -692,9 +693,15 @@ class ProvenancePipeline(PipelineBase):
 			pipeline.projects.provenance.lots.AddAuctionOfLot(helper=self.helper),
 			_input=records.output
 		)
+		
+		modeled_sales = graph.add_chain(
+			OnlyCromModeledRecords(),
+			_input=sales.output
+		)
+		
 		if serialize:
 			# write SALES data
-			self.add_serialization_chain(graph, sales.output, model=self.models['AuctionOfLot'])
+			self.add_serialization_chain(graph, modeled_sales.output, model=self.models['AuctionOfLot'])
 		return sales
 
 	def add_single_object_lot_tracking_chain(self, graph, sales):

@@ -28,6 +28,7 @@ class AddAuctionOfLot(Configurable):
 	auction_locations = Service('auction_locations')
 	auction_houses = Service('auction_houses')
 	non_auctions = Service('non_auctions')
+	transaction_types = Service('transaction_types')
 	def __init__(self, *args, **kwargs):
 		self.lot_cache = {}
 		super().__init__(*args, **kwargs)
@@ -93,7 +94,7 @@ class AddAuctionOfLot(Configurable):
 		lot.used_specific_object = coll
 		data['_lot_object_set'] = add_crom_data(data={}, what=coll)
 
-	def __call__(self, data, non_auctions, auction_houses, auction_locations, problematic_records):
+	def __call__(self, data, non_auctions, auction_houses, auction_locations, problematic_records, transaction_types):
 		'''Add modeling data for the auction of a lot of objects.'''
 		ask_price = data.get('ask_price', {}).get('ask_price')
 		if ask_price:
@@ -155,27 +156,29 @@ class AddAuctionOfLot(Configurable):
 			cite.identified_by = model.Name(ident='', content='Source of transaction type')
 			lot.referred_to_by = cite
 
-		self.set_lot_auction_houses(lot, cno, auction_houses)
-		self.set_lot_location(lot, cno, auction_locations)
-		self.set_lot_date(lot, auction_data)
-		self.set_lot_notes(lot, auction_data)
-		self.set_lot_objects(lot, cno, lno, data)
+		transaction = data.get('transaction')
+		if transaction not in transaction_types['withdrawn']:
+			self.set_lot_auction_houses(lot, cno, auction_houses)
+			self.set_lot_location(lot, cno, auction_locations)
+			self.set_lot_date(lot, auction_data)
+			self.set_lot_notes(lot, auction_data)
+			self.set_lot_objects(lot, cno, lno, data)
 
-		tx_uri = self.helper.transaction_uri_for_lot(auction_data, data.get('price', []))
-		lots = self.helper.lots_in_transaction(auction_data, data.get('price', []))
-		multi = self.helper.transaction_contains_multiple_lots(auction_data, data.get('price', []))
-		tx = vocab.Procurement(ident=tx_uri)
-		tx._label = f'Procurement of Lot {cno} {lots} ({date})'
-		lot.caused = tx
-		tx_data = {'uri': tx_uri}
+			tx_uri = self.helper.transaction_uri_for_lot(auction_data, data.get('price', []))
+			lots = self.helper.lots_in_transaction(auction_data, data.get('price', []))
+			multi = self.helper.transaction_contains_multiple_lots(auction_data, data.get('price', []))
+			tx = vocab.Procurement(ident=tx_uri)
+			tx._label = f'Procurement of Lot {cno} {lots} ({date})'
+			lot.caused = tx
+			tx_data = {'uri': tx_uri}
 
-		if multi:
-			tx_data['multi_lot_tx'] = lots
-		with suppress(AttributeError):
-			tx_data['_date'] = lot.timespan
-		data['_procurement_data'] = add_crom_data(data=tx_data, what=tx)
+			if multi:
+				tx_data['multi_lot_tx'] = lots
+			with suppress(AttributeError):
+				tx_data['_date'] = lot.timespan
+			data['_procurement_data'] = add_crom_data(data=tx_data, what=tx)
 
-		add_crom_data(data=data, what=lot)
+			add_crom_data(data=data, what=lot)
 		yield data
 
 class AddAcquisitionOrBidding(Configurable):
@@ -466,6 +469,8 @@ class AddAcquisitionOrBidding(Configurable):
 		auction_data = parent['auction_of_lot']
 		cno, lno, date = object_key(auction_data)
 		lot = get_crom_object(parent)
+		if not lot:
+			return
 		ts = lot.timespan
 
 		prev_procurements = self.add_non_sale_sellers(data, sellers)

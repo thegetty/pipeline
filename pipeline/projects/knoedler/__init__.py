@@ -28,6 +28,7 @@ from bonobo.constants import NOT_MODIFIED
 import settings
 
 from cromulent import model, vocab
+from cromulent.extract import extract_monetary_amount
 
 from pipeline.projects import PipelineBase, UtilityHelper
 from pipeline.util import \
@@ -194,6 +195,15 @@ class KnoedlerUtilityHelper(UtilityHelper):
 
 
 
+def add_crom_price(data, parent, services, add_citations=False):
+	'''
+	Add modeling data for `MonetaryAmount` based on properties of the supplied `data` dict.
+	'''
+	currencies = services['currencies']
+	amnt = extract_monetary_amount(data, currency_mapping=currencies, add_citations=add_citations)
+	if amnt:
+		add_crom_data(data=data, what=amnt)
+	return data
 
 
 # TODO: copied from provenance.util; refactor
@@ -370,6 +380,48 @@ class AddRow(Configurable):
 
 		return data
 
+class AddArtists(Configurable):
+	helper = Option(required=True)
+	make_la_person = Service('make_la_person')
+
+	def __call__(self, data:dict, *, make_la_person):
+		'''Add modeling for artists as people involved in the production of an object'''
+		hmo = get_crom_object(data['_object'])
+
+		try:
+			hmo_label = f'{hmo._label}'
+		except AttributeError:
+			hmo_label = 'object'
+		event_id = hmo.id + '-Production'
+		event = model.Production(ident=event_id, label=f'Production event for {hmo_label}')
+		hmo.produced_by = event
+
+		artists = data.get('_artists', [])
+
+		sales_record = get_crom_object(data['_text_row'])
+		pi = self.helper.person_identity
+
+		apuri = AddPersonURI(helper=self.helper)
+		mlap = MakeLinkedArtPerson()
+		for a in artists:
+			apuri(a)
+			mlap(a)
+
+		for seq_no, a in enumerate(artists):
+			pi.add_uri(a, record_id=f'artist-{seq_no+1}')
+			pi.add_names(a, referrer=sales_record, role='artist')
+			artist_label = a.get('role_label')
+			make_la_person(a)
+			person = get_crom_object(a)
+
+			subprod_path = self.helper.make_uri_path(*a["uri_keys"])
+			subevent_id = event_id + f'-{subprod_path}'
+			subevent = model.Production(ident=subevent_id, label=f'Production sub-event for {artist_label}')
+			subevent.carried_out_by = person
+			event.part = subevent
+# 		data['_artists'] = [a for a in artists]
+		return data
+
 class AddObject(Configurable):
 	helper = Option(required=True)
 	make_la_org = Service('make_la_org')
@@ -380,6 +432,13 @@ class AddObject(Configurable):
 		title = odata['title']
 		typestring = odata.get('object_type', '')
 		identifiers = []
+		
+		apuri = AddPersonURI(helper=self.helper)
+		mlap = MakeLinkedArtPerson()
+		for a in data.get('_artists', []):
+			apuri(a)
+			mlap(a)
+
 		data['_object'] = {
 			'title': title,
 			'identifiers': identifiers,
@@ -421,6 +480,10 @@ class AddObject(Configurable):
 		return data
 
 class TransactionSwitch:
+	'''
+	Wrap data values with an index on the transaction field so that different branches
+	can be constructed for each transaction type (by using ExtractKeyedValue).
+	'''
 	def __call__(self, data:dict):
 		rec = data['book_record']
 		transaction = rec['transaction']
@@ -430,7 +493,7 @@ class TransactionSwitch:
 			warnings.warn(f'TODO: handle transaction type {transaction}')
 
 class TransactionHandler:
-	def _procurement(self, data, date_key, participants, incoming):
+	def _procurement(self, data, date_key, participants, purchase=None, incoming=False):
 		date = implode_date(data[date_key])
 		rec = data['book_record']
 		pi_rec = data['pi_record_no']
@@ -438,18 +501,27 @@ class TransactionHandler:
 		sales_record = get_crom_object(data['_text_row'])
 
 		hmo = get_crom_object(data['_object'])
+		object_label = f'“{hmo._label}”'
 		
 		dir = 'In' if incoming else 'Out'
-		dir_label = 'Incoming' if incoming else 'Outgoing'
+		dir_label = 'Knoedler purchase' if incoming else 'Knoedler sale'
 		tx_uri = self.helper.make_proj_uri('TX', dir, book_id, page_id, row_id)
 		tx = vocab.Procurement(ident=tx_uri)
-		tx._label = f'{dir_label} Procurement of {pi_rec} ({date})'
+		tx._label = f'{dir_label} of {pi_rec} ({date})'
 		tx_data = add_crom_data(data={'uri': tx_uri}, what=tx)
 		self.set_date(tx, data, date_key)
 
 		acq_id = tx_uri + '-Acquisition'
 		acq = model.Acquisition(ident=acq_id, label=f'')
 		acq.transferred_title_of = hmo
+
+		amnt = get_crom_object(purchase)
+		paym = None
+		if amnt:
+			payment_id = tx_uri + '-Payment'
+			paym = model.Payment(ident=payment_id, label=f'Payment for {object_label}')
+			paym.paid_amount = amnt
+			tx.part = paym
 
 		role = 'seller' if incoming else 'buyer'
 		people = [
@@ -464,8 +536,16 @@ class TransactionHandler:
 		for person_data in people:
 			person = get_crom_object(person_data)
 			if incoming:
+				if paym:
+					paym.carried_out_by = person
+					paym.paid_to = person
+					paym.paid_from = knoedler
 				tx_from, tx_to = person, knoedler
 			else:
+				if paym:
+					paym.carried_out_by = knoedler
+					paym.paid_to = knoedler
+					paym.paid_from = person
 				tx_from, tx_to = knoedler, person
 			acq.transferred_title_from = tx_from
 			acq.transferred_title_to = tx_to
@@ -480,10 +560,12 @@ class TransactionHandler:
 		return tx
 
 	def add_incoming_tx(self, data, make_la_person):
-		return self._procurement(data, 'entry_date', data['purchase_seller'], True)
+		purch = data.get('knoedler_purchase')
+		return self._procurement(data, 'entry_date', data['purchase_seller'], purch, True)
 
 	def add_outgoing_tx(self, data, make_la_person):
-		return self._procurement(data, 'sale_date', data['sale_buyer'], False)
+		purch = data.get('purchase')
+		return self._procurement(data, 'sale_date', data['sale_buyer'], purch, False)
 
 	@staticmethod
 	def set_date(event, data, date_key, date_key_prefix=''):
@@ -590,7 +672,7 @@ class KnoedlerPipeline(PipelineBase):
 		})
 		return services
 
-	def add_sales_chain(self, graph, records, serialize=True):
+	def add_sales_chain(self, graph, records, services, serialize=True):
 		'''Add transformation of sales records to the bonobo pipeline.'''
 		sales_records = graph.add_chain(
 # 			"star_record_no",
@@ -704,6 +786,7 @@ class KnoedlerPipeline(PipelineBase):
 					)
 				},
 				'purchase': {
+					'postprocess': [lambda x, _: strip_key_prefix('purch_', x), lambda d, p: add_crom_price(d, p, services)],
 					'properties': (
 						"purch_amount",
 						"purch_currency",
@@ -711,6 +794,7 @@ class KnoedlerPipeline(PipelineBase):
 					)
 				},
 				'knoedler_purchase': {
+					'postprocess': [lambda x, _: strip_key_prefix('knoedpurch_', x), lambda d, p: add_crom_price(d, p, services)],
 					'properties': (
 						"knoedpurch_amt",
 						"knoedpurch_curr",
@@ -841,20 +925,14 @@ class KnoedlerPipeline(PipelineBase):
 	def add_object_chain(self, graph, rows, serialize=True):
 		objects = graph.add_chain(
 			AddObject(helper=self.helper),
+			
+			AddArtists(helper=self.helper),
 			_input=rows.output
 		)
-		hmos = graph.add_chain(
-			ExtractKeyedValue(key='_object'),
-			_input=objects.output
-		)
-		consigners = graph.add_chain(
-			ExtractKeyedValue(key='_consigner'),
-			_input=objects.output
-		)
+		hmos = graph.add_chain( ExtractKeyedValue(key='_object'), _input=objects.output )
+		consigners = graph.add_chain( ExtractKeyedValue(key='_consigner'), _input=objects.output )
 		artists = graph.add_chain(
 			ExtractKeyedValues(key='_artists'),
-			AddPersonURI(helper=self.helper),
-			MakeLinkedArtPerson(),
 			_input=objects.output
 		)
 		if serialize:
@@ -863,7 +941,7 @@ class KnoedlerPipeline(PipelineBase):
 			self.add_serialization_chain(graph, artists.output, model=self.models['Person'])
 		return objects
 
-	def _construct_graph(self):
+	def _construct_graph(self, services=None):
 		'''
 		Construct bonobo.Graph object(s) for the entire pipeline.
 		'''
@@ -874,14 +952,14 @@ class KnoedlerPipeline(PipelineBase):
 			CurriedCSVReader(fs='fs.data.knoedler', limit=self.limit),
 			AddFieldNames(field_names=self.headers),
 		)
-		sales = self.add_sales_chain(g, contents_records, serialize=True)
+		sales = self.add_sales_chain(g, contents_records, services, serialize=True)
 
 		self.graph = g
 
-	def get_graph(self):
+	def get_graph(self, **kwargs):
 		'''Return a single bonobo.Graph object for the entire pipeline.'''
 		if not self.graph:
-			self._construct_graph()
+			self._construct_graph(**kwargs)
 
 		return self.graph
 
@@ -892,7 +970,7 @@ class KnoedlerPipeline(PipelineBase):
 			services = self.get_services(**options)
 
 		print('Running graph...', file=sys.stderr)
-		graph = self.get_graph(**options)
+		graph = self.get_graph(services=services, **options)
 		self.run_graph(graph, services=services)
 
 		print('Serializing static instances...', file=sys.stderr)

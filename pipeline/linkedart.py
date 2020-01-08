@@ -5,6 +5,7 @@ import calendar
 
 from cromulent import model, vocab
 from cromulent.model import factory
+from cromulent.extract import extract_physical_dimensions
 from pipeline.util.cleaners import ymd_to_datetime
 
 factory.auto_id_type = 'uuid'
@@ -504,3 +505,35 @@ def make_la_place(data:dict, base_uri=None):
 	if parent:
 		p.part_of = parent
 	return add_crom_data(data=data, what=p)
+
+class PopulateObject:
+	'''
+	Shared functionality for project-specific bonobo node sub-classes to populate
+	object records.
+	'''
+	@staticmethod
+	def populate_object_statements(data:dict, default_unit=None):
+		hmo = get_crom_object(data)
+		materials = data.get('materials')
+		if materials:
+			matstmt = vocab.MaterialStatement(ident='', content=materials)
+			sales_record = get_crom_object(data.get('_record'))
+			if sales_record:
+				matstmt.referred_to_by = sales_record
+			hmo.referred_to_by = matstmt
+
+		dimstr = data.get('dimensions')
+		if dimstr:
+			dimstmt = vocab.DimensionStatement(ident='', content=dimstr)
+			sales_record = get_crom_object(data.get('_record'))
+			if sales_record:
+				dimstmt.referred_to_by = sales_record
+			hmo.referred_to_by = dimstmt
+			for dim in extract_physical_dimensions(dimstr, default_unit=default_unit):
+				if sales_record:
+					dim.referred_to_by = sales_record
+				hmo.dimension = dim
+		else:
+			pass
+	# 		print(f'No dimension data was parsed from the dimension statement: {dimstr}')
+

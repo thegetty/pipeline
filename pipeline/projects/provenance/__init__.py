@@ -716,7 +716,7 @@ class ProvenancePipeline(PipelineBase):
 		objects = graph.add_chain(
 			ExtractKeyedValue(key='_object'),
 			pipeline.projects.provenance.objects.add_object_type,
-			pipeline.projects.provenance.objects.PopulateObject(helper=self.helper),
+			pipeline.projects.provenance.objects.PopulateSalesObject(helper=self.helper),
 			pipeline.linkedart.MakeLinkedArtHumanMadeObject(),
 			pipeline.projects.provenance.objects.AddArtists(helper=self.helper),
 			_input=sales.output

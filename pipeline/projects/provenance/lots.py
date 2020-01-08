@@ -157,12 +157,12 @@ class AddAuctionOfLot(Configurable):
 			lot.referred_to_by = cite
 
 		transaction = data.get('transaction')
+		self.set_lot_objects(lot, cno, lno, data)
 		if transaction not in transaction_types['withdrawn']:
 			self.set_lot_auction_houses(lot, cno, auction_houses)
 			self.set_lot_location(lot, cno, auction_locations)
 			self.set_lot_date(lot, auction_data)
 			self.set_lot_notes(lot, auction_data)
-			self.set_lot_objects(lot, cno, lno, data)
 
 			tx_uri = self.helper.transaction_uri_for_lot(auction_data, data.get('price', []))
 			lots = self.helper.lots_in_transaction(auction_data, data.get('price', []))

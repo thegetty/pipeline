@@ -45,6 +45,7 @@ from pipeline.util import \
 from pipeline.io.file import MergingFileWriter
 from pipeline.io.memory import MergingMemoryWriter
 # from pipeline.io.arches import ArchesWriter
+import pipeline.linkedart
 from pipeline.linkedart import \
 			add_crom_data, \
 			get_crom_object, \
@@ -422,7 +423,7 @@ class AddArtists(Configurable):
 # 		data['_artists'] = [a for a in artists]
 		return data
 
-class AddObject(Configurable):
+class PopulateKnoedlerObject(Configurable, pipeline.linkedart.PopulateObject):
 	helper = Option(required=True)
 	make_la_org = Service('make_la_org')
 	vocab_type_map = Service('vocab_type_map')
@@ -442,7 +443,9 @@ class AddObject(Configurable):
 		data['_object'] = {
 			'title': title,
 			'identifiers': identifiers,
+			'_record': data['_text_row'],
 		}
+		data['_object'].update({k:v for k,v in odata.items() if k in ('materials', 'dimensions')})
 
 		try:
 			knum = odata['knoedler_number']
@@ -477,6 +480,8 @@ class AddObject(Configurable):
 
 		mlao = MakeLinkedArtHumanMadeObject()
 		mlao(data['_object'])
+
+		self.populate_object_statements(data['_object'], default_unit='inches')
 		return data
 
 class TransactionSwitch:
@@ -924,7 +929,7 @@ class KnoedlerPipeline(PipelineBase):
 
 	def add_object_chain(self, graph, rows, serialize=True):
 		objects = graph.add_chain(
-			AddObject(helper=self.helper),
+			PopulateKnoedlerObject(helper=self.helper),
 			
 			AddArtists(helper=self.helper),
 			_input=rows.output

@@ -181,6 +181,15 @@ class KnoedlerUtilityHelper(UtilityHelper):
 		return self.make_proj_uri('TX', dir, book_id, page_id, row_id)
 
 	@staticmethod
+	def transaction_multiple_object_label(data, incoming=False):
+		price = data.get('knoedler_purchase') if incoming else data.get('price')
+		if price:
+			n = price.get('note')
+			if n and n.startswith('for numbers '):
+				return n[12:]
+		return None
+
+	@staticmethod
 	def transaction_contains_multiple_objects(data, incoming=False):
 		'''
 		Return `True` if the procurement related to the supplied data represents a
@@ -553,9 +562,9 @@ class TransactionHandler:
 		acq_id = self.helper.make_proj_uri('ACQ', dir, book_id, page_id, row_id)
 		acq = model.Acquisition(ident=acq_id)
 		if self.helper.transaction_contains_multiple_objects(data, incoming):
-			tx._label = f'{dir_label} of multiple objects ({date})'
+			multi_label = self.helper.transaction_multiple_object_label(data, incoming)
+			tx._label = f'{dir_label} of multiple objects {multi_label} ({date})'
 			acq._label = f'{dir_label} of {pi_rec} ({date})'
-			print(f'ACQ: {acq._label}')
 		else:
 			tx._label = f'{dir_label} of {pi_rec} ({date})'
 		acq.transferred_title_of = hmo
@@ -605,7 +614,7 @@ class TransactionHandler:
 		return tx
 
 	def add_incoming_tx(self, data, make_la_person):
-		purch = data.get('knoedler_purchase')
+		purch = data.get('purchase')
 		return self._procurement(data, 'entry_date', data['purchase_seller'], purch, True)
 
 	def add_outgoing_tx(self, data, make_la_person):

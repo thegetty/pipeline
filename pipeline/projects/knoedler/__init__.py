@@ -158,6 +158,41 @@ class KnoedlerUtilityHelper(UtilityHelper):
 		self.csv_source_columns = ['pi_record_no']
 		self.make_la_person = MakeLinkedArtPerson()
 
+	def transaction_uri_for_record(self, data, incoming=False):
+		'''
+		Return a URI representing the procurement which the object (identified by the
+		supplied data) is a part of. This may identify just the object being bought or
+		sold or, in the case of multiple objects being bought for a single price, a
+		single procurement that encompasses multiple object acquisitions.
+		'''
+		rec = data['book_record']
+		book_id = rec['stock_book_no']
+		page_id = rec['page_number']
+		row_id = rec['row_number']
+		hmo = get_crom_object(data['_object'])
+		
+		dir = 'In' if incoming else 'Out'
+		price = data.get('knoedler_purchase') if incoming else data.get('price')
+		if price:
+			n = price.get('note')
+			if n and n.startswith('for numbers '):
+				print('MULTI OBJECT PURCHASE: ' + self.make_proj_uri('TX-MULTI', dir, n[12:]))
+				return self.make_proj_uri('TX-MULTI', dir, n[12:])
+		return self.make_proj_uri('TX', dir, book_id, page_id, row_id)
+
+	@staticmethod
+	def transaction_contains_multiple_objects(data, incoming=False):
+		'''
+		Return `True` if the procurement related to the supplied data represents a
+		transaction of multiple objects with a single payment, `False` otherwise.
+		'''
+		price = data.get('knoedler_purchase') if incoming else data.get('price')
+		if price:
+			n = price.get('note')
+			if n and n.startswith('for numbers '):
+				return True
+		return False
+
 	def copy_source_information(self, dst: dict, src: dict):
 		for k in self.csv_source_columns:
 			with suppress(KeyError):
@@ -510,14 +545,19 @@ class TransactionHandler:
 		
 		dir = 'In' if incoming else 'Out'
 		dir_label = 'Knoedler purchase' if incoming else 'Knoedler sale'
-		tx_uri = self.helper.make_proj_uri('TX', dir, book_id, page_id, row_id)
+		tx_uri = self.helper.transaction_uri_for_record(data, incoming)
 		tx = vocab.Procurement(ident=tx_uri)
-		tx._label = f'{dir_label} of {pi_rec} ({date})'
 		tx_data = add_crom_data(data={'uri': tx_uri}, what=tx)
 		self.set_date(tx, data, date_key)
 
-		acq_id = tx_uri + '-Acquisition'
-		acq = model.Acquisition(ident=acq_id, label=f'')
+		acq_id = self.helper.make_proj_uri('ACQ', dir, book_id, page_id, row_id)
+		acq = model.Acquisition(ident=acq_id)
+		if self.helper.transaction_contains_multiple_objects(data, incoming):
+			tx._label = f'{dir_label} of multiple objects ({date})'
+			acq._label = f'{dir_label} of {pi_rec} ({date})'
+			print(f'ACQ: {acq._label}')
+		else:
+			tx._label = f'{dir_label} of {pi_rec} ({date})'
 		acq.transferred_title_of = hmo
 
 		amnt = get_crom_object(purchase)
@@ -799,7 +839,11 @@ class KnoedlerPipeline(PipelineBase):
 					)
 				},
 				'knoedler_purchase': {
-					'postprocess': [lambda x, _: strip_key_prefix('knoedpurch_', x), lambda d, p: add_crom_price(d, p, services)],
+					'postprocess': [
+						lambda x, _: strip_key_prefix('knoedpurch_', x),
+						lambda d, p: add_crom_price(d, p, services),
+						lambda x, _: {'amount' if k == 'amt' else k:v for k,v in x.items()}
+					],
 					'properties': (
 						"knoedpurch_amt",
 						"knoedpurch_curr",

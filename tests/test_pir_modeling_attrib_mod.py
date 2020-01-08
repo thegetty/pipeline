@@ -72,7 +72,7 @@ class PIRModelingTest_AttributionModifiers(TestProvenancePipelineOutput):
 		production = style_of_obj['produced_by']
 		attr_assignment = production['attributed_by'][0]
 		self.assertEqual(attr_assignment['assigned_property'], 'influenced_by')
-		self.assertEqual(attr_assignment['property_classified_as']['_label'], 'Style Of')
+		self.assertEqual({c['_label'] for c in attr_assignment['property_classified_as']}, {'Style Of'})
 		self.assertEqual(attr_assignment['assigned']['id'], 'tag:getty.edu,2019:digital:pipeline:provenance:REPLACE-WITH-UUID#PERSON,ULAN,500005259')
 
 		# 'possibly by' modifiers use an AttributeAssignment that is classified as 'possibly' to assert the 'carried_out_by' property

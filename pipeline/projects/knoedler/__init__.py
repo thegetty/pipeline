@@ -536,12 +536,17 @@ class TransactionSwitch:
 	def __call__(self, data:dict):
 		rec = data['book_record']
 		transaction = rec['transaction']
-		if transaction in ('Sold', 'Destroyed'):
+		if transaction in ('Sold', 'Destroyed', 'Stolen', 'Lost'):
 			yield {transaction: data}
 		else:
 			warnings.warn(f'TODO: handle transaction type {transaction}')
 
 class TransactionHandler:
+	def _empty_tx(self, data, incoming=False):
+		tx_uri = self.helper.transaction_uri_for_record(data, incoming)
+		tx = vocab.Procurement(ident=tx_uri)
+		return tx
+
 	def _procurement(self, data, date_key, participants, purchase=None, incoming=False):
 		date = implode_date(data[date_key])
 		rec = data['book_record']
@@ -552,10 +557,11 @@ class TransactionHandler:
 		hmo = get_crom_object(data['_object'])
 		object_label = f'“{hmo._label}”'
 		
+		tx = self._empty_tx(data, incoming)
+		tx_uri = tx.id
+
 		dir = 'In' if incoming else 'Out'
 		dir_label = 'Knoedler purchase' if incoming else 'Knoedler sale'
-		tx_uri = self.helper.transaction_uri_for_record(data, incoming)
-		tx = vocab.Procurement(ident=tx_uri)
 		tx_data = add_crom_data(data={'uri': tx_uri}, what=tx)
 		self.set_date(tx, data, date_key)
 
@@ -654,7 +660,47 @@ class ModelDestruction(Configurable, TransactionHandler):
 		hmo.destroyed_by = d
 
 		tx = self.add_incoming_tx(data, make_la_person)
-		print(f'incoming transaction: {tx.id}')
+		return data
+
+class ModelTheftOrLoss(Configurable, TransactionHandler):
+	helper = Option(required=True)
+	make_la_person = Service('make_la_person')
+
+	def __call__(self, data:dict, make_la_person):
+		rec = data['book_record']
+		pi_rec = data['pi_record_no']
+		hmo = get_crom_object(data['_object'])
+		tx = self.add_incoming_tx(data, make_la_person)
+		tx_out = self._empty_tx(data, incoming=False)
+
+		tx_type = rec['transaction']
+		label_type = None
+		if tx_type == 'Lost':
+			label_type = 'Loss'
+			transfer_class = vocab.Loss
+		else:
+			label_type = 'Theft'
+			transfer_class = vocab.Theft
+
+		tx_out._label = f'{label_type} of {pi_rec}'
+		tx_out_data = add_crom_data(data={'uri': tx_out.id, 'label': tx_out._label}, what=tx_out)
+
+		title = data['_object'].get('title')
+		short_title = truncate_with_ellipsis(title, 100) or title
+		theft_id = hmo.id + f'-{label_type}'
+		notes = rec.get('verbatim_notes')
+		if notes and 'Looted' in notes:
+			transfer_class = vocab.Looting
+		t = transfer_class(ident=theft_id, label=f'{label_type} of “{short_title}”')
+		t.transferred_custody_from = self.helper.static_instances.get_instance('Group', 'knoedler')
+		t.transferred_custody_of = hmo
+
+		if notes:
+			t.referred_to_by = vocab.Note(ident='', content=notes)
+
+		tx_out.part = t
+		
+		data['_procurements'].append(tx_out_data)
 		return data
 
 class AddSaleAcquisitions(Configurable, TransactionHandler):
@@ -920,7 +966,19 @@ class KnoedlerPipeline(PipelineBase):
 			_input=tx.output
 		)
 
-		for branch in (sale, destruction):
+		theft = graph.add_chain(
+			ExtractKeyedValue(key='Stolen'),
+			ModelTheftOrLoss(helper=self.helper),
+			_input=tx.output
+		)
+
+		loss = graph.add_chain(
+			ExtractKeyedValue(key='Lost'),
+			ModelTheftOrLoss(helper=self.helper),
+			_input=tx.output
+		)
+
+		for branch in (sale, destruction, theft, loss):
 			procurement = graph.add_chain( ExtractKeyedValues(key='_procurements'), _input=branch.output )
 			people = graph.add_chain( ExtractKeyedValues(key='_people'), _input=branch.output )
 		

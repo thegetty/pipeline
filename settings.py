@@ -11,6 +11,7 @@ arches_models = {
 	'AuctionOfLot': 'auction_of_lot',
 	'Bidding': 'bidding',
 	'HumanMadeObject': 'physical_thing',
+	'Inventorying': 'inventorying',
 	'LinguisticObject': 'textual_work',
 	'Person': 'person',
 	'Phase': 'phase',

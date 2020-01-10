@@ -258,7 +258,7 @@ class MakeLinkedArtHumanMadeObject(MakeLinkedArtRecord):
 				set_la_name(thing, title, title_type, set_label=True)
 			elif isinstance(title, (list, tuple)):
 				value, *properties = title
-				n = model.Name(ident='', content=value)
+				n = set_la_name(thing, value, title_type, set_label=True)
 				n.classified_as = title_type
 				self.set_lo_properties(n, *properties)
 				thing.identified_by = n

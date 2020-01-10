@@ -157,6 +157,25 @@ class KnoedlerUtilityHelper(UtilityHelper):
 		self.static_instances = static_instances
 		self.csv_source_columns = ['pi_record_no']
 		self.make_la_person = MakeLinkedArtPerson()
+		self.title_re = re.compile(r'\["(.*)" (title )?(info )?from ([^]]+)\]')
+
+	def title_value(self, title):
+		if not isinstance(title, str):
+			return
+		
+		m = self.title_re.search(title)
+		if m:
+			return m.group(1)
+		return title
+
+	def title_reference(self, title):
+		if not isinstance(title, str):
+			return
+		
+		m = self.title_re.search(title)
+		if m:
+			return m.group(4)
+		return None
 
 	def transaction_uri_for_record(self, data, incoming=False):
 		'''
@@ -176,7 +195,6 @@ class KnoedlerUtilityHelper(UtilityHelper):
 		if price:
 			n = price.get('note')
 			if n and n.startswith('for numbers '):
-				print('MULTI OBJECT PURCHASE: ' + self.make_proj_uri('TX-MULTI', dir, n[12:]))
 				return self.make_proj_uri('TX-MULTI', dir, n[12:])
 		return self.make_proj_uri('TX', dir, book_id, page_id, row_id)
 
@@ -472,9 +490,14 @@ class PopulateKnoedlerObject(Configurable, pipeline.linkedart.PopulateObject):
 	make_la_org = Service('make_la_org')
 	vocab_type_map = Service('vocab_type_map')
 
+	def __init__(self, *args, **kwargs):
+		super().__init__(*args, **kwargs)
+		# "Collecting her strength" title info from Sales Book 3, 1874-1879, f.252
+
 	def __call__(self, data:dict, *, vocab_type_map, make_la_org):
 		odata = data['object']
-		title = odata['title']
+		label = self.helper.title_value(odata['title'])
+		title_ref = self.helper.title_reference(odata['title'])
 		typestring = odata.get('object_type', '')
 		identifiers = []
 		
@@ -484,12 +507,17 @@ class PopulateKnoedlerObject(Configurable, pipeline.linkedart.PopulateObject):
 			apuri(a)
 			mlap(a)
 
+		if title_ref:
+			warnings.warn(f'TODO: parse out citation information from title reference: {title_ref}')
+			title = [label, {'referred_to_by': [vocab.Note(ident='', content=title_ref)]}]
+		else:
+			title = label
 		data['_object'] = {
 			'title': title,
 			'identifiers': identifiers,
 			'_record': data['_text_row'],
 		}
-		data['_object'].update({k:v for k,v in odata.items() if k in ('materials', 'dimensions')})
+		data['_object'].update({k:v for k,v in odata.items() if k in ('materials', 'dimensions', 'knoedler_number')})
 
 		try:
 			knum = odata['knoedler_number']
@@ -536,7 +564,8 @@ class TransactionSwitch:
 	def __call__(self, data:dict):
 		rec = data['book_record']
 		transaction = rec['transaction']
-		if transaction in ('Sold', 'Destroyed', 'Stolen', 'Lost'):
+# 		print(f'{transaction}')
+		if transaction in ('Sold', 'Destroyed', 'Stolen', 'Lost', 'Unsold'):
 			yield {transaction: data}
 		else:
 			warnings.warn(f'TODO: handle transaction type {transaction}')
@@ -551,10 +580,17 @@ class TransactionHandler:
 		date = implode_date(data[date_key])
 		rec = data['book_record']
 		pi_rec = data['pi_record_no']
+		odata = data['_object']
 		book_id, page_id, row_id = record_id(rec)
 		sales_record = get_crom_object(data['_text_row'])
+		
+		knum = odata.get('knoedler_number')
+		if knum:
+			parenthetical = f'{date}; {knum}'
+		else:
+			parenthetical = f'{date}'
 
-		hmo = get_crom_object(data['_object'])
+		hmo = get_crom_object(odata)
 		object_label = f'“{hmo._label}”'
 		
 		tx = self._empty_tx(data, incoming)
@@ -569,17 +605,17 @@ class TransactionHandler:
 		acq = model.Acquisition(ident=acq_id)
 		if self.helper.transaction_contains_multiple_objects(data, incoming):
 			multi_label = self.helper.transaction_multiple_object_label(data, incoming)
-			tx._label = f'{dir_label} of multiple objects {multi_label} ({date})'
-			acq._label = f'{dir_label} of {pi_rec} ({date})'
+			tx._label = f'{dir_label} of multiple objects {multi_label} ({parenthetical})'
+			acq._label = f'{dir_label} of {pi_rec} ({parenthetical})'
 		else:
-			tx._label = f'{dir_label} of {pi_rec} ({date})'
+			tx._label = f'{dir_label} of {pi_rec} ({parenthetical})'
 		acq.transferred_title_of = hmo
 
 		amnt = get_crom_object(purchase)
 		paym = None
 		if amnt:
 			payment_id = tx_uri + '-Payment'
-			paym = model.Payment(ident=payment_id, label=f'Payment for {object_label}')
+			paym = model.Payment(ident=payment_id, label=f'Payment for {object_label} ({parenthetical})')
 			paym.paid_amount = amnt
 			tx.part = paym
 
@@ -651,7 +687,7 @@ class ModelDestruction(Configurable, TransactionHandler):
 		date = implode_date(data['sale_date'])
 		hmo = get_crom_object(data['_object'])
 
-		title = data['_object'].get('title')
+		title = self.helper.title_value(data['_object'].get('title'))
 		short_title = truncate_with_ellipsis(title, 100) or title
 		dest_id = hmo.id + '-Destruction'
 		d = model.Destruction(ident=dest_id, label=f'Destruction of “{short_title}”')
@@ -685,9 +721,16 @@ class ModelTheftOrLoss(Configurable, TransactionHandler):
 		tx_out._label = f'{label_type} of {pi_rec}'
 		tx_out_data = add_crom_data(data={'uri': tx_out.id, 'label': tx_out._label}, what=tx_out)
 
-		title = data['_object'].get('title')
+		title = self.helper.title_value(data['_object'].get('title'))
 		short_title = truncate_with_ellipsis(title, 100) or title
 		theft_id = hmo.id + f'-{label_type}'
+		
+		warnings.warn('TODO: parse Theft/Loss note for date and location')
+		# Examples:
+		#     "Dec 1947 Looted by Germans during war"
+		#     "July 1959 Lost in Paris f.111"
+		#     "Lost at Sea on board Str Europe lost April 4/74"
+
 		notes = rec.get('verbatim_notes')
 		if notes and 'Looted' in notes:
 			transfer_class = vocab.Looting
@@ -703,7 +746,7 @@ class ModelTheftOrLoss(Configurable, TransactionHandler):
 		data['_procurements'].append(tx_out_data)
 		return data
 
-class AddSaleAcquisitions(Configurable, TransactionHandler):
+class ModelSale(Configurable, TransactionHandler):
 	'''
 	Add Procurement/Acquisition modeling for a sold object. This includes an acquisition
 	TO Knoedler from seller(s), and another acquisition FROM Knoedler to buyer(s).
@@ -718,6 +761,39 @@ class AddSaleAcquisitions(Configurable, TransactionHandler):
 		out_tx.starts_after_the_end_of = in_tx
 		yield data
 
+class ModelInventorying(Configurable, TransactionHandler):
+	helper = Option(required=True)
+	make_la_person = Service('make_la_person')
+	
+	def __call__(self, data:dict, make_la_person):
+		rec = data['book_record']
+		pi_rec = data['pi_record_no']
+		odata = data['_object']
+		book_id, page_id, row_id = record_id(rec)
+		sales_record = get_crom_object(data['_text_row'])
+		date = implode_date(data['entry_date'])
+
+		hmo = get_crom_object(odata)
+		object_label = f'“{hmo._label}”'
+
+		knum = odata.get('knoedler_number')
+		if knum:
+			parenthetical = f'{date}; {knum}'
+		else:
+			parenthetical = f'{date}'
+		
+		inv_uri = self.helper.make_proj_uri('INV', book_id, page_id, row_id)
+		inv = vocab.Inventorying(ident=inv_uri, label=f'Inventorying of {pi_rec} ({parenthetical})')
+		inv.used_specific_object = hmo
+		inv.carried_out_by = self.helper.static_instances.get_instance('Group', 'knoedler')
+		self.set_date(inv, data, 'entry_date')
+		
+		inv_data = add_crom_data(data={'uri': inv_uri}, what=inv)
+		if '_activities' not in data:
+			data['_activities'] = []
+		data['_activities'].append(inv_data)
+		return data
+	
 #mark - Knoedler Pipeline class
 
 class KnoedlerPipeline(PipelineBase):
@@ -953,10 +1029,18 @@ class KnoedlerPipeline(PipelineBase):
 			TransactionSwitch(),
 			_input=objects.output
 		)
+		return tx
 
+	def add_transaction_chains(self, graph, tx, services, serialize=True):
+		inventorying = graph.add_chain(
+			ExtractKeyedValue(key='Unsold'),
+			ModelInventorying(helper=self.helper),
+			_input=tx.output
+		)
+		
 		sale = graph.add_chain(
 			ExtractKeyedValue(key='Sold'),
-			AddSaleAcquisitions(helper=self.helper),
+			ModelSale(helper=self.helper),
 			_input=tx.output
 		)
 
@@ -978,15 +1062,19 @@ class KnoedlerPipeline(PipelineBase):
 			_input=tx.output
 		)
 
-		for branch in (sale, destruction, theft, loss):
+		# activities are specific to the inventorying chain
+		activities = graph.add_chain( ExtractKeyedValues(key='_activities'), _input=inventorying.output )
+		if serialize:
+			self.add_serialization_chain(graph, activities.output, model=self.models['Inventorying'])
+
+		# people and procurements can come from any of these chains:
+		for branch in (sale, destruction, theft, loss, inventorying):
 			procurement = graph.add_chain( ExtractKeyedValues(key='_procurements'), _input=branch.output )
 			people = graph.add_chain( ExtractKeyedValues(key='_people'), _input=branch.output )
 		
 			if serialize:
 				self.add_serialization_chain(graph, procurement.output, model=self.models['Procurement'])
 				self.add_serialization_chain(graph, people.output, model=self.models['Person'])
-
-		return tx
 
 	def add_book_chain(self, graph, sales_records, serialize=True):
 		books = graph.add_chain(
@@ -1069,6 +1157,7 @@ class KnoedlerPipeline(PipelineBase):
 			AddFieldNames(field_names=self.headers),
 		)
 		sales = self.add_sales_chain(g, contents_records, services, serialize=True)
+		self.add_transaction_chains(g, sales, services, serialize=True)
 
 		self.graph = g
 

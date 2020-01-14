@@ -122,9 +122,8 @@ class ProvenanceTestPipeline(ProvenancePipeline):
 		services = self.get_services(**options)
 		super().run(services=services, **options)
 
-		counter = services['lot_counter']
 		post_map = services['post_sale_map']
-		self.generate_prev_post_sales_data(counter, post_map)
+		self.generate_prev_post_sales_data(post_map)
 
 	def load_prev_post_sales_data(self):
 		return {}

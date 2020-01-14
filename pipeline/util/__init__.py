@@ -618,3 +618,5 @@ class GraphListSource:
 		for v in self.values:
 			yield add_crom_data({}, v)
 
+def rename_keys(mapping:dict):
+	return lambda d, p: {mapping[k] if k in mapping else k: v for k, v in d.items()}

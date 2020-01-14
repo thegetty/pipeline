@@ -41,7 +41,8 @@ from pipeline.util import \
 			ExtractKeyedValue, \
 			ExtractKeyedValues, \
 			MatchingFiles, \
-			strip_key_prefix
+			strip_key_prefix, \
+			rename_keys
 from pipeline.io.file import MergingFileWriter
 from pipeline.io.memory import MergingMemoryWriter
 # from pipeline.io.arches import ArchesWriter
@@ -191,7 +192,7 @@ class KnoedlerUtilityHelper(UtilityHelper):
 		hmo = get_crom_object(data['_object'])
 		
 		dir = 'In' if incoming else 'Out'
-		price = data.get('knoedler_purchase') if incoming else data.get('price')
+		price = data.get('purchase_knoedler_share') if incoming else data.get('sale_knoedler_share')
 		if price:
 			n = price.get('note')
 			if n and n.startswith('for numbers '):
@@ -200,7 +201,7 @@ class KnoedlerUtilityHelper(UtilityHelper):
 
 	@staticmethod
 	def transaction_multiple_object_label(data, incoming=False):
-		price = data.get('knoedler_purchase') if incoming else data.get('price')
+		price = data.get('purchase_knoedler_share') if incoming else data.get('sale_knoedler_share')
 		if price:
 			n = price.get('note')
 			if n and n.startswith('for numbers '):
@@ -213,7 +214,7 @@ class KnoedlerUtilityHelper(UtilityHelper):
 		Return `True` if the procurement related to the supplied data represents a
 		transaction of multiple objects with a single payment, `False` otherwise.
 		'''
-		price = data.get('knoedler_purchase') if incoming else data.get('price')
+		price = data.get('purchase_knoedler_share') if incoming else data.get('sale_knoedler_share')
 		if price:
 			n = price.get('note')
 			if n and n.startswith('for numbers '):
@@ -578,7 +579,11 @@ class TransactionHandler:
 		tx = vocab.Procurement(ident=tx_uri)
 		return tx
 
-	def _procurement(self, data, date_key, participants, purchase=None, incoming=False):
+	def _procurement(self, data, date_key, participants, purchase=None, shared_purchase=None, shared_people=None, incoming=False):
+		for k in ('_procurements', '_people'):
+			if k not in data:
+				data[k] = []
+
 		date = implode_date(data[date_key])
 		rec = data['book_record']
 		pi_rec = data['pi_record_no']
@@ -613,13 +618,45 @@ class TransactionHandler:
 			tx._label = f'{dir_label} of {pi_rec} ({parenthetical})'
 		acq.transferred_title_of = hmo
 
+		knoedler = self.helper.static_instances.get_instance('Group', 'knoedler')
+		
+		# this is the group of people along with Knoedler that made the purchase/sale (len > 1 when there is shared ownership)
+		knoedler_group = [knoedler]
+		if shared_people:
+			role = 'shared-buyer' if incoming else 'shared-seller'
+			people = [
+				self.helper.add_person(
+					self.helper.copy_source_information(p, data),
+					sales_record,
+					f'{role}_{i+1}'
+				) for i, p in enumerate(shared_people)
+			]
+			knoedler_group.extend([get_crom_object(p) for p in shared_people])
+			data['_people'].extend(shared_people)
+
 		amnt = get_crom_object(purchase)
+		shared_amnt = get_crom_object(shared_purchase)
 		paym = None
 		if amnt:
 			payment_id = tx_uri + '-Payment'
 			paym = model.Payment(ident=payment_id, label=f'Payment for {object_label} ({parenthetical})')
 			paym.paid_amount = amnt
 			tx.part = paym
+			for kp in knoedler_group:
+				if incoming:
+					paym.paid_from = kp
+				else:
+					paym.paid_to = kp
+			
+			if shared_amnt:
+				shared_payment_id = tx_uri + '-Payment-Knoedler-share'
+				shared_paym = model.Payment(ident=shared_payment_id, label=f"Knoedler's share of Payment for {object_label} ({parenthetical})")
+				shared_paym.paid_amount = shared_amnt
+				if incoming:
+					shared_paym.paid_from = knoedler
+				else:
+					shared_paym.paid_to = knoedler
+				paym.part = shared_paym
 
 		role = 'seller' if incoming else 'buyer'
 		people = [
@@ -630,40 +667,44 @@ class TransactionHandler:
 			) for i, p in enumerate(participants)
 		]
 
-		knoedler = self.helper.static_instances.get_instance('Group', 'knoedler')
 		for person_data in people:
-			person = get_crom_object(person_data)
+			person = [get_crom_object(person_data)]
 			if incoming:
 				if paym:
-					paym.carried_out_by = person
-					paym.paid_to = person
-					paym.paid_from = knoedler
-				tx_from, tx_to = person, knoedler
+					for p in person:
+						paym.paid_to = p
+					for kp in knoedler_group:
+						paym.carried_out_by = kp
+				tx_from, tx_to = person, knoedler_group
 			else:
 				if paym:
-					paym.carried_out_by = knoedler
-					paym.paid_to = knoedler
-					paym.paid_from = person
-				tx_from, tx_to = knoedler, person
-			acq.transferred_title_from = tx_from
-			acq.transferred_title_to = tx_to
+					for p in person:
+						paym.paid_from = p
+					for kp in knoedler_group:
+						paym.carried_out_by = kp
+				tx_from, tx_to = knoedler_group, person
+			
+			for p in tx_from:
+				acq.transferred_title_from = p
+			for p in tx_to:
+				acq.transferred_title_to = p
 
 		tx.part = acq
 
-		for k in ('_procurements', '_people'):
-			if k not in data:
-				data[k] = []
 		data['_procurements'].append(tx_data)
 		data['_people'].extend(people)
 		return tx
 
-	def add_incoming_tx(self, data, make_la_person):
+	def add_incoming_tx(self, data):
 		purch = data.get('purchase')
-		return self._procurement(data, 'entry_date', data['purchase_seller'], purch, True)
+		shared_price = data.get('purchase_knoedler_share')
+		shared_people = data.get('purchase_buyer')
+		return self._procurement(data, 'entry_date', data['purchase_seller'], purch, shared_price, shared_people, incoming=True)
 
-	def add_outgoing_tx(self, data, make_la_person):
-		purch = data.get('purchase')
-		return self._procurement(data, 'sale_date', data['sale_buyer'], purch, False)
+	def add_outgoing_tx(self, data):
+		purch = data.get('sale')
+		shared_price = data.get('sale_knoedler_share')
+		return self._procurement(data, 'sale_date', data['sale_buyer'], purch, shared_price, incoming=False)
 
 	@staticmethod
 	def set_date(event, data, date_key, date_key_prefix=''):
@@ -697,7 +738,7 @@ class ModelDestruction(Configurable, TransactionHandler):
 			d.referred_to_by = vocab.Note(ident='', content=rec['verbatim_notes'])
 		hmo.destroyed_by = d
 
-		tx = self.add_incoming_tx(data, make_la_person)
+		tx = self.add_incoming_tx(data)
 		return data
 
 class ModelTheftOrLoss(Configurable, TransactionHandler):
@@ -708,7 +749,7 @@ class ModelTheftOrLoss(Configurable, TransactionHandler):
 		rec = data['book_record']
 		pi_rec = data['pi_record_no']
 		hmo = get_crom_object(data['_object'])
-		tx = self.add_incoming_tx(data, make_la_person)
+		tx = self.add_incoming_tx(data)
 		tx_out = self._empty_tx(data, incoming=False)
 
 		tx_type = rec['transaction']
@@ -757,8 +798,8 @@ class ModelSale(Configurable, TransactionHandler):
 	make_la_person = Service('make_la_person')
 
 	def __call__(self, data:dict, make_la_person):
-		in_tx = self.add_incoming_tx(data, make_la_person)
-		out_tx = self.add_outgoing_tx(data, make_la_person)
+		in_tx = self.add_incoming_tx(data)
+		out_tx = self.add_outgoing_tx(data)
 		in_tx.ends_before_the_start_of = out_tx
 		out_tx.starts_after_the_end_of = in_tx
 		yield data
@@ -889,6 +930,7 @@ class KnoedlerPipeline(PipelineBase):
 						'postprocess': [
 							filter_empty_person,
 							lambda x, _: strip_key_prefix('purchase_buyer_', x),
+							rename_keys({'own': 'name'}),
 						],
 						'prefixes': (
 							"purchase_buyer_own",
@@ -964,18 +1006,32 @@ class KnoedlerPipeline(PipelineBase):
 					)
 				},
 				'purchase': {
-					'postprocess': [lambda x, _: strip_key_prefix('purch_', x), lambda d, p: add_crom_price(d, p, services)],
+					'postprocess': [
+						lambda x, _: strip_key_prefix('purch_', x),
+						lambda d, p: add_crom_price(d, p, services),
+					],
 					'properties': (
 						"purch_amount",
 						"purch_currency",
 						"purch_note",
 					)
 				},
-				'knoedler_purchase': {
+				'sale': {
+					'postprocess': [
+						lambda x, _: strip_key_prefix('price_', x),
+						lambda d, p: add_crom_price(d, p, services),
+					],
+					'properties': (
+						"price_amount",
+						"price_currency",
+						"price_note",
+					)
+				},
+				'purchase_knoedler_share': {
 					'postprocess': [
 						lambda x, _: strip_key_prefix('knoedpurch_', x),
+						rename_keys({'amt': 'amount', 'curr': 'currency'}),
 						lambda d, p: add_crom_price(d, p, services),
-						lambda x, _: {'amount' if k == 'amt' else k:v for k,v in x.items()}
 					],
 					'properties': (
 						"knoedpurch_amt",
@@ -983,18 +1039,16 @@ class KnoedlerPipeline(PipelineBase):
 						"knoedpurch_note",
 					)
 				},
-				'knoedler_share': {
+				'sale_knoedler_share': {
+					'postprocess': [
+						lambda x, _: strip_key_prefix('knoedshare_', x),
+						rename_keys({'amt': 'amount', 'curr': 'currency'}),
+						lambda d, p: add_crom_price(d, p, services),
+					],
 					'properties': (
 						"knoedshare_amt",
 						"knoedshare_curr",
 						"knoedshare_note",
-					)
-				},
-				'price': {
-					'properties': (
-						"price_amount",
-						"price_currency",
-						"price_note",
 					)
 				},
 				'book_record': {

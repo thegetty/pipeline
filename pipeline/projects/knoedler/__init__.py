@@ -492,12 +492,14 @@ class PopulateKnoedlerObject(Configurable, pipeline.linkedart.PopulateObject):
 
 	def __init__(self, *args, **kwargs):
 		super().__init__(*args, **kwargs)
-		# "Collecting her strength" title info from Sales Book 3, 1874-1879, f.252
 
 	def __call__(self, data:dict, *, vocab_type_map, make_la_org):
 		odata = data['object']
+
+		# split the title and reference in a value such as 「"Collecting her strength" title info from Sales Book 3, 1874-1879, f.252」
 		label = self.helper.title_value(odata['title'])
 		title_ref = self.helper.title_reference(odata['title'])
+
 		typestring = odata.get('object_type', '')
 		identifiers = []
 		

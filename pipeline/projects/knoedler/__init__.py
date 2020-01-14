@@ -939,6 +939,10 @@ class KnoedlerPipeline(PipelineBase):
 						)
 					},
 					'prev_own': {
+						'postprocess': [
+							lambda x, _: strip_key_prefix('prev_', x),
+							rename_keys({'own': 'name'}),
+						],
 						'prefixes': (
 							"prev_own",
 							"prev_own_loc",
@@ -946,6 +950,9 @@ class KnoedlerPipeline(PipelineBase):
 						)
 					},
 					'sale_buyer': {
+						'postprocess': [
+							lambda x, _: strip_key_prefix('sale_buyer_', x),
+						],
 						'prefixes': (
 							"sale_buyer_name",
 							"sale_buyer_loc",
@@ -1067,6 +1074,10 @@ class KnoedlerPipeline(PipelineBase):
 					)
 				},
 				'post_owner': {
+					'postprocess': [
+						rename_keys({'post_owner': 'post_owner_name'}),
+						lambda x, _: strip_key_prefix('post_owner_', x),
+					],
 					'properties': (
 						"post_owner",
 						"post_owner_ulan",

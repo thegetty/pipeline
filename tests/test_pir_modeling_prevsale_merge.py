@@ -21,9 +21,7 @@ vocab.add_attribute_assignment_check()
 
 class PIRModelingTest_PrevSaleMerge(TestProvenancePipelineOutput):
 	def merge_objects(self, objects):
-		rewrite_map_data = self.prev_post_sales_map
-		post_sale_rewrite_map = rewrite_map_data
-		r = JSONValueRewriter(post_sale_rewrite_map)
+		r = JSONValueRewriter(self.prev_post_sales_map)
 		for k in list(objects.keys()):
 			data = objects[k]
 			updated = r.rewrite(data)

@@ -574,6 +574,7 @@ class AddAcquisitionOrBidding(Configurable):
 
 		SOLD = CaseFoldingSet(transaction_types['sold'])
 		UNSOLD = CaseFoldingSet(transaction_types['unsold'])
+		UNKNOWN = CaseFoldingSet(transaction_types['unknown'])
 		if '_procurements' not in data:
 			data['_procurements'] = []
 		if transaction in SOLD:
@@ -581,11 +582,13 @@ class AddAcquisitionOrBidding(Configurable):
 			yield from self.add_acquisition(data, buyers, sellers, buy_sell_modifiers, make_la_person)
 		elif transaction in UNSOLD:
 			yield from self.add_bidding(data, buyers, sellers, buy_sell_modifiers)
+		elif transaction in UNKNOWN:
+			yield from self.add_bidding(data, buyers, sellers, buy_sell_modifiers)
 		else:
 			prev_procurements = self.add_non_sale_sellers(data, sellers)
 			lot = get_crom_object(parent)
 			for tx_data in prev_procurements:
 				tx = get_crom_object(tx_data)
 				lot.starts_after_the_end_of = tx
-			warnings.warn(f'Cannot create acquisition data for unknown transaction type: {transaction!r}')
+			warnings.warn(f'Cannot create acquisition data for unrecognized transaction type: {transaction!r}')
 			yield data

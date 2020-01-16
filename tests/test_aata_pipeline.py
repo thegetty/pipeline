@@ -380,8 +380,8 @@ class TestAATAPipelineOutput_Journals(unittest.TestCase):
 					'classified_as': [
 						{
 							'_label': 'Title',
-						'id': 'http://vocab.getty.edu/aat/300417193',
-						'type': 'Type'
+							'id': 'http://vocab.getty.edu/aat/300417193',
+							'type': 'Type'
 						}
 					],
 					'content': 'Green chemistry',
@@ -516,14 +516,16 @@ class TestAATAPipelineOutput_Journals(unittest.TestCase):
 					'classified_as': [
 						{
 							'_label': 'Note',
+							'classified_as': [
+								{
+									'_label': 'Brief Text',
+									'id': 'http://vocab.getty.edu/aat/300418049',
+									'type': 'Type'
+								}
+							],
 							'id': 'http://vocab.getty.edu/aat/300027200',
 							'type': 'Type'
 						},
-						{
-							'_label': 'Brief Text',
-							'id': 'http://vocab.getty.edu/aat/300418049',
-							'type': 'Type'
-						}
 					],
 					'content': 'v. 24 (2005)',
 					'type': 'LinguisticObject'

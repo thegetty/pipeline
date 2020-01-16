@@ -568,7 +568,7 @@ class TransactionSwitch:
 		rec = data['book_record']
 		transaction = rec['transaction']
 # 		print(f'{transaction}')
-		if transaction in ('Sold', 'Destroyed', 'Stolen', 'Lost', 'Unsold'):
+		if transaction in ('Sold', 'Destroyed', 'Stolen', 'Lost', 'Unsold', 'Returned'):
 			yield {transaction: data}
 		else:
 			warnings.warn(f'TODO: handle transaction type {transaction}')
@@ -803,6 +803,19 @@ class ModelSale(Configurable, TransactionHandler):
 		in_tx.ends_before_the_start_of = out_tx
 		out_tx.starts_after_the_end_of = in_tx
 		yield data
+
+class ModelReturn(ModelSale):
+	helper = Option(required=True)
+	make_la_person = Service('make_la_person')
+
+	def __call__(self, data:dict, make_la_person):
+		sellers = data.get('purchase_seller', [])
+		buyers = data.get('sale_buyer', [])
+		if not buyers:
+			buyers = sellers.copy()
+			data['sale_buyer'] = buyers
+		pprint.pprint(data)
+		yield from super().__call__(data, make_la_person)
 
 class ModelInventorying(Configurable, TransactionHandler):
 	helper = Option(required=True)
@@ -1111,6 +1124,12 @@ class KnoedlerPipeline(PipelineBase):
 			_input=tx.output
 		)
 
+		returned = graph.add_chain(
+			ExtractKeyedValue(key='Returned'),
+			ModelReturn(helper=self.helper),
+			_input=tx.output
+		)
+
 		destruction = graph.add_chain(
 			ExtractKeyedValue(key='Destroyed'),
 			ModelDestruction(helper=self.helper),
@@ -1135,7 +1154,7 @@ class KnoedlerPipeline(PipelineBase):
 			self.add_serialization_chain(graph, activities.output, model=self.models['Inventorying'])
 
 		# people and procurements can come from any of these chains:
-		for branch in (sale, destruction, theft, loss, inventorying):
+		for branch in (sale, destruction, theft, loss, inventorying, returned):
 			procurement = graph.add_chain( ExtractKeyedValues(key='_procurements'), _input=branch.output )
 			people = graph.add_chain( ExtractKeyedValues(key='_people'), _input=branch.output )
 		

@@ -157,26 +157,30 @@ class AddAuctionOfLot(Configurable):
 			lot.referred_to_by = cite
 
 		transaction = data.get('transaction')
+		SOLD = CaseFoldingSet(transaction_types['sold'])
+		WITHDRAWN = transaction_types['withdrawn']
 		self.set_lot_objects(lot, cno, lno, data)
-		if transaction not in transaction_types['withdrawn']:
+		if transaction not in WITHDRAWN:
 			self.set_lot_auction_houses(lot, cno, auction_houses)
 			self.set_lot_location(lot, cno, auction_locations)
 			self.set_lot_date(lot, auction_data)
 			self.set_lot_notes(lot, auction_data)
 
-			tx_uri = self.helper.transaction_uri_for_lot(auction_data, data.get('price', []))
-			lots = self.helper.lots_in_transaction(auction_data, data.get('price', []))
-			multi = self.helper.transaction_contains_multiple_lots(auction_data, data.get('price', []))
-			tx = vocab.Procurement(ident=tx_uri)
-			tx._label = f'Procurement of Lot {cno} {lots} ({date})'
-			lot.caused = tx
-			tx_data = {'uri': tx_uri}
+			if transaction in SOLD:
+				# only model a Procurement caused by this Auction of Lot if the transaction type is sold
+				tx_uri = self.helper.transaction_uri_for_lot(auction_data, data.get('price', []))
+				lots = self.helper.lots_in_transaction(auction_data, data.get('price', []))
+				multi = self.helper.transaction_contains_multiple_lots(auction_data, data.get('price', []))
+				tx = vocab.Procurement(ident=tx_uri)
+				tx._label = f'Procurement of Lot {cno} {lots} ({date})'
+				lot.caused = tx
+				tx_data = {'uri': tx_uri}
 
-			if multi:
-				tx_data['multi_lot_tx'] = lots
-			with suppress(AttributeError):
-				tx_data['_date'] = lot.timespan
-			data['_procurement_data'] = add_crom_data(data=tx_data, what=tx)
+				if multi:
+					tx_data['multi_lot_tx'] = lots
+				with suppress(AttributeError):
+					tx_data['_date'] = lot.timespan
+				data['_procurement_data'] = add_crom_data(data=tx_data, what=tx)
 
 			add_crom_data(data=data, what=lot)
 		yield data

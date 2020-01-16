@@ -449,7 +449,7 @@ class AddAcquisitionOrBidding(Configurable):
 		auction_data = parent['auction_of_lot']
 		cno, lno, date = object_key(auction_data)
 		lot = get_crom_object(parent)
-		ts = lot.timespan
+		ts = getattr(lot, 'timespan', None)
 
 		own_info_source = f'Listed as the seller of object in {cno} {lno} ({date}) that was not sold'
 		note = vocab.SourceStatement(ident='', content=own_info_source)

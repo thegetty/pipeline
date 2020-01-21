@@ -81,7 +81,11 @@ class PipelineBase:
 	def _service_from_path(self, file):
 		if file.suffix == '.json':
 			with open(file, 'r') as f:
-				return json.load(f)
+				try:
+					return json.load(f)
+				except Exception as e:
+					warnings.warn(f'*** Failed to load service JSON: {file}: {e}')
+					return None
 		elif file.suffix == '.sqlite':
 			s = URL(drivername='sqlite', database=file.absolute())
 			e = create_engine(s)

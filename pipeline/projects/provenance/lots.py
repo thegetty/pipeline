@@ -171,8 +171,8 @@ class AddAuctionOfLot(Configurable):
 				tx_uri = self.helper.transaction_uri_for_lot(auction_data, data.get('price', []))
 				lots = self.helper.lots_in_transaction(auction_data, data.get('price', []))
 				multi = self.helper.transaction_contains_multiple_lots(auction_data, data.get('price', []))
-				tx = vocab.Procurement(ident=tx_uri)
-				tx._label = f'Procurement of Lot {cno} {lots} ({date})'
+				tx = vocab.ProvenanceEntry(ident=tx_uri)
+				tx._label = f'Provenance Entry of Lot {cno} {lots} ({date})'
 				lot.caused = tx
 				tx_data = {'uri': tx_uri}
 
@@ -194,7 +194,7 @@ class AddAcquisitionOrBidding(Configurable):
 	@staticmethod
 	def related_procurement(hmo, current_tx=None, current_ts=None, buyer=None, seller=None, previous=False):
 		'''
-		Returns a new `vocab.Procurement` object (and related acquisition) that is temporally
+		Returns a new `vocab.ProvenanceEntry` object (and related acquisition) that is temporally
 		related to the supplied procurement and associated data. The new procurement is for
 		the given object, and has the given buyer and seller (both optional).
 
@@ -202,7 +202,7 @@ class AddAcquisitionOrBidding(Configurable):
 		and if the timespan `current_ts` is given, has temporal data to that effect. If
 		`previous` is `False`, this relationship is reversed.
 		'''
-		tx = vocab.Procurement() # TODO: can this be created with a consistent URI?
+		tx = vocab.ProvenanceEntry() # TODO: can this be created with a consistent URI?
 		if current_tx:
 			if previous:
 				tx.ends_before_the_start_of = current_tx
@@ -269,9 +269,9 @@ class AddAcquisitionOrBidding(Configurable):
 		tx = self.related_procurement(hmo, current_tx, current_ts, buyer=final_owner)
 		try:
 			object_label = hmo._label
-			tx._label = f'Procurement leading to the currently known location of “{object_label}”'
+			tx._label = f'ProvenanceEntry leading to the currently known location of “{object_label}”'
 		except AttributeError:
-			tx._label = f'Procurement leading to the currently known location of object'
+			tx._label = f'ProvenanceEntry leading to the currently known location of object'
 		return tx
 
 	def add_acquisition(self, data, buyers, sellers, buy_sell_modifiers, make_la_person=None):
@@ -457,7 +457,7 @@ class AddAcquisitionOrBidding(Configurable):
 		for seller_data in sellers:
 			seller = get_crom_object(seller_data)
 			tx = self.related_procurement(hmo, current_ts=ts, buyer=seller, previous=True)
-			tx._label = f'Procurement leading to the ownership of {hmo._label}'
+			tx._label = f'ProvenanceEntry leading to the ownership of {hmo._label}'
 			tx.referred_to_by = note
 			prev_procurements.append(add_crom_data(data={}, what=tx))
 		data['_procurements'] += prev_procurements

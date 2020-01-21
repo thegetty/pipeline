@@ -157,26 +157,30 @@ class AddAuctionOfLot(Configurable):
 			lot.referred_to_by = cite
 
 		transaction = data.get('transaction')
+		SOLD = CaseFoldingSet(transaction_types['sold'])
+		WITHDRAWN = transaction_types['withdrawn']
 		self.set_lot_objects(lot, cno, lno, data)
-		if transaction not in transaction_types['withdrawn']:
+		if transaction not in WITHDRAWN:
 			self.set_lot_auction_houses(lot, cno, auction_houses)
 			self.set_lot_location(lot, cno, auction_locations)
 			self.set_lot_date(lot, auction_data)
 			self.set_lot_notes(lot, auction_data)
 
-			tx_uri = self.helper.transaction_uri_for_lot(auction_data, data.get('price', []))
-			lots = self.helper.lots_in_transaction(auction_data, data.get('price', []))
-			multi = self.helper.transaction_contains_multiple_lots(auction_data, data.get('price', []))
-			tx = vocab.Procurement(ident=tx_uri)
-			tx._label = f'Procurement of Lot {cno} {lots} ({date})'
-			lot.caused = tx
-			tx_data = {'uri': tx_uri}
+			if transaction in SOLD:
+				# only model a Procurement caused by this Auction of Lot if the transaction type is sold
+				tx_uri = self.helper.transaction_uri_for_lot(auction_data, data.get('price', []))
+				lots = self.helper.lots_in_transaction(auction_data, data.get('price', []))
+				multi = self.helper.transaction_contains_multiple_lots(auction_data, data.get('price', []))
+				tx = vocab.ProvenanceEntry(ident=tx_uri)
+				tx._label = f'Provenance Entry of Lot {cno} {lots} ({date})'
+				lot.caused = tx
+				tx_data = {'uri': tx_uri}
 
-			if multi:
-				tx_data['multi_lot_tx'] = lots
-			with suppress(AttributeError):
-				tx_data['_date'] = lot.timespan
-			data['_procurement_data'] = add_crom_data(data=tx_data, what=tx)
+				if multi:
+					tx_data['multi_lot_tx'] = lots
+				with suppress(AttributeError):
+					tx_data['_date'] = lot.timespan
+				data['_procurement_data'] = add_crom_data(data=tx_data, what=tx)
 
 			add_crom_data(data=data, what=lot)
 		yield data
@@ -190,7 +194,7 @@ class AddAcquisitionOrBidding(Configurable):
 	@staticmethod
 	def related_procurement(hmo, current_tx=None, current_ts=None, buyer=None, seller=None, previous=False):
 		'''
-		Returns a new `vocab.Procurement` object (and related acquisition) that is temporally
+		Returns a new `vocab.ProvenanceEntry` object (and related acquisition) that is temporally
 		related to the supplied procurement and associated data. The new procurement is for
 		the given object, and has the given buyer and seller (both optional).
 
@@ -198,7 +202,7 @@ class AddAcquisitionOrBidding(Configurable):
 		and if the timespan `current_ts` is given, has temporal data to that effect. If
 		`previous` is `False`, this relationship is reversed.
 		'''
-		tx = vocab.Procurement() # TODO: can this be created with a consistent URI?
+		tx = vocab.ProvenanceEntry() # TODO: can this be created with a consistent URI?
 		if current_tx:
 			if previous:
 				tx.ends_before_the_start_of = current_tx
@@ -265,9 +269,9 @@ class AddAcquisitionOrBidding(Configurable):
 		tx = self.related_procurement(hmo, current_tx, current_ts, buyer=final_owner)
 		try:
 			object_label = hmo._label
-			tx._label = f'Procurement leading to the currently known location of “{object_label}”'
+			tx._label = f'ProvenanceEntry leading to the currently known location of “{object_label}”'
 		except AttributeError:
-			tx._label = f'Procurement leading to the currently known location of object'
+			tx._label = f'ProvenanceEntry leading to the currently known location of object'
 		return tx
 
 	def add_acquisition(self, data, buyers, sellers, buy_sell_modifiers, make_la_person=None):
@@ -445,7 +449,7 @@ class AddAcquisitionOrBidding(Configurable):
 		auction_data = parent['auction_of_lot']
 		cno, lno, date = object_key(auction_data)
 		lot = get_crom_object(parent)
-		ts = lot.timespan
+		ts = getattr(lot, 'timespan', None)
 
 		own_info_source = f'Listed as the seller of object in {cno} {lno} ({date}) that was not sold'
 		note = vocab.SourceStatement(ident='', content=own_info_source)
@@ -453,7 +457,7 @@ class AddAcquisitionOrBidding(Configurable):
 		for seller_data in sellers:
 			seller = get_crom_object(seller_data)
 			tx = self.related_procurement(hmo, current_ts=ts, buyer=seller, previous=True)
-			tx._label = f'Procurement leading to the ownership of {hmo._label}'
+			tx._label = f'ProvenanceEntry leading to the ownership of {hmo._label}'
 			tx.referred_to_by = note
 			prev_procurements.append(add_crom_data(data={}, what=tx))
 		data['_procurements'] += prev_procurements
@@ -574,6 +578,7 @@ class AddAcquisitionOrBidding(Configurable):
 
 		SOLD = CaseFoldingSet(transaction_types['sold'])
 		UNSOLD = CaseFoldingSet(transaction_types['unsold'])
+		UNKNOWN = CaseFoldingSet(transaction_types['unknown'])
 		if '_procurements' not in data:
 			data['_procurements'] = []
 		if transaction in SOLD:
@@ -581,11 +586,13 @@ class AddAcquisitionOrBidding(Configurable):
 			yield from self.add_acquisition(data, buyers, sellers, buy_sell_modifiers, make_la_person)
 		elif transaction in UNSOLD:
 			yield from self.add_bidding(data, buyers, sellers, buy_sell_modifiers)
+		elif transaction in UNKNOWN:
+			yield from self.add_bidding(data, buyers, sellers, buy_sell_modifiers)
 		else:
 			prev_procurements = self.add_non_sale_sellers(data, sellers)
 			lot = get_crom_object(parent)
 			for tx_data in prev_procurements:
 				tx = get_crom_object(tx_data)
 				lot.starts_after_the_end_of = tx
-			warnings.warn(f'Cannot create acquisition data for unknown transaction type: {transaction!r}')
+			warnings.warn(f'Cannot create acquisition data for unrecognized transaction type: {transaction!r}')
 			yield data

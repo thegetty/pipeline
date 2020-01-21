@@ -239,6 +239,14 @@ class KnoedlerUtilityHelper(UtilityHelper):
 		k_id.assigned_by = assignment
 		return k_id
 
+	def make_object_uri(self, *uri_key):
+		uri_key = list(uri_key)
+		same_objects = self.services['same_objects_map']
+		if uri_key[-1] in same_objects:
+			uri_key[-1] = same_objects[uri_key[-1]][0]
+		uri = self.make_uri(*uri_key)
+		return uri
+
 	def make_uri(self, *values):
 		'''Convert a set of identifying `values` into a URI'''
 		if values:
@@ -535,7 +543,7 @@ class PopulateKnoedlerObject(Configurable, pipeline.linkedart.PopulateObject):
 			identifiers.append(self.helper.knoedler_number_id(knum))
 		except:
 			uri_key = ('Object', 'Internal', data['pi_record_no'])
-		uri = self.helper.make_uri(*uri_key)
+		uri = self.helper.make_object_uri(*uri_key)
 		data['_object']['uri'] = uri
 		data['_object']['uri_key'] = uri_key
 
@@ -580,7 +588,7 @@ class TransactionSwitch:
 		else:
 			warnings.warn(f'TODO: handle transaction type {transaction}')
 
-class TransactionHandler:
+class TransactionHandler(Configurable):
 	def _empty_tx(self, data, incoming=False):
 		tx_uri = self.helper.transaction_uri_for_record(data, incoming)
 		tx = vocab.ProvenanceEntry(ident=tx_uri)
@@ -734,7 +742,7 @@ class TransactionHandler:
 			ts.identified_by = model.Name(ident='', content=date)
 			event.timespan = ts
 
-class ModelDestruction(Configurable, TransactionHandler):
+class ModelDestruction(TransactionHandler):
 	helper = Option(required=True)
 	make_la_person = Service('make_la_person')
 
@@ -754,7 +762,7 @@ class ModelDestruction(Configurable, TransactionHandler):
 		tx = self.add_incoming_tx(data)
 		return data
 
-class ModelTheftOrLoss(Configurable, TransactionHandler):
+class ModelTheftOrLoss(TransactionHandler):
 	helper = Option(required=True)
 	make_la_person = Service('make_la_person')
 
@@ -802,7 +810,7 @@ class ModelTheftOrLoss(Configurable, TransactionHandler):
 		data['_procurements'].append(tx_out_data)
 		return data
 
-class ModelSale(Configurable, TransactionHandler):
+class ModelSale(TransactionHandler):
 	'''
 	Add ProvenanceEntry/Acquisition modeling for a sold object. This includes an acquisition
 	TO Knoedler from seller(s), and another acquisition FROM Knoedler to buyer(s).
@@ -830,7 +838,7 @@ class ModelReturn(ModelSale):
 # 		pprint.pprint(data)
 		yield from super().__call__(data, make_la_person)
 
-class ModelInventorying(Configurable, TransactionHandler):
+class ModelInventorying(TransactionHandler):
 	helper = Option(required=True)
 	make_la_person = Service('make_la_person')
 	
@@ -874,7 +882,7 @@ class KnoedlerPipeline(PipelineBase):
 		helper = KnoedlerUtilityHelper(project_name, self.uid_tag_prefix)
 		super().__init__(project_name, helper=helper)
 		helper.static_instances = self.static_instances
-		
+
 		self.graph = None
 		self.models = kwargs.get('models', settings.arches_models)
 		self.header_file = data['header_file']
@@ -907,6 +915,11 @@ class KnoedlerPipeline(PipelineBase):
 	def get_services(self):
 		'''Return a `dict` of named services available to the bonobo pipeline.'''
 		services = super().get_services()
+		
+		same_objects = services['objects_same']['objects']
+		same_objects_map = {k: sorted(l) for l in same_objects for k in l}
+		services['same_objects_map'] = same_objects_map
+		
 		services.update({
 			# to avoid constructing new MakeLinkedArtPerson objects millions of times, this
 			# is passed around as a service to the functions and classes that require it.
@@ -1228,7 +1241,6 @@ class KnoedlerPipeline(PipelineBase):
 	def add_object_chain(self, graph, rows, serialize=True):
 		objects = graph.add_chain(
 			PopulateKnoedlerObject(helper=self.helper),
-			
 			AddArtists(helper=self.helper),
 			_input=rows.output
 		)

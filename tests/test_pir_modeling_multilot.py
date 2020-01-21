@@ -31,11 +31,11 @@ class PIRModelingTest_MultiLot(TestProvenancePipelineOutput):
 		self.assertEqual(len(auctions), 2)
 		
 		by_type = {k: list(v) for k,v in groupby(activities, key=lambda a: a['classified_as'][0]['_label'])}
-		self.assertEqual(sorted(by_type.keys()), ['ProvenanceEntry'])
+		self.assertEqual(sorted(by_type.keys()), ['Provenance Entry'])
 
 		# there are 2 lots and 1 procurement
-		self.assertEqual(len(by_type['ProvenanceEntry']), 1)
-		procurement = by_type['ProvenanceEntry'][0]
+		self.assertEqual(len(by_type['Provenance Entry']), 1)
+		procurement = by_type['Provenance Entry'][0]
 
 
 		by_type = {k: list(v) for k,v in groupby(auctions, key=lambda a: a['classified_as'][0]['_label'])}

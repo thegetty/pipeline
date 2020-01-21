@@ -576,7 +576,7 @@ class TransactionSwitch:
 class TransactionHandler:
 	def _empty_tx(self, data, incoming=False):
 		tx_uri = self.helper.transaction_uri_for_record(data, incoming)
-		tx = vocab.Procurement(ident=tx_uri)
+		tx = vocab.ProvenanceEntry(ident=tx_uri)
 		return tx
 
 	def _procurement(self, data, date_key, participants, purchase=None, shared_purchase=None, shared_people=None, incoming=False):
@@ -791,7 +791,7 @@ class ModelTheftOrLoss(Configurable, TransactionHandler):
 
 class ModelSale(Configurable, TransactionHandler):
 	'''
-	Add Procurement/Acquisition modeling for a sold object. This includes an acquisition
+	Add ProvenanceEntry/Acquisition modeling for a sold object. This includes an acquisition
 	TO Knoedler from seller(s), and another acquisition FROM Knoedler to buyer(s).
 	'''
 	helper = Option(required=True)
@@ -1159,7 +1159,7 @@ class KnoedlerPipeline(PipelineBase):
 			people = graph.add_chain( ExtractKeyedValues(key='_people'), _input=branch.output )
 		
 			if serialize:
-				self.add_serialization_chain(graph, procurement.output, model=self.models['Procurement'])
+				self.add_serialization_chain(graph, procurement.output, model=self.models['ProvenanceEntry'])
 				self.add_serialization_chain(graph, people.output, model=self.models['Person'])
 
 	def add_book_chain(self, graph, sales_records, serialize=True):

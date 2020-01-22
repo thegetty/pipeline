@@ -167,7 +167,7 @@ class AddAuctionOfLot(Configurable):
 			self.set_lot_notes(lot, auction_data)
 
 			if transaction in SOLD:
-				# only model a Procurement caused by this Auction of Lot if the transaction type is sold
+				# only model a ProvenanceEntry caused by this Auction of Lot if the transaction type is sold
 				tx_uri = self.helper.transaction_uri_for_lot(auction_data, data.get('price', []))
 				lots = self.helper.lots_in_transaction(auction_data, data.get('price', []))
 				multi = self.helper.transaction_contains_multiple_lots(auction_data, data.get('price', []))

@@ -79,11 +79,12 @@ class AddAuctionOfLot(Configurable):
 		lot.identified_by = vocab.LotNumber(ident='', content=lno)
 		lot.part_of = auction
 
-	def set_lot_objects(self, lot, cno, lno, data):
+	def set_lot_objects(self, lot, cno, lno, data, sale_type):
 		'''Associate the set of objects with the auction lot.'''
-		coll = vocab.AuctionLotSet(ident=f'{data["uri"]}-Set')
+		set_type = vocab.AuctionLotSet if sale_type == 'Auction' else vocab.CollectionSet
+		coll = set_type(ident=f'{data["uri"]}-Set')
 		shared_lot_number = self.helper.shared_lot_number_from_lno(lno)
-		coll._label = f'Auction Lot {cno} {shared_lot_number}'
+		coll._label = f'Object Set for Lot {cno} {shared_lot_number}'
 		est_price = data.get('estimated_price')
 		if est_price:
 			coll.dimension = get_crom_object(est_price)
@@ -91,17 +92,16 @@ class AddAuctionOfLot(Configurable):
 		if start_price:
 			coll.dimension = get_crom_object(start_price)
 
+		ask_price = data.get('ask_price')
+		pprint.pprint(ask_price)
+		if ask_price:
+			coll.dimension = get_crom_object(ask_price)
+
 		lot.used_specific_object = coll
 		data['_lot_object_set'] = add_crom_data(data={}, what=coll)
 
 	def __call__(self, data, non_auctions, auction_houses, auction_locations, problematic_records, transaction_types):
 		'''Add modeling data for the auction of a lot of objects.'''
-		ask_price = data.get('ask_price', {}).get('ask_price')
-		if ask_price:
-			# if there is an asking price/currency, it's a direct sale, not an auction;
-			# filter these out from subsequent modeling of auction lots.
-			return
-
 		self.helper.copy_source_information(data['_object'], data)
 
 		auction_data = data['auction_of_lot']
@@ -112,10 +112,26 @@ class AddAuctionOfLot(Configurable):
 			pprint.pprint({k: v for k, v in data.items() if v != ''})
 			raise
 		cno, lno, date = lot_object_key
-# 		if cno in non_auctions:
-# 			# the records in this sales catalog do not represent auction sales, so should
-# 			# be skipped.
-# 			return
+		sale_type = non_auctions.get(cno, 'Auction')
+
+		ask_price = data.get('ask_price', {}).get('ask_price')
+		if ask_price:
+			# if there is an asking price/currency, it's a direct sale, not an auction;
+			# filter these out from subsequent modeling of auction lots.
+			warnings.warn(f'Skipping {cno} {lno} because it asserts an asking price')
+			return
+
+		if cno in non_auctions:
+			# the records in this sales catalog do not represent auction sales, so the
+			# price data should not be asserted as a sale price, but instead as an
+			# asking price.
+			with suppress(KeyError):
+				prices = data['price']
+				del data['price']
+				if prices:
+					price = prices[0]
+					ma = vocab.add_classification(get_crom_object(price), vocab.AskingPrice)
+					data['ask_price'] = add_crom_data(price, ma)
 
 		shared_lot_number = self.helper.shared_lot_number_from_lno(lno)
 		print(f'AddAuctionOfLot >>> {shared_lot_number}')
@@ -160,7 +176,7 @@ class AddAuctionOfLot(Configurable):
 		transaction = data.get('transaction')
 		SOLD = CaseFoldingSet(transaction_types['sold'])
 		WITHDRAWN = transaction_types['withdrawn']
-		self.set_lot_objects(lot, cno, lno, data)
+		self.set_lot_objects(lot, cno, lno, data, sale_type)
 		if transaction not in WITHDRAWN:
 			self.set_lot_auction_houses(lot, cno, auction_houses)
 			self.set_lot_location(lot, cno, auction_locations)
@@ -280,7 +296,7 @@ class AddAcquisitionOrBidding(Configurable):
 		hmo = get_crom_object(data)
 		parent = data['parent_data']
 	# 	transaction = parent['transaction']
-		prices = parent['price']
+		prices = parent.get('price')
 		auction_data = parent['auction_of_lot']
 		cno, lno, date = object_key(auction_data)
 		data['buyer'] = buyers

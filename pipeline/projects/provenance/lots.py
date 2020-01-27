@@ -68,7 +68,7 @@ class AddAuctionOfLot(Configurable):
 	def set_lot_notes(self, lot, auction_data):
 		'''Associate notes with the auction lot.'''
 		cno, lno, _ = object_key(auction_data)
-		auction, _, _ = self.helper.auction_event_for_catalog_number(cno)
+		auction, _, _ = self.helper.sale_event_for_catalog_number(cno)
 		notes = auction_data.get('lot_notes')
 		if notes:
 			note_id = lot.id + '-LotNotes'
@@ -112,12 +112,13 @@ class AddAuctionOfLot(Configurable):
 			pprint.pprint({k: v for k, v in data.items() if v != ''})
 			raise
 		cno, lno, date = lot_object_key
-		if cno in non_auctions:
-			# the records in this sales catalog do not represent auction sales, so should
-			# be skipped.
-			return
+# 		if cno in non_auctions:
+# 			# the records in this sales catalog do not represent auction sales, so should
+# 			# be skipped.
+# 			return
 
 		shared_lot_number = self.helper.shared_lot_number_from_lno(lno)
+		print(f'AddAuctionOfLot >>> {shared_lot_number}')
 		uid, uri = self.helper.shared_lot_number_ids(cno, lno, date)
 		data['uid'] = uid
 		data['uri'] = uri

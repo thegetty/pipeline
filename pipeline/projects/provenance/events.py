@@ -20,13 +20,14 @@ class AddAuctionEvent(Configurable):
 	def __call__(self, data:dict):
 		'''Add modeling for an auction event based on properties of the supplied `data` dict.'''
 		cno = data['catalog_number']
-		auction, uid, uri = self.helper.auction_event_for_catalog_number(cno)
+		non_auction_type = data.get('non_auction_flag')
+		auction, uid, uri = self.helper.sale_event_for_catalog_number(cno, non_auction_type)
 		auction.identified_by = model.Name(ident='', content=auction._label)
 		data['uid'] = uid
 		data['uri'] = uri
 		add_crom_data(data=data, what=auction)
+		
 		catalog = get_crom_object(data['_catalog'])
-
 		data['_record'] = data['_catalog']
 		return data
 

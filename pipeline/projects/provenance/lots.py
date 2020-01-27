@@ -93,7 +93,6 @@ class AddAuctionOfLot(Configurable):
 			coll.dimension = get_crom_object(start_price)
 
 		ask_price = data.get('ask_price')
-		pprint.pprint(ask_price)
 		if ask_price:
 			coll.dimension = get_crom_object(ask_price)
 
@@ -129,12 +128,13 @@ class AddAuctionOfLot(Configurable):
 				prices = data['price']
 				del data['price']
 				if prices:
-					price = prices[0]
-					ma = vocab.add_classification(get_crom_object(price), vocab.AskingPrice)
-					data['ask_price'] = add_crom_data(price, ma)
+					price_data = prices[0]
+					price = get_crom_object(price_data)
+					if price:
+						ma = vocab.add_classification(price, vocab.AskingPrice)
+						data['ask_price'] = add_crom_data(price_data, ma)
 
 		shared_lot_number = self.helper.shared_lot_number_from_lno(lno)
-		print(f'AddAuctionOfLot >>> {shared_lot_number}')
 		uid, uri = self.helper.shared_lot_number_ids(cno, lno, date)
 		data['uid'] = uid
 		data['uri'] = uri

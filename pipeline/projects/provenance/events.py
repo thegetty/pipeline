@@ -20,8 +20,8 @@ class AddAuctionEvent(Configurable):
 	def __call__(self, data:dict):
 		'''Add modeling for an auction event based on properties of the supplied `data` dict.'''
 		cno = data['catalog_number']
-		non_auction_type = data.get('non_auction_flag')
-		auction, uid, uri = self.helper.sale_event_for_catalog_number(cno, non_auction_type)
+		sale_type = data.get('non_auction_flag', 'Auction')
+		auction, uid, uri = self.helper.sale_event_for_catalog_number(cno, sale_type)
 		auction.identified_by = model.Name(ident='', content=auction._label)
 		data['uid'] = uid
 		data['uri'] = uri

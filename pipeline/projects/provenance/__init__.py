@@ -306,13 +306,13 @@ class ProvenancePipeline(PipelineBase):
 		vocab.register_instance('fire', {'parent': model.Type, 'id': '300068986', 'label': 'Fire'})
 		vocab.register_instance('animal', {'parent': model.Type, 'id': '300249395', 'label': 'Animal'})
 		vocab.register_instance('history', {'parent': model.Type, 'id': '300033898', 'label': 'History'})
-		vocab.register_vocab_class('AuctionCatalog', {'parent': model.HumanMadeObject, 'id': '300026068', 'label': 'Auction Catalog', 'metatype': 'work type'})
 
 		super().__init__(project_name, helper=helper)
 
 		self.graph_0 = None
 		self.graph_1 = None
 		self.graph_2 = None
+		self.graph_3 = None
 		self.models = kwargs.get('models', settings.arches_models)
 		self.catalogs_header_file = catalogs['header_file']
 		self.catalogs_files_pattern = catalogs['files_pattern']
@@ -814,9 +814,9 @@ class ProvenancePipeline(PipelineBase):
 		'''
 		Construct bonobo.Graph object(s) for the entire pipeline.
 
-		If `single_graph` is `False`, generate two `Graph`s (`self.graph_1` and
-		`self.graph_2`), that will be run sequentially. the first for catalogs and events,
-		the second for sales auctions (which depends on output from the first).
+		If `single_graph` is `False`, generate three `Graph`s (`self.graph_1`,
+		`self.graph_2`, and `self.graph_3`), that will be run sequentially. The first for
+		events, then catalogs, and finally for sales auctions (which depends on output from the first).
 
 		If `single_graph` is `True`, then generate a single `Graph` that has the entire
 		pipeline in it (`self.graph_0`). This is used to be able to produce graphviz
@@ -825,30 +825,34 @@ class ProvenancePipeline(PipelineBase):
 		graph0 = bonobo.Graph()
 		graph1 = bonobo.Graph()
 		graph2 = bonobo.Graph()
+		graph3 = bonobo.Graph()
 
 		component1 = [graph0] if single_graph else [graph1]
 		component2 = [graph0] if single_graph else [graph2]
+		component3 = [graph0] if single_graph else [graph3]
 		for g in component1:
-			physical_catalog_records = g.add_chain(
-				MatchingFiles(path='/', pattern=self.catalogs_files_pattern, fs='fs.data.provenance'),
-				CurriedCSVReader(fs='fs.data.provenance', limit=self.limit),
-				AddFieldNames(field_names=self.catalogs_headers),
-			)
-
 			auction_events_records = g.add_chain(
 				MatchingFiles(path='/', pattern=self.auction_events_files_pattern, fs='fs.data.provenance'),
 				CurriedCSVReader(fs='fs.data.provenance', limit=self.limit),
 				AddFieldNames(field_names=self.auction_events_headers),
 			)
 
-			catalogs = self.add_physical_catalogs_chain(g, physical_catalog_records, serialize=True)
-			_ = self.add_physical_catalog_owners_chain(g, catalogs, serialize=True)
 			auction_events = self.add_auction_events_chain(g, auction_events_records, serialize=True)
 			_ = self.add_catalog_linguistic_objects_chain(g, auction_events, serialize=True)
 			_ = self.add_auction_houses_chain(g, auction_events, serialize=True)
 			_ = self.add_places_chain(g, auction_events, serialize=True)
 
 		for g in component2:
+			physical_catalog_records = g.add_chain(
+				MatchingFiles(path='/', pattern=self.catalogs_files_pattern, fs='fs.data.provenance'),
+				CurriedCSVReader(fs='fs.data.provenance', limit=self.limit),
+				AddFieldNames(field_names=self.catalogs_headers),
+			)
+
+			catalogs = self.add_physical_catalogs_chain(g, physical_catalog_records, serialize=True)
+			_ = self.add_physical_catalog_owners_chain(g, catalogs, serialize=True)
+
+		for g in component3:
 			contents_records = g.add_chain(
 				MatchingFiles(path='/', pattern=self.contents_files_pattern, fs='fs.data.provenance'),
 				CurriedCSVReader(fs='fs.data.provenance', limit=self.limit),
@@ -871,6 +875,7 @@ class ProvenancePipeline(PipelineBase):
 		else:
 			self.graph_1 = graph1
 			self.graph_2 = graph2
+			self.graph_3 = graph3
 
 	def get_graph(self, **kwargs):
 		'''Return a single bonobo.Graph object for the entire pipeline.'''
@@ -891,6 +896,12 @@ class ProvenancePipeline(PipelineBase):
 			self._construct_graph(**kwargs)
 		return self.graph_2
 
+	def get_graph_3(self, **kwargs):
+		'''Construct the bonobo pipeline to fully transform Provenance data from CSV to JSON-LD.'''
+		if not self.graph_3:
+			self._construct_graph(**kwargs)
+		return self.graph_3
+
 	def run(self, services=None, **options):
 		'''Run the Provenance bonobo pipeline.'''
 		print(f'- Limiting to {self.limit} records per file', file=sys.stderr)
@@ -904,6 +915,10 @@ class ProvenancePipeline(PipelineBase):
 		print('Running graph component 2...', file=sys.stderr)
 		graph2 = self.get_graph_2(**options, services=services)
 		self.run_graph(graph2, services=services)
+
+		print('Running graph component 3...', file=sys.stderr)
+		graph3 = self.get_graph_3(**options, services=services)
+		self.run_graph(graph3, services=services)
 
 		print('Serializing static instances...', file=sys.stderr)
 		for model, instances in self.static_instances.used_instances().items():

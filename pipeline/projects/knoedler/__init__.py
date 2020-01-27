@@ -96,7 +96,10 @@ class PersonIdentity:
 			return ('PERSON', 'AUTHNAME', auth_name)
 		else:
 			# not enough information to identify this person uniquely, so use the source location in the input file
-			pi_rec_no = data['pi_record_no']
+			pi_rec_no = data.get('pi_record_no')
+			if not pi_rec_no:
+				pprint.pprint(data)
+				raise Exception(f'No pi_rec_no in data: {pprint.pformat(parent)}')
 			if record_id:
 				return ('PERSON', 'PI_REC_NO', pi_rec_no, record_id)
 			else:
@@ -222,6 +225,8 @@ class KnoedlerUtilityHelper(UtilityHelper):
 		return False
 
 	def copy_source_information(self, dst: dict, src: dict):
+		if not dst or not isinstance(dst, dict):
+			return dst
 		for k in self.csv_source_columns:
 			with suppress(KeyError):
 				dst[k] = src[k]
@@ -316,7 +321,7 @@ class AddPersonURI(Configurable):
 			]
 		else:
 			# not enough information to identify this person uniquely, so use the source location in the input file
-			data['uri'] = self.helper.make_uri('PERSON', 'PI_REC_NO', data['parent_data']['pi_record_no'])
+			data['uri'] = self.helper.make_uri('PERSON', 'PI_REC_NO', data['pi_record_no'])
 
 		return data
 
@@ -468,6 +473,7 @@ class AddArtists(Configurable):
 		apuri = AddPersonURI(helper=self.helper)
 		mlap = MakeLinkedArtPerson()
 		for a in artists:
+			self.helper.copy_source_information(a, data)
 			apuri(a)
 			mlap(a)
 
@@ -507,11 +513,12 @@ class PopulateKnoedlerObject(Configurable, pipeline.linkedart.PopulateObject):
 		apuri = AddPersonURI(helper=self.helper)
 		mlap = MakeLinkedArtPerson()
 		for a in data.get('_artists', []):
+			self.helper.copy_source_information(a, data)
 			apuri(a)
 			mlap(a)
 
 		if title_ref:
-			warnings.warn(f'TODO: parse out citation information from title reference: {title_ref}')
+# 			warnings.warn(f'TODO: parse out citation information from title reference: {title_ref}')
 			title = [label, {'referred_to_by': [vocab.Note(ident='', content=title_ref)]}]
 		else:
 			title = label
@@ -540,7 +547,7 @@ class PopulateKnoedlerObject(Configurable, pipeline.linkedart.PopulateObject):
 			data['_object']['object_type'] = model.HumanMadeObject
 
 		add_group_uri = AddGroupURI(helper=self.helper)
-		consigner = data['consigner']
+		consigner = self.helper.copy_source_information(data['consigner'], data)
 		if consigner:
 			add_group_uri(consigner)
 			make_la_org(consigner)
@@ -699,12 +706,18 @@ class TransactionHandler:
 		purch = data.get('purchase')
 		shared_price = data.get('purchase_knoedler_share')
 		shared_people = data.get('purchase_buyer')
-		return self._procurement(data, 'entry_date', data['purchase_seller'], purch, shared_price, shared_people, incoming=True)
+		sellers = data['purchase_seller']
+		for p in sellers:
+			self.helper.copy_source_information(p, data)
+		return self._procurement(data, 'entry_date', sellers, purch, shared_price, shared_people, incoming=True)
 
 	def add_outgoing_tx(self, data):
 		purch = data.get('sale')
 		shared_price = data.get('sale_knoedler_share')
-		return self._procurement(data, 'sale_date', data['sale_buyer'], purch, shared_price, incoming=False)
+		buyers = data['sale_buyer']
+		for p in buyers:
+			self.helper.copy_source_information(p, data)
+		return self._procurement(data, 'sale_date', buyers, purch, shared_price, incoming=False)
 
 	@staticmethod
 	def set_date(event, data, date_key, date_key_prefix=''):
@@ -814,7 +827,7 @@ class ModelReturn(ModelSale):
 		if not buyers:
 			buyers = sellers.copy()
 			data['sale_buyer'] = buyers
-		pprint.pprint(data)
+# 		pprint.pprint(data)
 		yield from super().__call__(data, make_la_person)
 
 class ModelInventorying(Configurable, TransactionHandler):
@@ -1246,6 +1259,7 @@ class KnoedlerPipeline(PipelineBase):
 		self.add_transaction_chains(g, sales, services, serialize=True)
 
 		self.graph = g
+		return sales
 
 	def get_graph(self, **kwargs):
 		'''Return a single bonobo.Graph object for the entire pipeline.'''

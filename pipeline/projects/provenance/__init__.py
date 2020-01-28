@@ -193,7 +193,7 @@ class ProvenanceUtilityHelper(UtilityHelper):
 			raise NotImplementedError(f'Unexpected sale type: {sale_type!r}')
 		elif sale_type == 'Lottery':
 			raise NotImplementedError(f'Unexpected sale type: {sale_type!r}')
-		elif sale_type == 'Auction':
+		elif sale_type in ('Auction'):
 			return vocab.AuctionEvent
 		else:
 			raise NotImplementedError(f'Unexpected sale type: {sale_type!r}')
@@ -253,7 +253,9 @@ class ProvenanceUtilityHelper(UtilityHelper):
 		Return a `vocab.AuctionEvent` object and its associated 'uid' key and URI, based on
 		the supplied `catalog_number`.
 		'''
-		
+		if sale_type == '':
+			sale_type = 'Auction'
+
 		event_type = self.event_type_for_sale_type(sale_type)
 		sale_type_key = sale_type.replace(' ', '_').upper()
 		uid = f'{sale_type_key}-EVENT-CATALOGNUMBER-{catalog_number}'

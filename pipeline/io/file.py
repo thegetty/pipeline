@@ -104,8 +104,7 @@ class MergingFileWriter(Configurable):
 					merger.merge(m, model_object)
 					return m
 			except model.DataError as e:
-				print(f'Exception caught while merging data from {fn}:')
-				print(str(e))
+				print(f'Exception caught while merging data from {fn} ({str(e)}):')
 				print(factory.toString(model_object, False))
 				print(content)
 				raise

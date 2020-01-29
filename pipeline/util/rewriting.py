@@ -81,8 +81,7 @@ def _rewrite_output_files(files, r, update_filename=False, **kwargs):
 # 						print(f'- {n}')
 						merger.merge(m, n)
 					except model.DataError as e:
-						print(f'Exception caught while merging data from {newfile}:')
-						print(str(e))
+						print(f'Exception caught while merging data from {newfile} ({str(e)}):')
 						print(d)
 						print(content)
 						raise

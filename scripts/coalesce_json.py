@@ -57,8 +57,8 @@ for id in sorted(counter):
 							n = read.read(canon_content)
 							try:
 								merger.merge(m, n)
-							except model.DataError:
-								print(f'Exception caught while merging data from {newfile}:')
+							except model.DataError as e:
+								print(f'Exception caught while merging data from {newfile} ({str(e)}):')
 								print(d)
 								print(content)
 								raise

@@ -175,7 +175,7 @@ class ProvenanceUtilityHelper(UtilityHelper):
 		# TODO: does this handle all the cases of data packed into the lot_number string that need to be stripped?
 		self.shared_lot_number_re = re.compile(r'(\[[a-z]\])')
 		self.ignore_house_authnames = CaseFoldingSet(('Anonymous',))
-		self.csv_source_columns = ['pi_record_no', 'catalog_number']
+		self.csv_source_columns = ['pi_record_no', 'star_record_no', 'catalog_number']
 		self.problematic_record_uri = 'tag:getty.edu,2019:digital:pipeline:provenance:ProblematicRecord'
 		self.person_identity = PersonIdentity(make_uri=self.make_proj_uri)
 		self.uid_tag_prefix = UID_TAG_PREFIX
@@ -278,13 +278,14 @@ class ProvenanceUtilityHelper(UtilityHelper):
 			return lno.replace(m.group(1), '')
 		return lno
 
-	def transaction_uri_for_lot(self, data, prices):
+	def transaction_uri_for_lot(self, data, metadata):
 		'''
 		Return a URI representing the procurement which the object (identified by the
 		supplied data) is a part of. This may identify just the lot being sold or, in the
 		case of multiple lots being bought for a single price, a single procurement that
 		encompasses multiple acquisitions that span different lots.
 		'''
+		prices = metadata.get('price', [])
 		cno, lno, date = object_key(data)
 		shared_lot_number = self.shared_lot_number_from_lno(lno)
 		for p in prices:
@@ -293,11 +294,12 @@ class ProvenanceUtilityHelper(UtilityHelper):
 				return self.make_proj_uri('AUCTION-TX-MULTI', cno, date, n[9:])
 		return self.make_proj_uri('AUCTION-TX', cno, date, shared_lot_number)
 
-	def lots_in_transaction(self, data, prices):
+	def lots_in_transaction(self, data, metadata):
 		'''
 		Return a string that represents the lot numbers that are a part of the procurement
 		related to the supplied data.
 		'''
+		prices = metadata.get('price', [])
 		_, lno, _ = object_key(data)
 		shared_lot_number = self.shared_lot_number_from_lno(lno)
 		for p in prices:
@@ -317,16 +319,64 @@ class ProvenanceUtilityHelper(UtilityHelper):
 		return uid, uri
 
 	@staticmethod
-	def transaction_contains_multiple_lots(data, prices):
+	def transaction_contains_multiple_lots(data, metadata):
 		'''
 		Return `True` if the procurement related to the supplied data represents a
 		transaction of multiple lots with a single payment, `False` otherwise.
 		'''
+		prices = metadata.get('price', [])
 		for p in prices:
 			n = p.get('price_note')
 			if n and n.startswith('for lots '):
 				return True
 		return False
+
+	def add_auction_house_data(self, a, sequence=1, event_record=None):
+		'''Add modeling data for an auction house organization.'''
+		catalog = a.get('_catalog')
+
+		ulan = None
+		with suppress(ValueError, TypeError):
+			ulan = int(a.get('ulan'))
+		auth_name = a.get('auth')
+		a['identifiers'] = []
+		if ulan:
+			key = f'AUCTION-HOUSE-ULAN-{ulan}'
+			a['uid'] = key
+			a['uri'] = self.make_proj_uri('AUCTION-HOUSE', 'ULAN', ulan)
+			a['ulan'] = ulan
+			house = vocab.AuctionHouseOrg(ident=a['uri'])
+		elif auth_name and auth_name not in self.ignore_house_authnames:
+			a['uri'] = self.make_proj_uri('AUCTION-HOUSE', 'AUTHNAME', auth_name)
+			pname = vocab.PrimaryName(ident='', content=auth_name)
+			if event_record:
+				pname.referred_to_by = event_record
+			a['identifiers'].append(pname)
+			house = vocab.AuctionHouseOrg(ident=a['uri'], label=auth_name)
+		else:
+			# not enough information to identify this house uniquely, so use the source location in the input file
+			if 'pi_record_no' in a:
+				a['uri'] = self.make_proj_uri('AUCTION-HOUSE', 'PI_REC_NO', a['pi_record_no'], sequence)
+			else:
+				a['uri'] = self.make_proj_uri('AUCTION-HOUSE', 'STAR_REC_NO', a['star_record_no'], sequence)
+			house = vocab.AuctionHouseOrg(ident=a['uri'])
+
+		name = a.get('name')
+		if name:
+			n = model.Name(ident='', content=name)
+			if event_record:
+				n.referred_to_by = event_record
+			a['identifiers'].append(n)
+			a['label'] = name
+			if not hasattr(house, 'label'):
+				house._label = a['label']
+		else:
+			a['label'] = '(Anonymous)'
+
+
+		add_crom_data(data=a, what=house)
+		return a
+
 
 def add_crom_price(data, parent, services, add_citations=False):
 	'''
@@ -360,6 +410,15 @@ class TrackLotSizes(Configurable):
 		lot = self.helper.shared_lot_number_from_lno(lno)
 		key = (cno, lot, date)
 		lot_counter[key] += 1
+
+@use('non_auctions')
+def remove_non_auction_sales(data:dict, non_auctions):
+	'''
+	Do not allow the Auction of Lot model objects to be serialized for non-auction sales.
+	'''
+	cno = data['auction_of_lot']['catalog_number']
+	if cno not in non_auctions:
+		yield data
 
 #mark - Provenance Pipeline class
 
@@ -465,7 +524,12 @@ class ProvenancePipeline(PipelineBase):
 					'seller': {'prefixes': ('sell_auth_name', 'sell_auth_q')},
 					'expert': {'prefixes': ('expert', 'expert_auth', 'expert_ulan')},
 					'commissaire': {'prefixes': ('comm_pr', 'comm_pr_auth', 'comm_pr_ulan')},
-					'auction_house': {'prefixes': ('auc_house_name', 'auc_house_auth', 'auc_house_ulan')},
+					'auction_house': {
+						'postprocess': [
+							lambda x, _: strip_key_prefix('auc_house_', x),
+						],
+						'prefixes': ('auc_house_name', 'auc_house_auth', 'auc_house_ulan')
+					},
 					'portal': {'prefixes': ('portal_url',)},
 				}
 			),
@@ -580,7 +644,13 @@ class ProvenancePipeline(PipelineBase):
 				mapping={
 					'expert': {'prefixes': ('expert_auth', 'expert_ulan')},
 					'commissaire': {'prefixes': ('commissaire_pr', 'comm_ulan')},
-					'auction_house': {'prefixes': ('auction_house', 'house_ulan')},
+					'auction_house': {
+						'postprocess': [
+							lambda x, _: replace_key_pattern(r'(auction_house)', 'house_name', x),
+							lambda x, _: strip_key_prefix('house_', x),
+						],
+						'prefixes': ('auction_house', 'house_ulan')
+					},
 					'_artists': {
 						'postprocess': [
 							filter_empty_person,
@@ -762,6 +832,8 @@ class ProvenancePipeline(PipelineBase):
 		)
 		
 		modeled_sales = graph.add_chain(
+			remove_non_auction_sales,
+			ExtractKeyedValue(key='_auction_of_lot'),
 			OnlyCromModeledRecords(),
 			_input=sales.output
 		)
@@ -901,7 +973,7 @@ class ProvenancePipeline(PipelineBase):
 			auction_events_records = g.add_chain(
 				MatchingFiles(path='/', pattern=self.auction_events_files_pattern, fs='fs.data.provenance'),
 				CurriedCSVReader(fs='fs.data.provenance', limit=self.limit),
-				AddFieldNames(field_names=self.auction_events_headers),
+				AddFieldNames(field_names=self.auction_events_headers)
 			)
 
 			auction_events = self.add_auction_events_chain(g, auction_events_records, serialize=True)

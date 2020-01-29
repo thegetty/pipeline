@@ -21,15 +21,18 @@ if __name__ == '__main__':
 
 	catalogs = {
 		'header_file': 'sales_catalogs_info_0.csv',
-		'files_pattern': 'sales_catalogs_info.csv',
+# 		'files_pattern': 'sales_catalogs_info.csv',
+		'files_pattern': 'sales_catalogs_info_non_auctions.csv',
 	}
 	contents = {
 		'header_file': 'sales_contents_0.csv',
-		'files_pattern': 'sales_contents_[!0]*.csv',
+# 		'files_pattern': 'sales_contents_[!0]*.csv',
+		'files_pattern': 'sales_contents_non_auctions.csv',
 	}
 	auction_events = {
 		'header_file': 'sales_descriptions_0.csv',
-		'files_pattern': 'sales_descriptions.csv',
+# 		'files_pattern': 'sales_descriptions.csv',
+		'files_pattern': 'sales_descriptions_non_auctions.csv',
 	}
 
 #	factory.production_mode()

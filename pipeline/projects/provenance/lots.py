@@ -689,19 +689,7 @@ class AddAcquisitionOrBidding(Configurable):
 		if '_procurements' not in data:
 			data['_procurements'] = []
 
-# XXXXX
 		sale_type = non_auctions.get(cno, 'Auction')
-		event = get_crom_object(parent['_auction_of_lot'])
-# 		if sale_type == 'Private Contract Sale':
-# 			print(f'Private Contract Sale event: {event}')
-# 			if transaction in SOLD:
-# 				prev_procurements = self.add_private_sellers(data, sellers)
-# 			else:
-# 				prev_procurements = self.add_non_sale_sellers(data, sellers)
-# 			for tx_data in prev_procurements:
-# 				tx = get_crom_object(tx_data)
-# 				lot.starts_after_the_end_of = tx
-
 		if transaction in SOLD:
 			data['_owner_locations'] = []
 			

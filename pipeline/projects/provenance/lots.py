@@ -190,7 +190,7 @@ class AddAuctionOfLot(Configurable):
 				lots = self.helper.lots_in_transaction(auction_data, data)
 				multi = self.helper.transaction_contains_multiple_lots(auction_data, data)
 				tx = vocab.ProvenanceEntry(ident=tx_uri)
-				tx._label = f'Provenance Entry of Lot {cno} {lots} ({date})'
+				tx._label = f'Provenance Entry for Lot {cno} {lots} ({date})'
 				lot.caused = tx
 				tx_data = {'uri': tx_uri}
 
@@ -725,6 +725,7 @@ class AddAcquisitionOrBidding(Configurable):
 						self.add_transfer_of_custody(data, current_tx, [h], sellers, non_auctions, buy_sell_modifiers, sequence=1)
 						self.add_transfer_of_custody(data, current_tx, buyers, [h], non_auctions, buy_sell_modifiers, sequence=2)
 						data['_organizations'].append(h)
+					prev_procurements = self.add_private_sellers(data, sellers)
 				yield data
 		elif transaction in UNSOLD:
 			yield from self.add_bidding(data, buyers, sellers, buy_sell_modifiers)

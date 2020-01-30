@@ -211,7 +211,7 @@ class AddAcquisitionOrBidding(Configurable):
 	transaction_types = Service('transaction_types')
 
 	@staticmethod
-	def related_procurement(hmo, current_tx=None, current_ts=None, buyer=None, seller=None, previous=False):
+	def related_procurement(hmo, current_tx=None, current_ts=None, buyer=None, seller=None, previous=False, ident=None):
 		'''
 		Returns a new `vocab.ProvenanceEntry` object (and related acquisition) that is temporally
 		related to the supplied procurement and associated data. The new procurement is for
@@ -221,7 +221,7 @@ class AddAcquisitionOrBidding(Configurable):
 		and if the timespan `current_ts` is given, has temporal data to that effect. If
 		`previous` is `False`, this relationship is reversed.
 		'''
-		tx = vocab.ProvenanceEntry() # TODO: can this be created with a consistent URI?
+		tx = vocab.ProvenanceEntry(ident=ident)
 		if current_tx:
 			if previous:
 				tx.ends_before_the_start_of = current_tx
@@ -291,7 +291,8 @@ class AddAcquisitionOrBidding(Configurable):
 		return label
 
 	def final_owner_procurement(self, final_owner, current_tx, hmo, current_ts):
-		tx = self.related_procurement(hmo, current_tx, current_ts, buyer=final_owner)
+		tx_uri = hmo.id + '-FinalOwnerProvenanceEntry'
+		tx = self.related_procurement(hmo, current_tx, current_ts, buyer=final_owner, ident=tx_uri)
 		try:
 			object_label = hmo._label
 			tx._label = f'ProvenanceEntry leading to the currently known location of “{object_label}”'
@@ -517,7 +518,8 @@ class AddAcquisitionOrBidding(Configurable):
 			data['_other_owners'] = []
 		data['_other_owners'].append(owner_record)
 
-		tx = self.related_procurement(hmo, current_tx, ts, buyer=owner, previous=rev)
+		tx_uri = hmo.id + f'-{record_id}-ProvenanceEntry'
+		tx = self.related_procurement(hmo, current_tx, ts, buyer=owner, previous=rev, ident=tx_uri)
 
 		own_info_source = owner_record.get('own_so')
 		if own_info_source:
@@ -536,9 +538,10 @@ class AddAcquisitionOrBidding(Configurable):
 		ts = getattr(lot, 'timespan', None)
 
 		prev_procurements = []
-		for seller_data in sellers:
+		for i, seller_data in enumerate(sellers):
 			seller = get_crom_object(seller_data)
-			tx = self.related_procurement(hmo, current_ts=ts, buyer=seller, previous=True)
+			tx_uri = hmo.id + f'-seller-{i}-ProvenanceEntry'
+			tx = self.related_procurement(hmo, current_ts=ts, buyer=seller, previous=True, ident=tx_uri)
 			tx._label = f'ProvenanceEntry leading to the ownership of {hmo._label}'
 			if source:
 				tx.referred_to_by = source

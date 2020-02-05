@@ -409,6 +409,16 @@ class AddAcquisitionOrBidding(Configurable):
 			elif mod in FOR:
 				acq.transferred_title_from = seller
 				paym.paid_to = seller
+			elif mod == 'or anonymous':
+				acq_assignment = vocab.PossibleAssignment(ident='', label=f'Uncertain seller as previous title holder in acquisition')
+				acq_assignment.assigned_property = 'transferred_title_from'
+				acq_assignment.assigned = seller
+				acq.attributed_by = acq_assignment
+
+				paym_assignment = vocab.PossibleAssignment(ident='', label=f'Uncertain seller as recipient of payment')
+				paym_assignment.assigned_property = 'paid_to'
+				paym_assignment.assigned = seller
+				paym.attributed_by = paym_assignment
 			else:
 				# covers non-modified
 				acq.carried_out_by = seller

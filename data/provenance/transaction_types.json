@@ -9,7 +9,6 @@
 	],
 	"unsold": [
 		"Bought In [?]",
-		"Bought In or Withdrawn",
 		"Bought In",
 		"Non Vendu [?]",
 		"Non Vendu",
@@ -20,15 +19,12 @@
 		"Unverkauft",
 		"Withdrawn [?]",
 		"Withdrawn",
-		"Zurückgezogen oder Unverkauft",
 		"Zurückgezogen"
 	],
 	"unknown": [
 		"Inconnue",
-		"Sold or Bought In",
 		"Unbekannt",
-		"Unknown",
-		"Vendu ou Retiré"
+		"Unknown"
 	],
 	"withdrawn": [
 		"Withdrawn [?]",

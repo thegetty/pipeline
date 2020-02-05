@@ -193,7 +193,7 @@ def label_from_file(p):
 app = Flask(__name__)
 output_path = pathlib.Path(settings.output_file_path)
 
-@app.route('/output/<string:model>/<path:file>')
+@app.route(f'/{output_path.name}/<string:model>/<path:file>')
 def render_file(model, file):
 	p = output_path / model / file
 	with open(p, 'r') as fh:
@@ -202,7 +202,7 @@ def render_file(model, file):
 		b = Builder(output_path)
 		return b.write_html(j, title=title)
 
-@app.route('/output/<string:model>')
+@app.route(f'/{output_path.name}/<string:model>')
 def list_files(model):
 	p = output_path / model
 	files = p.rglob('*.json')

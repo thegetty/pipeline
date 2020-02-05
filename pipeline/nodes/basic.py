@@ -200,6 +200,14 @@ class OnlyCromModeledRecords:
 		if o:
 			yield data
 
+class OnlyRecordsOfType(Configurable):
+	type = Option()
+
+	def __call__(self, data):
+		o = get_crom_object(data)
+		if isinstance(o, self.type):
+			yield data
+
 class Trace(Configurable):
 	name = Option()
 	diff = Option(default=False)

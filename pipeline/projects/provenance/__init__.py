@@ -449,26 +449,9 @@ class ProvenancePipeline(PipelineBase):
 
 	def add_buyers_sellers_chain(self, graph, acquisitions, serialize=True):
 		'''Add modeling of the buyers, bidders, and sellers involved in an auction.'''
-		buyers = graph.add_chain(
-			ExtractKeyedValues(key='buyer'),
-			_input=acquisitions.output
-		)
-
-		owners = graph.add_chain(
-			ExtractKeyedValues(key='_other_owners'),
-			_input=acquisitions.output
-		)
-
-		sellers = graph.add_chain(
-			ExtractKeyedValues(key='seller'),
-			_input=acquisitions.output
-		)
-
-		if serialize:
-			# write SALES data
-			self.add_serialization_chain(graph, owners.output, model=self.models['Person'])
-			self.add_serialization_chain(graph, buyers.output, model=self.models['Person'])
-			self.add_serialization_chain(graph, sellers.output, model=self.models['Person'])
+		buyers = self.add_person_chain(graph, acquisitions, 'buyer', serialize=serialize)
+		sellers = self.add_person_chain(graph, acquisitions, 'seller', serialize=serialize)
+		owners = self.add_person_chain(graph, acquisitions, '_other_owners', serialize=serialize)
 
 	def add_acquisitions_chain(self, graph, sales, serialize=True):
 		'''Add modeling of the acquisitions and bidding on lots being auctioned.'''
@@ -759,6 +742,17 @@ class ProvenancePipeline(PipelineBase):
 			self.add_serialization_chain(graph, places.output, model=self.models['Place'])
 		return places
 
+	def add_person_chain(self, graph, input, key, serialize=True):
+		'''Add extraction and serialization of people.'''
+		people = graph.add_chain(
+			ExtractKeyedValues(key=key),
+			_input=input.output
+		)
+		if serialize:
+			# write OBJECTS data
+			self.add_serialization_chain(graph, people.output, model=self.models['Person'])
+		return people
+
 	def add_auction_houses_chain(self, graph, auction_events, serialize=True):
 		'''Add modeling of the auction houses related to an auction event.'''
 		houses = graph.add_chain(
@@ -794,17 +788,6 @@ class ProvenancePipeline(PipelineBase):
 			# write RECORD data
 			self.add_serialization_chain(graph, texts.output, model=self.models['LinguisticObject'])
 		return texts
-
-	def add_people_chain(self, graph, objects, serialize=True):
-		'''Add transformation of artists records to the bonobo pipeline.'''
-		people = graph.add_chain(
-			ExtractKeyedValues(key='_artists'),
-			_input=objects.output
-		)
-		if serialize:
-			# write PEOPLE data
-			self.add_serialization_chain(graph, people.output, model=self.models['Person'])
-		return people
 
 	def _construct_graph(self, single_graph=False, services=None):
 		'''
@@ -858,7 +841,7 @@ class ProvenancePipeline(PipelineBase):
 			acquisitions = self.add_acquisitions_chain(g, objects, serialize=True)
 			self.add_buyers_sellers_chain(g, acquisitions, serialize=True)
 			self.add_procurement_chain(g, acquisitions, serialize=True)
-			_ = self.add_people_chain(g, objects, serialize=True)
+			_ = self.add_person_chain(g, objects, '_artists', serialize=True)
 			_ = self.add_record_text_chain(g, objects, serialize=True)
 			_ = self.add_visual_item_chain(g, objects, serialize=True)
 

@@ -228,15 +228,15 @@ class PopulateObject(Configurable):
 			for sale_record in sales_data:
 				pcno = sale_record.get('cat')
 				plno = sale_record.get('lot')
-				plot = self.helper.shared_lot_number_from_lno(plno)
+# 				plot = self.helper.shared_lot_number_from_lno(plno)
 				pdate = implode_date(sale_record, '')
-				if pcno and plot and pdate:
+				if pcno and plno and pdate:
 					if pcno == 'NA':
 						desc = f'Also sold in an unidentified sale: {plot} ({pdate})'
 						note = vocab.Note(ident='', content=desc)
 						hmo.referred_to_by = note
 					else:
-						that_key = (pcno, plot, pdate)
+						that_key = (pcno, plno, pdate)
 						if rev:
 							# `that_key` is for a previous sale for this object
 							post_sale_map[this_key] = that_key
@@ -263,8 +263,8 @@ class PopulateObject(Configurable):
 		cno = auction_data['catalog_number']
 		lno = auction_data['lot_number']
 		date = implode_date(auction_data, 'lot_sale_')
-		lot = self.helper.shared_lot_number_from_lno(lno)
-		now_key = (cno, lot, date) # the current key for this object; may be associated later with prev and post object keys
+		lot = self.helper.shared_lot_number_from_lno(lno) # the current key for this object; may be associated later with prev and post object keys
+		now_key = (cno, lno, date)
 
 		data['_locations'] = []
 		data['_events'] = []

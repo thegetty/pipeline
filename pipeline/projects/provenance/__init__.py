@@ -281,19 +281,6 @@ def add_crom_price(data, parent, services, add_citations=False):
 	return data
 
 
-#mark - Single Object Lot Tracking
-
-class TrackLotSizes(Configurable):
-	helper = Option(required=True)
-	lot_counter = Service('lot_counter')
-
-	def __call__(self, data, lot_counter):
-		auction_data = data['auction_of_lot']
-		cno, lno, date = object_key(auction_data)
-		lot = self.helper.shared_lot_number_from_lno(lno)
-		key = (cno, lot, date)
-		lot_counter[key] += 1
-
 #mark - Provenance Pipeline class
 
 class ProvenancePipeline(PipelineBase):
@@ -343,7 +330,6 @@ class ProvenancePipeline(PipelineBase):
 			# to avoid constructing new MakeLinkedArtPerson objects millions of times, this
 			# is passed around as a service to the functions and classes that require it.
 			'make_la_person': pipeline.linkedart.MakeLinkedArtPerson(),
-			'lot_counter': Counter(),
 			'unique_catalogs': {},
 			'post_sale_map': {},
 			'auction_houses': {},
@@ -700,13 +686,6 @@ class ProvenancePipeline(PipelineBase):
 			self.add_serialization_chain(graph, modeled_sales.output, model=self.models['AuctionOfLot'])
 		return sales
 
-	def add_single_object_lot_tracking_chain(self, graph, sales):
-		small_lots = graph.add_chain(
-			TrackLotSizes(helper=self.helper),
-			_input=sales.output
-		)
-		return small_lots
-
 	def add_object_chain(self, graph, sales, serialize=True):
 		'''Add modeling of the objects described by sales records.'''
 		objects = graph.add_chain(
@@ -851,7 +830,6 @@ class ProvenancePipeline(PipelineBase):
 				AddFieldNames(field_names=self.contents_headers),
 			)
 			sales = self.add_sales_chain(g, contents_records, services, serialize=True)
-			_ = self.add_single_object_lot_tracking_chain(g, sales)
 			_ = self.add_lot_set_chain(g, sales, serialize=True)
 			objects = self.add_object_chain(g, sales, serialize=True)
 			_ = self.add_places_chain(g, objects, serialize=True)
@@ -910,23 +888,15 @@ class ProvenancePipeline(PipelineBase):
 			self.add_serialization_chain(g, source.output, model=self.models[model], use_memory_writer=False)
 			self.run_graph(g, services={})
 
-	def generate_prev_post_sales_data(self, counter, post_map):
-		singles = {k for k in counter if counter[k] == 1}
-		multiples = {k for k in counter if counter[k] > 1}
-
+	def generate_prev_post_sales_data(self, post_map):
 		total = 0
 		mapped = 0
 
 		g = self.load_sales_tree()
 		for src, dst in post_map.items():
 			total += 1
-			if dst in singles:
-				mapped += 1
-				g.add_edge(src, dst)
-# 			elif dst in multiples:
-# 				print(f'  {src} maps to a MULTI-OBJECT lot')
-# 			else:
-# 				print(f'  {src} maps to an UNKNOWN lot')
+			mapped += 1
+			g.add_edge(src, dst)
 # 		print(f'mapped {mapped}/{total} objects to a previous sale', file=sys.stderr)
 
 		large_components = set(g.largest_component_canonical_keys(10))
@@ -1015,6 +985,7 @@ class ProvenanceFilePipeline(ProvenancePipeline):
 	@staticmethod
 	def persist_prev_post_sales_data(post_sale_rewrite_map):
 		rewrite_map_filename = os.path.join(settings.pipeline_tmp_path, 'post_sale_rewrite_map.json')
+		print(rewrite_map_filename)
 		with open(rewrite_map_filename, 'w') as f:
 			json.dump(post_sale_rewrite_map, f)
 			print(f'Saved post-sales rewrite map to {rewrite_map_filename}')
@@ -1034,8 +1005,7 @@ class ProvenanceFilePipeline(ProvenancePipeline):
 
 		print('====================================================')
 		print('Running post-processing of post-sale data...')
-		counter = services['lot_counter']
 		post_map = services['post_sale_map']
-		self.generate_prev_post_sales_data(counter, post_map)
+		self.generate_prev_post_sales_data(post_map)
 		print(f'>>> {len(post_map)} post sales records')
 		print('Total runtime: ', timeit.default_timer() - start)

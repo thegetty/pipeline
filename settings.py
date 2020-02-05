@@ -5,7 +5,7 @@ arches_models = {
 	'Group': 'group',
 	'Journal': 'journal',
 	'Place': 'place',
-	'Procurement': 'provenance_activity',
+	'ProvenanceEntry': 'provenance_activity',
 	'Series': 'series',
 	'Activity': 'auction',
 	'AuctionOfLot': 'auction_of_lot',

@@ -431,7 +431,7 @@ class ProvenancePipeline(PipelineBase):
 		)
 		if serialize:
 			# write SALES data
-			self.add_serialization_chain(graph, p.output, model=self.models['Procurement'], use_memory_writer=False)
+			self.add_serialization_chain(graph, p.output, model=self.models['ProvenanceEntry'], use_memory_writer=False)
 
 	def add_buyers_sellers_chain(self, graph, acquisitions, serialize=True):
 		'''Add modeling of the buyers, bidders, and sellers involved in an auction.'''
@@ -478,17 +478,13 @@ class ProvenancePipeline(PipelineBase):
 			ExtractKeyedValue(key='_bidding'),
 			_input=bid_acqs.output
 		)
-		places = graph.add_chain(
-			ExtractKeyedValues(key='_owner_locations'),
-			_input=bid_acqs.output
-		)
+		_ = self.add_places_chain(graph, bid_acqs, key='_owner_locations', serialize=True)
 
 		if serialize:
 			# write SALES data
 			self.add_serialization_chain(graph, refs.output, model=self.models['LinguisticObject'])
 			self.add_serialization_chain(graph, bids.output, model=self.models['Bidding'])
 			self.add_serialization_chain(graph, orgs.output, model=self.models['Group'])
-			self.add_serialization_chain(graph, places.output, model=self.models['Place'])
 		return bid_acqs
 
 	def add_sales_chain(self, graph, records, services, serialize=True):
@@ -730,10 +726,10 @@ class ProvenancePipeline(PipelineBase):
 			self.add_serialization_chain(graph, sets.output, model=self.models['Set'])
 		return sets
 
-	def add_places_chain(self, graph, auction_events, serialize=True):
+	def add_places_chain(self, graph, auction_events, key='_locations', serialize=True):
 		'''Add extraction and serialization of locations.'''
 		places = graph.add_chain(
-			ExtractKeyedValues(key='_locations'),
+			ExtractKeyedValues(key=key),
 			RecursiveExtractKeyedValue(key='part_of'),
 			_input=auction_events.output
 		)

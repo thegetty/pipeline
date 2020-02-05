@@ -25,7 +25,7 @@ MODELS = {
 	'LinguisticObject': 'model-lo',
 	'Person': 'model-person',
 	'Place': 'model-place',
-	'Procurement': 'model-activity',
+	'ProvenanceEntry': 'model-activity',
 	'Production': 'model-production',
 	'Set': 'model-set',
 	'VisualItem': 'model-visual-item'

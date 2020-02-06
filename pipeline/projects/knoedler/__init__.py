@@ -247,7 +247,7 @@ class KnoedlerUtilityHelper(UtilityHelper):
 		if kn in different_objects:
 			uri_key = uri_key[:-1] + ['flag-separated', kn, pi_rec_no]
 		elif kn in same_objects:
-			uri_key[-1] = same_objects[uri_key[-1]][0]
+			uri_key[-1] = same_objects[uri_key[-1]]
 		uri = self.make_uri(*uri_key)
 		return uri
 
@@ -915,14 +915,50 @@ class KnoedlerPipeline(PipelineBase):
 		})
 		return instances
 
+	def _construct_same_object_map(self, same_objects):
+		'''
+		Same objects data comes in as a list of identity equivalences (each being a list of ID strings).
+		ID strings may appear in multiple equivalences. For example, these 3 equivalences
+		represent a single object with 4 ID strings:
+			
+			[['1','2','3'], ['1','3'], ['2','4']]
+		
+		This function computes a dict mapping every ID string to a canonical
+		representative ID for that object (being the first ID value, lexicographically):
+		
+			{
+				'1': '1',
+				'2': '1',
+				'3': '1',
+				'4': '1',
+			}
+		'''
+		same_objects_map = {}
+		same_objects_map = {k: sorted(l) for l in same_objects for k in l}
+		for k in same_objects_map:
+			v = same_objects_map[k]
+			orig = set(v)
+			vv = set(v)
+			for kk in v:
+				vv |= set(same_objects_map[kk])
+			if vv != orig:
+				keys = v + [k]
+				for kk in keys:
+					same_objects_map[kk] = sorted(vv)
+
+		same_object_id_map = {k: v[0] for k, v in same_objects_map.items()}
+		leaders = set()
+		for k in same_objects_map:
+			leaders.add(same_objects_map[k][0])
+
 	# Set up environment
 	def get_services(self):
 		'''Return a `dict` of named services available to the bonobo pipeline.'''
 		services = super().get_services()
 		
 		same_objects = services['objects_same']['objects']
-		same_objects_map = {k: sorted(l) for l in same_objects for k in l}
-		services['same_objects_map'] = same_objects_map
+		same_object_id_map = self._construct_same_object_map(same_objects)
+		services['same_objects_map'] = same_object_id_map
 
 		different_objects = set(services['objects_different']['knoedler_numbers'])
 		services['different_objects'] = different_objects

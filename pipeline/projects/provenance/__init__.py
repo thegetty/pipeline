@@ -176,7 +176,7 @@ class ProvenanceUtilityHelper(UtilityHelper):
 		# TODO: does this handle all the cases of data packed into the lot_number string that need to be stripped?
 		self.shared_lot_number_re = re.compile(r'(\[[a-z]\])')
 		self.ignore_house_authnames = CaseFoldingSet(('Anonymous',))
-		self.csv_source_columns = ['pi_record_no', 'catalog_number']
+		self.csv_source_columns = ['pi_record_no', 'star_record_no', 'catalog_number']
 		self.problematic_record_uri = 'tag:getty.edu,2019:digital:pipeline:provenance:ProblematicRecord'
 		self.person_identity = PersonIdentity(make_uri=self.make_proj_uri)
 		self.uid_tag_prefix = UID_TAG_PREFIX
@@ -187,15 +187,82 @@ class ProvenanceUtilityHelper(UtilityHelper):
 				dst[k] = src[k]
 		return dst
 
-	def auction_event_for_catalog_number(self, catalog_number):
+	def event_type_for_sale_type(self, sale_type):
+		if sale_type == 'Private Contract Sale':
+			return vocab.Exhibition
+		elif sale_type == 'Stock List':
+			raise NotImplementedError(f'Unexpected sale type: {sale_type!r}')
+		elif sale_type == 'Lottery':
+			raise NotImplementedError(f'Unexpected sale type: {sale_type!r}')
+		elif sale_type in ('Auction'):
+			return vocab.AuctionEvent
+		else:
+			raise NotImplementedError(f'Unexpected sale type: {sale_type!r}')
+
+	def catalog_type_for_sale_type(self, sale_type):
+		if sale_type == 'Private Contract Sale':
+			return vocab.ExhibitionCatalog
+		elif sale_type == 'Stock List':
+			return vocab.AccessionCatalog
+		elif sale_type == 'Lottery':
+			return vocab.SalesCatalog
+		elif sale_type == 'Auction':
+			return vocab.AuctionCatalog
+		else:
+			raise NotImplementedError(f'Unexpected sale type: {sale_type!r}')
+
+	def catalog_text(self, cno, sale_type='Auction'):
+		uri = self.make_proj_uri('CATALOG', cno)
+		if sale_type == 'Auction':
+			catalog = vocab.AuctionCatalogText(ident=uri, label=f'Sale Catalog {cno}')
+		elif sale_type == 'Private Contract Sale':
+			catalog = vocab.ExhibitionCatalogText(ident=uri, label=f'Private Sale Exhibition Catalog {cno}')
+		elif sale_type == 'Stock List':
+			catalog = vocab.AccessionCatalogText(ident=uri, label=f'Accession Catalog {cno}')
+		elif sale_type == 'Lottery':
+			raise NotImplementedError(f'Unexpected sale type: {sale_type!r}')
+		else:
+			catalog = vocab.SalesCatalogText(ident=uri, label=f'Sale Catalog {cno}')
+		return catalog
+
+	def physical_catalog(self, cno, sale_type, owner=None, copy=None):
+		keys = [v for v in [cno, owner, copy] if v]
+		uri = self.make_proj_uri('PHYSICAL-CATALOG', *keys)
+		labels = []
+		if owner:
+			labels.append(f'owned by “{owner}”')
+		if copy:
+			labels.append(f'copy {copy}')
+		label = ', '.join(labels)
+		if sale_type == 'Auction':
+			labels = [f'Sale Catalog {cno}'] + labels
+			catalog = vocab.AuctionCatalog(ident=uri, label=', '.join(labels))
+		elif sale_type == 'Private Contract Sale':
+			labels = [f'Private Sale Exhibition Catalog {cno}'] + labels
+			catalog = vocab.ExhibitionCatalog(ident=uri, label=', '.join(labels))
+		elif sale_type == 'Stock List':
+			labels = [f'Accession Catalog {cno}'] + labels
+			catalog = vocab.AccessionCatalog(ident=uri, label=', '.join(labels))
+		elif sale_type == 'Lottery':
+			raise NotImplementedError(f'Unexpected sale type: {sale_type!r}')
+		else:
+			raise NotImplementedError(f'Unexpected sale type: {sale_type!r}')
+		return catalog
+
+	def sale_event_for_catalog_number(self, catalog_number, sale_type='Auction'):
 		'''
 		Return a `vocab.AuctionEvent` object and its associated 'uid' key and URI, based on
 		the supplied `catalog_number`.
 		'''
-		uid = f'AUCTION-EVENT-CATALOGNUMBER-{catalog_number}'
-		uri = self.make_proj_uri('AUCTION-EVENT', 'CATALOGNUMBER', catalog_number)
-		label = f"Auction Event for {catalog_number}"
-		auction = vocab.AuctionEvent(ident=uri, label=label)
+		if sale_type == '':
+			sale_type = 'Auction'
+
+		event_type = self.event_type_for_sale_type(sale_type)
+		sale_type_key = sale_type.replace(' ', '_').upper()
+		uid = f'{sale_type_key}-EVENT-CATALOGNUMBER-{catalog_number}'
+		uri = self.make_proj_uri(f'{sale_type_key}-EVENT', 'CATALOGNUMBER', catalog_number)
+		label = f"{sale_type} Event for {catalog_number}"
+		auction = event_type(ident=uri, label=label)
 		return auction, uid, uri
 
 	def shared_lot_number_from_lno(self, lno):
@@ -212,13 +279,14 @@ class ProvenanceUtilityHelper(UtilityHelper):
 			return lno.replace(m.group(1), '')
 		return lno
 
-	def transaction_uri_for_lot(self, data, prices):
+	def transaction_uri_for_lot(self, data, metadata):
 		'''
 		Return a URI representing the procurement which the object (identified by the
 		supplied data) is a part of. This may identify just the lot being sold or, in the
 		case of multiple lots being bought for a single price, a single procurement that
 		encompasses multiple acquisitions that span different lots.
 		'''
+		prices = metadata.get('price', [])
 		cno, lno, date = object_key(data)
 		shared_lot_number = self.shared_lot_number_from_lno(lno)
 		for p in prices:
@@ -227,11 +295,12 @@ class ProvenanceUtilityHelper(UtilityHelper):
 				return self.make_proj_uri('AUCTION-TX-MULTI', cno, date, n[9:])
 		return self.make_proj_uri('AUCTION-TX', cno, date, shared_lot_number)
 
-	def lots_in_transaction(self, data, prices):
+	def lots_in_transaction(self, data, metadata):
 		'''
 		Return a string that represents the lot numbers that are a part of the procurement
 		related to the supplied data.
 		'''
+		prices = metadata.get('price', [])
 		_, lno, _ = object_key(data)
 		shared_lot_number = self.shared_lot_number_from_lno(lno)
 		for p in prices:
@@ -251,16 +320,64 @@ class ProvenanceUtilityHelper(UtilityHelper):
 		return uid, uri
 
 	@staticmethod
-	def transaction_contains_multiple_lots(data, prices):
+	def transaction_contains_multiple_lots(data, metadata):
 		'''
 		Return `True` if the procurement related to the supplied data represents a
 		transaction of multiple lots with a single payment, `False` otherwise.
 		'''
+		prices = metadata.get('price', [])
 		for p in prices:
 			n = p.get('price_note')
 			if n and n.startswith('for lots '):
 				return True
 		return False
+
+	def add_auction_house_data(self, a, sequence=1, event_record=None):
+		'''Add modeling data for an auction house organization.'''
+		catalog = a.get('_catalog')
+
+		ulan = None
+		with suppress(ValueError, TypeError):
+			ulan = int(a.get('ulan'))
+		auth_name = a.get('auth')
+		a['identifiers'] = []
+		if ulan:
+			key = f'AUCTION-HOUSE-ULAN-{ulan}'
+			a['uid'] = key
+			a['uri'] = self.make_proj_uri('AUCTION-HOUSE', 'ULAN', ulan)
+			a['ulan'] = ulan
+			house = vocab.AuctionHouseOrg(ident=a['uri'])
+		elif auth_name and auth_name not in self.ignore_house_authnames:
+			a['uri'] = self.make_proj_uri('AUCTION-HOUSE', 'AUTHNAME', auth_name)
+			pname = vocab.PrimaryName(ident='', content=auth_name)
+			if event_record:
+				pname.referred_to_by = event_record
+			a['identifiers'].append(pname)
+			house = vocab.AuctionHouseOrg(ident=a['uri'], label=auth_name)
+		else:
+			# not enough information to identify this house uniquely, so use the source location in the input file
+			if 'pi_record_no' in a:
+				a['uri'] = self.make_proj_uri('AUCTION-HOUSE', 'PI_REC_NO', a['pi_record_no'], sequence)
+			else:
+				a['uri'] = self.make_proj_uri('AUCTION-HOUSE', 'STAR_REC_NO', a['star_record_no'], sequence)
+			house = vocab.AuctionHouseOrg(ident=a['uri'])
+
+		name = a.get('name')
+		if name:
+			n = model.Name(ident='', content=name)
+			if event_record:
+				n.referred_to_by = event_record
+			a['identifiers'].append(n)
+			a['label'] = name
+			if not hasattr(house, 'label'):
+				house._label = a['label']
+		else:
+			a['label'] = '(Anonymous)'
+
+
+		add_crom_data(data=a, what=house)
+		return a
+
 
 def add_crom_price(data, parent, services, add_citations=False):
 	'''
@@ -282,6 +399,15 @@ def add_crom_price(data, parent, services, add_citations=False):
 	return data
 
 
+@use('non_auctions')
+def remove_non_auction_sales(data:dict, non_auctions):
+	'''
+	Do not allow the Auction of Lot model objects to be serialized for non-auction sales.
+	'''
+	cno = data['auction_of_lot']['catalog_number']
+	if cno not in non_auctions:
+		yield data
+
 #mark - Provenance Pipeline class
 
 class ProvenancePipeline(PipelineBase):
@@ -294,13 +420,13 @@ class ProvenancePipeline(PipelineBase):
 		vocab.register_instance('fire', {'parent': model.Type, 'id': '300068986', 'label': 'Fire'})
 		vocab.register_instance('animal', {'parent': model.Type, 'id': '300249395', 'label': 'Animal'})
 		vocab.register_instance('history', {'parent': model.Type, 'id': '300033898', 'label': 'History'})
-		vocab.register_vocab_class('AuctionCatalog', {'parent': model.HumanMadeObject, 'id': '300026068', 'label': 'Auction Catalog', 'metatype': 'work type'})
 
 		super().__init__(project_name, helper=helper)
 
 		self.graph_0 = None
 		self.graph_1 = None
 		self.graph_2 = None
+		self.graph_3 = None
 		self.models = kwargs.get('models', settings.arches_models)
 		self.catalogs_header_file = catalogs['header_file']
 		self.catalogs_files_pattern = catalogs['files_pattern']
@@ -373,7 +499,12 @@ class ProvenancePipeline(PipelineBase):
 					'seller': {'prefixes': ('sell_auth_name', 'sell_auth_q')},
 					'expert': {'prefixes': ('expert', 'expert_auth', 'expert_ulan')},
 					'commissaire': {'prefixes': ('comm_pr', 'comm_pr_auth', 'comm_pr_ulan')},
-					'auction_house': {'prefixes': ('auc_house_name', 'auc_house_auth', 'auc_house_ulan')},
+					'auction_house': {
+						'postprocess': [
+							lambda x, _: strip_key_prefix('auc_house_', x),
+						],
+						'prefixes': ('auc_house_name', 'auc_house_auth', 'auc_house_ulan')
+					},
 					'portal': {'prefixes': ('portal_url',)},
 				}
 			),
@@ -464,7 +595,13 @@ class ProvenancePipeline(PipelineBase):
 				mapping={
 					'expert': {'prefixes': ('expert_auth', 'expert_ulan')},
 					'commissaire': {'prefixes': ('commissaire_pr', 'comm_ulan')},
-					'auction_house': {'prefixes': ('auction_house', 'house_ulan')},
+					'auction_house': {
+						'postprocess': [
+							lambda x, _: replace_key_pattern(r'(auction_house)', 'house_name', x),
+							lambda x, _: strip_key_prefix('house_', x),
+						],
+						'prefixes': ('auction_house', 'house_ulan')
+					},
 					'_artists': {
 						'postprocess': [
 							filter_empty_person,
@@ -646,6 +783,8 @@ class ProvenancePipeline(PipelineBase):
 		)
 		
 		modeled_sales = graph.add_chain(
+			remove_non_auction_sales,
+			ExtractKeyedValue(key='_auction_of_lot'),
 			OnlyCromModeledRecords(),
 			_input=sales.output
 		)
@@ -759,9 +898,9 @@ class ProvenancePipeline(PipelineBase):
 		'''
 		Construct bonobo.Graph object(s) for the entire pipeline.
 
-		If `single_graph` is `False`, generate two `Graph`s (`self.graph_1` and
-		`self.graph_2`), that will be run sequentially. the first for catalogs and events,
-		the second for sales auctions (which depends on output from the first).
+		If `single_graph` is `False`, generate three `Graph`s (`self.graph_1`,
+		`self.graph_2`, and `self.graph_3`), that will be run sequentially. The first for
+		events, then catalogs, and finally for sales auctions (which depends on output from the first).
 
 		If `single_graph` is `True`, then generate a single `Graph` that has the entire
 		pipeline in it (`self.graph_0`). This is used to be able to produce graphviz
@@ -770,30 +909,17 @@ class ProvenancePipeline(PipelineBase):
 		graph0 = bonobo.Graph()
 		graph1 = bonobo.Graph()
 		graph2 = bonobo.Graph()
+		graph3 = bonobo.Graph()
 
 		component1 = [graph0] if single_graph else [graph1]
 		component2 = [graph0] if single_graph else [graph2]
+		component3 = [graph0] if single_graph else [graph3]
 		for g in component1:
-			physical_catalog_records = g.add_chain(
-				MatchingFiles(path='/', pattern=self.catalogs_files_pattern, fs='fs.data.provenance'),
-				CurriedCSVReader(fs='fs.data.provenance', limit=self.limit),
-				AddFieldNames(field_names=self.catalogs_headers),
-			)
-
 			auction_events_records = g.add_chain(
 				MatchingFiles(path='/', pattern=self.auction_events_files_pattern, fs='fs.data.provenance'),
 				CurriedCSVReader(fs='fs.data.provenance', limit=self.limit),
-				AddFieldNames(field_names=self.auction_events_headers),
+				AddFieldNames(field_names=self.auction_events_headers)
 			)
-
-			catalogs = self.add_physical_catalogs_chain(g, physical_catalog_records, serialize=True)
-
-			catalog_owners = g.add_chain(
-				ExtractKeyedValue(key='_owner'),
-				pipeline.linkedart.MakeLinkedArtAuctionHouseOrganization(),
-				_input=catalogs.output
-			)
-			_ = self.add_person_or_group_chain(g, catalog_owners, serialize=True)
 
 			auction_events = self.add_auction_events_chain(g, auction_events_records, serialize=True)
 			_ = self.add_catalog_linguistic_objects_chain(g, auction_events, serialize=True)
@@ -807,6 +933,22 @@ class ProvenancePipeline(PipelineBase):
 			_ = self.add_person_or_group_chain(g, houses, serialize=True)
 
 		for g in component2:
+			physical_catalog_records = g.add_chain(
+				MatchingFiles(path='/', pattern=self.catalogs_files_pattern, fs='fs.data.provenance'),
+				CurriedCSVReader(fs='fs.data.provenance', limit=self.limit),
+				AddFieldNames(field_names=self.catalogs_headers),
+			)
+
+			catalogs = self.add_physical_catalogs_chain(g, physical_catalog_records, serialize=True)
+
+			catalog_owners = g.add_chain(
+				ExtractKeyedValue(key='_owner'),
+				pipeline.linkedart.MakeLinkedArtAuctionHouseOrganization(),
+				_input=catalogs.output
+			)
+			_ = self.add_person_or_group_chain(g, catalog_owners, serialize=True)
+
+		for g in component3:
 			contents_records = g.add_chain(
 				MatchingFiles(path='/', pattern=self.contents_files_pattern, fs='fs.data.provenance'),
 				CurriedCSVReader(fs='fs.data.provenance', limit=self.limit),
@@ -828,6 +970,7 @@ class ProvenancePipeline(PipelineBase):
 		else:
 			self.graph_1 = graph1
 			self.graph_2 = graph2
+			self.graph_3 = graph3
 
 	def get_graph(self, **kwargs):
 		'''Return a single bonobo.Graph object for the entire pipeline.'''
@@ -848,6 +991,12 @@ class ProvenancePipeline(PipelineBase):
 			self._construct_graph(**kwargs)
 		return self.graph_2
 
+	def get_graph_3(self, **kwargs):
+		'''Construct the bonobo pipeline to fully transform Provenance data from CSV to JSON-LD.'''
+		if not self.graph_3:
+			self._construct_graph(**kwargs)
+		return self.graph_3
+
 	def run(self, services=None, **options):
 		'''Run the Provenance bonobo pipeline.'''
 		print(f'- Limiting to {self.limit} records per file', file=sys.stderr)
@@ -861,6 +1010,10 @@ class ProvenancePipeline(PipelineBase):
 		print('Running graph component 2...', file=sys.stderr)
 		graph2 = self.get_graph_2(**options, services=services)
 		self.run_graph(graph2, services=services)
+
+		print('Running graph component 3...', file=sys.stderr)
+		graph3 = self.get_graph_3(**options, services=services)
+		self.run_graph(graph3, services=services)
 
 		print('Serializing static instances...', file=sys.stderr)
 		for model, instances in self.static_instances.used_instances().items():

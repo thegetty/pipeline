@@ -47,8 +47,8 @@ class MergingMemoryWriter(Configurable):
 			else:
 				merger.merge(m, model_object)
 				return m
-		except model.DataError:
-			print(f'Exception caught while merging data:')
+		except model.DataError as e:
+			print(f'Exception caught while merging data ({e}):')
 			print(d)
 			print(content)
 			raise

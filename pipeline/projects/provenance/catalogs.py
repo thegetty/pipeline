@@ -18,32 +18,32 @@ class AddAuctionCatalog(Configurable):
 		'''Add modeling for auction catalogs as linguistic objects'''
 		cno = data['catalog_number']
 
-		non_auction_flag = data.get('non_auction_flag')
-		if non_auction_flag:
-			non_auctions[cno] = non_auction_flag
-		else:
-			key = f'CATALOG-{cno}'
-			cdata = {'uid': key, 'uri': self.helper.make_proj_uri('CATALOG', cno)}
-			catalog = vocab.AuctionCatalogText(ident=cdata['uri'], label=f'Sale Catalog {cno}')
-
-			data['_catalog'] = add_crom_data(data=cdata, what=catalog)
-			yield data
+		# this information may either come from `data` (for the auction events branch of the pipeline)
+		# or from `non_auctions` (for the catalogs branch, which lacks this information,
+		# but will have access to the `non_auctions` service which was shared from the events branch)
+		sale_type = non_auctions.get(cno, data.get('non_auction_flag'))
+		if sale_type:
+			non_auctions[cno] = sale_type
+		sale_type = sale_type or 'Auction'
+		catalog = self.helper.catalog_text(cno, sale_type)
+		cdata = {'uri': catalog.id}
+		
+		data['_catalog'] = add_crom_data(data=cdata, what=catalog)
+		yield data
 
 class AddPhysicalCatalogObjects(Configurable):
 	helper = Option(required=True)
+	non_auctions = Service('non_auctions')
 
-	def __call__(self, data:dict):
+	def __call__(self, data:dict, non_auctions):
 		'''Add modeling for physical copies of an auction catalog'''
 		catalog = get_crom_object(data['_catalog'])
 		cno = data['catalog_number']
 		owner = data['owner_code']
 		copy = data['copy_number']
-		uri = self.helper.make_proj_uri('CATALOG', cno, owner, copy)
-		data['uri'] = uri
-		labels = [f'Sale Catalog {cno}', f'owned by “{owner}”']
-		if copy:
-			labels.append(f'copy {copy}')
-		catalogObject = vocab.AuctionCatalog(ident=uri, label=', '.join(labels))
+		sale_type = non_auctions.get(cno, 'Auction')
+		catalogObject = self.helper.physical_catalog(cno, sale_type, owner, copy)
+		data['uri'] = catalogObject.id
 		info = data.get('annotation_info')
 		if info:
 			catalogObject.referred_to_by = vocab.Note(ident='', content=info)

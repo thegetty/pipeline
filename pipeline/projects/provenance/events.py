@@ -20,13 +20,14 @@ class AddAuctionEvent(Configurable):
 	def __call__(self, data:dict):
 		'''Add modeling for an auction event based on properties of the supplied `data` dict.'''
 		cno = data['catalog_number']
-		auction, uid, uri = self.helper.auction_event_for_catalog_number(cno)
+		sale_type = data.get('non_auction_flag', 'Auction')
+		auction, uid, uri = self.helper.sale_event_for_catalog_number(cno, sale_type)
 		auction.identified_by = model.Name(ident='', content=auction._label)
 		data['uid'] = uid
 		data['uri'] = uri
 		add_crom_data(data=data, what=auction)
+		
 		catalog = get_crom_object(data['_catalog'])
-
 		data['_record'] = data['_catalog']
 		return data
 
@@ -77,6 +78,11 @@ class PopulateAuctionEvent(Configurable):
 			end=end,
 			inclusive=True
 		)
+
+		notes = data.get('notes')
+		if notes:
+			auction.referred_to_by = vocab.Note(ident='', content=notes)
+
 		if begin and end:
 			ts.identified_by = model.Name(ident='', content=f'{begin} to {end}')
 		elif begin:
@@ -101,44 +107,6 @@ class AddAuctionHouses(Configurable):
 	helper = Option(required=True)
 	auction_houses = Service('auction_houses')
 
-	def add_auction_house_data(self, a, event_record):
-		'''Add modeling data for an auction house organization.'''
-		catalog = a.get('_catalog')
-
-		ulan = None
-		with suppress(ValueError, TypeError):
-			ulan = int(a.get('auc_house_ulan'))
-		auth_name = a.get('auc_house_auth')
-		a['identifiers'] = []
-		if ulan:
-			key = f'AUCTION-HOUSE-ULAN-{ulan}'
-			a['uid'] = key
-			a['uri'] = self.helper.make_proj_uri('AUCTION-HOUSE', 'ULAN', ulan)
-			a['ulan'] = ulan
-			house = vocab.AuctionHouseOrg(ident=a['uri'])
-		elif auth_name and auth_name not in self.helper.ignore_house_authnames:
-			a['uri'] = self.helper.make_proj_uri('AUCTION-HOUSE', 'AUTHNAME', auth_name)
-			pname = vocab.PrimaryName(ident='', content=auth_name)
-			pname.referred_to_by = event_record
-			a['identifiers'].append(pname)
-			house = vocab.AuctionHouseOrg(ident=a['uri'])
-		else:
-			# not enough information to identify this house uniquely, so use the source location in the input file
-			a['uri'] = self.helper.make_proj_uri('AUCTION-HOUSE', 'CAT_NO', 'CATALOG-NUMBER', a['catalog_number'])
-			house = vocab.AuctionHouseOrg(ident=a['uri'])
-
-		name = a.get('auc_house_name') or a.get('name')
-		if name:
-			n = model.Name(ident='', content=name)
-			n.referred_to_by = event_record
-			a['identifiers'].append(n)
-			a['label'] = name
-		else:
-			a['label'] = '(Anonymous)'
-
-		add_crom_data(data=a, what=house)
-		return a
-
 	def __call__(self, data:dict, auction_houses):
 		'''
 		Add modeling data for the auction house organization(s) associated with an auction
@@ -153,9 +121,9 @@ class AddAuctionHouses(Configurable):
 
 		house_objects = []
 		event_record = get_crom_object(data['_record'])
-		for h in houses:
+		for i, h in enumerate(houses):
 			h['_catalog'] = catalog
-			self.add_auction_house_data(self.helper.copy_source_information(h, data), event_record)
+			self.helper.add_auction_house_data(self.helper.copy_source_information(h, data), sequence=i, event_record=event_record)
 			house = get_crom_object(h)
 			auction.carried_out_by = house
 			if auction_houses:

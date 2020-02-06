@@ -46,10 +46,10 @@ class PIRModelingTest_MultiLot(TestProvenancePipelineOutput):
 
 
 
-		# procurement has 1 payment and 2 acquisitions
+		# procurement has 1 payment, 2 acquisitions, and 2 transfers of custody
 		parts = procurement['part']
 		proc_types = sorted([a['type'] for a in parts])
-		self.assertEqual(proc_types, ['Acquisition', 'Acquisition', 'Payment'])
+		self.assertEqual(proc_types, ['Acquisition', 'Acquisition', 'Payment', 'TransferOfCustody', 'TransferOfCustody'])
 		acqs = [a for a in parts if a['type'] == 'Acquisition']
 		paym = [a for a in parts if a['type'] == 'Payment'][0]
 

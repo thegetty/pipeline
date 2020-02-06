@@ -40,7 +40,9 @@ class PIRModelingTest_Withdrawn(TestProvenancePipelineOutput):
 		
 		procurement = procurements['tag:getty.edu,2019:digital:pipeline:provenance:REPLACE-WITH-UUID#AUCTION-TX,Br-3039,1827-11-24,0082']
 		parts = procurement.get('part', [])
-		self.assertEqual(len(parts), 2)
+		self.assertEqual(len(parts), 3)
+		part_types = {p['type'] for p in parts}
+		self.assertEqual(part_types, {'Acquisition', 'Payment', 'TransferOfCustody'})
 		acqs = [p for p in parts if p['type'] == 'Acquisition']
 		self.assertEqual(len(acqs), 1)
 

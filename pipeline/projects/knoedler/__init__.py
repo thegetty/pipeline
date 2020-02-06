@@ -239,10 +239,14 @@ class KnoedlerUtilityHelper(UtilityHelper):
 		k_id.assigned_by = assignment
 		return k_id
 
-	def make_object_uri(self, *uri_key):
+	def make_object_uri(self, pi_rec_no, *uri_key):
 		uri_key = list(uri_key)
 		same_objects = self.services['same_objects_map']
-		if uri_key[-1] in same_objects:
+		different_objects = self.services['different_objects']
+		kn = uri_key[-1]
+		if kn in different_objects:
+			uri_key = uri_key[:-1] + ['flag-separated', kn, pi_rec_no]
+		elif kn in same_objects:
 			uri_key[-1] = same_objects[uri_key[-1]][0]
 		uri = self.make_uri(*uri_key)
 		return uri
@@ -543,7 +547,7 @@ class PopulateKnoedlerObject(Configurable, pipeline.linkedart.PopulateObject):
 			identifiers.append(self.helper.knoedler_number_id(knum))
 		except:
 			uri_key = ('Object', 'Internal', data['pi_record_no'])
-		uri = self.helper.make_object_uri(*uri_key)
+		uri = self.helper.make_object_uri(data['pi_record_no'], *uri_key)
 		data['_object']['uri'] = uri
 		data['_object']['uri_key'] = uri_key
 
@@ -919,6 +923,9 @@ class KnoedlerPipeline(PipelineBase):
 		same_objects = services['objects_same']['objects']
 		same_objects_map = {k: sorted(l) for l in same_objects for k in l}
 		services['same_objects_map'] = same_objects_map
+
+		different_objects = set(services['objects_different']['knoedler_numbers'])
+		services['different_objects'] = different_objects
 		
 		services.update({
 			# to avoid constructing new MakeLinkedArtPerson objects millions of times, this

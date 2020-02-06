@@ -64,6 +64,7 @@ from pipeline.nodes.basic import \
 			AddArchesModel, \
 			Serializer, \
 			OnlyCromModeledRecords, \
+			OnlyRecordsOfType, \
 			Trace
 from pipeline.util.rewriting import rewrite_output_files, JSONValueRewriter
 import pipeline.projects.provenance.events
@@ -281,19 +282,6 @@ def add_crom_price(data, parent, services, add_citations=False):
 	return data
 
 
-#mark - Single Object Lot Tracking
-
-class TrackLotSizes(Configurable):
-	helper = Option(required=True)
-	lot_counter = Service('lot_counter')
-
-	def __call__(self, data, lot_counter):
-		auction_data = data['auction_of_lot']
-		cno, lno, date = object_key(auction_data)
-		lot = self.helper.shared_lot_number_from_lno(lno)
-		key = (cno, lot, date)
-		lot_counter[key] += 1
-
 #mark - Provenance Pipeline class
 
 class ProvenancePipeline(PipelineBase):
@@ -343,7 +331,6 @@ class ProvenancePipeline(PipelineBase):
 			# to avoid constructing new MakeLinkedArtPerson objects millions of times, this
 			# is passed around as a service to the functions and classes that require it.
 			'make_la_person': pipeline.linkedart.MakeLinkedArtPerson(),
-			'lot_counter': Counter(),
 			'unique_catalogs': {},
 			'post_sale_map': {},
 			'auction_houses': {},
@@ -351,18 +338,6 @@ class ProvenancePipeline(PipelineBase):
 			'auction_locations': {},
 		})
 		return services
-
-	def add_physical_catalog_owners_chain(self, graph, catalogs, serialize=True):
-		'''Add modeling of physical copies of auction catalogs.'''
-		groups = graph.add_chain(
-			ExtractKeyedValue(key='_owner'),
-			pipeline.linkedart.MakeLinkedArtOrganization(),
-			_input=catalogs.output
-		)
-		if serialize:
-			# write SALES data
-			self.add_serialization_chain(graph, groups.output, model=self.models['Group'])
-		return groups
 
 	def add_physical_catalogs_chain(self, graph, records, serialize=True):
 		'''Add modeling of physical copies of auction catalogs.'''
@@ -449,26 +424,9 @@ class ProvenancePipeline(PipelineBase):
 
 	def add_buyers_sellers_chain(self, graph, acquisitions, serialize=True):
 		'''Add modeling of the buyers, bidders, and sellers involved in an auction.'''
-		buyers = graph.add_chain(
-			ExtractKeyedValues(key='buyer'),
-			_input=acquisitions.output
-		)
-
-		owners = graph.add_chain(
-			ExtractKeyedValues(key='_other_owners'),
-			_input=acquisitions.output
-		)
-
-		sellers = graph.add_chain(
-			ExtractKeyedValues(key='seller'),
-			_input=acquisitions.output
-		)
-
-		if serialize:
-			# write SALES data
-			self.add_serialization_chain(graph, owners.output, model=self.models['Person'])
-			self.add_serialization_chain(graph, buyers.output, model=self.models['Person'])
-			self.add_serialization_chain(graph, sellers.output, model=self.models['Person'])
+		buyers = self.add_person_or_group_chain(graph, acquisitions, key='buyer', serialize=serialize)
+		sellers = self.add_person_or_group_chain(graph, acquisitions, key='seller', serialize=serialize)
+		owners = self.add_person_or_group_chain(graph, acquisitions, key='_other_owners', serialize=serialize)
 
 	def add_acquisitions_chain(self, graph, sales, serialize=True):
 		'''Add modeling of the acquisitions and bidding on lots being auctioned.'''
@@ -476,10 +434,8 @@ class ProvenancePipeline(PipelineBase):
 			pipeline.projects.provenance.lots.AddAcquisitionOrBidding(helper=self.helper),
 			_input=sales.output
 		)
-		orgs = graph.add_chain(
-			ExtractKeyedValues(key='_organizations'),
-			_input=bid_acqs.output
-		)
+		
+		orgs = self.add_person_or_group_chain(graph, bid_acqs, key='_organizations', serialize=serialize)
 		refs = graph.add_chain(
 			ExtractKeyedValues(key='_citation_references'),
 			_input=bid_acqs.output
@@ -492,17 +448,12 @@ class ProvenancePipeline(PipelineBase):
 			ExtractKeyedValue(key='_bidding'),
 			_input=bid_acqs.output
 		)
-		places = graph.add_chain(
-			ExtractKeyedValues(key='_owner_locations'),
-			_input=bid_acqs.output
-		)
+		_ = self.add_places_chain(graph, bid_acqs, key='_owner_locations', serialize=True)
 
 		if serialize:
 			# write SALES data
 			self.add_serialization_chain(graph, refs.output, model=self.models['LinguisticObject'])
 			self.add_serialization_chain(graph, bids.output, model=self.models['Bidding'])
-			self.add_serialization_chain(graph, orgs.output, model=self.models['Group'])
-			self.add_serialization_chain(graph, places.output, model=self.models['Place'])
 		return bid_acqs
 
 	def add_sales_chain(self, graph, records, services, serialize=True):
@@ -704,13 +655,6 @@ class ProvenancePipeline(PipelineBase):
 			self.add_serialization_chain(graph, modeled_sales.output, model=self.models['AuctionOfLot'])
 		return sales
 
-	def add_single_object_lot_tracking_chain(self, graph, sales):
-		small_lots = graph.add_chain(
-			TrackLotSizes(helper=self.helper),
-			_input=sales.output
-		)
-		return small_lots
-
 	def add_object_chain(self, graph, sales, serialize=True):
 		'''Add modeling of the objects described by sales records.'''
 		objects = graph.add_chain(
@@ -751,10 +695,10 @@ class ProvenancePipeline(PipelineBase):
 			self.add_serialization_chain(graph, sets.output, model=self.models['Set'])
 		return sets
 
-	def add_places_chain(self, graph, auction_events, serialize=True):
+	def add_places_chain(self, graph, auction_events, key='_locations', serialize=True):
 		'''Add extraction and serialization of locations.'''
 		places = graph.add_chain(
-			ExtractKeyedValues(key='_locations'),
+			ExtractKeyedValues(key=key),
 			RecursiveExtractKeyedValue(key='part_of'),
 			_input=auction_events.output
 		)
@@ -763,17 +707,29 @@ class ProvenancePipeline(PipelineBase):
 			self.add_serialization_chain(graph, places.output, model=self.models['Place'])
 		return places
 
-	def add_auction_houses_chain(self, graph, auction_events, serialize=True):
-		'''Add modeling of the auction houses related to an auction event.'''
-		houses = graph.add_chain(
-			ExtractKeyedValues(key='auction_house'),
-			pipeline.linkedart.MakeLinkedArtAuctionHouseOrganization(),
-			_input=auction_events.output
+	def add_person_or_group_chain(self, graph, input, key=None, serialize=True):
+		'''Add extraction and serialization of people and groups.'''
+		if key:
+			extracted = graph.add_chain(
+				ExtractKeyedValues(key=key),
+				_input=input.output
+			)
+		else:
+			extracted = input
+
+		people = graph.add_chain(
+			OnlyRecordsOfType(type=model.Person),
+			_input=extracted.output
+		)
+		groups = graph.add_chain(
+			OnlyRecordsOfType(type=model.Group),
+			_input=extracted.output
 		)
 		if serialize:
 			# write OBJECTS data
-			self.add_serialization_chain(graph, houses.output, model=self.models['Group'])
-		return houses
+			self.add_serialization_chain(graph, people.output, model=self.models['Person'])
+			self.add_serialization_chain(graph, groups.output, model=self.models['Group'])
+		return people
 
 	def add_visual_item_chain(self, graph, objects, serialize=True):
 		'''Add transformation of visual items to the bonobo pipeline.'''
@@ -798,17 +754,6 @@ class ProvenancePipeline(PipelineBase):
 			# write RECORD data
 			self.add_serialization_chain(graph, texts.output, model=self.models['LinguisticObject'])
 		return texts
-
-	def add_people_chain(self, graph, objects, serialize=True):
-		'''Add transformation of artists records to the bonobo pipeline.'''
-		people = graph.add_chain(
-			ExtractKeyedValues(key='_artists'),
-			_input=objects.output
-		)
-		if serialize:
-			# write PEOPLE data
-			self.add_serialization_chain(graph, people.output, model=self.models['Person'])
-		return people
 
 	def _construct_graph(self, single_graph=False, services=None):
 		'''
@@ -842,11 +787,24 @@ class ProvenancePipeline(PipelineBase):
 			)
 
 			catalogs = self.add_physical_catalogs_chain(g, physical_catalog_records, serialize=True)
-			_ = self.add_physical_catalog_owners_chain(g, catalogs, serialize=True)
+
+			catalog_owners = g.add_chain(
+				ExtractKeyedValue(key='_owner'),
+				pipeline.linkedart.MakeLinkedArtAuctionHouseOrganization(),
+				_input=catalogs.output
+			)
+			_ = self.add_person_or_group_chain(g, catalog_owners, serialize=True)
+
 			auction_events = self.add_auction_events_chain(g, auction_events_records, serialize=True)
 			_ = self.add_catalog_linguistic_objects_chain(g, auction_events, serialize=True)
-			_ = self.add_auction_houses_chain(g, auction_events, serialize=True)
 			_ = self.add_places_chain(g, auction_events, serialize=True)
+
+			houses = g.add_chain(
+				ExtractKeyedValues(key='auction_house'),
+				pipeline.linkedart.MakeLinkedArtAuctionHouseOrganization(),
+				_input=auction_events.output
+			)
+			_ = self.add_person_or_group_chain(g, houses, serialize=True)
 
 		for g in component2:
 			contents_records = g.add_chain(
@@ -855,14 +813,13 @@ class ProvenancePipeline(PipelineBase):
 				AddFieldNames(field_names=self.contents_headers),
 			)
 			sales = self.add_sales_chain(g, contents_records, services, serialize=True)
-			_ = self.add_single_object_lot_tracking_chain(g, sales)
 			_ = self.add_lot_set_chain(g, sales, serialize=True)
 			objects = self.add_object_chain(g, sales, serialize=True)
 			_ = self.add_places_chain(g, objects, serialize=True)
 			acquisitions = self.add_acquisitions_chain(g, objects, serialize=True)
 			self.add_buyers_sellers_chain(g, acquisitions, serialize=True)
 			self.add_procurement_chain(g, acquisitions, serialize=True)
-			_ = self.add_people_chain(g, objects, serialize=True)
+			_ = self.add_person_or_group_chain(g, objects, key='_artists', serialize=True)
 			_ = self.add_record_text_chain(g, objects, serialize=True)
 			_ = self.add_visual_item_chain(g, objects, serialize=True)
 
@@ -914,23 +871,15 @@ class ProvenancePipeline(PipelineBase):
 			self.add_serialization_chain(g, source.output, model=self.models[model], use_memory_writer=False)
 			self.run_graph(g, services={})
 
-	def generate_prev_post_sales_data(self, counter, post_map):
-		singles = {k for k in counter if counter[k] == 1}
-		multiples = {k for k in counter if counter[k] > 1}
-
+	def generate_prev_post_sales_data(self, post_map):
 		total = 0
 		mapped = 0
 
 		g = self.load_sales_tree()
 		for src, dst in post_map.items():
 			total += 1
-			if dst in singles:
-				mapped += 1
-				g.add_edge(src, dst)
-# 			elif dst in multiples:
-# 				print(f'  {src} maps to a MULTI-OBJECT lot')
-# 			else:
-# 				print(f'  {src} maps to an UNKNOWN lot')
+			mapped += 1
+			g.add_edge(src, dst)
 # 		print(f'mapped {mapped}/{total} objects to a previous sale', file=sys.stderr)
 
 		large_components = set(g.largest_component_canonical_keys(10))
@@ -975,18 +924,12 @@ class ProvenanceFilePipeline(ProvenancePipeline):
 
 	def serializer_nodes_for_model(self, *args, model=None, use_memory_writer=True, **kwargs):
 		nodes = []
-		if self.debug:
-			if use_memory_writer:
-				w = MergingMemoryWriter(directory=self.output_path, partition_directories=True, compact=False, model=model)
-			else:
-				w = MergingFileWriter(directory=self.output_path, partition_directories=True, compact=False, model=model)
-			nodes.append(w)
+		kwargs['compact'] = not self.debug
+		if use_memory_writer:
+			w = MergingMemoryWriter(directory=self.output_path, partition_directories=True, model=model, **kwargs)
 		else:
-			if use_memory_writer:
-				w = MergingMemoryWriter(directory=self.output_path, partition_directories=True, compact=True, model=model)
-			else:
-				w = MergingFileWriter(directory=self.output_path, partition_directories=True, compact=True, model=model)
-			nodes.append(w)
+			w = MergingFileWriter(directory=self.output_path, partition_directories=True, model=model, **kwargs)
+		nodes.append(w)
 		self.writers += nodes
 		return nodes
 
@@ -1019,6 +962,7 @@ class ProvenanceFilePipeline(ProvenancePipeline):
 	@staticmethod
 	def persist_prev_post_sales_data(post_sale_rewrite_map):
 		rewrite_map_filename = os.path.join(settings.pipeline_tmp_path, 'post_sale_rewrite_map.json')
+		print(rewrite_map_filename)
 		with open(rewrite_map_filename, 'w') as f:
 			json.dump(post_sale_rewrite_map, f)
 			print(f'Saved post-sales rewrite map to {rewrite_map_filename}')
@@ -1038,8 +982,7 @@ class ProvenanceFilePipeline(ProvenancePipeline):
 
 		print('====================================================')
 		print('Running post-processing of post-sale data...')
-		counter = services['lot_counter']
 		post_map = services['post_sale_map']
-		self.generate_prev_post_sales_data(counter, post_map)
+		self.generate_prev_post_sales_data(post_map)
 		print(f'>>> {len(post_map)} post sales records')
 		print('Total runtime: ', timeit.default_timer() - start)

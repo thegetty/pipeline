@@ -197,6 +197,7 @@ class PopulateSalesObject(Configurable, pipeline.linkedart.PopulateObject):
 			hmo.referred_to_by = vocab.InscriptionStatement(ident='', content=inscription)
 
 	def _populate_object_prev_post_sales(self, data:dict, this_key, post_sale_map):
+		hmo = get_crom_object(data)
 		post_sales = data.get('post_sale', [])
 		prev_sales = data.get('prev_sale', [])
 		prev_post_sales_records = [(post_sales, False), (prev_sales, True)]
@@ -204,16 +205,21 @@ class PopulateSalesObject(Configurable, pipeline.linkedart.PopulateObject):
 			for sale_record in sales_data:
 				pcno = sale_record.get('cat')
 				plno = sale_record.get('lot')
-				plot = self.helper.shared_lot_number_from_lno(plno)
+# 				plot = self.helper.shared_lot_number_from_lno(plno)
 				pdate = implode_date(sale_record, '')
-				if pcno and plot and pdate:
-					that_key = (pcno, plot, pdate)
-					if rev:
-						# `that_key` is for a previous sale for this object
-						post_sale_map[this_key] = that_key
+				if pcno and plno and pdate:
+					if pcno == 'NA':
+						desc = f'Also sold in an unidentified sale: {plot} ({pdate})'
+						note = vocab.Note(ident='', content=desc)
+						hmo.referred_to_by = note
 					else:
-						# `that_key` is for a later sale for this object
-						post_sale_map[that_key] = this_key
+						that_key = (pcno, plno, pdate)
+						if rev:
+							# `that_key` is for a previous sale for this object
+							post_sale_map[this_key] = that_key
+						else:
+							# `that_key` is for a later sale for this object
+							post_sale_map[that_key] = this_key
 
 	def __call__(self, data:dict, post_sale_map, unique_catalogs, vocab_instance_map, destruction_types_map):
 		'''Add modeling for an object described by a sales record'''
@@ -234,8 +240,8 @@ class PopulateSalesObject(Configurable, pipeline.linkedart.PopulateObject):
 		cno = auction_data['catalog_number']
 		lno = auction_data['lot_number']
 		date = implode_date(auction_data, 'lot_sale_')
-		lot = self.helper.shared_lot_number_from_lno(lno)
-		now_key = (cno, lot, date) # the current key for this object; may be associated later with prev and post object keys
+		lot = self.helper.shared_lot_number_from_lno(lno) # the current key for this object; may be associated later with prev and post object keys
+		now_key = (cno, lno, date)
 
 		data['_locations'] = []
 		data['_events'] = []

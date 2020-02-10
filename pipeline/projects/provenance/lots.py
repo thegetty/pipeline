@@ -320,36 +320,20 @@ class AddAcquisitionOrBidding(Configurable):
 		xfer_id = hmo.id + f'-CustodyTransfer-{sequence}'
 		xfer = model.TransferOfCustody(ident=xfer_id, label=xfer_label)
 		xfer.transferred_custody_of = hmo
-		xfer_has_details = False
 
 		THROUGH = set(buy_sell_modifiers['through'])
-		single_seller = (len(sellers) == 1)
-		single_buyer = (len(buyers) == 1)
 
 		for seller_data in sellers:
 			seller = get_crom_object(seller_data)
 			mod = seller_data.get('auth_mod_a', '')
-
-			if single_seller:
-				xfer.transferred_custody_from = seller
-				xfer_has_details = True
-			elif mod in THROUGH:
-				xfer.transferred_custody_from = seller
-				xfer_has_details = True
+			xfer.transferred_custody_from = seller
 
 		for buyer_data in buyers:
 			buyer = get_crom_object(buyer_data)
 			mod = buyer_data.get('auth_mod_a', '')
+			xfer.transferred_custody_to = buyer
 
-			if single_buyer:
-				xfer.transferred_custody_to = buyer
-				xfer_has_details = True
-			elif mod in THROUGH:
-				xfer.transferred_custody_to = buyer
-				xfer_has_details = True
-
-		if xfer_has_details:
-			current_tx.part = xfer
+		current_tx.part = xfer
 
 	def add_acquisition(self, data, buyers, sellers, non_auctions, buy_sell_modifiers, make_la_person=None):
 		'''Add modeling of an acquisition as a transfer of title from the seller to the buyer'''

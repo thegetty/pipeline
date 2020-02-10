@@ -557,7 +557,9 @@ class AddAcquisitionOrBidding(Configurable):
 		'''Add modeling of bids that did not lead to an acquisition'''
 		hmo = get_crom_object(data)
 		parent = data['parent_data']
-		prices = parent['price']
+		prices = parent.get('price', [])
+		if not prices:
+			return
 		amnts = [get_crom_object(p) for p in prices]
 		data['seller'] = sellers
 		auction_data = parent['auction_of_lot']

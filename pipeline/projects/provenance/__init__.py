@@ -63,7 +63,6 @@ from pipeline.nodes.basic import \
 			GroupKeys, \
 			AddArchesModel, \
 			Serializer, \
-			OnlyCromModeledRecords, \
 			OnlyRecordsOfType, \
 			Trace
 from pipeline.util.rewriting import rewrite_output_files, JSONValueRewriter
@@ -191,13 +190,25 @@ class ProvenanceUtilityHelper(UtilityHelper):
 		if sale_type == 'Private Contract Sale':
 			return vocab.Exhibition
 		elif sale_type == 'Stock List':
-			raise NotImplementedError(f'Unexpected sale type: {sale_type!r}')
+			warnings.warn(f'Unexpected sale type: {sale_type!r}')
 		elif sale_type == 'Lottery':
-			raise NotImplementedError(f'Unexpected sale type: {sale_type!r}')
+			warnings.warn(f'Unexpected sale type: {sale_type!r}')
 		elif sale_type in ('Auction'):
 			return vocab.AuctionEvent
 		else:
-			raise NotImplementedError(f'Unexpected sale type: {sale_type!r}')
+			warnings.warn(f'Unexpected sale type: {sale_type!r}')
+
+	def sale_type_for_sale_type(self, sale_type):
+		if sale_type == 'Private Contract Sale':
+			return vocab.SaleAgreement
+		elif sale_type == 'Stock List':
+			warnings.warn(f'Unexpected sale type: {sale_type!r}')
+		elif sale_type == 'Lottery':
+			warnings.warn(f'Unexpected sale type: {sale_type!r}')
+		elif sale_type in ('Auction'):
+			return vocab.Auction
+		else:
+			warnings.warn(f'Unexpected sale type: {sale_type!r}')
 
 	def catalog_type_for_sale_type(self, sale_type):
 		if sale_type == 'Private Contract Sale':
@@ -248,6 +259,30 @@ class ProvenanceUtilityHelper(UtilityHelper):
 		else:
 			raise NotImplementedError(f'Unexpected sale type: {sale_type!r}')
 		return catalog
+
+	def sale_for_sale_type(self, sale_type, lot_object_key):
+		cno, lno, date = lot_object_key
+		uid, uri = self.shared_lot_number_ids(cno, lno, date)
+		shared_lot_number = self.shared_lot_number_from_lno(lno)
+
+		lot_type = self.sale_type_for_sale_type(sale_type)
+		lot = lot_type(ident=uri)
+
+		if sale_type == 'Auction':
+			lot_id = f'{cno} {shared_lot_number} ({date})'
+			lot_label = f'Auction of Lot {lot_id}'
+			lot._label = lot_label
+		elif sale_type == 'Private Contract Sale':
+			lot_id = f'{cno} {shared_lot_number} ({date})'
+			lot_label = f'Sale of {lot_id}'
+			lot._label = lot_label
+		elif sale_type == 'Stock List':
+			raise NotImplementedError(f'Unexpected sale type: {sale_type!r}')
+		elif sale_type == 'Lottery':
+			raise NotImplementedError(f'Unexpected sale type: {sale_type!r}')
+		else:
+			raise NotImplementedError(f'Unexpected sale type: {sale_type!r}')
+		return lot
 
 	def sale_event_for_catalog_number(self, catalog_number, sale_type='Auction'):
 		'''
@@ -399,15 +434,6 @@ def add_crom_price(data, parent, services, add_citations=False):
 	return data
 
 
-@use('non_auctions')
-def remove_non_auction_sales(data:dict, non_auctions):
-	'''
-	Do not allow the Auction of Lot model objects to be serialized for non-auction sales.
-	'''
-	cno = data['auction_of_lot']['catalog_number']
-	if cno not in non_auctions:
-		yield data
-
 #mark - Provenance Pipeline class
 
 class ProvenancePipeline(PipelineBase):
@@ -420,6 +446,9 @@ class ProvenancePipeline(PipelineBase):
 		vocab.register_instance('fire', {'parent': model.Type, 'id': '300068986', 'label': 'Fire'})
 		vocab.register_instance('animal', {'parent': model.Type, 'id': '300249395', 'label': 'Animal'})
 		vocab.register_instance('history', {'parent': model.Type, 'id': '300033898', 'label': 'History'})
+
+		warnings.warn(f'TODO: NEED TO USE CORRECT CLASSIFICATION FOR NON-AUCTION SALES ACTIVITIES')
+		vocab.register_vocab_class('SaleAgreement', {"parent": model.Activity, "id":"000000000", "label": "Sale Agreement"})
 
 		super().__init__(project_name, helper=helper)
 
@@ -782,16 +811,22 @@ class ProvenancePipeline(PipelineBase):
 			_input=records.output
 		)
 		
-		modeled_sales = graph.add_chain(
-			remove_non_auction_sales,
-			ExtractKeyedValue(key='_auction_of_lot'),
-			OnlyCromModeledRecords(),
+		auctions_of_lot = graph.add_chain(
+			ExtractKeyedValue(key='_event_causing_prov_entry'),
+			OnlyRecordsOfType(type=vocab.Auction),
+			_input=sales.output
+		)
+		
+		private_sale_activities = graph.add_chain(
+			ExtractKeyedValue(key='_event_causing_prov_entry'),
+			OnlyRecordsOfType(type=vocab.SaleAgreement),
 			_input=sales.output
 		)
 		
 		if serialize:
 			# write SALES data
-			self.add_serialization_chain(graph, modeled_sales.output, model=self.models['AuctionOfLot'])
+			self.add_serialization_chain(graph, auctions_of_lot.output, model=self.models['AuctionOfLot'])
+			self.add_serialization_chain(graph, private_sale_activities.output, model=self.models['Activity'])
 		return sales
 
 	def add_object_chain(self, graph, sales, serialize=True):

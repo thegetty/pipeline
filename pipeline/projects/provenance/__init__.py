@@ -220,7 +220,7 @@ class ProvenanceUtilityHelper(UtilityHelper):
 		elif sale_type == 'Auction':
 			return vocab.AuctionCatalog
 		else:
-			raise NotImplementedError(f'Unexpected sale type: {sale_type!r}')
+			warnings.warn(f'Unexpected sale type: {sale_type!r}')
 
 	def catalog_text(self, cno, sale_type='Auction'):
 		uri = self.make_proj_uri('CATALOG', cno)
@@ -231,7 +231,7 @@ class ProvenanceUtilityHelper(UtilityHelper):
 		elif sale_type == 'Stock List':
 			catalog = vocab.AccessionCatalogText(ident=uri, label=f'Accession Catalog {cno}')
 		elif sale_type == 'Lottery':
-			raise NotImplementedError(f'Unexpected sale type: {sale_type!r}')
+			warnings.warn(f'Unexpected sale type: {sale_type!r}')
 		else:
 			catalog = vocab.SalesCatalogText(ident=uri, label=f'Sale Catalog {cno}')
 		return catalog
@@ -255,9 +255,9 @@ class ProvenanceUtilityHelper(UtilityHelper):
 			labels = [f'Accession Catalog {cno}'] + labels
 			catalog = vocab.AccessionCatalog(ident=uri, label=', '.join(labels))
 		elif sale_type == 'Lottery':
-			raise NotImplementedError(f'Unexpected sale type: {sale_type!r}')
+			warnings.warn(f'Unexpected sale type: {sale_type!r}')
 		else:
-			raise NotImplementedError(f'Unexpected sale type: {sale_type!r}')
+			warnings.warn(f'Unexpected sale type: {sale_type!r}')
 		return catalog
 
 	def sale_for_sale_type(self, sale_type, lot_object_key):
@@ -277,11 +277,11 @@ class ProvenanceUtilityHelper(UtilityHelper):
 			lot_label = f'Sale of {lot_id}'
 			lot._label = lot_label
 		elif sale_type == 'Stock List':
-			raise NotImplementedError(f'Unexpected sale type: {sale_type!r}')
+			warnings.warn(f'Unexpected sale type: {sale_type!r}')
 		elif sale_type == 'Lottery':
-			raise NotImplementedError(f'Unexpected sale type: {sale_type!r}')
+			warnings.warn(f'Unexpected sale type: {sale_type!r}')
 		else:
-			raise NotImplementedError(f'Unexpected sale type: {sale_type!r}')
+			warnings.warn(f'Unexpected sale type: {sale_type!r}')
 		return lot
 
 	def sale_event_for_catalog_number(self, catalog_number, sale_type='Auction'):

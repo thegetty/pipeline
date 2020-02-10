@@ -369,7 +369,6 @@ class AddAcquisitionOrBidding(Configurable):
 		multi = tx_data.get('multi_lot_tx')
 		paym_label = f'multiple lots {multi}' if multi else object_label
 		paym = model.Payment(ident=payment_id, label=f'Payment for {paym_label}')
-		paym_has_amount = False
 
 		THROUGH = set(buy_sell_modifiers['through'])
 		FOR = set(buy_sell_modifiers['for'])
@@ -431,7 +430,6 @@ class AddAcquisitionOrBidding(Configurable):
 
 		if prices:
 			amnt = get_crom_object(prices[0])
-			paym_has_amount = True
 			paym.paid_amount = amnt
 			for price in prices[1:]:
 				amnt = get_crom_object(price)
@@ -444,8 +442,7 @@ class AddAcquisitionOrBidding(Configurable):
 			acq.timespan = ts
 		
 		current_tx.part = acq
-		if paym_has_amount:
-			current_tx.part = paym
+		current_tx.part = paym
 		data['_procurements'] += [add_crom_data(data={}, what=current_tx)]
 	# 	lot_uid, lot_uri = helper.shared_lot_number_ids(cno, lno)
 		# TODO: `annotation` here is from add_physical_catalog_objects

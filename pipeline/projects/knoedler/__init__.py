@@ -554,9 +554,6 @@ class PopulateKnoedlerObject(Configurable, pipeline.linkedart.PopulateObject):
 			if 'no' in consigner:
 				consigner_num = consigner['no']
 				consigner_id = vocab.LocalNumber(ident='', label=f'Consigned number: {consigner_num}', content=consigner_num)
-				assignment = model.AttributeAssignment(ident='')
-				assignment.carried_out_by = get_crom_object(consigner)
-				consigner_id.assigned_by = assignment
 				data['_object']['identifiers'].append(consigner_id)
 			data['_consigner'] = consigner
 

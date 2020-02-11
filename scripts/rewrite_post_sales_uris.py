@@ -1,5 +1,6 @@
 #!/usr/bin/env python3 -B
 
+import re
 import os
 import sys
 import json
@@ -26,5 +27,10 @@ with open(rewrite_map_filename, 'r') as f:
 # 	print('Post sales rewrite map:')
 # 	pprint.pprint(post_sale_rewrite_map)
 	r = JSONValueRewriter(post_sale_rewrite_map, prefix=True)
-	rewrite_output_files(r, parallel=True)
+
+	kwargs = {}
+	prefix = os.path.commonprefix(list(post_sale_rewrite_map.keys()))
+	if len(prefix) > 20:
+		kwargs['content_filter_re'] = re.compile(re.escape(prefix))
+	rewrite_output_files(r, parallel=True, **kwargs)
 print('Done')

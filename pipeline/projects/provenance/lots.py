@@ -557,10 +557,6 @@ class AddAcquisitionOrBidding(Configurable):
 		'''Add modeling of bids that did not lead to an acquisition'''
 		hmo = get_crom_object(data)
 		parent = data['parent_data']
-		prices = parent.get('price', [])
-		if not prices:
-			return
-		amnts = [get_crom_object(p) for p in prices]
 		data['seller'] = sellers
 		auction_data = parent['auction_of_lot']
 		cno, lno, date = object_key(auction_data)
@@ -573,6 +569,11 @@ class AddAcquisitionOrBidding(Configurable):
 		ts = lot.timespan
 
 		prev_procurements = self.add_non_sale_sellers(data, sellers)
+
+		prices = parent.get('price', [])
+		if not prices:
+			yield data
+		amnts = [get_crom_object(p) for p in prices]
 
 		if amnts:
 			bidding_id = hmo.id + '-Bidding'

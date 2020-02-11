@@ -1,4 +1,5 @@
 import os
+import re
 import sys
 import json
 import multiprocessing
@@ -40,18 +41,26 @@ def rewrite_output_files(r, update_filename=False, parallel=False, **kwargs):
 	if parallel:
 		j = 8
 		pool = multiprocessing.Pool(j)
-		args = (((f,), r, update_filename) for f in files)
+		args = (((f,), r, update_filename, kwargs) for f in files)
 		_ = pool.starmap(_rewrite_output_files, args)
 	else:
-		_rewrite_output_files(files, r, update_filename, **kwargs)
+		_rewrite_output_files(files, r, update_filename, kwargs)
 
-def _rewrite_output_files(files, r, update_filename=False, **kwargs):
+def _rewrite_output_files(files, r, update_filename, kwargs):
 	i = 0
 	for i, f in enumerate(files):
 		# print(f'{i} {f}', end="\r", flush=True)
 		with open(f) as data_file:
 			try:
-				data = json.load(data_file)
+				bytes = data_file.read()
+				if 'content_filter_re' in kwargs:
+					filter_re = kwargs['content_filter_re']
+					if not re.search(filter_re, bytes):
+						print(f'skipping   {f}')
+						continue
+					else:
+						print(f'processing {f}')
+				data = json.loads(bytes)
 			except json.decoder.JSONDecodeError:
 				sys.stderr.write(f'Failed to load JSON during rewriting of {f}\n')
 				raise

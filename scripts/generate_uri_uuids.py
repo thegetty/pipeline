@@ -4,6 +4,7 @@ import os
 import sys
 import json
 import uuid
+import time
 import pprint
 import itertools
 from pathlib import Path
@@ -98,6 +99,7 @@ except FileNotFoundError:
 	map_data = {}
 
 print(f'Generating URI to UUID map ...')
+start_time = time.time()
 uris = find_uris(prefix, map_data, Path(output_file_path))
 uuid_map = {}
 for uri in uris:
@@ -111,4 +113,6 @@ map_data.update(uuid_map)
 with open(map_file, 'w') as data_file:
 	json.dump(map_data, data_file)
 
-print('Done')
+cur = time.time()
+elapsed = cur - start_time
+print(f'Done (%.1fs)' % (elapsed,))

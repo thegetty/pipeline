@@ -3,6 +3,7 @@
 import os
 import sys
 import json
+import time
 import uuid
 import pprint
 import itertools
@@ -63,8 +64,11 @@ prefix = sys.argv[1]
 map_file = sys.argv[2]
 
 print(f'Rewriting URIs to UUIDs ...')
+start_time = time.time()
 r = UUIDRewriter(prefix, map_file)
 rewrite_output_files(r, update_filename=True, verify_uuid=True, parallel=True)
 if map_file:
 	r.persist_map()
-print('Done')
+cur = time.time()
+elapsed = cur - start_time
+print(f'Done (%.1fs)' % (elapsed,))

@@ -4,6 +4,7 @@ import re
 import os
 import sys
 import json
+import time
 import uuid
 import pprint
 import itertools
@@ -21,6 +22,7 @@ Usage: {cmd} URI_REWRITE_MAP.json
 	sys.exit(1)
 
 print(f'Rewriting post-sales URIs ...')
+start_time = time.time()
 rewrite_map_filename = sys.argv[1]
 with open(rewrite_map_filename, 'r') as f:
 	post_sale_rewrite_map = json.load(f)
@@ -33,4 +35,6 @@ with open(rewrite_map_filename, 'r') as f:
 	if len(prefix) > 20:
 		kwargs['content_filter_re'] = re.compile(re.escape(prefix))
 	rewrite_output_files(r, parallel=True, **kwargs)
-print('Done')
+cur = time.time()
+elapsed = cur - start_time
+print(f'Done (%.1fs)' % (elapsed,))

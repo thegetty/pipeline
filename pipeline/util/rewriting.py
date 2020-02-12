@@ -39,7 +39,7 @@ def rewrite_output_files(r, update_filename=False, parallel=False, **kwargs):
 	files = sorted(p.rglob('*.json'))
 
 	if parallel:
-		j = 8
+		j = 16
 		pool = multiprocessing.Pool(j)
 		args = (((f,), r, update_filename, kwargs) for f in files)
 		_ = pool.starmap(_rewrite_output_files, args)

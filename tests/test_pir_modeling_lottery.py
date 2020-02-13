@@ -66,7 +66,7 @@ class PIRModelingTest_PrivateContractSales(TestProvenancePipelineOutput):
 		* A private sale activity classified as a Lottery
 		* An Object Set classified as a Collection
 		* A HumanMadeObject classified as a Painting, and belonging to the Object Set
-		* A Provenance Entry for the private sale
+		* An Activity modeling the individual private sale
 		'''
 		objects = output['model-object']
 		activities = output['model-activity']
@@ -77,7 +77,7 @@ class PIRModelingTest_PrivateContractSales(TestProvenancePipelineOutput):
 		hmo_key = 'tag:getty.edu,2019:digital:pipeline:provenance:REPLACE-WITH-UUID#OBJECT,D-A50,0001,1765'
 		hmo = objects[hmo_key]
 		
-		prov_entry_curr = drawings['tag:getty.edu,2019:digital:pipeline:provenance:REPLACE-WITH-UUID#AUCTION,D-A50,LOT,0001,DATE,1765']
+		sale_curr = drawings['tag:getty.edu,2019:digital:pipeline:provenance:REPLACE-WITH-UUID#AUCTION,D-A50,LOT,0001,DATE,1765']
 		
 		event_key = 'tag:getty.edu,2019:digital:pipeline:provenance:REPLACE-WITH-UUID#LOTTERY-EVENT,CATALOGNUMBER,D-A50'
 		sale_event = activities[event_key]
@@ -91,7 +91,7 @@ class PIRModelingTest_PrivateContractSales(TestProvenancePipelineOutput):
 		self.assertIn(object_set_key, {s['id'] for s in hmo['member_of']})
 		
 		# There are no acquisitions or payments as the transaction is 'unknown'.
-		self.assertNotIn('part', prov_entry_curr)
+		self.assertNotIn('part', sale_curr)
 
 
 if __name__ == '__main__':

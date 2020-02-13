@@ -66,7 +66,7 @@ class PIRModelingTest_StockListSales(TestProvenancePipelineOutput):
 		* A private sale activity classified as an Exhibition
 		* An Object Set classified as a Collection
 		* A HumanMadeObject classified as a Painting, and belonging to the Object Set
-		* A Provenance Entry for the private sale
+		* An Activity modeling the individual private sale
 		'''
 		objects = output['model-object']
 		activities = output['model-activity']
@@ -76,7 +76,7 @@ class PIRModelingTest_StockListSales(TestProvenancePipelineOutput):
 		hmo_key = 'tag:getty.edu,2019:digital:pipeline:provenance:REPLACE-WITH-UUID#OBJECT,Br-541,%5B0001%5D,1808'
 		hmo = objects[hmo_key]
 		
-		prov_entry_curr = activities['tag:getty.edu,2019:digital:pipeline:provenance:REPLACE-WITH-UUID#AUCTION,Br-541,LOT,%5B0001%5D,DATE,1808']
+		sale_curr = activities['tag:getty.edu,2019:digital:pipeline:provenance:REPLACE-WITH-UUID#AUCTION,Br-541,LOT,%5B0001%5D,DATE,1808']
 		
 		event_key = 'tag:getty.edu,2019:digital:pipeline:provenance:REPLACE-WITH-UUID#STOCK_LIST-EVENT,CATALOGNUMBER,Br-541'
 		sale_event = activities[event_key]
@@ -90,7 +90,7 @@ class PIRModelingTest_StockListSales(TestProvenancePipelineOutput):
 		self.assertIn(object_set_key, {s['id'] for s in hmo['member_of']})
 		
 		# There are no acquisitions or payments as the transaction is 'unknown'.
-		self.assertNotIn('part', prov_entry_curr)
+		self.assertNotIn('part', sale_curr)
 
 
 if __name__ == '__main__':

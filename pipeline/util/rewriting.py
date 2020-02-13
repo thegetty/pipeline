@@ -41,14 +41,26 @@ def rewrite_output_files(r, update_filename=False, parallel=False, **kwargs):
 	if parallel:
 		j = 16
 		pool = multiprocessing.Pool(j)
-		args = (((f,), r, update_filename, kwargs) for f in files)
+
+		partition_count = 10 * j
+		chunk_size = 1+int(len(files)/partition_count)
+		_file_partitions = [files[chunk_size*i:chunk_size*(i+1)] for i in range(partition_count)]
+		file_partitions = [p for p in _file_partitions if len(p)]
+		args = list((file_partition, r, update_filename, kwargs) for file_partition in file_partitions)
+		print(f'{len(args)} partitions for starmap')
 		_ = pool.starmap(_rewrite_output_files, args)
 	else:
 		_rewrite_output_files(files, r, update_filename, kwargs)
 
 def _rewrite_output_files(files, r, update_filename, kwargs):
 	i = 0
+	if not files:
+		return
+	print(f'rewrite worker called with {len(files)} files [{files[0]} .. {files[-1]}]')
+	rewritten_count = 0
+	processed_count = 0
 	for i, f in enumerate(files):
+		processed_count += 1
 		# print(f'{i} {f}', end="\r", flush=True)
 		with open(f) as data_file:
 			try:
@@ -97,11 +109,12 @@ def _rewrite_output_files(files, r, update_filename, kwargs):
 					data = factory.toString(m, False)
 					d = json.loads(data)
 		with open(newfile, 'w') as data_file:
+			rewritten_count += 1
 			json.dump(d, data_file, indent=2, ensure_ascii=False)
 		if newfile != f:
 			os.remove(f)
-	if i:
-		print(f'{i} files rewritten')
+	if rewritten_count:
+		print(f'{rewritten_count}/{processed_count} files rewritten')
 
 class JSONValueRewriter:
 	def __init__(self, mapping, prefix=False):

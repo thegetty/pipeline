@@ -1,7 +1,7 @@
 import os
 import re
 import sys
-import json
+import ujson as json
 import multiprocessing
 from pathlib import Path
 from contextlib import suppress

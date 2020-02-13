@@ -42,19 +42,21 @@ def rewrite_output_files(r, update_filename=False, parallel=False, **kwargs):
 	p = Path(output_file_path)
 	files = sorted(p.rglob('*.json'))
 
+	if 'content_filter_re' in kwargs:
+		print('rewriting with content filter: {kwargs["content_filter_re"]}')
 	if parallel:
 		j = 16
 		pool = multiprocessing.Pool(j)
 
 		partition_size = min(10000, int(len(files)/j))
 		file_partitions = list(chunks(files, partition_size))
-		args = list((file_partition, r, update_filename, i, kwargs) for i, file_partition in enumerate(file_partitions))
+		args = list((file_partition, r, update_filename, i+1, len(file_partitions), kwargs) for i, file_partition in enumerate(file_partitions))
 		print(f'{len(args)} worker partitions with size {partition_size}')
 		_ = pool.starmap(_rewrite_output_files, args)
 	else:
-		_rewrite_output_files(files, r, update_filename, 0, kwargs)
+		_rewrite_output_files(files, r, update_filename, 1, 1, kwargs)
 
-def _rewrite_output_files(files, r, update_filename, worker_id, kwargs):
+def _rewrite_output_files(files, r, update_filename, worker_id, total_workers, kwargs):
 	i = 0
 	if not files:
 		return
@@ -116,9 +118,9 @@ def _rewrite_output_files(files, r, update_filename, worker_id, kwargs):
 		if newfile != f:
 			os.remove(f)
 	if rewritten_count:
-		print(f'worker {worker_id} finished with {rewritten_count}/{processed_count} files rewritten')
+		print(f'worker {worker_id}/{total_workers} finished with {rewritten_count}/{processed_count} files rewritten')
 	else:
-		print(f'worker {worker_id} finished')
+		print(f'worker {worker_id}/{total_workers} finished')
 
 class JSONValueRewriter:
 	def __init__(self, mapping, prefix=False):

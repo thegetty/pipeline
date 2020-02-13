@@ -688,7 +688,8 @@ class AddAcquisitionOrBidding(Configurable):
 			for data, current_tx in self.add_acquisition(data, buyers, sellers, non_auctions, buy_sell_modifiers, make_la_person):
 				if sale_type == 'Auction':
 					self.add_transfer_of_custody(data, current_tx, buyers, sellers, non_auctions, buy_sell_modifiers)
-				elif sale_type == 'Private Contract Sale':
+				elif sale_type in ('Private Contract Sale', 'Stock List'):
+					# 'Stock List' is treated just like a Private Contract Sale, except for the catalogs
 					metadata = {
 						'pi_record_no': parent['pi_record_no'],
 						'catalog_number': cno
@@ -710,7 +711,10 @@ class AddAcquisitionOrBidding(Configurable):
 		elif transaction in UNSOLD:
 			yield from self.add_bidding(data, buyers, sellers, buy_sell_modifiers)
 		elif transaction in UNKNOWN:
-			yield from self.add_bidding(data, buyers, sellers, buy_sell_modifiers)
+			if sale_type == 'Lottery':
+				yield data
+			else:
+				yield from self.add_bidding(data, buyers, sellers, buy_sell_modifiers)
 		else:
 			prev_procurements = self.add_non_sale_sellers(data, sellers)
 			lot = get_crom_object(parent['_event_causing_prov_entry'])

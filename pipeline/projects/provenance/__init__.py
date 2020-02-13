@@ -187,24 +187,22 @@ class ProvenanceUtilityHelper(UtilityHelper):
 		return dst
 
 	def event_type_for_sale_type(self, sale_type):
-		if sale_type == 'Private Contract Sale':
+		if sale_type in ('Private Contract Sale', 'Stock List'):
+			# 'Stock List' is treated just like a Private Contract Sale, except for the catalogs
 			return vocab.Exhibition
-		elif sale_type == 'Stock List':
-			warnings.warn(f'Unexpected sale type: {sale_type!r}')
 		elif sale_type == 'Lottery':
-			warnings.warn(f'Unexpected sale type: {sale_type!r}')
+			return vocab.Lottery
 		elif sale_type in ('Auction'):
 			return vocab.AuctionEvent
 		else:
 			warnings.warn(f'Unexpected sale type: {sale_type!r}')
 
 	def sale_type_for_sale_type(self, sale_type):
-		if sale_type == 'Private Contract Sale':
+		if sale_type in ('Private Contract Sale', 'Stock List'):
+			# 'Stock List' is treated just like a Private Contract Sale, except for the catalogs
 			return vocab.SaleAgreement
-		elif sale_type == 'Stock List':
-			warnings.warn(f'Unexpected sale type: {sale_type!r}')
 		elif sale_type == 'Lottery':
-			warnings.warn(f'Unexpected sale type: {sale_type!r}')
+			return vocab.LotteryDrawing
 		elif sale_type in ('Auction'):
 			return vocab.Auction
 		else:
@@ -216,7 +214,7 @@ class ProvenanceUtilityHelper(UtilityHelper):
 		elif sale_type == 'Stock List':
 			return vocab.AccessionCatalog
 		elif sale_type == 'Lottery':
-			return vocab.SalesCatalog
+			return vocab.LotteryCatalog
 		elif sale_type == 'Auction':
 			return vocab.AuctionCatalog
 		else:
@@ -231,7 +229,7 @@ class ProvenanceUtilityHelper(UtilityHelper):
 		elif sale_type == 'Stock List':
 			catalog = vocab.AccessionCatalogText(ident=uri, label=f'Accession Catalog {cno}')
 		elif sale_type == 'Lottery':
-			warnings.warn(f'Unexpected sale type: {sale_type!r}')
+			catalog = vocab.LotteryCatalogText(ident=uri, label=f'Lottery Catalog {cno}')
 		else:
 			catalog = vocab.SalesCatalogText(ident=uri, label=f'Sale Catalog {cno}')
 		return catalog
@@ -245,17 +243,19 @@ class ProvenanceUtilityHelper(UtilityHelper):
 		if copy:
 			labels.append(f'copy {copy}')
 		label = ', '.join(labels)
+		catalot_type = self.catalog_type_for_sale_type(sale_type)
 		if sale_type == 'Auction':
 			labels = [f'Sale Catalog {cno}'] + labels
-			catalog = vocab.AuctionCatalog(ident=uri, label=', '.join(labels))
+			catalog = catalot_type(ident=uri, label=', '.join(labels))
 		elif sale_type == 'Private Contract Sale':
 			labels = [f'Private Sale Exhibition Catalog {cno}'] + labels
-			catalog = vocab.ExhibitionCatalog(ident=uri, label=', '.join(labels))
+			catalog = catalot_type(ident=uri, label=', '.join(labels))
 		elif sale_type == 'Stock List':
-			labels = [f'Accession Catalog {cno}'] + labels
-			catalog = vocab.AccessionCatalog(ident=uri, label=', '.join(labels))
+			labels = [f'Stock List {cno}'] + labels
+			catalog = catalot_type(ident=uri, label=', '.join(labels))
 		elif sale_type == 'Lottery':
-			warnings.warn(f'Unexpected sale type: {sale_type!r}')
+			labels = [f'Lottery Catalog {cno}'] + labels
+			catalog = catalot_type(ident=uri, label=', '.join(labels))
 		else:
 			warnings.warn(f'Unexpected sale type: {sale_type!r}')
 		return catalog
@@ -272,14 +272,14 @@ class ProvenanceUtilityHelper(UtilityHelper):
 			lot_id = f'{cno} {shared_lot_number} ({date})'
 			lot_label = f'Auction of Lot {lot_id}'
 			lot._label = lot_label
-		elif sale_type == 'Private Contract Sale':
+		elif sale_type in ('Private Contract Sale', 'Stock List'):
 			lot_id = f'{cno} {shared_lot_number} ({date})'
 			lot_label = f'Sale of {lot_id}'
 			lot._label = lot_label
-		elif sale_type == 'Stock List':
-			warnings.warn(f'Unexpected sale type: {sale_type!r}')
 		elif sale_type == 'Lottery':
-			warnings.warn(f'Unexpected sale type: {sale_type!r}')
+			lot_id = f'{cno} {shared_lot_number} ({date})'
+			lot_label = f'Lottery Drawing for {lot_id}'
+			lot._label = lot_label
 		else:
 			warnings.warn(f'Unexpected sale type: {sale_type!r}')
 		return lot
@@ -344,7 +344,7 @@ class ProvenanceUtilityHelper(UtilityHelper):
 				return n[9:]
 		return shared_lot_number
 
-	def shared_lot_number_ids(self, cno, lno, date):
+	def shared_lot_number_ids(self, cno, lno, date, sale_type='Auction'):
 		'''
 		Return a tuple of a UID string and a URI for the lot identified by the supplied
 		data which identifies a specific object in that lot.
@@ -447,8 +447,13 @@ class ProvenancePipeline(PipelineBase):
 		vocab.register_instance('animal', {'parent': model.Type, 'id': '300249395', 'label': 'Animal'})
 		vocab.register_instance('history', {'parent': model.Type, 'id': '300033898', 'label': 'History'})
 
-		warnings.warn(f'TODO: NEED TO USE CORRECT CLASSIFICATION FOR NON-AUCTION SALES ACTIVITIES')
+		warnings.warn(f'TODO: NEED TO USE CORRECT CLASSIFICATION FOR NON-AUCTION SALES ACTIVITIES, LOTTERY CATALOG')
 		vocab.register_vocab_class('SaleAgreement', {"parent": model.Activity, "id":"000000000", "label": "Sale Agreement"})
+		vocab.register_vocab_class('LotteryDrawing', {"parent": model.Activity, "id":"000000000", "label": "Lottery Drawing"})
+
+		vocab.register_vocab_class('Lottery', {"parent": model.Activity, "id":"000000000", "label": "Lottery"})
+		vocab.register_vocab_class('LotteryCatalog', {"parent": model.HumanMadeObject, "id":"000000000", "label": "Lottery Catalog", "metatype": "work type"})
+		vocab.register_vocab_class('LotteryCatalogText', {"parent": model.LinguisticObject, "id":"000000000", "label": "Lottery Catalog", "metatype": "work type"})
 
 		super().__init__(project_name, helper=helper)
 
@@ -608,12 +613,17 @@ class ProvenancePipeline(PipelineBase):
 			ExtractKeyedValue(key='_bidding'),
 			_input=bid_acqs.output
 		)
+		drawing = graph.add_chain(
+			ExtractKeyedValue(key='_drawing'),
+			_input=bid_acqs.output
+		)
 		_ = self.add_places_chain(graph, bid_acqs, key='_owner_locations', serialize=True)
 
 		if serialize:
 			# write SALES data
 			self.add_serialization_chain(graph, refs.output, model=self.models['LinguisticObject'])
 			self.add_serialization_chain(graph, bids.output, model=self.models['Bidding'])
+			self.add_serialization_chain(graph, drawing.output, model=self.models['Drawing'])
 		return bid_acqs
 
 	def add_sales_chain(self, graph, records, services, serialize=True):
@@ -823,10 +833,17 @@ class ProvenancePipeline(PipelineBase):
 			_input=sales.output
 		)
 		
+		lottery_drawings = graph.add_chain(
+			ExtractKeyedValue(key='_event_causing_prov_entry'),
+			OnlyRecordsOfType(type=vocab.LotteryDrawing),
+			_input=sales.output
+		)
+		
 		if serialize:
 			# write SALES data
 			self.add_serialization_chain(graph, auctions_of_lot.output, model=self.models['AuctionOfLot'])
 			self.add_serialization_chain(graph, private_sale_activities.output, model=self.models['Activity'])
+			self.add_serialization_chain(graph, lottery_drawings.output, model=self.models['Drawing'])
 		return sales
 
 	def add_object_chain(self, graph, sales, serialize=True):

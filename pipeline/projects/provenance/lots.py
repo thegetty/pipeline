@@ -202,7 +202,6 @@ class AddAcquisitionOrBidding(Configurable):
 	helper = Option(required=True)
 	non_auctions = Service('non_auctions')
 	buy_sell_modifiers = Service('buy_sell_modifiers')
-	make_la_person = Service('make_la_person')
 	transaction_types = Service('transaction_types')
 
 	@staticmethod
@@ -330,7 +329,7 @@ class AddAcquisitionOrBidding(Configurable):
 
 		current_tx.part = xfer
 
-	def add_acquisition(self, data, buyers, sellers, non_auctions, buy_sell_modifiers, make_la_person=None):
+	def add_acquisition(self, data, buyers, sellers, non_auctions, buy_sell_modifiers):
 		'''Add modeling of an acquisition as a transfer of title from the seller to the buyer'''
 		hmo = get_crom_object(data)
 		parent = data['parent_data']
@@ -467,10 +466,10 @@ class AddAcquisitionOrBidding(Configurable):
 					# some records seem to have metadata (source information, location, or notes)
 					# but no other fields set these should not constitute actual records of a prev/post owner.
 					continue
-				self.handle_prev_post_owner(data, tx_data, owner_record, record_id, rev,  make_la_person, ts)
+				self.handle_prev_post_owner(data, tx_data, owner_record, record_id, rev, ts)
 		yield data, current_tx
 
-	def handle_prev_post_owner(self, data, tx_data, owner_record, record_id, rev, make_la_person, ts=None):
+	def handle_prev_post_owner(self, data, tx_data, owner_record, record_id, rev, ts=None):
 		hmo = get_crom_object(data)
 		current_tx = get_crom_object(tx_data)
 		sales_record = get_crom_object(data['_record'])
@@ -485,9 +484,7 @@ class AddAcquisitionOrBidding(Configurable):
 			'name': owner_record['own']
 		})
 		pi = self.helper.person_identity
-		pi.add_uri(owner_record, record_id=record_id)
-		pi.add_names(owner_record, referrer=sales_record, role='artist')
-		make_la_person(owner_record)
+		pi.add_person(owner_record, sales_record, relative_id=record_id, role='artist')
 		owner = get_crom_object(owner_record)
 
 		# TODO: handle other fields of owner_record: own_auth_d, own_auth_q, own_ques, own_so
@@ -633,7 +630,7 @@ class AddAcquisitionOrBidding(Configurable):
 			warnings.warn(f'*** No price data found for {parent["transaction"]!r} transaction')
 			yield data
 
-	def add_person(self, data:dict, sales_record, rec_id, *, make_la_person):
+	def add_person(self, data:dict, sales_record, rec_id):
 		'''
 		Add modeling data for people, based on properties of the supplied `data` dict.
 
@@ -641,13 +638,10 @@ class AddAcquisitionOrBidding(Configurable):
 		`pipeline.linkedart.MakeLinkedArtPerson` to construct the model objects.
 		'''
 		pi = self.helper.person_identity
-		pi.add_uri(data, record_id=rec_id)
-		pi.add_names(data, referrer=sales_record)
-
-		make_la_person(data)
+		pi.add_person(data, sales_record, relative_id=rec_id)
 		return data
 
-	def __call__(self, data:dict, non_auctions, buy_sell_modifiers, make_la_person, transaction_types):
+	def __call__(self, data:dict, non_auctions, buy_sell_modifiers, transaction_types):
 		'''Determine if this record has an acquisition or bidding, and add appropriate modeling'''
 		parent = data['parent_data']
 		sales_record = get_crom_object(data['_record'])
@@ -660,8 +654,7 @@ class AddAcquisitionOrBidding(Configurable):
 			self.add_person(
 				self.helper.copy_source_information(p, parent),
 				sales_record,
-				f'buyer_{i+1}',
-				make_la_person=make_la_person
+				f'buyer_{i+1}'
 			) for i, p in enumerate(parent['buyer'])
 		]
 
@@ -669,8 +662,7 @@ class AddAcquisitionOrBidding(Configurable):
 			self.add_person(
 				self.helper.copy_source_information(p, parent),
 				sales_record,
-				f'seller_{i+1}',
-				make_la_person=make_la_person
+				f'seller_{i+1}'
 			) for i, p in enumerate(parent['seller'])
 		]
 
@@ -685,7 +677,7 @@ class AddAcquisitionOrBidding(Configurable):
 		if transaction in SOLD:
 			data['_owner_locations'] = []
 			
-			for data, current_tx in self.add_acquisition(data, buyers, sellers, non_auctions, buy_sell_modifiers, make_la_person):
+			for data, current_tx in self.add_acquisition(data, buyers, sellers, non_auctions, buy_sell_modifiers):
 				if sale_type == 'Auction':
 					self.add_transfer_of_custody(data, current_tx, buyers, sellers, non_auctions, buy_sell_modifiers)
 				elif sale_type == 'Private Contract Sale':

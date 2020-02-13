@@ -33,6 +33,10 @@ def filename_for(data: dict, original_filename: str, verify_uuid=False):
 	q = p.with_name(fn)
 	return q
 
+def chunks(l, size):
+    for i in range(0, len(l), size):
+        yield l[i:i+size]	
+
 def rewrite_output_files(r, update_filename=False, parallel=False, **kwargs):
 	print(f'Rewriting JSON output files')
 	p = Path(output_file_path)
@@ -42,21 +46,19 @@ def rewrite_output_files(r, update_filename=False, parallel=False, **kwargs):
 		j = 16
 		pool = multiprocessing.Pool(j)
 
-		partition_count = 10 * j
-		chunk_size = 1+int(len(files)/partition_count)
-		_file_partitions = [files[chunk_size*i:chunk_size*(i+1)] for i in range(partition_count)]
-		file_partitions = [p for p in _file_partitions if len(p)]
-		args = list((file_partition, r, update_filename, kwargs) for file_partition in file_partitions)
-		print(f'{len(args)} partitions for starmap')
+		partition_size = min(10000, int(len(files)/j))
+		file_partitions = list(chunks(files, partition_size))
+		args = list((file_partition, r, update_filename, i, kwargs) for i, file_partition in enumerate(file_partitions))
+		print(f'{len(args)} worker partitions with size {partition_size}')
 		_ = pool.starmap(_rewrite_output_files, args)
 	else:
-		_rewrite_output_files(files, r, update_filename, kwargs)
+		_rewrite_output_files(files, r, update_filename, 0, kwargs)
 
-def _rewrite_output_files(files, r, update_filename, kwargs):
+def _rewrite_output_files(files, r, update_filename, worker_id, kwargs):
 	i = 0
 	if not files:
 		return
-	print(f'rewrite worker called with {len(files)} files [{files[0]} .. {files[-1]}]')
+	print(f'rewrite worker {worker_id} called with {len(files)} files [{files[0]} .. {files[-1]}]')
 	rewritten_count = 0
 	processed_count = 0
 	for i, f in enumerate(files):
@@ -114,7 +116,9 @@ def _rewrite_output_files(files, r, update_filename, kwargs):
 		if newfile != f:
 			os.remove(f)
 	if rewritten_count:
-		print(f'{rewritten_count}/{processed_count} files rewritten')
+		print(f'worker {worker_id} finished with {rewritten_count}/{processed_count} files rewritten')
+	else:
+		print(f'worker {worker_id} finished')
 
 class JSONValueRewriter:
 	def __init__(self, mapping, prefix=False):

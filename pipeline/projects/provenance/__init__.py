@@ -243,19 +243,19 @@ class ProvenanceUtilityHelper(UtilityHelper):
 		if copy:
 			labels.append(f'copy {copy}')
 		label = ', '.join(labels)
-		catalot_type = self.catalog_type_for_sale_type(sale_type)
+		catalog_type = self.catalog_type_for_sale_type(sale_type)
 		if sale_type == 'Auction':
 			labels = [f'Sale Catalog {cno}'] + labels
-			catalog = catalot_type(ident=uri, label=', '.join(labels))
+			catalog = catalog_type(ident=uri, label=', '.join(labels))
 		elif sale_type == 'Private Contract Sale':
 			labels = [f'Private Sale Exhibition Catalog {cno}'] + labels
-			catalog = catalot_type(ident=uri, label=', '.join(labels))
+			catalog = catalog_type(ident=uri, label=', '.join(labels))
 		elif sale_type == 'Stock List':
 			labels = [f'Stock List {cno}'] + labels
-			catalog = catalot_type(ident=uri, label=', '.join(labels))
+			catalog = catalog_type(ident=uri, label=', '.join(labels))
 		elif sale_type == 'Lottery':
 			labels = [f'Lottery Catalog {cno}'] + labels
-			catalog = catalot_type(ident=uri, label=', '.join(labels))
+			catalog = catalog_type(ident=uri, label=', '.join(labels))
 		else:
 			warnings.warn(f'Unexpected sale type: {sale_type!r}')
 		return catalog

@@ -34,8 +34,9 @@ def filename_for(data: dict, original_filename: str, verify_uuid=False):
 	return q
 
 def chunks(l, size):
-    for i in range(0, len(l), size):
-        yield l[i:i+size]	
+	if len(l):
+		for i in range(0, len(l), size):
+			yield l[i:i+size]
 
 def rewrite_output_files(r, update_filename=False, parallel=False, **kwargs):
 	print(f'Rewriting JSON output files')
@@ -48,7 +49,7 @@ def rewrite_output_files(r, update_filename=False, parallel=False, **kwargs):
 		j = 16
 		pool = multiprocessing.Pool(j)
 
-		partition_size = min(10000, int(len(files)/j))
+		partition_size = max(min(10000, int(len(files)/j)), 10)
 		file_partitions = list(chunks(files, partition_size))
 		args = list((file_partition, r, update_filename, i+1, len(file_partitions), kwargs) for i, file_partition in enumerate(file_partitions))
 		print(f'{len(args)} worker partitions with size {partition_size}')

@@ -16,12 +16,12 @@ from cromulent import vocab
 
 vocab.add_attribute_assignment_check()
 
-class PIRModelingTest_NonAuctionSales(TestProvenancePipelineOutput):
-	def test_modeling_non_auction_sales(self):
+class PIRModelingTest_PrivateContractSales(TestProvenancePipelineOutput):
+	def test_modeling_private_contract_sales(self):
 		'''
-		Test for modeling of sales that are not auctions.
+		Test for modeling of Private Contract Sales.
 		'''
-		output = self.run_pipeline('non_auction')
+		output = self.run_pipeline('private_contract_sales')
 		self.verify_catalogs(output)
 		self.verify_sales(output)
 	
@@ -60,7 +60,7 @@ class PIRModelingTest_NonAuctionSales(TestProvenancePipelineOutput):
 
 	def verify_sales(self, output):
 		'''
-		For a non-auction sale record, there should be:
+		For a private contract sale record, there should be:
 		
 		* A private sale activity classified as an Exhibition
 		* An Object Set classified as a Collection, having an Asking Price

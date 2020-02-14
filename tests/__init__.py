@@ -19,6 +19,7 @@ MODELS = {
 	'AuctionOfLot': 'model-auction-of-lot',
 	'Acquisition': 'model-acquisition',
 	'Activity': 'model-activity',
+	'Drawing': 'model-drawing',
 	'Event': 'model-event',
 	'Group': 'model-groups',
 	'HumanMadeObject': 'model-object',

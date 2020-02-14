@@ -1,5 +1,6 @@
 import warnings
 import pprint
+import traceback
 from contextlib import suppress
 
 from bonobo.config import Option, Service, Configurable
@@ -185,7 +186,7 @@ class AddAuctionOfLot(Configurable):
 				lots = self.helper.lots_in_transaction(auction_data, data)
 				multi = self.helper.transaction_contains_multiple_lots(auction_data, data)
 				tx = vocab.ProvenanceEntry(ident=tx_uri)
-				tx._label = f'Provenance Entry for Lot {cno} {lots} ({date})'
+				tx._label = prov_entry_label(sale_type, transaction, transaction_types, cno, lots, date, 'of')
 				lot.caused = tx
 				tx_data = {'uri': tx_uri}
 
@@ -197,6 +198,18 @@ class AddAuctionOfLot(Configurable):
 
 			data['_event_causing_prov_entry'] = add_crom_data(data=sale_data, what=lot)
 		yield data
+	
+def prov_entry_label(sale_type, transaction, transaction_types, cno, lots, date, rel):
+	SOLD = CaseFoldingSet(transaction_types['sold'])
+	id = f'{cno} {lots} ({date})'
+	if sale_type == 'Auction':
+		if transaction in SOLD:
+			return f'Sale {rel} {id}'
+		else:
+			return f'Offer {rel} {id}'
+	else:
+		print(f'PROV ENTRY: {pprint.pformat([sale_type, transaction])}')
+		return f'Provenance Entry {rel} Lot {cno} {lots} ({date})'
 
 class AddAcquisitionOrBidding(Configurable):
 	helper = Option(required=True)
@@ -205,7 +218,7 @@ class AddAcquisitionOrBidding(Configurable):
 	transaction_types = Service('transaction_types')
 
 	@staticmethod
-	def related_procurement(hmo, current_tx=None, current_ts=None, buyer=None, seller=None, previous=False, ident=None):
+	def related_procurement(hmo, tx_label_args, current_tx=None, current_ts=None, buyer=None, seller=None, previous=False, ident=None):
 		'''
 		Returns a new `vocab.ProvenanceEntry` object (and related acquisition) that is temporally
 		related to the supplied procurement and associated data. The new procurement is for
@@ -215,7 +228,9 @@ class AddAcquisitionOrBidding(Configurable):
 		and if the timespan `current_ts` is given, has temporal data to that effect. If
 		`previous` is `False`, this relationship is reversed.
 		'''
+		
 		tx = vocab.ProvenanceEntry(ident=ident)
+		tx._label = prov_entry_label(*tx_label_args)
 		if current_tx:
 			if previous:
 				tx.ends_before_the_start_of = current_tx
@@ -284,14 +299,9 @@ class AddAcquisitionOrBidding(Configurable):
 			label += f'; {content}'
 		return label
 
-	def final_owner_procurement(self, final_owner, current_tx, hmo, current_ts):
+	def final_owner_procurement(self, tx_label_args, final_owner, current_tx, hmo, current_ts):
 		tx_uri = hmo.id + '-FinalOwnerProvenanceEntry'
-		tx = self.related_procurement(hmo, current_tx, current_ts, buyer=final_owner, ident=tx_uri)
-		try:
-			object_label = hmo._label
-			tx._label = f'ProvenanceEntry leading to the currently known location of “{object_label}”'
-		except AttributeError:
-			tx._label = f'ProvenanceEntry leading to the currently known location of object'
+		tx = self.related_procurement(hmo, tx_label_args, current_tx, current_ts, buyer=final_owner, ident=tx_uri)
 		return tx
 
 	def add_transfer_of_custody(self, data, current_tx, buyers, sellers, non_auctions, buy_sell_modifiers, sequence=1):
@@ -329,14 +339,15 @@ class AddAcquisitionOrBidding(Configurable):
 
 		current_tx.part = xfer
 
-	def add_acquisition(self, data, buyers, sellers, non_auctions, buy_sell_modifiers):
+	def add_acquisition(self, data, buyers, sellers, non_auctions, buy_sell_modifiers, transaction, transaction_types):
 		'''Add modeling of an acquisition as a transfer of title from the seller to the buyer'''
 		hmo = get_crom_object(data)
 		parent = data['parent_data']
 	# 	transaction = parent['transaction']
 		prices = parent.get('price')
 		auction_data = parent['auction_of_lot']
-		cno, lno, date = object_key(auction_data)
+		lot_object_key = object_key(auction_data)
+		cno, lno, date = lot_object_key
 		sale_type = non_auctions.get(cno, 'Auction')
 		data['buyer'] = buyers
 		data['seller'] = sellers
@@ -448,7 +459,8 @@ class AddAcquisitionOrBidding(Configurable):
 		if final_owner_data:
 			data['_organizations'].append(final_owner_data)
 			final_owner = get_crom_object(final_owner_data)
-			tx = self.final_owner_procurement(final_owner, current_tx, hmo, ts)
+			tx_label_args = tuple([sale_type, 'Sold', transaction_types] + list(lot_object_key) + ['leading to the currently known location of'])
+			tx = self.final_owner_procurement(tx_label_args, final_owner, current_tx, hmo, ts)
 			data['_procurements'].append(add_crom_data(data={}, what=tx))
 
 		post_own = data.get('post_owner', [])
@@ -466,16 +478,18 @@ class AddAcquisitionOrBidding(Configurable):
 					# some records seem to have metadata (source information, location, or notes)
 					# but no other fields set these should not constitute actual records of a prev/post owner.
 					continue
-				self.handle_prev_post_owner(data, tx_data, owner_record, record_id, rev, ts)
+				self.handle_prev_post_owner(data, tx_data, sale_type, transaction_types, lot_object_key, owner_record, record_id, rev, ts)
 		yield data, current_tx
 
-	def handle_prev_post_owner(self, data, tx_data, owner_record, record_id, rev, ts=None):
+	def handle_prev_post_owner(self, data, tx_data, sale_type, transaction_types, lot_object_key, owner_record, record_id, rev, ts=None):
 		hmo = get_crom_object(data)
 		current_tx = get_crom_object(tx_data)
 		sales_record = get_crom_object(data['_record'])
 		if rev:
+			rel = f'leading to the previous ownership of'
 			source_label = 'Source of information on history of the object prior to the current sale.'
 		else:
+			rel = f'leading to the subsequent ownership of'
 			source_label = 'Source of information on history of the object after the current sale.'
 		owner_record.update({
 			'pi_record_no': data['pi_record_no'],
@@ -502,7 +516,8 @@ class AddAcquisitionOrBidding(Configurable):
 		data['_other_owners'].append(owner_record)
 
 		tx_uri = hmo.id + f'-{record_id}-ProvenanceEntry'
-		tx = self.related_procurement(hmo, current_tx, ts, buyer=owner, previous=rev, ident=tx_uri)
+		tx_label_args = tuple([sale_type, 'Sold', transaction_types] + list(lot_object_key) + [rel])
+		tx = self.related_procurement(hmo, tx_label_args, current_tx, ts, buyer=owner, previous=rev, ident=tx_uri)
 
 		own_info_source = owner_record.get('own_so')
 		if own_info_source:
@@ -512,51 +527,55 @@ class AddAcquisitionOrBidding(Configurable):
 		ptx_data = tx_data.copy()
 		data['_procurements'].append(add_crom_data(data=ptx_data, what=tx))
 
-	def add_sellers(self, data:dict, sellers, source=None):
+	def add_sellers(self, data:dict, sale_type, transaction, transaction_types, sellers, rel, source=None):
 		hmo = get_crom_object(data)
 		parent = data['parent_data']
 		auction_data = parent['auction_of_lot']
-		cno, lno, date = object_key(auction_data)
+		lot_object_key = object_key(auction_data)
+		cno, lno, date = lot_object_key
 		lot = get_crom_object(parent['_event_causing_prov_entry'])
 		ts = getattr(lot, 'timespan', None)
 
 		prev_procurements = []
+		tx_label_args = tuple([sale_type, 'Sold', transaction_types] + list(lot_object_key) + [rel])
 		for i, seller_data in enumerate(sellers):
 			seller = get_crom_object(seller_data)
 			tx_uri = hmo.id + f'-seller-{i}-ProvenanceEntry'
-			tx = self.related_procurement(hmo, current_ts=ts, buyer=seller, previous=True, ident=tx_uri)
-			tx._label = f'ProvenanceEntry leading to the ownership of {hmo._label}'
+			tx = self.related_procurement(hmo, tx_label_args, current_ts=ts, buyer=seller, previous=True, ident=tx_uri)
 			if source:
 				tx.referred_to_by = source
 			prev_procurements.append(add_crom_data(data={}, what=tx))
 		data['_procurements'] += prev_procurements
 		return prev_procurements
 
-	def add_non_sale_sellers(self, data:dict, sellers):
+	def add_non_sale_sellers(self, data:dict, sellers, sale_type, transaction, transaction_types):
 		parent = data['parent_data']
 		auction_data = parent['auction_of_lot']
 		cno, lno, date = object_key(auction_data)
 
 		own_info_source = f'Listed as the seller of object in {cno} {lno} ({date}) that was not sold'
 		note = vocab.SourceStatement(ident='', content=own_info_source)
-		return self.add_sellers(data, sellers, source=note)
+		rel = 'leading to the previous ownership of'
+		return self.add_sellers(data, sale_type, transaction, transaction_types, sellers, rel, source=note)
 
-	def add_private_sellers(self, data:dict, sellers):
+	def add_private_sellers(self, data:dict, sellers, sale_type, transaction, transaction_types):
 		parent = data['parent_data']
 		auction_data = parent['auction_of_lot']
 		cno, lno, date = object_key(auction_data)
 
 		own_info_source = f'Listed as the seller of object in {cno} {lno} ({date}) that was privately sold'
 		note = vocab.SourceStatement(ident='', content=own_info_source)
-		return self.add_sellers(data, sellers, source=note)
+		rel = 'leading to the previous ownership of'
+		return self.add_sellers(data, sale_type, transaction, transaction_types, sellers, rel, source=note)
 
-	def add_bidding(self, data:dict, buyers, sellers, buy_sell_modifiers):
+	def add_bidding(self, data:dict, buyers, sellers, buy_sell_modifiers, sale_type, transaction, transaction_types):
 		'''Add modeling of bids that did not lead to an acquisition'''
 		hmo = get_crom_object(data)
 		parent = data['parent_data']
 		data['seller'] = sellers
 		auction_data = parent['auction_of_lot']
-		cno, lno, date = object_key(auction_data)
+		lot_object_key = object_key(auction_data)
+		cno, lno, date = lot_object_key
 		lot_data = parent.get('_event_causing_prov_entry')
 		if not lot_data:
 			return
@@ -565,7 +584,7 @@ class AddAcquisitionOrBidding(Configurable):
 			return
 		ts = lot.timespan
 
-		prev_procurements = self.add_non_sale_sellers(data, sellers)
+		prev_procurements = self.add_non_sale_sellers(data, sellers, sale_type, transaction, transaction_types)
 
 		prices = parent.get('price', [])
 		if not prices:
@@ -618,7 +637,8 @@ class AddAcquisitionOrBidding(Configurable):
 				data['_organizations'].append(final_owner_data)
 				final_owner = get_crom_object(final_owner_data)
 				hmo = get_crom_object(data)
-				tx = self.final_owner_procurement(final_owner, None, hmo, ts)
+				tx_label_args = tuple([sale_type, 'Sold', transaction_types] + list(lot_object_key) + ['leading to the currently known location of'])
+				tx = self.final_owner_procurement(tx_label_args, final_owner, None, hmo, ts)
 				if '_procurements' not in data:
 					data['_procurements'] = []
 				data['_procurements'].append(add_crom_data(data={}, what=tx))
@@ -677,7 +697,7 @@ class AddAcquisitionOrBidding(Configurable):
 		if transaction in SOLD:
 			data['_owner_locations'] = []
 			
-			for data, current_tx in self.add_acquisition(data, buyers, sellers, non_auctions, buy_sell_modifiers):
+			for data, current_tx in self.add_acquisition(data, buyers, sellers, non_auctions, buy_sell_modifiers, transaction, transaction_types):
 				if sale_type == 'Auction':
 					self.add_transfer_of_custody(data, current_tx, buyers, sellers, non_auctions, buy_sell_modifiers)
 				elif sale_type in ('Private Contract Sale', 'Stock List'):
@@ -698,17 +718,17 @@ class AddAcquisitionOrBidding(Configurable):
 						self.add_transfer_of_custody(data, current_tx, [h], sellers, non_auctions, buy_sell_modifiers, sequence=1)
 						self.add_transfer_of_custody(data, current_tx, buyers, [h], non_auctions, buy_sell_modifiers, sequence=2)
 						data['_organizations'].append(h)
-					prev_procurements = self.add_private_sellers(data, sellers)
+					prev_procurements = self.add_private_sellers(data, sellers, sale_type, transaction, transaction_types)
 				yield data
 		elif transaction in UNSOLD:
-			yield from self.add_bidding(data, buyers, sellers, buy_sell_modifiers)
+			yield from self.add_bidding(data, buyers, sellers, buy_sell_modifiers, sale_type, transaction, transaction_types)
 		elif transaction in UNKNOWN:
 			if sale_type == 'Lottery':
 				yield data
 			else:
-				yield from self.add_bidding(data, buyers, sellers, buy_sell_modifiers)
+				yield from self.add_bidding(data, buyers, sellers, buy_sell_modifiers, sale_type, transaction, transaction_types)
 		else:
-			prev_procurements = self.add_non_sale_sellers(data, sellers)
+			prev_procurements = self.add_non_sale_sellers(data, sellers, sale_type, transaction, transaction_types)
 			lot = get_crom_object(parent['_event_causing_prov_entry'])
 			for tx_data in prev_procurements:
 				tx = get_crom_object(tx_data)

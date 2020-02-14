@@ -80,6 +80,7 @@ class PersonIdentity:
 	def __init__(self, *, make_uri):
 		self.make_uri = make_uri
 		self.ignore_authnames = CaseFoldingSet(('NEW', 'NON-UNIQUE'))
+		self.make_la_person = pipeline.linkedart.MakeLinkedArtPerson()
 
 	def acceptable_auth_name(self, auth_name):
 		if not auth_name or auth_name in self.ignore_authnames:
@@ -101,7 +102,7 @@ class PersonIdentity:
 				return False
 		return True
 
-	def uri_keys(self, data:dict, record_id=None):
+	def _uri_keys(self, data:dict, record_id=None):
 		ulan = None
 		with suppress(ValueError, TypeError):
 			ulan = int(data.get('ulan'))
@@ -122,8 +123,14 @@ class PersonIdentity:
 				warnings.warn(f'*** No record identifier given for person identified only by pi_record_number {pi_rec_no}')
 				return ('PERSON', 'PI_REC_NO', pi_rec_no)
 
+	def add_person(self, a, sales_record, relative_id, **kwargs):
+		self.add_uri(a, record_id=relative_id)
+		self.add_names(a, referrer=sales_record, **kwargs)
+		self.make_la_person(a)
+		return get_crom_object(a)
+
 	def add_uri(self, data:dict, **kwargs):
-		keys = self.uri_keys(data, **kwargs)
+		keys = self._uri_keys(data, **kwargs)
 		data['uri_keys'] = keys
 		data['uri'] = self.make_uri(*keys)
 

@@ -26,8 +26,12 @@ COPY Makefile setup.py aata.py pir.py knoedler.py settings.py ./
 FROM swift:latest
 WORKDIR /usr/src/swift
 
-COPY scripts/find_matching_json_files.swift ./
-RUN swiftc find_matching_json_files.swift
+RUN mkdir scripts
+COPY Makefile ./
+COPY scripts/find_matching_json_files.swift ./scripts/
+COPY scripts/generate_uri_uuids.swift ./scripts/
+RUN make scripts/generate_uri_uuids
+RUN make scripts/find_matching_json_files
 
 FROM python:3
 WORKDIR /usr/src/app
@@ -38,7 +42,8 @@ COPY requirements.txt ./
 RUN pip install --no-cache-dir -r requirements.txt
 
 COPY --from=0 /usr/src/app ./
-COPY --from=1 /usr/src/swift/find_matching_json_files scripts/
+COPY --from=1 /usr/src/swift/scripts/find_matching_json_files scripts/
+COPY --from=1 /usr/src/swift/scripts/generate_uri_uuids scripts/
 COPY --from=1 /usr/lib/swift /usr/lib/swift
 
 EXPOSE 8080

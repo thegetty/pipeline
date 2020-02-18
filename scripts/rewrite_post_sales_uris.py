@@ -21,16 +21,19 @@ Usage: {cmd} URI_REWRITE_MAP.json
 	'''.lstrip())
 	sys.exit(1)
 
+rewrite_map_filename = sys.argv[1]
+
+kwargs = {}
+if len(sys.argv) > 2:
+	kwargs['files'] = sys.argv[2:]
+
 print(f'Rewriting post-sales URIs ...')
 start_time = time.time()
-rewrite_map_filename = sys.argv[1]
 with open(rewrite_map_filename, 'r') as f:
 	post_sale_rewrite_map = json.load(f)
 # 	print('Post sales rewrite map:')
 # 	pprint.pprint(post_sale_rewrite_map)
 	r = JSONValueRewriter(post_sale_rewrite_map, prefix=True)
-
-	kwargs = {}
 	prefix = os.path.commonprefix(list(post_sale_rewrite_map.keys()))
 	if len(prefix) > 20:
 		kwargs['content_filter_re'] = re.compile(re.escape(prefix))

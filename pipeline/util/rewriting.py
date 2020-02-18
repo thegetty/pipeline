@@ -1,6 +1,8 @@
 import os
 import re
 import sys
+import time
+import pprint
 import ujson as json
 import multiprocessing
 from pathlib import Path
@@ -38,15 +40,19 @@ def chunks(l, size):
 		for i in range(0, len(l), size):
 			yield l[i:i+size]
 
-def rewrite_output_files(r, update_filename=False, parallel=False, **kwargs):
+def rewrite_output_files(r, update_filename=False, parallel=False, path=None, files=None, **kwargs):
 	print(f'Rewriting JSON output files')
-	p = Path(output_file_path)
-	files = sorted(p.rglob('*.json'))
+	if not files:
+		if path is None:
+			path = output_file_path
+		p = Path(path)
+		files = p.rglob('*.json')
+	files = sorted(files)
 
 	if 'content_filter_re' in kwargs:
-		print('rewriting with content filter: {kwargs["content_filter_re"]}')
+		print(f'rewriting with content filter: {kwargs["content_filter_re"]}')
 	if parallel:
-		j = 16
+		j = 4
 		pool = multiprocessing.Pool(j)
 
 		partition_size = max(min(10000, int(len(files)/j)), 10)
@@ -61,7 +67,8 @@ def _rewrite_output_files(files, r, update_filename, worker_id, total_workers, k
 	i = 0
 	if not files:
 		return
-	print(f'rewrite worker {worker_id} called with {len(files)} files [{files[0]} .. {files[-1]}]')
+	print(f'rewrite worker partition {worker_id} called with {len(files)} files [{files[0]} .. {files[-1]}]')
+	start = time.time()
 	rewritten_count = 0
 	processed_count = 0
 	for i, f in enumerate(files):
@@ -73,10 +80,12 @@ def _rewrite_output_files(files, r, update_filename, worker_id, total_workers, k
 				if 'content_filter_re' in kwargs:
 					filter_re = kwargs['content_filter_re']
 					if not re.search(filter_re, bytes):
-						print(f'skipping   {f}')
+						pass
+# 						print(f'skipping   {f}')
 						continue
 					else:
-						print(f'processing {f}')
+						pass
+# 						print(f'processing {f}')
 				data = json.loads(bytes)
 			except json.decoder.JSONDecodeError:
 				sys.stderr.write(f'Failed to load JSON during rewriting of {f}\n')
@@ -118,10 +127,12 @@ def _rewrite_output_files(files, r, update_filename, worker_id, total_workers, k
 			json.dump(d, data_file, indent=2, ensure_ascii=False)
 		if newfile != f:
 			os.remove(f)
+	end = time.time()
+	elapsed = end - start
 	if rewritten_count:
-		print(f'worker {worker_id}/{total_workers} finished with {rewritten_count}/{processed_count} files rewritten')
+		print(f'worker partition {worker_id}/{total_workers} finished with {rewritten_count}/{processed_count} files rewritten in %.1fs' % (elapsed,))
 	else:
-		print(f'worker {worker_id}/{total_workers} finished')
+		print(f'worker partition {worker_id}/{total_workers} finished in %.1fs' % (elapsed,))
 
 class JSONValueRewriter:
 	def __init__(self, mapping, prefix=False):

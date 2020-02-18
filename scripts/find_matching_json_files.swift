@@ -96,4 +96,4 @@ walk(path: pathu) { (file) in
 let end = DispatchTime.now()
 let nanoTime = end.uptimeNanoseconds - start.uptimeNanoseconds
 let elapsed = Double(nanoTime) / 1_000_000_000
-print("\(count) file processed in \(elapsed)s")
+//print("\(count) file processed in \(elapsed)s")

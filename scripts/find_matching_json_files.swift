@@ -5,10 +5,14 @@ let map_file = args[1]
 let path = args[2]
 let pathu = URL(fileURLWithPath: path)
 
+let PARALLEL = true
 let u = URL(fileURLWithPath: map_file)
 let d = try Data(contentsOf: u)
 let map = try JSONSerialization.jsonObject(with: d) as! [String:String]
 let map_keys = Set(map.keys)
+
+let process_queue = DispatchQueue(label: "edu.getty.digital.2019.pipeline.post-sales-rewriting", attributes: .concurrent)
+let output_queue = DispatchQueue(label: "edu.getty.digital.2019.pipeline.post-sales-output")
 
 let filemgr = FileManager.default
 let resourceKeys : [URLResourceKey] = [.nameKey, .isDirectoryKey]
@@ -19,7 +23,7 @@ let directoryEnumerator = filemgr.enumerator(
     errorHandler: nil
 )
 
-func walk(path pathu: URL, _ callback : (URL) -> ()) {
+func walk(path pathu: URL, _ callback : @escaping (URL) -> ()) {
     if let directoryEnumerator = directoryEnumerator {
         for case let fileURL as NSURL in directoryEnumerator {
             guard let resourceValues = try? fileURL.resourceValues(forKeys: resourceKeys),
@@ -34,7 +38,13 @@ func walk(path pathu: URL, _ callback : (URL) -> ()) {
 	            	directoryEnumerator.skipDescendants()
 	            }
             } else {
-                callback(fileURL as URL)
+            	if PARALLEL {
+					process_queue.async {
+						callback(fileURL as URL)
+					}
+            	} else {
+					callback(fileURL as URL)
+            	}
             }
         }
     }
@@ -63,6 +73,7 @@ func _find(_ value: Any, _ map: [String:String]) -> String? {
 }
 
 var count = 0
+let start = DispatchTime.now()
 walk(path: pathu) { (file) in
     count += 1
 //   print("\r\(count)             ", separator: "", terminator: "", to: &stderr)
@@ -72,7 +83,17 @@ walk(path: pathu) { (file) in
         if let m = _find(j, map) {
 //            print("\r\(file)\t--> \(m)")
 //            print("\(m)\t\(file)")
-            print("\(file.path)")
+			if PARALLEL {
+				output_queue.async {
+					print("\(file.path)")
+				}
+			} else {
+				print("\(file.path)")
+			}
         }
     } catch {}
 }
+let end = DispatchTime.now()
+let nanoTime = end.uptimeNanoseconds - start.uptimeNanoseconds
+let elapsed = Double(nanoTime) / 1_000_000_000
+print("\(count) file processed in \(elapsed)s")

@@ -78,11 +78,11 @@ class PIRModelingTest_PrivateContractSales(TestProvenancePipelineOutput):
 		sets = output['model-set']
 		texts = output['model-lo']
 
-		hmo_key = 'tag:getty.edu,2019:digital:pipeline:provenance:REPLACE-WITH-UUID#OBJECT,B-267,0001,1817'
+		hmo_key = 'tag:getty.edu,2019:digital:pipeline:provenance:REPLACE-WITH-UUID#OBJ,B-267,0001,1817'
 		hmo = objects[hmo_key]
 		
-		prov_entry_curr = activities['tag:getty.edu,2019:digital:pipeline:provenance:REPLACE-WITH-UUID#AUCTION-TX,B-267,1817,0001']
-		prov_entry_prev = activities['tag:getty.edu,2019:digital:pipeline:provenance:REPLACE-WITH-UUID#OBJECT,B-267,0001,1817-seller-0-ProvenanceEntry']
+		prov_entry_curr = activities['tag:getty.edu,2019:digital:pipeline:provenance:REPLACE-WITH-UUID#PROV,B-267,1817,0001']
+		prov_entry_prev = activities['tag:getty.edu,2019:digital:pipeline:provenance:REPLACE-WITH-UUID#OBJ,B-267,0001,1817-seller-0-ProvenanceEntry']
 		
 		event_key = 'tag:getty.edu,2019:digital:pipeline:provenance:REPLACE-WITH-UUID#PRIVATE_CONTRACT_SALE-EVENT,CATALOGNUMBER,B-267'
 		sale_event = activities[event_key]

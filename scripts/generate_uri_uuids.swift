@@ -120,8 +120,8 @@ func process(map: [String:String], path pathu: URL, prefix: String) -> [String:S
 	let map_keys = Set(map.keys)
 	walk(path: pathu, queue: process_queue) { (file) in
 		count += 1
-		if count % 100 == 0 {
-			print("\r\(count) files    ", terminator: "")
+		if count % 1000 == 0 {
+			print("\r\(count) files processed    ", terminator: "")
 		}
 	//	print("\r\(count)             ", separator: "", terminator: "")
 		do {

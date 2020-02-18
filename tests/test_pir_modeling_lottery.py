@@ -74,7 +74,7 @@ class PIRModelingTest_PrivateContractSales(TestProvenancePipelineOutput):
 		texts = output['model-lo']
 		drawings = output['model-drawing']
 
-		hmo_key = 'tag:getty.edu,2019:digital:pipeline:provenance:REPLACE-WITH-UUID#OBJECT,D-A50,0001,1765'
+		hmo_key = 'tag:getty.edu,2019:digital:pipeline:provenance:REPLACE-WITH-UUID#OBJ,D-A50,0001,1765'
 		hmo = objects[hmo_key]
 		
 		sale_curr = drawings['tag:getty.edu,2019:digital:pipeline:provenance:REPLACE-WITH-UUID#AUCTION,D-A50,LOT,0001,DATE,1765']

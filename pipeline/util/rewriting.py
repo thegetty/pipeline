@@ -47,7 +47,7 @@ def rewrite_output_files(r, update_filename=False, parallel=False, path=None, fi
 			path = output_file_path
 		p = Path(path)
 		files = p.rglob('*.json')
-	files = sorted(files)
+	files = list(files)
 
 	if 'content_filter_re' in kwargs:
 		print(f'rewriting with content filter: {kwargs["content_filter_re"]}')
@@ -55,7 +55,7 @@ def rewrite_output_files(r, update_filename=False, parallel=False, path=None, fi
 		j = 4
 		pool = multiprocessing.Pool(j)
 
-		partition_size = max(min(10000, int(len(files)/j)), 10)
+		partition_size = max(min(25000, int(len(files)/j)), 10)
 		file_partitions = list(chunks(files, partition_size))
 		args = list((file_partition, r, update_filename, i+1, len(file_partitions), kwargs) for i, file_partition in enumerate(file_partitions))
 		print(f'{len(args)} worker partitions with size {partition_size}')

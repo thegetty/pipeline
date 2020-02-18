@@ -73,7 +73,7 @@ class PIRModelingTest_StockListSales(TestProvenancePipelineOutput):
 		sets = output['model-set']
 		texts = output['model-lo']
 
-		hmo_key = 'tag:getty.edu,2019:digital:pipeline:provenance:REPLACE-WITH-UUID#OBJECT,Br-541,%5B0001%5D,1808'
+		hmo_key = 'tag:getty.edu,2019:digital:pipeline:provenance:REPLACE-WITH-UUID#OBJ,Br-541,%5B0001%5D,1808'
 		hmo = objects[hmo_key]
 		
 		sale_curr = activities['tag:getty.edu,2019:digital:pipeline:provenance:REPLACE-WITH-UUID#AUCTION,Br-541,LOT,%5B0001%5D,DATE,1808']

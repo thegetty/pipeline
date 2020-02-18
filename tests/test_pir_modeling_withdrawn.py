@@ -38,7 +38,7 @@ class PIRModelingTest_Withdrawn(TestProvenancePipelineOutput):
 		self.assertEqual(len(auctions), 1)
 		self.assertEqual(len(procurements), 1)
 		
-		procurement = procurements['tag:getty.edu,2019:digital:pipeline:provenance:REPLACE-WITH-UUID#AUCTION-TX,Br-3039,1827-11-24,0082']
+		procurement = procurements['tag:getty.edu,2019:digital:pipeline:provenance:REPLACE-WITH-UUID#PROV,Br-3039,1827-11-24,0082']
 		parts = procurement.get('part', [])
 		self.assertEqual(len(parts), 3)
 		part_types = {p['type'] for p in parts}
@@ -46,10 +46,10 @@ class PIRModelingTest_Withdrawn(TestProvenancePipelineOutput):
 		acqs = [p for p in parts if p['type'] == 'Acquisition']
 		self.assertEqual(len(acqs), 1)
 
-		withdrawn_obj = objects['tag:getty.edu,2019:digital:pipeline:provenance:REPLACE-WITH-UUID#OBJECT,Br-3039,0082%5Bb%5D,1827-11-24']
+		withdrawn_obj = objects['tag:getty.edu,2019:digital:pipeline:provenance:REPLACE-WITH-UUID#OBJ,Br-3039,0082%5Bb%5D,1827-11-24']
 		withdrawn_rec = texts['tag:getty.edu,2019:digital:pipeline:provenance:REPLACE-WITH-UUID#CATALOG,Br-3039,RECORD,343048']
 
-		sold_obj = objects['tag:getty.edu,2019:digital:pipeline:provenance:REPLACE-WITH-UUID#OBJECT,Br-3039,0082%5Ba%5D,1827-11-24']
+		sold_obj = objects['tag:getty.edu,2019:digital:pipeline:provenance:REPLACE-WITH-UUID#OBJ,Br-3039,0082%5Ba%5D,1827-11-24']
 		sold_rec = texts['tag:getty.edu,2019:digital:pipeline:provenance:REPLACE-WITH-UUID#CATALOG,Br-3039,RECORD,343049']
 		
 		# both sold and withdrawn objects are members of the auction set...

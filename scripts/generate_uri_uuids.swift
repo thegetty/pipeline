@@ -120,6 +120,9 @@ func process(map: [String:String], path pathu: URL, prefix: String) -> [String:S
 	let map_keys = Set(map.keys)
 	walk(path: pathu, queue: process_queue) { (file) in
 		count += 1
+		if count % 100 == 0 {
+			print("\r\(count) files    ", terminator: "")
+		}
 	//	print("\r\(count)             ", separator: "", terminator: "")
 		do {
 			let d = try Data(contentsOf: file)
@@ -134,6 +137,7 @@ func process(map: [String:String], path pathu: URL, prefix: String) -> [String:S
 			}
 		} catch {}
 	}
+	print("\n")
 	process_queue.sync(flags: .barrier) {}
 
 	let uris = found_uris.subtracting(map_keys)
@@ -161,6 +165,6 @@ print("updated map has \(updated_map.count) elements")
 let encoder = JSONEncoder()
 //let map_file_url_out = URL(fileURLWithPath: "\(map_file).out")
 let map_file_url_out = map_file_url
-encoder.outputFormatting = [.prettyPrinted, .sortedKeys]
+encoder.outputFormatting = [.prettyPrinted] // .sortedKeys
 let data = try encoder.encode(updated_map)
 try! data.write(to: map_file_url_out, options: [.atomic])

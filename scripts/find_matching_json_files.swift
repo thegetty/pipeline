@@ -24,8 +24,6 @@ let d = try Data(contentsOf: u)
 let map = try JSONSerialization.jsonObject(with: d) as! [String:String]
 let map_keys = Set(map.keys)
 
-let output_queue = DispatchQueue(label: "edu.getty.digital.2019.pipeline.post-sales-output")
-
 func walk(path pathu: URL, queue: DispatchQueue, _ callback : @escaping (URL) -> ()) {
 	let filemgr = FileManager.default
 	let resourceKeys : [URLResourceKey] = [.nameKey, .isDirectoryKey]
@@ -62,16 +60,16 @@ func walk(path pathu: URL, queue: DispatchQueue, _ callback : @escaping (URL) ->
 
 }
 
-func _find(_ value: Any, _ map: [String:String]) -> String? {
+func findKeys(in value: Any, from map: [String:String]) -> String? {
     if let d = value as? [String: Any] {
         for v in d.values {
-            if let m = _find(v, map) {
+            if let m = findKeys(in: v, from: map) {
                 return m
             }
         }
     } else if let a = value as? [Any] {
         for v in a {
-            if let m = _find(v, map) {
+            if let m = findKeys(in: v, from: map) {
                 return m
             }
         }
@@ -83,29 +81,35 @@ func _find(_ value: Any, _ map: [String:String]) -> String? {
     return nil
 }
 
-var count = 0
-let start = DispatchTime.now()
-let process_queue = DispatchQueue(label: "edu.getty.digital.2019.pipeline.post-sales-rewriting", attributes: .concurrent)
-walk(path: pathu, queue: process_queue) { (file) in
-    count += 1
-//   print("\r\(count)             ", separator: "", terminator: "", to: &stderr)
-    do {
-        let d = try Data(contentsOf: file)
-        let j = try JSONSerialization.jsonObject(with: d)
-        if let m = _find(j, map) {
-//            print("\r\(file)\t--> \(m)")
-//            print("\(m)\t\(file)")
-			if PARALLEL {
-				output_queue.async {
+func process(map: [String:String], path pathu: URL) {
+	var count = 0
+//	let start = DispatchTime.now()
+	let process_queue = DispatchQueue(label: "edu.getty.digital.2019.pipeline.post-sales-rewriting", attributes: .concurrent)
+	let serial = DispatchQueue(label: "edu.getty.digital.2019.pipeline.post-sales-output")
+	walk(path: pathu, queue: process_queue) { (file) in
+		count += 1
+	//   print("\r\(count)             ", separator: "", terminator: "", to: &stderr)
+		do {
+			let d = try Data(contentsOf: file)
+			let j = try JSONSerialization.jsonObject(with: d)
+			if let _ = findKeys(in: j, from: map) {
+	//            print("\r\(file)\t--> \(m)")
+	//            print("\(m)\t\(file)")
+				if PARALLEL {
+					serial.async {
+						print("\(file.path)")
+					}
+				} else {
 					print("\(file.path)")
 				}
-			} else {
-				print("\(file.path)")
 			}
-        }
-    } catch {}
+		} catch {}
+	}
+	process_queue.sync(flags: .barrier) {}
+//	let end = DispatchTime.now()
+//	let nanoTime = end.uptimeNanoseconds - start.uptimeNanoseconds
+//	let elapsed = Double(nanoTime) / 1_000_000_000
+//	print("\(count) file processed in \(elapsed)s")
 }
-let end = DispatchTime.now()
-let nanoTime = end.uptimeNanoseconds - start.uptimeNanoseconds
-let elapsed = Double(nanoTime) / 1_000_000_000
-//print("\(count) file processed in \(elapsed)s")
+
+process(map: map, path: pathu)

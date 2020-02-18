@@ -23,12 +23,17 @@ func walk(path pathu: URL, _ callback : (URL) -> ()) {
     if let directoryEnumerator = directoryEnumerator {
         for case let fileURL as NSURL in directoryEnumerator {
             guard let resourceValues = try? fileURL.resourceValues(forKeys: resourceKeys),
-                let isDirectory = resourceValues[.isDirectoryKey] as? Bool
+                let isDirectory = resourceValues[.isDirectoryKey] as? Bool,
+                let name = resourceValues[.nameKey] as? String
                 else {
                     continue
             }
             
-            if !isDirectory {
+            if isDirectory {
+            	if name == "tmp" {
+	            	directoryEnumerator.skipDescendants()
+	            }
+            } else {
                 callback(fileURL as URL)
             }
         }

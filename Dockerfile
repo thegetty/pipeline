@@ -32,10 +32,14 @@ RUN swiftc find_matching_json_files.swift
 FROM python:3
 WORKDIR /usr/src/app
 
+RUN pip install --no-cache-dir awscli
+
+COPY requirements.txt ./
+RUN pip install --no-cache-dir -r requirements.txt
+
 COPY --from=0 /usr/src/app ./
 COPY --from=1 /usr/src/swift/find_matching_json_files scripts/
 COPY --from=1 /usr/lib/swift /usr/lib/swift
-RUN ls /usr/src/app
 
 EXPOSE 8080
 VOLUME ["/data"]

@@ -63,6 +63,9 @@ salespipeline:
 	mkdir -p $(GETTY_PIPELINE_TMP_PATH)/pipeline
 	QUIET=$(QUIET) GETTY_PIPELINE_DEBUG=$(DEBUG) GETTY_PIPELINE_LIMIT=$(LIMIT) $(PYTHON) ./pir.py
 
+scripts/generate_uri_uuids: scripts/generate_uri_uuids.swift
+	swiftc scripts/generate_uri_uuids.swift -o scripts/generate_uri_uuids
+
 scripts/find_matching_json_files: scripts/find_matching_json_files.swift
 	swiftc scripts/find_matching_json_files.swift -o scripts/find_matching_json_files
 
@@ -72,11 +75,8 @@ salespostsalefilelist: scripts/find_matching_json_files
 salespostsalerewrite: salespostsalefilelist
 	cat $(GETTY_PIPELINE_OUTPUT)/post-sale-matching-files.txt | PYTHONPATH=`pwd`  xargs -n 256 $(PYTHON) ./scripts/rewrite_post_sales_uris.py "${GETTY_PIPELINE_TMP_PATH}/post_sale_rewrite_map.json"
 
-salespostsalerewrite0:
-	PYTHONPATH=`pwd` $(PYTHON) ./scripts/rewrite_post_sales_uris.py "${GETTY_PIPELINE_TMP_PATH}/post_sale_rewrite_map.json"
-
-salespostprocessing: salespostsalerewrite
-	PYTHONPATH=`pwd` $(PYTHON) ./scripts/generate_uri_uuids.py 'tag:getty.edu,2019:digital:pipeline:provenance:REPLACE-WITH-UUID#' "${GETTY_PIPELINE_TMP_PATH}/uri_to_uuid_map.json"
+salespostprocessing: salespostsalerewrite ./scripts/generate_uri_uuids
+	./scripts/generate_uri_uuids "${GETTY_PIPELINE_TMP_PATH}/uri_to_uuid_map.json" $(GETTY_PIPELINE_OUTPUT) 'tag:getty.edu,2019:digital:pipeline:provenance:REPLACE-WITH-UUID#'
 	PYTHONPATH=`pwd` $(PYTHON) ./scripts/rewrite_uris_to_uuids_parallel.py 'tag:getty.edu,2019:digital:pipeline:provenance:REPLACE-WITH-UUID#' "${GETTY_PIPELINE_TMP_PATH}/uri_to_uuid_map.json"
 	ls $(GETTY_PIPELINE_OUTPUT) | PYTHONPATH=`pwd` xargs -n 1 -P 16 -I '{}' $(PYTHON) ./scripts/coalesce_json.py "${GETTY_PIPELINE_OUTPUT}/{}"
 	PYTHONPATH=`pwd` $(PYTHON) ./scripts/remove_meaningless_ids.py

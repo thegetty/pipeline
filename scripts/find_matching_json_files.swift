@@ -1,6 +1,19 @@
+/**************
+
+ ./find_matching_json_files /path/to/post_sale_rewrite_map.json PATH
+  
+ Find and print the path to JSON files in PATH that contain at least one string value
+ that appears as a key in the post_sale_rewrite_map.json file.
+ 
+ **************/
+
 import Foundation
 
 let args = CommandLine.arguments
+if args.count != 3 {
+	print("Usage: \(args[0]) post_sale_rewrite_map.json PATH")
+	exit(1)
+}
 let map_file = args[1]
 let path = args[2]
 let pathu = URL(fileURLWithPath: path)
@@ -11,19 +24,17 @@ let d = try Data(contentsOf: u)
 let map = try JSONSerialization.jsonObject(with: d) as! [String:String]
 let map_keys = Set(map.keys)
 
-let process_queue = DispatchQueue(label: "edu.getty.digital.2019.pipeline.post-sales-rewriting", attributes: .concurrent)
 let output_queue = DispatchQueue(label: "edu.getty.digital.2019.pipeline.post-sales-output")
 
-let filemgr = FileManager.default
-let resourceKeys : [URLResourceKey] = [.nameKey, .isDirectoryKey]
-let directoryEnumerator = filemgr.enumerator(
-    at: pathu,
-    includingPropertiesForKeys: resourceKeys,
-    options: [.skipsHiddenFiles],
-    errorHandler: nil
-)
-
-func walk(path pathu: URL, _ callback : @escaping (URL) -> ()) {
+func walk(path pathu: URL, queue: DispatchQueue, _ callback : @escaping (URL) -> ()) {
+	let filemgr = FileManager.default
+	let resourceKeys : [URLResourceKey] = [.nameKey, .isDirectoryKey]
+	let directoryEnumerator = filemgr.enumerator(
+		at: pathu,
+		includingPropertiesForKeys: resourceKeys,
+		options: [.skipsHiddenFiles],
+		errorHandler: nil
+	)
     if let directoryEnumerator = directoryEnumerator {
         for case let fileURL as NSURL in directoryEnumerator {
             guard let resourceValues = try? fileURL.resourceValues(forKeys: resourceKeys),
@@ -39,7 +50,7 @@ func walk(path pathu: URL, _ callback : @escaping (URL) -> ()) {
 	            }
             } else {
             	if PARALLEL {
-					process_queue.async {
+					queue.async {
 						callback(fileURL as URL)
 					}
             	} else {
@@ -74,7 +85,8 @@ func _find(_ value: Any, _ map: [String:String]) -> String? {
 
 var count = 0
 let start = DispatchTime.now()
-walk(path: pathu) { (file) in
+let process_queue = DispatchQueue(label: "edu.getty.digital.2019.pipeline.post-sales-rewriting", attributes: .concurrent)
+walk(path: pathu, queue: process_queue) { (file) in
     count += 1
 //   print("\r\(count)             ", separator: "", terminator: "", to: &stderr)
     do {

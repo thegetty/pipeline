@@ -34,6 +34,7 @@ if filemgr.fileExists(atPath: map_file) {
 }
 
 func assign_uuids(for uris: Set<String>, prefix: String) -> [String:String] {
+	print("Assigning \(uris.count) UUIDs")
 	var m = [String:String]()
 	for s in uris {
 		let u = UUID().uuidString

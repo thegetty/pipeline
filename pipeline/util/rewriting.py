@@ -71,6 +71,7 @@ def _rewrite_output_files(files, r, update_filename, worker_id, total_workers, k
 	start = time.time()
 	rewritten_count = 0
 	processed_count = 0
+	ignore_errors = kwargs.get('ignore_errors', False)
 	for i, f in enumerate(files):
 		processed_count += 1
 		# print(f'{i} {f}', end="\r", flush=True)
@@ -89,7 +90,10 @@ def _rewrite_output_files(files, r, update_filename, worker_id, total_workers, k
 				data = json.loads(bytes)
 			except json.decoder.JSONDecodeError:
 				sys.stderr.write(f'Failed to load JSON during rewriting of {f}\n')
-				raise
+				if ignore_errors:
+					continue
+				else:
+					raise
 		d = r.rewrite(data, file=f)
 		if update_filename:
 			newfile = filename_for(d, original_filename=f, **kwargs)
@@ -115,11 +119,15 @@ def _rewrite_output_files(files, r, update_filename, worker_id, total_workers, k
 # 						print(f'- {m}')
 # 						print(f'- {n}')
 						merger.merge(m, n)
-					except model.DataError as e:
+# 					except model.DataError as e:
+					except Exception as e:
 						print(f'Exception caught while merging data from {newfile} ({str(e)}):')
 						print(d)
 						print(content)
-						raise
+						if ignore_errors:
+							continue
+						else:
+							raise
 					data = factory.toString(m, False)
 					d = json.loads(data)
 		with open(newfile, 'w') as data_file:

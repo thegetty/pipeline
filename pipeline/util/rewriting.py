@@ -11,9 +11,9 @@ from contextlib import suppress
 from settings import output_file_path
 from pipeline.util import CromObjectMerger
 from cromulent.model import factory
-from cromulent import model, reader
+from cromulent import model, reader, vocab
 
-def filename_for(data: dict, original_filename: str, verify_uuid=False):
+def filename_for(data: dict, original_filename: str, verify_uuid=False, **kwargs):
 	'''
 	For JSON `data` read from the file `original_filename`, return the filename to which
 	it should be (re-)written. The new filename is based on the top-level 'id' member,
@@ -42,6 +42,8 @@ def chunks(l, size):
 
 def rewrite_output_files(r, update_filename=False, parallel=False, path=None, files=None, **kwargs):
 	print(f'Rewriting JSON output files')
+	vocab.add_linked_art_boundary_check()
+	vocab.add_attribute_assignment_check()
 	if not files:
 		if path is None:
 			path = output_file_path

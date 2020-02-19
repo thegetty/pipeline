@@ -66,7 +66,7 @@ map_file = sys.argv[2]
 print(f'Rewriting URIs to UUIDs ...')
 start_time = time.time()
 r = UUIDRewriter(prefix, map_file)
-rewrite_output_files(r, update_filename=True, verify_uuid=True, parallel=True)
+rewrite_output_files(r, update_filename=True, verify_uuid=True, parallel=True, ignore_errors=True)
 if map_file:
 	r.persist_map()
 cur = time.time()

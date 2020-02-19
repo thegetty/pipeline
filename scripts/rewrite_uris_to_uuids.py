@@ -65,7 +65,7 @@ prefix = sys.argv[1]
 print(f'Rewriting URIs to UUIDs ...')
 map_file = sys.argv[2] if len(sys.argv) > 2 else None
 r = UUIDRewriter(prefix, map_file)
-rewrite_output_files(r, update_filename=True, verify_uuid=True)
+rewrite_output_files(r, update_filename=True, verify_uuid=True, ignore_errors=True)
 if map_file:
 	r.persist_map()
 print('Done')

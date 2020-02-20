@@ -43,8 +43,8 @@ class MakeLinkedArtRecord:
 					'Getty',
 					{
 						'referred_to_by': [
-							{'uri': 'tag:getty.edu,2019:digital:pipeline:knoedler:REPLACE-WITH-UUID#K-ROW-1-2-3'},
-							model.LinguisticObject(ident='tag:getty.edu,2019:digital:pipeline:knoedler:REPLACE-WITH-UUID#K-ROW-1-7-10'),
+							{'uri': 'tag:getty.edu,2019:digital:pipeline:REPLACE-WITH-UUID:knoedler#K-ROW-1-2-3'},
+							model.LinguisticObject(ident='tag:getty.edu,2019:digital:pipeline:REPLACE-WITH-UUID:knoedler#K-ROW-1-7-10'),
 						]
 					}
 				]

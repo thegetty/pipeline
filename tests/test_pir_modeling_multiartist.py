@@ -30,7 +30,7 @@ class PIRModelingTest_MultiArtist(TestProvenancePipelineOutput):
 		self.assertEqual(len(people), 4) # there are 3 artists and 1 seller
 		people_ids = set([p['id'] for p in people.values()])
 		
-		seller_id = {'tag:getty.edu,2019:digital:pipeline:provenance:REPLACE-WITH-UUID#PERSON,AUTHNAME,Wit%2C%20Jacomo%20de'}
+		seller_id = {'tag:getty.edu,2019:digital:pipeline:REPLACE-WITH-UUID:shared#PERSON,AUTHNAME,Wit%2C%20Jacomo%20de'}
 		artist_people_ids = people_ids - seller_id
 		
 		object = next(iter(objects.values()))

@@ -8,7 +8,7 @@ import bonobo
 import bonobo_sqlalchemy
 
 PROJECT_NAME = "knoedler"
-UID_TAG_PREFIX = f'tag:getty.edu,2019:digital:pipeline:{PROJECT_NAME}:REPLACE-WITH-UUID#'
+UID_TAG_PREFIX = f'tag:getty.edu,2019:digital:pipeline:REPLACE-WITH-UUID:{PROJECT_NAME}#'
 
 from pipeline.projects import PipelineBase
 from pipeline.nodes.basic import AddArchesModel, AddFieldNamesService, Serializer, deep_copy, Offset, Trace

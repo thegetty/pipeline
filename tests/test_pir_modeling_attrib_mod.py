@@ -68,22 +68,22 @@ class PIRModelingTest_AttributionModifiers(TestProvenancePipelineOutput):
 		self.assertEqual(len(groups), 4)
 		
 		# 'style of' modifiers use an AttributeAssignment that classifies the 'influenced_by' property as being 'Style of'
-		style_of_obj = objects['tag:getty.edu,2019:digital:pipeline:provenance:REPLACE-WITH-UUID#OBJECT,Br-A2493,0029%5Bb%5D,1800-03-01']
+		style_of_obj = objects['tag:getty.edu,2019:digital:pipeline:REPLACE-WITH-UUID:provenance#OBJECT,Br-A2493,0029%5Bb%5D,1800-03-01']
 		production = style_of_obj['produced_by']
 		attr_assignment = production['attributed_by'][0]
 		self.assertEqual(attr_assignment['assigned_property'], 'influenced_by')
 		self.assertEqual({c['_label'] for c in attr_assignment['property_classified_as']}, {'Style Of'})
-		self.assertEqual(attr_assignment['assigned']['id'], 'tag:getty.edu,2019:digital:pipeline:provenance:REPLACE-WITH-UUID#PERSON,ULAN,500005259')
+		self.assertEqual(attr_assignment['assigned']['id'], 'tag:getty.edu,2019:digital:pipeline:REPLACE-WITH-UUID:shared#PERSON,ULAN,500005259')
 
 		# 'possibly by' modifiers use an AttributeAssignment that is classified as 'possibly' to assert the 'carried_out_by' property
-		possibly_by_obj = objects['tag:getty.edu,2019:digital:pipeline:provenance:REPLACE-WITH-UUID#OBJECT,B-A13,0086,1738-07-21']
+		possibly_by_obj = objects['tag:getty.edu,2019:digital:pipeline:REPLACE-WITH-UUID:provenance#OBJECT,B-A13,0086,1738-07-21']
 		production = possibly_by_obj['produced_by']
 		attr_assignment = production['attributed_by'][0]
 		self.assertEqual(attr_assignment['assigned_property'], 'carried_out_by')
 		self.assertIn('Possibly', {c['_label'] for c in attr_assignment['classified_as']})
 		
 		# 'formerly attributed to' modifiers use an AttributeAssignment that is classified as 'obsolete' to assert the 'carried_out_by' property
-		formerly_obj = objects['tag:getty.edu,2019:digital:pipeline:provenance:REPLACE-WITH-UUID#OBJECT,B-A160,0221,1776-04-30']
+		formerly_obj = objects['tag:getty.edu,2019:digital:pipeline:REPLACE-WITH-UUID:provenance#OBJECT,B-A160,0221,1776-04-30']
 		production = formerly_obj['produced_by']
 		attr_assignment = production['attributed_by'][0]
 		self.assertEqual(attr_assignment['assigned_property'], 'carried_out_by')
@@ -93,7 +93,7 @@ class PIRModelingTest_AttributionModifiers(TestProvenancePipelineOutput):
 		self.assertEqual(people, {'Gosdaert [?]'})
 		
 		# 'copy after' modifiers assert that the object's production was 'influenced_by' another object by the named influencer artist
-		copy_after_obj = objects['tag:getty.edu,2019:digital:pipeline:provenance:REPLACE-WITH-UUID#OBJECT,B-A136,0089,1773-07-20']
+		copy_after_obj = objects['tag:getty.edu,2019:digital:pipeline:REPLACE-WITH-UUID:provenance#OBJECT,B-A136,0089,1773-07-20']
 		production = copy_after_obj['produced_by']
 		self.assertEqual(1, len(production['influenced_by']))
 		influence = production['influenced_by'][0]
@@ -102,7 +102,7 @@ class PIRModelingTest_AttributionModifiers(TestProvenancePipelineOutput):
 		self.assertEqual(people, {'DYCK, ANTHONIE VAN'})
 
 		# 'attributed to' modifiers are no-ops; they result in a normal carried_out_by property
-		attributed_to_obj = objects['tag:getty.edu,2019:digital:pipeline:provenance:REPLACE-WITH-UUID#OBJECT,B-A138,0022,1774-05-30']
+		attributed_to_obj = objects['tag:getty.edu,2019:digital:pipeline:REPLACE-WITH-UUID:provenance#OBJECT,B-A138,0022,1774-05-30']
 		production = attributed_to_obj['produced_by']
 		people = {person['_label'] for part in production['part'] for person in part['carried_out_by']}
 		self.assertEqual(people, {'SAVERY (XAVERY)'})

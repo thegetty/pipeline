@@ -337,7 +337,7 @@ class TestAATAPipelineOutput_Journals(unittest.TestCase):
 		lo_model = models['LinguisticObject']
 		journal_model = models['Journal']
 		
-		TAG_PREFIX = 'tag:getty.edu,2019:digital:pipeline:aata:REPLACE-WITH-UUID#'
+		TAG_PREFIX = 'tag:getty.edu,2019:digital:pipeline:REPLACE-WITH-UUID:aata#'
 		
 		journal = output[journal_model].get(f'{TAG_PREFIX}AATA,Journal,2')
 		issue = output[lo_model].get(f'{TAG_PREFIX}AATA,Journal,2,Issue,9')
@@ -359,7 +359,7 @@ class TestAATAPipelineOutput_Journals(unittest.TestCase):
 					'type': 'Type'
 				}
 			],
-			'id': 'tag:getty.edu,2019:digital:pipeline:aata:REPLACE-WITH-UUID#AATA,Journal,2',
+			'id': 'tag:getty.edu,2019:digital:pipeline:REPLACE-WITH-UUID:aata#AATA,Journal,2',
 			'identified_by': [
 				{
 					'classified_as': [
@@ -408,7 +408,7 @@ class TestAATAPipelineOutput_Journals(unittest.TestCase):
 					'type': 'Type'
 				}
 			],
-			'id': 'tag:getty.edu,2019:digital:pipeline:aata:REPLACE-WITH-UUID#AATA,Journal,2,Issue,9',
+			'id': 'tag:getty.edu,2019:digital:pipeline:REPLACE-WITH-UUID:aata#AATA,Journal,2,Issue,9',
 			'identified_by': [
 				{
 					'classified_as': [
@@ -443,7 +443,7 @@ class TestAATAPipelineOutput_Journals(unittest.TestCase):
 							'type': 'Type'
 						}
 					],
-					'id': 'tag:getty.edu,2019:digital:pipeline:aata:REPLACE-WITH-UUID#AATA,Journal,2',
+					'id': 'tag:getty.edu,2019:digital:pipeline:REPLACE-WITH-UUID:aata#AATA,Journal,2',
 					'identified_by': [
 						{
 							'classified_as': [
@@ -483,7 +483,7 @@ class TestAATAPipelineOutput_Journals(unittest.TestCase):
 							'type': 'Type'
 						}
 					],
-					'id': 'tag:getty.edu,2019:digital:pipeline:aata:REPLACE-WITH-UUID#AATA,Journal,2,Volume,9',
+					'id': 'tag:getty.edu,2019:digital:pipeline:REPLACE-WITH-UUID:aata#AATA,Journal,2,Volume,9',
 					'identified_by': [
 						{
 							'classified_as': [

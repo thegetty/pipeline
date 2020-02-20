@@ -91,6 +91,7 @@ class PersonIdentity:
 		self.make_la_person = pipeline.linkedart.MakeLinkedArtPerson()
 		self.make_la_org = pipeline.linkedart.MakeLinkedArtOrganization()
 		self.anon_dated_re = re.compile(r'\[ANONYMOUS - (\d+)TH C[.]\]')
+		self.anon_period_re = re.compile(r'\[ANONYMOUS - (MODERN|ANTIQUE)\]')
 
 	def acceptable_person_auth_name(self, auth_name):
 		if not auth_name or auth_name in self.ignore_authnames:
@@ -100,8 +101,9 @@ class PersonIdentity:
 		return True
 
 	def is_anonymous_group(self, auth_name):
-		m = self.anon_dated_re.match(auth_name)
-		if m:
+		if self.anon_dated_re.match(auth_name):
+			return True
+		elif self.anon_period_re.match(auth_name):
 			return True
 		return False
 
@@ -169,13 +171,18 @@ class PersonIdentity:
 		role = role if role else 'person'
 		auth_name = data.get('auth_name')
 		if self.is_anonymous_group(auth_name):
-			m = self.anon_dated_re.match(auth_name)
-			if m:
-				century = m.group(1)
+			dated_match = self.anon_dated_re.match(auth_name)
+			if dated_match:
+				century = dated_match.group(1)
 				data['label'] = f'anonymous {role}s of the {make_ordinal(century)} century'
 				print(data['label'])
 # 				ts = self.timespan_for_century(century)
 				warnings.warn('TODO: add timespan to anonymous group')
+			period_match = self.anon_period_re.match(auth_name)
+			if period_match:
+				period = period_match.group(1).lower()
+				data['label'] = f'anonymous {period} {role}s'
+				print(data['label'])
 
 	def add_names(self, data:dict, referrer=None, role=None):
 		'''

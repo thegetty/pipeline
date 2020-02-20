@@ -84,8 +84,9 @@ _COUNTRY_NAMES = {
 	'UK': 'United Kingdom',
 	'Ukraine': 'Ukraine',
 	'Ukraïna': 'Ukraine',
-	'USA': 'United States of America',
-	'US': 'United States of America',
+	'United States of America': 'USA',
+	'USA': 'USA',
+	'US': 'USA',
 	'Wales': 'Wales',
 }
 
@@ -163,8 +164,8 @@ def _parse_us_location(parts, *, uri_base):
 	city_uri = None
 	if state_name in _US_STATES or state_name in _US_STATES.values():
 		state_name = _US_STATES.get(state_name, state_name)
-		state_uri = f'{uri_base}PLACE-COUNTRY-' + urllib.parse.quote(country_name) + '-STATE-' + urllib.parse.quote(state_name)
-		city_uri = state_uri + '-CITY-' + urllib.parse.quote(city_name)
+		state_uri = f'{uri_base}PLACE,COUNTRY-' + urllib.parse.quote(country_name) + ',' + urllib.parse.quote(state_name)
+		city_uri = state_uri + ',' + urllib.parse.quote(city_name)
 		state_type = 'State'
 		city_type = 'City'
 	else:
@@ -175,7 +176,7 @@ def _parse_us_location(parts, *, uri_base):
 	country = {
 		'type': 'Country',
 		'name': country_name,
-		'uri': f'{uri_base}PLACE-COUNTRY-' + urllib.parse.quote(country_name),
+		'uri': f'{uri_base}PLACE,COUNTRY-' + urllib.parse.quote(country_name),
 	}
 
 	state = {
@@ -211,13 +212,13 @@ def _parse_uk_location(parts, *, uri_base):
 			'part_of': {
 				'type': 'Country',
 				'name': country_name,
-				'uri': f'{uri_base}PLACE-COUNTRY-' + urllib.parse.quote(country_name),
+				'uri': f'{uri_base}PLACE,COUNTRY-' + urllib.parse.quote(country_name),
 			}
 		}
 	return None
 
 _COUNTRY_HANDLERS = {
-	'United States of America': _parse_us_location,
+	'USA': _parse_us_location,
 	'United Kingdom': _parse_uk_location,
 }
 
@@ -250,7 +251,7 @@ def parse_location(*parts, uri_base=None, types=None):
 			if t.upper() in ('COUNTRY', 'STATE', 'PROVINCE'):
 				uri_parts.append(t.upper())
 				uri_parts.append(urllib.parse.quote(name))
-				uri = f'{uri_base}PLACE-' + '-'.join(uri_parts)
+				uri = f'{uri_base}PLACE,' + '-'.join(uri_parts)
 			current = {
 				'type': t,
 				'name': name,
@@ -282,7 +283,7 @@ def parse_location(*parts, uri_base=None, types=None):
 	current = {
 		'type': country_type,
 		'name': country_name,
-		'uri': f'{uri_base}PLACE-COUNTRY-' + urllib.parse.quote(country_name),
+		'uri': f'{uri_base}PLACE,COUNTRY-' + urllib.parse.quote(country_name),
 	}
 
 	if len(parts) == 2:

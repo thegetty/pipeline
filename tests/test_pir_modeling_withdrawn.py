@@ -53,7 +53,7 @@ class PIRModelingTest_Withdrawn(TestProvenancePipelineOutput):
 		sold_rec = texts['tag:getty.edu,2019:digital:pipeline:provenance:REPLACE-WITH-UUID#CATALOG,Br-3039,RECORD,343049']
 		
 		# both sold and withdrawn objects are members of the auction set...
-		set_id = 'tag:getty.edu,2019:digital:pipeline:provenance:REPLACE-WITH-UUID#AUCTION,Br-3039,LOT,0082,DATE,1827-11-24-Set'
+		set_id = 'tag:getty.edu,2019:digital:pipeline:provenance:REPLACE-WITH-UUID#AUCTION,Br-3039,0082,1827-11-24-Set'
 		self.assertEqual({o['id'] for o in sold_obj['member_of']}, {set_id})
 		self.assertEqual({o['id'] for o in withdrawn_obj['member_of']}, {set_id})
 

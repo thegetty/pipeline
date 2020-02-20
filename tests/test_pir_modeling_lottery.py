@@ -36,7 +36,7 @@ class PIRModelingTest_PrivateContractSales(TestProvenancePipelineOutput):
 		texts = output['model-lo']
 		
 		expected_catalog_text_id = 'tag:getty.edu,2019:digital:pipeline:provenance:REPLACE-WITH-UUID#CATALOG,D-A50'
-		expected_event_id = 'tag:getty.edu,2019:digital:pipeline:provenance:REPLACE-WITH-UUID#LOTTERY-EVENT,CATALOGNUMBER,D-A50'
+		expected_event_id = 'tag:getty.edu,2019:digital:pipeline:provenance:REPLACE-WITH-UUID#LOTTERY-EVENT,D-A50'
 		
 		# there is a single non-auction 'Private Contract Sale' event, and it is referred to by the catalog text
 		pvt_sale = activities[expected_event_id]
@@ -77,12 +77,12 @@ class PIRModelingTest_PrivateContractSales(TestProvenancePipelineOutput):
 		hmo_key = 'tag:getty.edu,2019:digital:pipeline:provenance:REPLACE-WITH-UUID#OBJ,D-A50,0001,1765'
 		hmo = objects[hmo_key]
 		
-		sale_curr = drawings['tag:getty.edu,2019:digital:pipeline:provenance:REPLACE-WITH-UUID#AUCTION,D-A50,LOT,0001,DATE,1765']
+		sale_curr = drawings['tag:getty.edu,2019:digital:pipeline:provenance:REPLACE-WITH-UUID#AUCTION,D-A50,0001,1765']
 		
-		event_key = 'tag:getty.edu,2019:digital:pipeline:provenance:REPLACE-WITH-UUID#LOTTERY-EVENT,CATALOGNUMBER,D-A50'
+		event_key = 'tag:getty.edu,2019:digital:pipeline:provenance:REPLACE-WITH-UUID#LOTTERY-EVENT,D-A50'
 		sale_event = activities[event_key]
 		
-		object_set_key = 'tag:getty.edu,2019:digital:pipeline:provenance:REPLACE-WITH-UUID#AUCTION,D-A50,LOT,0001,DATE,1765-Set'
+		object_set_key = 'tag:getty.edu,2019:digital:pipeline:provenance:REPLACE-WITH-UUID#AUCTION,D-A50,0001,1765-Set'
 		object_set = sets[object_set_key]
 		
 		self.assertEqual({c['_label'] for c in sale_event['classified_as']}, {'Lottery'})

@@ -118,10 +118,10 @@ class PersonIdentity:
 			# not enough information to identify this person uniquely, so use the source location in the input file
 			pi_rec_no = data['pi_record_no']
 			if record_id:
-				return ('PERSON', 'PI_REC_NO', pi_rec_no, record_id)
+				return ('PERSON', 'PI', pi_rec_no, record_id)
 			else:
 				warnings.warn(f'*** No record identifier given for person identified only by pi_record_number {pi_rec_no}')
-				return ('PERSON', 'PI_REC_NO', pi_rec_no)
+				return ('PERSON', 'PI', pi_rec_no)
 
 	def add_person(self, a, sales_record, relative_id, **kwargs):
 		self.add_uri(a, record_id=relative_id)
@@ -357,8 +357,8 @@ class ProvenanceUtilityHelper(UtilityHelper):
 		data which identifies a specific object in that lot.
 		'''
 		shared_lot_number = self.shared_lot_number_from_lno(lno)
-		uid = f'AUCTION-{cno}-LOT-{shared_lot_number}-DATE-{date}'
-		uri = self.make_proj_uri('AUCTION', cno, 'LOT', shared_lot_number, 'DATE', date)
+		uid = f'AUCTION-{cno}-{shared_lot_number}-{date}'
+		uri = self.make_proj_uri('AUCTION', cno, shared_lot_number, date)
 		return uid, uri
 
 	@staticmethod
@@ -384,13 +384,13 @@ class ProvenanceUtilityHelper(UtilityHelper):
 		auth_name = a.get('auth')
 		a['identifiers'] = []
 		if ulan:
-			key = f'AUCTION-HOUSE-ULAN-{ulan}'
+			key = f'HOUSE-ULAN-{ulan}'
 			a['uid'] = key
-			a['uri'] = self.make_proj_uri('AUCTION-HOUSE', 'ULAN', ulan)
+			a['uri'] = self.make_proj_uri('HOUSE', 'ULAN', ulan)
 			a['ulan'] = ulan
 			house = vocab.AuctionHouseOrg(ident=a['uri'])
 		elif auth_name and auth_name not in self.ignore_house_authnames:
-			a['uri'] = self.make_proj_uri('AUCTION-HOUSE', 'AUTH', auth_name)
+			a['uri'] = self.make_proj_uri('HOUSE', 'AUTH', auth_name)
 			pname = vocab.PrimaryName(ident='', content=auth_name)
 			if event_record:
 				pname.referred_to_by = event_record
@@ -399,9 +399,9 @@ class ProvenanceUtilityHelper(UtilityHelper):
 		else:
 			# not enough information to identify this house uniquely, so use the source location in the input file
 			if 'pi_record_no' in a:
-				a['uri'] = self.make_proj_uri('AUCTION-HOUSE', 'PI_REC_NO', a['pi_record_no'], sequence)
+				a['uri'] = self.make_proj_uri('HOUSE', 'PI', a['pi_record_no'], sequence)
 			else:
-				a['uri'] = self.make_proj_uri('AUCTION-HOUSE', 'STAR_REC_NO', a['star_record_no'], sequence)
+				a['uri'] = self.make_proj_uri('HOUSE', 'STAR', a['star_record_no'], sequence)
 			house = vocab.AuctionHouseOrg(ident=a['uri'])
 
 		name = a.get('name')

@@ -176,13 +176,13 @@ class PopulateObject(Configurable):
 							ulan = int(location.get('insi'))
 						if ulan:
 							owner_data['ulan'] = ulan
-							owner_data['uri'] = self.helper.make_proj_uri('ORGANIZATION', 'ULAN', ulan)
+							owner_data['uri'] = self.helper.make_proj_uri('ORG', 'ULAN', ulan)
 						else:
-							owner_data['uri'] = self.helper.make_proj_uri('ORGANIZATION', 'NAME', inst, 'PLACE', loc)
+							owner_data['uri'] = self.helper.make_proj_uri('ORG', 'NAME', inst, 'PLACE', loc)
 					else:
 						owner_data = {
 							'label': '(Anonymous organization)',
-							'uri': self.helper.make_proj_uri('ORGANIZATION', 'PRESENT-OWNER', *now_key),
+							'uri': self.helper.make_proj_uri('ORG', 'CURR-OWN', *now_key),
 						}
 
 					base_uri = hmo.id + '-Place,'

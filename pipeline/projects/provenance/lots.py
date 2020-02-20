@@ -208,7 +208,6 @@ def prov_entry_label(sale_type, transaction, transaction_types, cno, lots, date,
 		else:
 			return f'Offer {rel} {id}'
 	else:
-		print(f'PROV ENTRY: {pprint.pformat([sale_type, transaction])}')
 		return f'Provenance Entry {rel} Lot {cno} {lots} ({date})'
 
 class AddAcquisitionOrBidding(Configurable):

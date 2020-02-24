@@ -75,13 +75,13 @@ salespostsalefilelist: scripts/find_matching_json_files
 salespostsalerewrite: salespostsalefilelist
 	cat $(GETTY_PIPELINE_OUTPUT)/post-sale-matching-files.txt | PYTHONPATH=`pwd`  xargs -n 256 $(PYTHON) ./scripts/rewrite_post_sales_uris.py "${GETTY_PIPELINE_TMP_PATH}/post_sale_rewrite_map.json"
 
-salespostprocessing_uuidmap: ./scripts/generate_uri_uuids
-	./scripts/generate_uri_uuids "${GETTY_PIPELINE_TMP_PATH}/uri_to_uuid_map.json" $(GETTY_PIPELINE_OUTPUT) 'tag:getty.edu,2019:digital:pipeline:provenance:REPLACE-WITH-UUID#'
+postprocessing_uuidmap: ./scripts/generate_uri_uuids
+	./scripts/generate_uri_uuids "${GETTY_PIPELINE_TMP_PATH}/uri_to_uuid_map.json" $(GETTY_PIPELINE_OUTPUT) 'tag:getty.edu,2019:digital:pipeline:REPLACE-WITH-UUID:'
 
-salespostprocessing_rewrite_uris:
-	PYTHONPATH=`pwd` $(PYTHON) ./scripts/rewrite_uris_to_uuids_parallel.py 'tag:getty.edu,2019:digital:pipeline:provenance:REPLACE-WITH-UUID#' "${GETTY_PIPELINE_TMP_PATH}/uri_to_uuid_map.json"
+postprocessing_rewrite_uris:
+	PYTHONPATH=`pwd` $(PYTHON) ./scripts/rewrite_uris_to_uuids_parallel.py 'tag:getty.edu,2019:digital:pipeline:REPLACE-WITH-UUID:' "${GETTY_PIPELINE_TMP_PATH}/uri_to_uuid_map.json"
 
-salespostprocessing: salespostsalerewrite salespostprocessing_uuidmap salespostprocessing_rewrite_uris
+salespostprocessing: salespostsalerewrite postprocessing_uuidmap postprocessing_rewrite_uris
 	ls $(GETTY_PIPELINE_OUTPUT) | PYTHONPATH=`pwd` xargs -n 1 -P 16 -I '{}' $(PYTHON) ./scripts/coalesce_json.py "${GETTY_PIPELINE_OUTPUT}/{}"
 	PYTHONPATH=`pwd` $(PYTHON) ./scripts/remove_meaningless_ids.py
 	# Reorganizing JSON files...
@@ -144,4 +144,4 @@ clean:
 	rm -f $(GETTY_PIPELINE_TMP_PATH)/sales-tree.data
 	rm -f "${GETTY_PIPELINE_TMP_PATH}/post_sale_rewrite_map.json"
 
-.PHONY: aata aatagraph knoedler knoedlergraph pir pirgraph test upload nt docker dockerimage dockertest fetch fetchaata fetchpir fetchknoedler jsonlist salesdata salespipeline salespostprocessing salespostsalefilelist salespostprocessing_uuidmap salespostprocessing_rewrite_uris
+.PHONY: aata aatagraph knoedler knoedlergraph pir pirgraph test upload nt docker dockerimage dockertest fetch fetchaata fetchpir fetchknoedler jsonlist salesdata salespipeline salespostprocessing salespostsalefilelist postprocessing_uuidmap postprocessing_rewrite_uris

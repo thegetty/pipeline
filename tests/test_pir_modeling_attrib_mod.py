@@ -96,7 +96,8 @@ class PIRModelingTest_AttributionModifiers(TestProvenancePipelineOutput):
 		copy_after_obj = objects['tag:getty.edu,2019:digital:pipeline:REPLACE-WITH-UUID:provenance#OBJ,B-A136,0089,1773-07-20']
 		production = copy_after_obj['produced_by']
 		self.assertEqual(1, len(production['influenced_by']))
-		influence = production['influenced_by'][0]
+		influence_id = production['influenced_by'][0]['id']
+		influence = objects[influence_id]
 		orig_production = influence['produced_by']
 		people = {person['_label'] for part in orig_production['part'] for person in part['carried_out_by']}
 		self.assertEqual(people, {'DYCK, ANTHONIE VAN'})

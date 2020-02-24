@@ -232,4 +232,5 @@ class UtilityHelper:
 			warnings.warn(f'Place with missing name on {p.id}')
 		if parent:
 			p.part_of = parent
+			data['part_of'] = parent_data
 		return add_crom_data(data=data, what=p)

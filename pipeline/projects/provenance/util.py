@@ -50,7 +50,7 @@ def object_key(data):
 
 def object_uri(data, helper):
 	key = object_key(data)
-	return helper.make_proj_uri('OBJECT', *key)
+	return helper.make_proj_uri('OBJ', *key)
 
 def add_pir_object_uri_factory(helper):
 	return lambda d, p: add_pir_object_uri(d, p, helper)
@@ -102,7 +102,7 @@ class SalesTree:
 			components[key] += 1
 # 		print(f'Post sales records connected component sizes (top {limit}):')
 		for key, count in components.most_common(limit):
-			uri = helper.make_proj_uri('OBJECT', *key)
+			uri = helper.make_proj_uri('OBJ', *key)
 # 			print(f'{count}\t{key!s:>40}\t\t{uri}')
 			yield key
 

@@ -132,20 +132,20 @@ class PersonIdentity:
 			key = ('PERSON', 'ULAN', ulan)
 			return key, self.make_shared_uri
 		elif self.is_anonymous_group(auth_name):
-			key = ('GROUP', 'AUTHNAME', auth_name)
+			key = ('GROUP', 'AUTH', auth_name)
 			return key, self.make_shared_uri
 		elif self.acceptable_person_auth_name(auth_name):
-			key = ('PERSON', 'AUTHNAME', auth_name)
+			key = ('PERSON', 'AUTH', auth_name)
 			return key, self.make_shared_uri
 		else:
 			# not enough information to identify this person uniquely, so use the source location in the input file
 			pi_rec_no = data['pi_record_no']
 			if record_id:
-				key = ('PERSON', 'PI_REC_NO', pi_rec_no, record_id)
+				key = ('PERSON', 'PI', pi_rec_no, record_id)
 				return key, self.make_proj_uri
 			else:
 				warnings.warn(f'*** No record identifier given for person identified only by pi_record_number {pi_rec_no}')
-				key = ('PERSON', 'PI_REC_NO', pi_rec_no)
+				key = ('PERSON', 'PI', pi_rec_no)
 				return key, self.make_proj_uri
 
 	def add_person(self, a, sales_record, relative_id, **kwargs):
@@ -293,7 +293,7 @@ class ProvenanceUtilityHelper(UtilityHelper):
 
 	def physical_catalog(self, cno, sale_type, owner=None, copy=None):
 		keys = [v for v in [cno, owner, copy] if v]
-		uri = self.make_proj_uri('PHYSICAL-CATALOG', *keys)
+		uri = self.make_proj_uri('PHYS-CAT', *keys)
 		labels = []
 		if owner:
 			labels.append(f'owned by “{owner}”')
@@ -351,8 +351,8 @@ class ProvenanceUtilityHelper(UtilityHelper):
 
 		event_type = self.event_type_for_sale_type(sale_type)
 		sale_type_key = sale_type.replace(' ', '_').upper()
-		uid = f'{sale_type_key}-EVENT-CATALOGNUMBER-{catalog_number}'
-		uri = self.make_proj_uri(f'{sale_type_key}-EVENT', 'CATALOGNUMBER', catalog_number)
+		uid = f'{sale_type_key}-EVENT-{catalog_number}'
+		uri = self.make_proj_uri(f'{sale_type_key}-EVENT', catalog_number)
 		label = f"{sale_type} Event for {catalog_number}"
 		auction = event_type(ident=uri, label=label)
 		return auction, uid, uri
@@ -384,8 +384,8 @@ class ProvenanceUtilityHelper(UtilityHelper):
 		for p in prices:
 			n = p.get('price_note')
 			if n and n.startswith('for lots '):
-				return self.make_proj_uri('AUCTION-TX-MULTI', cno, date, n[9:])
-		return self.make_proj_uri('AUCTION-TX', cno, date, shared_lot_number)
+				return self.make_proj_uri('PROV-MULTI', cno, date, n[9:])
+		return self.make_proj_uri('PROV', cno, date, shared_lot_number)
 
 	def lots_in_transaction(self, data, metadata):
 		'''
@@ -407,8 +407,8 @@ class ProvenanceUtilityHelper(UtilityHelper):
 		data which identifies a specific object in that lot.
 		'''
 		shared_lot_number = self.shared_lot_number_from_lno(lno)
-		uid = f'AUCTION-{cno}-LOT-{shared_lot_number}-DATE-{date}'
-		uri = self.make_proj_uri('AUCTION', cno, 'LOT', shared_lot_number, 'DATE', date)
+		uid = f'AUCTION-{cno}-{shared_lot_number}-{date}'
+		uri = self.make_proj_uri('AUCTION', cno, shared_lot_number, date)
 		return uid, uri
 
 	@staticmethod
@@ -434,13 +434,13 @@ class ProvenanceUtilityHelper(UtilityHelper):
 		auth_name = a.get('auth')
 		a['identifiers'] = []
 		if ulan:
-			key = f'AUCTION-HOUSE-ULAN-{ulan}'
+			key = f'HOUSE-ULAN-{ulan}'
 			a['uid'] = key
-			a['uri'] = self.make_proj_uri('AUCTION-HOUSE', 'ULAN', ulan)
+			a['uri'] = self.make_proj_uri('HOUSE', 'ULAN', ulan)
 			a['ulan'] = ulan
 			house = vocab.AuctionHouseOrg(ident=a['uri'])
 		elif auth_name and auth_name not in self.ignore_house_authnames:
-			a['uri'] = self.make_proj_uri('AUCTION-HOUSE', 'AUTHNAME', auth_name)
+			a['uri'] = self.make_proj_uri('HOUSE', 'AUTH', auth_name)
 			pname = vocab.PrimaryName(ident='', content=auth_name)
 			if event_record:
 				pname.referred_to_by = event_record
@@ -449,9 +449,9 @@ class ProvenanceUtilityHelper(UtilityHelper):
 		else:
 			# not enough information to identify this house uniquely, so use the source location in the input file
 			if 'pi_record_no' in a:
-				a['uri'] = self.make_proj_uri('AUCTION-HOUSE', 'PI_REC_NO', a['pi_record_no'], sequence)
+				a['uri'] = self.make_proj_uri('HOUSE', 'PI', a['pi_record_no'], sequence)
 			else:
-				a['uri'] = self.make_proj_uri('AUCTION-HOUSE', 'STAR_REC_NO', a['star_record_no'], sequence)
+				a['uri'] = self.make_proj_uri('HOUSE', 'STAR', a['star_record_no'], sequence)
 			house = vocab.AuctionHouseOrg(ident=a['uri'])
 
 		name = a.get('name')
@@ -1157,8 +1157,8 @@ class ProvenancePipeline(PipelineBase):
 # 		print('Rewrite output files, replacing the following URIs:')
 		for src, dst in g:
 			canonical, steps = g.canonical_key(src)
-			src_uri = self.helper.make_proj_uri('OBJECT', *src)
-			dst_uri = self.helper.make_proj_uri('OBJECT', *canonical)
+			src_uri = self.helper.make_proj_uri('OBJ', *src)
+			dst_uri = self.helper.make_proj_uri('OBJ', *canonical)
 # 			print(f's/ {src_uri:<100} / {dst_uri:<100} /')
 			post_sale_rewrite_map[src_uri] = dst_uri
 			if canonical in large_components:

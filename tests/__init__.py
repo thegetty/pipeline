@@ -7,7 +7,7 @@ import pprint
 import unittest
 from pathlib import Path
 
-from cromulent import model, reader
+from cromulent import model, vocab, reader
 from cromulent.model import factory
 from pipeline.util import CromObjectMerger
 from pipeline.projects.provenance import ProvenancePipeline
@@ -120,6 +120,8 @@ class ProvenanceTestPipeline(ProvenancePipeline):
 		return services
 
 	def run(self, **options):
+		vocab.add_linked_art_boundary_check()
+		vocab.add_attribute_assignment_check()
 		services = self.get_services(**options)
 		super().run(services=services, **options)
 

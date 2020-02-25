@@ -21,7 +21,7 @@ COPY pipeline pipeline
 COPY tests tests
 COPY data/common /data/common
 COPY data/aata/*.json /data/aata/
-COPY Makefile setup.py aata.py pir.py knoedler.py settings.py ./
+COPY Makefile setup.py aata.py sales.py knoedler.py settings.py ./
 
 FROM swift:latest
 WORKDIR /usr/src/swift
@@ -50,4 +50,4 @@ EXPOSE 8080
 VOLUME ["/data"]
 VOLUME ["/output"]
 VOLUME ["/services"]
-CMD [ "make", "pir", "LIMIT=100" ]
+CMD [ "make", "sales", "LIMIT=100" ]

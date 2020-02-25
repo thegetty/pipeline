@@ -269,7 +269,7 @@ class ProvenanceUtilityHelper(UtilityHelper):
 	def sale_type_for_sale_type(self, sale_type):
 		if sale_type in ('Private Contract Sale', 'Stock List'):
 			# 'Stock List' is treated just like a Private Contract Sale, except for the catalogs
-			return vocab.SaleAgreement
+			return vocab.Negotiating
 		elif sale_type == 'Lottery':
 			return vocab.LotteryDrawing
 		elif sale_type in ('Auction'):
@@ -517,9 +517,7 @@ class ProvenancePipeline(PipelineBase):
 		vocab.register_instance('history', {'parent': model.Type, 'id': '300033898', 'label': 'History'})
 
 		warnings.warn(f'TODO: NEED TO USE CORRECT CLASSIFICATION FOR NON-AUCTION SALES ACTIVITIES, LOTTERY CATALOG')
-		vocab.register_vocab_class('SaleAgreement', {"parent": model.Activity, "id":"000000000", "label": "Sale Agreement"})
 		vocab.register_vocab_class('LotteryDrawing', {"parent": model.Activity, "id":"000000000", "label": "Lottery Drawing"})
-
 		vocab.register_vocab_class('Lottery', {"parent": model.Activity, "id":"000000000", "label": "Lottery"})
 		vocab.register_vocab_class('LotteryCatalog', {"parent": model.HumanMadeObject, "id":"000000000", "label": "Lottery Catalog", "metatype": "work type"})
 		vocab.register_vocab_class('LotteryCatalogText', {"parent": model.LinguisticObject, "id":"000000000", "label": "Lottery Catalog", "metatype": "work type"})
@@ -898,7 +896,7 @@ class ProvenancePipeline(PipelineBase):
 		
 		private_sale_activities = graph.add_chain(
 			ExtractKeyedValue(key='_event_causing_prov_entry'),
-			OnlyRecordsOfType(type=vocab.SaleAgreement),
+			OnlyRecordsOfType(type=vocab.Negotiating),
 			_input=sales.output
 		)
 		

@@ -61,7 +61,7 @@ nq: jsonlist
 
 salespipeline:
 	mkdir -p $(GETTY_PIPELINE_TMP_PATH)/pipeline
-	QUIET=$(QUIET) GETTY_PIPELINE_DEBUG=$(DEBUG) GETTY_PIPELINE_LIMIT=$(LIMIT) $(PYTHON) ./pir.py
+	QUIET=$(QUIET) GETTY_PIPELINE_DEBUG=$(DEBUG) GETTY_PIPELINE_LIMIT=$(LIMIT) $(PYTHON) ./sales.py
 
 scripts/generate_uri_uuids: scripts/generate_uri_uuids.swift
 	swiftc scripts/generate_uri_uuids.swift -o scripts/generate_uri_uuids
@@ -119,8 +119,8 @@ $(GETTY_PIPELINE_TMP_PATH)/aata.dot: aata.py
 $(GETTY_PIPELINE_TMP_PATH)/aata.pdf: $(GETTY_PIPELINE_TMP_PATH)/aata.dot
 	$(DOT) -Tpdf -o $(GETTY_PIPELINE_TMP_PATH)/aata.pdf $(GETTY_PIPELINE_TMP_PATH)/aata.dot
 
-$(GETTY_PIPELINE_TMP_PATH)/pir.dot: pir.py
-	./pir.py dot > $(GETTY_PIPELINE_TMP_PATH)/pir.dot
+$(GETTY_PIPELINE_TMP_PATH)/pir.dot: sales.py
+	./sales.py dot > $(GETTY_PIPELINE_TMP_PATH)/pir.dot
 
 $(GETTY_PIPELINE_TMP_PATH)/knoedler.dot: knoedler.py
 	./knoedler.py dot > $(GETTY_PIPELINE_TMP_PATH)/knoedler.dot

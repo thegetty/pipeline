@@ -241,7 +241,7 @@ def parse_location(*parts, uri_base=None, types=None):
 	'''
 	value = ', '.join(parts)
 	if uri_base is None:
-		uri_base = 'tag:getty.edu,2019:digital:pipeline:REPLACE-WITH-UUID#'
+		uri_base = 'tag:getty.edu,2019:digital:REPLACE-WITH-UUID:pipeline#'
 
 	if types:
 		current = None

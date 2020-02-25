@@ -73,21 +73,39 @@ import pipeline.projects.provenance.catalogs
 
 #mark - utility functions and classes
 
+def make_ordinal(n):
+	n = int(n)
+	suffix = ['th', 'st', 'nd', 'rd', 'th'][min(n % 10, 4)]
+	if 11 <= (n % 100) <= 13:
+		suffix = 'th'
+	return f'{n}{suffix}'
+
 class PersonIdentity:
 	'''
 	Utility class to help assign records for people with properties such as `uri` and identifiers.
 	'''
-	def __init__(self, *, make_uri):
-		self.make_uri = make_uri
+	def __init__(self, *, make_shared_uri, make_proj_uri):
+		self.make_shared_uri = make_shared_uri
+		self.make_proj_uri = make_proj_uri
 		self.ignore_authnames = CaseFoldingSet(('NEW', 'NON-UNIQUE'))
 		self.make_la_person = pipeline.linkedart.MakeLinkedArtPerson()
+		self.make_la_org = pipeline.linkedart.MakeLinkedArtOrganization()
+		self.anon_dated_re = re.compile(r'\[ANONYMOUS - (\d+)TH C[.]\]')
+		self.anon_period_re = re.compile(r'\[ANONYMOUS - (MODERN|ANTIQUE)\]')
 
-	def acceptable_auth_name(self, auth_name):
+	def acceptable_person_auth_name(self, auth_name):
 		if not auth_name or auth_name in self.ignore_authnames:
 			return False
-		if '[' in auth_name:
+		elif '[' in auth_name:
 			return False
 		return True
+
+	def is_anonymous_group(self, auth_name):
+		if self.anon_dated_re.match(auth_name):
+			return True
+		elif self.anon_period_re.match(auth_name):
+			return True
+		return False
 
 	@staticmethod
 	def is_anonymous(data:dict):
@@ -111,28 +129,72 @@ class PersonIdentity:
 		auth_name_q = '?' in data.get('auth_nameq', '')
 
 		if ulan:
-			return ('PERSON', 'ULAN', ulan)
-		elif self.acceptable_auth_name(auth_name):
-			return ('PERSON', 'AUTH', auth_name)
+			key = ('PERSON', 'ULAN', ulan)
+			return key, self.make_shared_uri
+		elif self.is_anonymous_group(auth_name):
+			key = ('GROUP', 'AUTH', auth_name)
+			return key, self.make_shared_uri
+		elif self.acceptable_person_auth_name(auth_name):
+			key = ('PERSON', 'AUTH', auth_name)
+			return key, self.make_shared_uri
 		else:
 			# not enough information to identify this person uniquely, so use the source location in the input file
 			pi_rec_no = data['pi_record_no']
 			if record_id:
-				return ('PERSON', 'PI', pi_rec_no, record_id)
+				key = ('PERSON', 'PI', pi_rec_no, record_id)
+				return key, self.make_proj_uri
 			else:
 				warnings.warn(f'*** No record identifier given for person identified only by pi_record_number {pi_rec_no}')
-				return ('PERSON', 'PI', pi_rec_no)
+				key = ('PERSON', 'PI', pi_rec_no)
+				return key, self.make_proj_uri
 
 	def add_person(self, a, sales_record, relative_id, **kwargs):
 		self.add_uri(a, record_id=relative_id)
 		self.add_names(a, referrer=sales_record, **kwargs)
-		self.make_la_person(a)
+		self.add_props(a, **kwargs)
+		auth_name = a.get('auth_name')
+		if self.is_anonymous_group(auth_name):
+			self.make_la_org(a)
+		else:
+			self.make_la_person(a)
 		return get_crom_object(a)
 
 	def add_uri(self, data:dict, **kwargs):
-		keys = self._uri_keys(data, **kwargs)
+		keys, make = self._uri_keys(data, **kwargs)
 		data['uri_keys'] = keys
-		data['uri'] = self.make_uri(*keys)
+		data['uri'] = make(*keys)
+
+	def timespan_for_century(self, century):
+		ord = make_ordinal(century)
+		ts = model.TimeSpan(ident='', label=f'{ord} century')
+		from_year = 100 * (century-1)
+		to_year = from_year + 100
+		ts.end_of_the_begin = "%04d-%02d-%02dT%02d:%02d:%02dZ" % (from_year, 1, 1, 0, 0, 0)
+		ts.begin_of_the_end = "%04d-%02d-%02dT%02d:%02d:%02dZ" % (to_year, 1, 1, 0, 0, 0)
+		return ts
+
+	def add_props(self, data:dict, role=None, **kwargs):
+		role = role if role else 'person'
+		auth_name = data.get('auth_name')
+		if self.is_anonymous_group(auth_name):
+			dated_match = self.anon_dated_re.match(auth_name)
+			if dated_match:
+				with suppress(ValueError):
+					print(dated_match.group(1))
+					century = int(dated_match.group(1))
+					ord = make_ordinal(century)
+					data['label'] = f'anonymous {role}s of the {ord} century'
+					a = vocab.Active(ident='', label=f'Professional activity of {role}s in the {ord} century')
+					ts = self.timespan_for_century(century)
+					a.timespan = ts
+					if 'events' not in data:
+						data['events'] = []
+					data['events'].append(a)
+			period_match = self.anon_period_re.match(auth_name)
+			if period_match:
+				period = period_match.group(1).lower()
+				data['label'] = f'anonymous {period} {role}s'
+				print(data['label'])
 
 	def add_names(self, data:dict, referrer=None, role=None):
 		'''
@@ -145,7 +207,7 @@ class PersonIdentity:
 		'''
 		auth_name = data.get('auth_name')
 		role_label = None
-		if self.acceptable_auth_name(auth_name):
+		if self.acceptable_person_auth_name(auth_name):
 			if role:
 				role_label = f'{role} “{auth_name}”'
 			data['label'] = auth_name
@@ -184,7 +246,7 @@ class ProvenanceUtilityHelper(UtilityHelper):
 		self.ignore_house_authnames = CaseFoldingSet(('Anonymous',))
 		self.csv_source_columns = ['pi_record_no', 'star_record_no', 'catalog_number']
 		self.problematic_record_uri = 'tag:getty.edu,2019:digital:pipeline:provenance:ProblematicRecord'
-		self.person_identity = PersonIdentity(make_uri=self.make_proj_uri)
+		self.person_identity = PersonIdentity(make_shared_uri=self.make_shared_uri, make_proj_uri=self.make_proj_uri)
 		self.uid_tag_prefix = UID_TAG_PREFIX
 
 	def copy_source_information(self, dst: dict, src: dict):

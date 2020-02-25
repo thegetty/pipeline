@@ -8,7 +8,7 @@ import warnings
 from pipeline.util import implode_date
 from pipeline.projects import UtilityHelper
 
-UID_TAG_PREFIX = 'tag:getty.edu,2019:digital:pipeline:provenance:REPLACE-WITH-UUID#'
+UID_TAG_PREFIX = 'tag:getty.edu,2019:digital:pipeline:REPLACE-WITH-UUID:provenance#'
 
 def filter_empty_person(data: dict, _):
 	'''

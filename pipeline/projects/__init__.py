@@ -144,8 +144,8 @@ class PipelineBase:
 class UtilityHelper:
 	def __init__(self, project_name):
 		self.project_name = project_name
-		self.proj_prefix = f'tag:getty.edu,2019:digital:pipeline:{project_name}:REPLACE-WITH-UUID#'
-		self.shared_prefix = f'tag:getty.edu,2019:digital:pipeline:REPLACE-WITH-UUID#'
+		self.proj_prefix = f'tag:getty.edu,2019:digital:pipeline:REPLACE-WITH-UUID:{project_name}#'
+		self.shared_prefix = f'tag:getty.edu,2019:digital:pipeline:REPLACE-WITH-UUID:shared#'
 
 	def add_services(self, services):
 		'''
@@ -232,4 +232,5 @@ class UtilityHelper:
 			warnings.warn(f'Place with missing name on {p.id}')
 		if parent:
 			p.part_of = parent
+			data['part_of'] = parent_data
 		return add_crom_data(data=data, what=p)

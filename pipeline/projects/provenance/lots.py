@@ -216,11 +216,14 @@ class AddAcquisitionOrBidding(Configurable):
 	auction_houses = Service('auction_houses')
 	buy_sell_modifiers = Service('buy_sell_modifiers')
 	transaction_types = Service('transaction_types')
-	custody_xfer_purposes = {
-		'to sell': model.Activity(ident='http://vocab.getty.edu/aat/XXX_1', label='Act of Selling'),
-		'returning': model.Activity(ident='http://vocab.getty.edu/aat/XXX_2', label='Act of Returning'),
-		'completing sale': model.Activity(ident='http://vocab.getty.edu/aat/XXX_3', label='Act of Completing Sale'),
-	}
+
+	def __init__(self, *args, **kwargs):
+		self.custody_xfer_purposes = {
+			'to sell': vocab.instances['act of selling'],
+			'returning': vocab.instances['act of returning'],
+			'completing sale': vocab.instances['act of completing sale'],
+		}
+		super().__init__(*args, **kwargs)
 
 	@staticmethod
 	def related_procurement(hmo, tx_label_args, current_tx=None, current_ts=None, buyer=None, seller=None, previous=False, ident=None):

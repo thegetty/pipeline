@@ -44,8 +44,8 @@ class MakeLinkedArtRecord:
 					'Getty',
 					{
 						'referred_to_by': [
-							{'uri': 'tag:getty.edu,2019:digital:pipeline:knoedler:REPLACE-WITH-UUID#K-ROW-1-2-3'},
-							model.LinguisticObject(ident='tag:getty.edu,2019:digital:pipeline:knoedler:REPLACE-WITH-UUID#K-ROW-1-7-10'),
+							{'uri': 'tag:getty.edu,2019:digital:pipeline:REPLACE-WITH-UUID:knoedler#K-ROW-1-2-3'},
+							model.LinguisticObject(ident='tag:getty.edu,2019:digital:pipeline:REPLACE-WITH-UUID:knoedler#K-ROW-1-7-10'),
 						]
 					}
 				]
@@ -309,9 +309,8 @@ class MakeLinkedArtOrganization(MakeLinkedArtAgent):
 		with suppress(KeyError):
 			thing._label = str(data['label'])
 
-		if 'events' in data:
-			for event in data['events']:
-				thing.carried_out = event
+		for event in data.get('events', []):
+			thing.carried_out = event
 
 	def __call__(self, data: dict):
 		if 'object_type' not in data:

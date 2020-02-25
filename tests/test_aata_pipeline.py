@@ -9,6 +9,7 @@ import hashlib
 import json
 import uuid
 
+from cromulent import vocab
 from tests import TestWriter
 from pipeline.util import CromObjectMerger
 from pipeline.projects.aata import AATAPipeline
@@ -144,6 +145,8 @@ class TestAATAPipelineOutput_Abstracts(unittest.TestCase):
 		os.environ['QUIET'] = '1'
 
 	def run_pipeline(self, models, input_path):
+		vocab.add_linked_art_boundary_check()
+		vocab.add_attribute_assignment_check()
 		writer = TestWriter()
 		pipeline = AATATestPipeline(
 			writer,
@@ -337,7 +340,7 @@ class TestAATAPipelineOutput_Journals(unittest.TestCase):
 		lo_model = models['LinguisticObject']
 		journal_model = models['Journal']
 		
-		TAG_PREFIX = 'tag:getty.edu,2019:digital:pipeline:aata:REPLACE-WITH-UUID#'
+		TAG_PREFIX = 'tag:getty.edu,2019:digital:pipeline:REPLACE-WITH-UUID:aata#'
 		
 		journal = output[journal_model].get(f'{TAG_PREFIX}AATA,Journal,2')
 		issue = output[lo_model].get(f'{TAG_PREFIX}AATA,Journal,2,Issue,9')
@@ -359,7 +362,7 @@ class TestAATAPipelineOutput_Journals(unittest.TestCase):
 					'type': 'Type'
 				}
 			],
-			'id': 'tag:getty.edu,2019:digital:pipeline:aata:REPLACE-WITH-UUID#AATA,Journal,2',
+			'id': 'tag:getty.edu,2019:digital:pipeline:REPLACE-WITH-UUID:aata#AATA,Journal,2',
 			'identified_by': [
 				{
 					'classified_as': [
@@ -392,9 +395,24 @@ class TestAATAPipelineOutput_Journals(unittest.TestCase):
 		}
 		self.assertEqual(journal, journal_expected)
 		
-		for i in [i for p in issue['part_of'] for i in p['identified_by']]:
-			with suppress(KeyError):
-				del i['id'] # remove UUIDs that will not be stable across runs
+		# stitch together the part-of hierarchy
+		parts = []
+		for p in issue.get('part_of', []):
+			i = p['id']
+			part = None
+			for k, model in output.items():
+				if i in model:
+					d = model[i].copy()
+					del d['@context']
+					part = d
+					break
+			if part:
+				parts.append(part)
+			else:
+				parts.append(p)
+# 				print(f'*** Did not find id {i}')
+		issue['part_of'] = parts
+
 		for i in issue['identified_by'] + issue['referred_to_by']:
 			with suppress(KeyError):
 				del i['id'] # remove UUIDs that will not be stable across runs
@@ -408,7 +426,7 @@ class TestAATAPipelineOutput_Journals(unittest.TestCase):
 					'type': 'Type'
 				}
 			],
-			'id': 'tag:getty.edu,2019:digital:pipeline:aata:REPLACE-WITH-UUID#AATA,Journal,2,Issue,9',
+			'id': 'tag:getty.edu,2019:digital:pipeline:REPLACE-WITH-UUID:aata#AATA,Journal,2,Issue,9',
 			'identified_by': [
 				{
 					'classified_as': [
@@ -443,7 +461,7 @@ class TestAATAPipelineOutput_Journals(unittest.TestCase):
 							'type': 'Type'
 						}
 					],
-					'id': 'tag:getty.edu,2019:digital:pipeline:aata:REPLACE-WITH-UUID#AATA,Journal,2',
+					'id': 'tag:getty.edu,2019:digital:pipeline:REPLACE-WITH-UUID:aata#AATA,Journal,2',
 					'identified_by': [
 						{
 							'classified_as': [
@@ -476,38 +494,7 @@ class TestAATAPipelineOutput_Journals(unittest.TestCase):
 				},
 				{
 					'_label': 'Volume 9 of “Green chemistry”',
-					'classified_as': [
-						{
-							'_label': 'Volume',
-							'id': 'http://vocab.getty.edu/aat/300265632',
-							'type': 'Type'
-						}
-					],
-					'id': 'tag:getty.edu,2019:digital:pipeline:aata:REPLACE-WITH-UUID#AATA,Journal,2,Volume,9',
-					'identified_by': [
-						{
-							'classified_as': [
-								{
-									'_label': 'Volume',
-									'id': 'http://vocab.getty.edu/aat/300265632',
-									'type': 'Type'
-								}
-							],
-							'content': '9',
-							'type': 'Identifier'
-						},
-						{
-							'classified_as': [
-								{
-									'_label': 'Title',
-									'id': 'http://vocab.getty.edu/aat/300417193',
-									'type': 'Type'
-								}
-							],
-							'content': 'Volume 9 of “Green chemistry”',
-							'type': 'Name'
-						}
-					],
+					'id': 'tag:getty.edu,2019:digital:pipeline:REPLACE-WITH-UUID:aata#AATA,Journal,2,Volume,9',
 					'type': 'LinguisticObject'
 				}
 			],

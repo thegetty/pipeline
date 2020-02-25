@@ -58,14 +58,13 @@ import pipeline.linkedart
 from pipeline.linkedart import add_crom_data, get_crom_object
 from pipeline.io.csv import CurriedCSVReader
 from pipeline.nodes.basic import \
-			AddFieldNames, \
 			GroupRepeatingKeys, \
 			GroupKeys, \
 			AddArchesModel, \
 			Serializer, \
-			OnlyCromModeledRecords, \
 			OnlyRecordsOfType, \
 			Trace
+from pipeline.nodes.basic import AddFieldNamesSimple as AddFieldNames
 from pipeline.util.rewriting import rewrite_output_files, JSONValueRewriter
 import pipeline.projects.provenance.events
 import pipeline.projects.provenance.lots
@@ -74,20 +73,39 @@ import pipeline.projects.provenance.catalogs
 
 #mark - utility functions and classes
 
+def make_ordinal(n):
+	n = int(n)
+	suffix = ['th', 'st', 'nd', 'rd', 'th'][min(n % 10, 4)]
+	if 11 <= (n % 100) <= 13:
+		suffix = 'th'
+	return f'{n}{suffix}'
+
 class PersonIdentity:
 	'''
 	Utility class to help assign records for people with properties such as `uri` and identifiers.
 	'''
-	def __init__(self, *, make_uri):
-		self.make_uri = make_uri
+	def __init__(self, *, make_shared_uri, make_proj_uri):
+		self.make_shared_uri = make_shared_uri
+		self.make_proj_uri = make_proj_uri
 		self.ignore_authnames = CaseFoldingSet(('NEW', 'NON-UNIQUE'))
+		self.make_la_person = pipeline.linkedart.MakeLinkedArtPerson()
+		self.make_la_org = pipeline.linkedart.MakeLinkedArtOrganization()
+		self.anon_dated_re = re.compile(r'\[ANONYMOUS - (\d+)TH C[.]\]')
+		self.anon_period_re = re.compile(r'\[ANONYMOUS - (MODERN|ANTIQUE)\]')
 
-	def acceptable_auth_name(self, auth_name):
+	def acceptable_person_auth_name(self, auth_name):
 		if not auth_name or auth_name in self.ignore_authnames:
 			return False
-		if '[' in auth_name:
+		elif '[' in auth_name:
 			return False
 		return True
+
+	def is_anonymous_group(self, auth_name):
+		if self.anon_dated_re.match(auth_name):
+			return True
+		elif self.anon_period_re.match(auth_name):
+			return True
+		return False
 
 	@staticmethod
 	def is_anonymous(data:dict):
@@ -102,7 +120,7 @@ class PersonIdentity:
 				return False
 		return True
 
-	def uri_keys(self, data:dict, record_id=None):
+	def _uri_keys(self, data:dict, record_id=None):
 		ulan = None
 		with suppress(ValueError, TypeError):
 			ulan = int(data.get('ulan'))
@@ -111,22 +129,72 @@ class PersonIdentity:
 		auth_name_q = '?' in data.get('auth_nameq', '')
 
 		if ulan:
-			return ('PERSON', 'ULAN', ulan)
-		elif self.acceptable_auth_name(auth_name):
-			return ('PERSON', 'AUTHNAME', auth_name)
+			key = ('PERSON', 'ULAN', ulan)
+			return key, self.make_shared_uri
+		elif self.is_anonymous_group(auth_name):
+			key = ('GROUP', 'AUTH', auth_name)
+			return key, self.make_shared_uri
+		elif self.acceptable_person_auth_name(auth_name):
+			key = ('PERSON', 'AUTH', auth_name)
+			return key, self.make_shared_uri
 		else:
 			# not enough information to identify this person uniquely, so use the source location in the input file
 			pi_rec_no = data['pi_record_no']
 			if record_id:
-				return ('PERSON', 'PI_REC_NO', pi_rec_no, record_id)
+				key = ('PERSON', 'PI', pi_rec_no, record_id)
+				return key, self.make_proj_uri
 			else:
 				warnings.warn(f'*** No record identifier given for person identified only by pi_record_number {pi_rec_no}')
-				return ('PERSON', 'PI_REC_NO', pi_rec_no)
+				key = ('PERSON', 'PI', pi_rec_no)
+				return key, self.make_proj_uri
+
+	def add_person(self, a, sales_record, relative_id, **kwargs):
+		self.add_uri(a, record_id=relative_id)
+		self.add_names(a, referrer=sales_record, **kwargs)
+		self.add_props(a, **kwargs)
+		auth_name = a.get('auth_name')
+		if self.is_anonymous_group(auth_name):
+			self.make_la_org(a)
+		else:
+			self.make_la_person(a)
+		return get_crom_object(a)
 
 	def add_uri(self, data:dict, **kwargs):
-		keys = self.uri_keys(data, **kwargs)
+		keys, make = self._uri_keys(data, **kwargs)
 		data['uri_keys'] = keys
-		data['uri'] = self.make_uri(*keys)
+		data['uri'] = make(*keys)
+
+	def timespan_for_century(self, century):
+		ord = make_ordinal(century)
+		ts = model.TimeSpan(ident='', label=f'{ord} century')
+		from_year = 100 * (century-1)
+		to_year = from_year + 100
+		ts.end_of_the_begin = "%04d-%02d-%02dT%02d:%02d:%02dZ" % (from_year, 1, 1, 0, 0, 0)
+		ts.begin_of_the_end = "%04d-%02d-%02dT%02d:%02d:%02dZ" % (to_year, 1, 1, 0, 0, 0)
+		return ts
+
+	def add_props(self, data:dict, role=None, **kwargs):
+		role = role if role else 'person'
+		auth_name = data.get('auth_name')
+		if self.is_anonymous_group(auth_name):
+			dated_match = self.anon_dated_re.match(auth_name)
+			if dated_match:
+				with suppress(ValueError):
+					print(dated_match.group(1))
+					century = int(dated_match.group(1))
+					ord = make_ordinal(century)
+					data['label'] = f'anonymous {role}s of the {ord} century'
+					a = vocab.Active(ident='', label=f'Professional activity of {role}s in the {ord} century')
+					ts = self.timespan_for_century(century)
+					a.timespan = ts
+					if 'events' not in data:
+						data['events'] = []
+					data['events'].append(a)
+			period_match = self.anon_period_re.match(auth_name)
+			if period_match:
+				period = period_match.group(1).lower()
+				data['label'] = f'anonymous {period} {role}s'
+				print(data['label'])
 
 	def add_names(self, data:dict, referrer=None, role=None):
 		'''
@@ -139,7 +207,7 @@ class PersonIdentity:
 		'''
 		auth_name = data.get('auth_name')
 		role_label = None
-		if self.acceptable_auth_name(auth_name):
+		if self.acceptable_person_auth_name(auth_name):
 			if role:
 				role_label = f'{role} “{auth_name}”'
 			data['label'] = auth_name
@@ -178,7 +246,7 @@ class ProvenanceUtilityHelper(UtilityHelper):
 		self.ignore_house_authnames = CaseFoldingSet(('Anonymous',))
 		self.csv_source_columns = ['pi_record_no', 'star_record_no', 'catalog_number']
 		self.problematic_record_uri = 'tag:getty.edu,2019:digital:pipeline:provenance:ProblematicRecord'
-		self.person_identity = PersonIdentity(make_uri=self.make_proj_uri)
+		self.person_identity = PersonIdentity(make_shared_uri=self.make_shared_uri, make_proj_uri=self.make_proj_uri)
 		self.uid_tag_prefix = UID_TAG_PREFIX
 
 	def copy_source_information(self, dst: dict, src: dict):
@@ -188,16 +256,26 @@ class ProvenanceUtilityHelper(UtilityHelper):
 		return dst
 
 	def event_type_for_sale_type(self, sale_type):
-		if sale_type == 'Private Contract Sale':
+		if sale_type in ('Private Contract Sale', 'Stock List'):
+			# 'Stock List' is treated just like a Private Contract Sale, except for the catalogs
 			return vocab.Exhibition
-		elif sale_type == 'Stock List':
-			raise NotImplementedError(f'Unexpected sale type: {sale_type!r}')
 		elif sale_type == 'Lottery':
-			raise NotImplementedError(f'Unexpected sale type: {sale_type!r}')
+			return vocab.Lottery
 		elif sale_type in ('Auction'):
 			return vocab.AuctionEvent
 		else:
-			raise NotImplementedError(f'Unexpected sale type: {sale_type!r}')
+			warnings.warn(f'Unexpected sale type: {sale_type!r}')
+
+	def sale_type_for_sale_type(self, sale_type):
+		if sale_type in ('Private Contract Sale', 'Stock List'):
+			# 'Stock List' is treated just like a Private Contract Sale, except for the catalogs
+			return vocab.Negotiating
+		elif sale_type == 'Lottery':
+			return vocab.LotteryDrawing
+		elif sale_type in ('Auction'):
+			return vocab.Auction
+		else:
+			warnings.warn(f'Unexpected sale type: {sale_type!r}')
 
 	def catalog_type_for_sale_type(self, sale_type):
 		if sale_type == 'Private Contract Sale':
@@ -205,11 +283,11 @@ class ProvenanceUtilityHelper(UtilityHelper):
 		elif sale_type == 'Stock List':
 			return vocab.AccessionCatalog
 		elif sale_type == 'Lottery':
-			return vocab.SalesCatalog
+			return vocab.LotteryCatalog
 		elif sale_type == 'Auction':
 			return vocab.AuctionCatalog
 		else:
-			raise NotImplementedError(f'Unexpected sale type: {sale_type!r}')
+			warnings.warn(f'Unexpected sale type: {sale_type!r}')
 
 	def catalog_text(self, cno, sale_type='Auction'):
 		uri = self.make_proj_uri('CATALOG', cno)
@@ -220,34 +298,60 @@ class ProvenanceUtilityHelper(UtilityHelper):
 		elif sale_type == 'Stock List':
 			catalog = vocab.AccessionCatalogText(ident=uri, label=f'Accession Catalog {cno}')
 		elif sale_type == 'Lottery':
-			raise NotImplementedError(f'Unexpected sale type: {sale_type!r}')
+			catalog = vocab.LotteryCatalogText(ident=uri, label=f'Lottery Catalog {cno}')
 		else:
 			catalog = vocab.SalesCatalogText(ident=uri, label=f'Sale Catalog {cno}')
 		return catalog
 
 	def physical_catalog(self, cno, sale_type, owner=None, copy=None):
 		keys = [v for v in [cno, owner, copy] if v]
-		uri = self.make_proj_uri('PHYSICAL-CATALOG', *keys)
+		uri = self.make_proj_uri('PHYS-CAT', *keys)
 		labels = []
 		if owner:
 			labels.append(f'owned by “{owner}”')
 		if copy:
 			labels.append(f'copy {copy}')
 		label = ', '.join(labels)
+		catalog_type = self.catalog_type_for_sale_type(sale_type)
 		if sale_type == 'Auction':
 			labels = [f'Sale Catalog {cno}'] + labels
-			catalog = vocab.AuctionCatalog(ident=uri, label=', '.join(labels))
+			catalog = catalog_type(ident=uri, label=', '.join(labels))
 		elif sale_type == 'Private Contract Sale':
 			labels = [f'Private Sale Exhibition Catalog {cno}'] + labels
-			catalog = vocab.ExhibitionCatalog(ident=uri, label=', '.join(labels))
+			catalog = catalog_type(ident=uri, label=', '.join(labels))
 		elif sale_type == 'Stock List':
-			labels = [f'Accession Catalog {cno}'] + labels
-			catalog = vocab.AccessionCatalog(ident=uri, label=', '.join(labels))
+			labels = [f'Stock List {cno}'] + labels
+			catalog = catalog_type(ident=uri, label=', '.join(labels))
 		elif sale_type == 'Lottery':
-			raise NotImplementedError(f'Unexpected sale type: {sale_type!r}')
+			labels = [f'Lottery Catalog {cno}'] + labels
+			catalog = catalog_type(ident=uri, label=', '.join(labels))
 		else:
-			raise NotImplementedError(f'Unexpected sale type: {sale_type!r}')
+			warnings.warn(f'Unexpected sale type: {sale_type!r}')
 		return catalog
+
+	def sale_for_sale_type(self, sale_type, lot_object_key):
+		cno, lno, date = lot_object_key
+		uid, uri = self.shared_lot_number_ids(cno, lno, date)
+		shared_lot_number = self.shared_lot_number_from_lno(lno)
+
+		lot_type = self.sale_type_for_sale_type(sale_type)
+		lot = lot_type(ident=uri)
+
+		if sale_type == 'Auction':
+			lot_id = f'{cno} {shared_lot_number} ({date})'
+			lot_label = f'Auction of Lot {lot_id}'
+			lot._label = lot_label
+		elif sale_type in ('Private Contract Sale', 'Stock List'):
+			lot_id = f'{cno} {shared_lot_number} ({date})'
+			lot_label = f'Sale of {lot_id}'
+			lot._label = lot_label
+		elif sale_type == 'Lottery':
+			lot_id = f'{cno} {shared_lot_number} ({date})'
+			lot_label = f'Lottery Drawing for {lot_id}'
+			lot._label = lot_label
+		else:
+			warnings.warn(f'Unexpected sale type: {sale_type!r}')
+		return lot
 
 	def sale_event_for_catalog_number(self, catalog_number, sale_type='Auction'):
 		'''
@@ -259,8 +363,8 @@ class ProvenanceUtilityHelper(UtilityHelper):
 
 		event_type = self.event_type_for_sale_type(sale_type)
 		sale_type_key = sale_type.replace(' ', '_').upper()
-		uid = f'{sale_type_key}-EVENT-CATALOGNUMBER-{catalog_number}'
-		uri = self.make_proj_uri(f'{sale_type_key}-EVENT', 'CATALOGNUMBER', catalog_number)
+		uid = f'{sale_type_key}-EVENT-{catalog_number}'
+		uri = self.make_proj_uri(f'{sale_type_key}-EVENT', catalog_number)
 		label = f"{sale_type} Event for {catalog_number}"
 		auction = event_type(ident=uri, label=label)
 		return auction, uid, uri
@@ -292,8 +396,8 @@ class ProvenanceUtilityHelper(UtilityHelper):
 		for p in prices:
 			n = p.get('price_note')
 			if n and n.startswith('for lots '):
-				return self.make_proj_uri('AUCTION-TX-MULTI', cno, date, n[9:])
-		return self.make_proj_uri('AUCTION-TX', cno, date, shared_lot_number)
+				return self.make_proj_uri('PROV-MULTI', cno, date, n[9:])
+		return self.make_proj_uri('PROV', cno, date, shared_lot_number)
 
 	def lots_in_transaction(self, data, metadata):
 		'''
@@ -309,14 +413,14 @@ class ProvenanceUtilityHelper(UtilityHelper):
 				return n[9:]
 		return shared_lot_number
 
-	def shared_lot_number_ids(self, cno, lno, date):
+	def shared_lot_number_ids(self, cno, lno, date, sale_type='Auction'):
 		'''
 		Return a tuple of a UID string and a URI for the lot identified by the supplied
 		data which identifies a specific object in that lot.
 		'''
 		shared_lot_number = self.shared_lot_number_from_lno(lno)
-		uid = f'AUCTION-{cno}-LOT-{shared_lot_number}-DATE-{date}'
-		uri = self.make_proj_uri('AUCTION', cno, 'LOT', shared_lot_number, 'DATE', date)
+		uid = f'AUCTION-{cno}-{shared_lot_number}-{date}'
+		uri = self.make_proj_uri('AUCTION', cno, shared_lot_number, date)
 		return uid, uri
 
 	@staticmethod
@@ -342,13 +446,13 @@ class ProvenanceUtilityHelper(UtilityHelper):
 		auth_name = a.get('auth')
 		a['identifiers'] = []
 		if ulan:
-			key = f'AUCTION-HOUSE-ULAN-{ulan}'
+			key = f'HOUSE-ULAN-{ulan}'
 			a['uid'] = key
-			a['uri'] = self.make_proj_uri('AUCTION-HOUSE', 'ULAN', ulan)
+			a['uri'] = self.make_proj_uri('HOUSE', 'ULAN', ulan)
 			a['ulan'] = ulan
 			house = vocab.AuctionHouseOrg(ident=a['uri'])
 		elif auth_name and auth_name not in self.ignore_house_authnames:
-			a['uri'] = self.make_proj_uri('AUCTION-HOUSE', 'AUTHNAME', auth_name)
+			a['uri'] = self.make_proj_uri('HOUSE', 'AUTH', auth_name)
 			pname = vocab.PrimaryName(ident='', content=auth_name)
 			if event_record:
 				pname.referred_to_by = event_record
@@ -357,9 +461,9 @@ class ProvenanceUtilityHelper(UtilityHelper):
 		else:
 			# not enough information to identify this house uniquely, so use the source location in the input file
 			if 'pi_record_no' in a:
-				a['uri'] = self.make_proj_uri('AUCTION-HOUSE', 'PI_REC_NO', a['pi_record_no'], sequence)
+				a['uri'] = self.make_proj_uri('HOUSE', 'PI', a['pi_record_no'], sequence)
 			else:
-				a['uri'] = self.make_proj_uri('AUCTION-HOUSE', 'STAR_REC_NO', a['star_record_no'], sequence)
+				a['uri'] = self.make_proj_uri('HOUSE', 'STAR', a['star_record_no'], sequence)
 			house = vocab.AuctionHouseOrg(ident=a['uri'])
 
 		name = a.get('name')
@@ -377,7 +481,6 @@ class ProvenanceUtilityHelper(UtilityHelper):
 
 		add_crom_data(data=a, what=house)
 		return a
-
 
 def add_crom_price(data, parent, services, add_citations=False):
 	'''
@@ -399,15 +502,6 @@ def add_crom_price(data, parent, services, add_citations=False):
 	return data
 
 
-@use('non_auctions')
-def remove_non_auction_sales(data:dict, non_auctions):
-	'''
-	Do not allow the Auction of Lot model objects to be serialized for non-auction sales.
-	'''
-	cno = data['auction_of_lot']['catalog_number']
-	if cno not in non_auctions:
-		yield data
-
 #mark - Provenance Pipeline class
 
 class ProvenancePipeline(PipelineBase):
@@ -420,6 +514,12 @@ class ProvenancePipeline(PipelineBase):
 		vocab.register_instance('fire', {'parent': model.Type, 'id': '300068986', 'label': 'Fire'})
 		vocab.register_instance('animal', {'parent': model.Type, 'id': '300249395', 'label': 'Animal'})
 		vocab.register_instance('history', {'parent': model.Type, 'id': '300033898', 'label': 'History'})
+
+		warnings.warn(f'TODO: NEED TO USE CORRECT CLASSIFICATION FOR NON-AUCTION SALES ACTIVITIES, LOTTERY CATALOG')
+		vocab.register_vocab_class('LotteryDrawing', {"parent": model.Activity, "id":"000000000", "label": "Lottery Drawing"})
+		vocab.register_vocab_class('Lottery', {"parent": model.Activity, "id":"000000000", "label": "Lottery"})
+		vocab.register_vocab_class('LotteryCatalog', {"parent": model.HumanMadeObject, "id":"000000000", "label": "Lottery Catalog", "metatype": "work type"})
+		vocab.register_vocab_class('LotteryCatalogText', {"parent": model.LinguisticObject, "id":"000000000", "label": "Lottery Catalog", "metatype": "work type"})
 
 		super().__init__(project_name, helper=helper)
 
@@ -482,7 +582,7 @@ class ProvenancePipeline(PipelineBase):
 		'''Add modeling of auction catalogs as linguistic objects.'''
 		los = graph.add_chain(
 			ExtractKeyedValue(key='_catalog'),
-			pipeline.projects.provenance.catalogs.PopulateAuctionCatalog(static_instances=self.static_instances),
+			pipeline.projects.provenance.catalogs.PopulateAuctionCatalog(helper=self.helper, static_instances=self.static_instances),
 			_input=events.output
 		)
 		if serialize:
@@ -579,12 +679,17 @@ class ProvenancePipeline(PipelineBase):
 			ExtractKeyedValue(key='_bidding'),
 			_input=bid_acqs.output
 		)
+		drawing = graph.add_chain(
+			ExtractKeyedValue(key='_drawing'),
+			_input=bid_acqs.output
+		)
 		_ = self.add_places_chain(graph, bid_acqs, key='_owner_locations', serialize=True)
 
 		if serialize:
 			# write SALES data
 			self.add_serialization_chain(graph, refs.output, model=self.models['LinguisticObject'])
 			self.add_serialization_chain(graph, bids.output, model=self.models['Bidding'])
+			self.add_serialization_chain(graph, drawing.output, model=self.models['Drawing'])
 		return bid_acqs
 
 	def add_sales_chain(self, graph, records, services, serialize=True):
@@ -782,16 +887,29 @@ class ProvenancePipeline(PipelineBase):
 			_input=records.output
 		)
 		
-		modeled_sales = graph.add_chain(
-			remove_non_auction_sales,
-			ExtractKeyedValue(key='_auction_of_lot'),
-			OnlyCromModeledRecords(),
+		auctions_of_lot = graph.add_chain(
+			ExtractKeyedValue(key='_event_causing_prov_entry'),
+			OnlyRecordsOfType(type=vocab.Auction),
+			_input=sales.output
+		)
+		
+		private_sale_activities = graph.add_chain(
+			ExtractKeyedValue(key='_event_causing_prov_entry'),
+			OnlyRecordsOfType(type=vocab.Negotiating),
+			_input=sales.output
+		)
+		
+		lottery_drawings = graph.add_chain(
+			ExtractKeyedValue(key='_event_causing_prov_entry'),
+			OnlyRecordsOfType(type=vocab.LotteryDrawing),
 			_input=sales.output
 		)
 		
 		if serialize:
 			# write SALES data
-			self.add_serialization_chain(graph, modeled_sales.output, model=self.models['AuctionOfLot'])
+			self.add_serialization_chain(graph, auctions_of_lot.output, model=self.models['AuctionOfLot'])
+			self.add_serialization_chain(graph, private_sale_activities.output, model=self.models['Activity'])
+			self.add_serialization_chain(graph, lottery_drawings.output, model=self.models['Drawing'])
 		return sales
 
 	def add_object_chain(self, graph, sales, serialize=True):
@@ -1048,8 +1166,8 @@ class ProvenancePipeline(PipelineBase):
 # 		print('Rewrite output files, replacing the following URIs:')
 		for src, dst in g:
 			canonical, steps = g.canonical_key(src)
-			src_uri = self.helper.make_proj_uri('OBJECT', *src)
-			dst_uri = self.helper.make_proj_uri('OBJECT', *canonical)
+			src_uri = self.helper.make_proj_uri('OBJ', *src)
+			dst_uri = self.helper.make_proj_uri('OBJ', *canonical)
 # 			print(f's/ {src_uri:<100} / {dst_uri:<100} /')
 			post_sale_rewrite_map[src_uri] = dst_uri
 			if canonical in large_components:
@@ -1134,7 +1252,7 @@ class ProvenanceFilePipeline(ProvenancePipeline):
 				w.flush()
 
 		print('====================================================')
-		print('Running post-processing of post-sale data...')
+		print('Compiling post-sale data...')
 		post_map = services['post_sale_map']
 		self.generate_prev_post_sales_data(post_map)
 		print(f'>>> {len(post_map)} post sales records')

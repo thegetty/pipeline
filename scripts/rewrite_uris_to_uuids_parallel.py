@@ -3,11 +3,13 @@
 import os
 import sys
 import json
+import time
 import uuid
 import pprint
 import itertools
 from pathlib import Path
 from contextlib import suppress
+import multiprocessing
 
 from settings import output_file_path
 from pipeline.util.rewriting import rewrite_output_files
@@ -36,10 +38,7 @@ class UUIDRewriter:
 				if d in self.map:
 					return self.map[d]
 				else:
-					uu = str(uuid.uuid4())
-					u = f'urn:uuid:{uu}'
-					self.map[d] = u
-					return u
+					raise Exception(f'URI does not have an assigned UUID: {d}')
 			return d
 		elif isinstance(d, list):
 			return [self.rewrite(v, *args, **kwargs) for v in d]
@@ -52,20 +51,24 @@ class UUIDRewriter:
 if len(sys.argv) < 2:
 	cmd = sys.argv[0]
 	print(f'''
-Usage: {cmd} URI_PREFIX [MAP_FILE_NAME]
+Usage: {cmd} URI_PREFIX MAP_FILE_NAME
 
 Process all json files in the output path (configured with the GETTY_PIPELINE_OUTPUT
 environment variable), rewriting URIs that have the specified URI_PREFIX to urn:uuid:
-URIs.
+URIs that are specified in the MAP_FILE_NAME JSON file.
+
 	'''.lstrip())
 	sys.exit(1)
 
 prefix = sys.argv[1]
+map_file = sys.argv[2]
 
 print(f'Rewriting URIs to UUIDs ...')
-map_file = sys.argv[2] if len(sys.argv) > 2 else None
+start_time = time.time()
 r = UUIDRewriter(prefix, map_file)
-rewrite_output_files(r, update_filename=True, verify_uuid=True, ignore_errors=True)
+rewrite_output_files(r, update_filename=True, verify_uuid=True, parallel=True, ignore_errors=True)
 if map_file:
 	r.persist_map()
-print('Done')
+cur = time.time()
+elapsed = cur - start_time
+print(f'Done (%.1fs)' % (elapsed,))

@@ -107,9 +107,13 @@ class PopulateSalesObject(Configurable, pipeline.linkedart.PopulateObject):
 
 		record_uri = self.helper.make_proj_uri('CATALOG', cno, 'RECORD', rec_num)
 		lot_object_id = parent['lot_object_id']
+		
+		puid = parent.get('persistent_puid')
+		puid_id = self.helper.gri_number_id(puid)
+
 		record = vocab.ParagraphText(ident=record_uri, label=f'Sale recorded in catalog: {lot_object_id} (record number {rec_num})')
 		record_data	= {'uri': record_uri}
-		record_data['identifiers'] = [model.Name(ident='', content=f'Record of sale {lot_object_id}')]
+		record_data['identifiers'] = [model.Name(ident='', content=f'Record of sale {lot_object_id}'), puid_id]
 		record.part_of = catalog
 
 		if parent.get('transaction'):
@@ -153,13 +157,13 @@ class PopulateSalesObject(Configurable, pipeline.linkedart.PopulateObject):
 							ulan = int(location.get('insi'))
 						if ulan:
 							owner_data['ulan'] = ulan
-							owner_data['uri'] = self.helper.make_proj_uri('ORGANIZATION', 'ULAN', ulan)
+							owner_data['uri'] = self.helper.make_proj_uri('ORG', 'ULAN', ulan)
 						else:
-							owner_data['uri'] = self.helper.make_proj_uri('ORGANIZATION', 'NAME', inst, 'PLACE', loc)
+							owner_data['uri'] = self.helper.make_proj_uri('ORG', 'NAME', inst, 'PLACE', loc)
 					else:
 						owner_data = {
 							'label': '(Anonymous organization)',
-							'uri': self.helper.make_proj_uri('ORGANIZATION', 'PRESENT-OWNER', *now_key),
+							'uri': self.helper.make_proj_uri('ORG', 'CURR-OWN', *now_key),
 						}
 
 					base_uri = hmo.id + '-Place,'
@@ -309,9 +313,8 @@ class AddArtists(Configurable):
 	helper = Option(required=True)
 	attribution_modifiers = Service('attribution_modifiers')
 	attribution_group_types = Service('attribution_group_types')
-	make_la_person = Service('make_la_person')
 
-	def __call__(self, data:dict, *, attribution_modifiers, attribution_group_types, make_la_person):
+	def __call__(self, data:dict, *, attribution_modifiers, attribution_group_types):
 		'''Add modeling for artists as people involved in the production of an object'''
 		hmo = get_crom_object(data)
 		data['_organizations'] = []
@@ -339,10 +342,10 @@ class AddArtists(Configurable):
 			})
 
 		def is_or_anon(data:dict):
-			if not pi.is_anonymous(data):
-				return False
-			mods = {m.lower().strip() for m in data.get('attrib_mod_auth', '').split(';')}
-			return 'or' in mods
+			if pi.is_anonymous(data):
+				mods = {m.lower().strip() for m in data.get('attrib_mod_auth', '').split(';')}
+				return 'or' in mods
+			return False
 		or_anon_records = [is_or_anon(a) for a in artists]
 		uncertain_attribution = any(or_anon_records)
 		for seq_no, a in enumerate(artists):
@@ -352,11 +355,8 @@ class AddArtists(Configurable):
 			if is_or_anon(a):
 				# do not model the "or anonymous" records; they turn into uncertainty on the other records
 				continue
-			pi.add_uri(a, record_id=f'artist-{seq_no+1}')
-			pi.add_names(a, referrer=sales_record, role='artist')
+			person = pi.add_person(a, sales_record, relative_id=f'artist-{seq_no+1}', role='artist')
 			artist_label = a.get('role_label')
-			make_la_person(a)
-			person = get_crom_object(a)
 
 			mod = a.get('attrib_mod_auth')
 			if mod:

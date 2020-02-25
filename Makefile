@@ -40,7 +40,7 @@ fetchknoedler:
 
 aata:
 	QUIET=$(QUIET) GETTY_PIPELINE_DEBUG=$(DEBUG) GETTY_PIPELINE_LIMIT=$(LIMIT) $(PYTHON) ./aata.py
-	PYTHONPATH=`pwd` $(PYTHON) ./scripts/rewrite_uris_to_uuids.py 'tag:getty.edu,2019:digital:pipeline:aata:REPLACE-WITH-UUID#'
+	PYTHONPATH=`pwd` $(PYTHON) ./scripts/rewrite_uris_to_uuids.py 'tag:getty.edu,2019:digital:pipeline:REPLACE-WITH-UUID:aata#'
 
 aatagraph: $(GETTY_PIPELINE_TMP_PATH)/aata.pdf
 	open -a Preview $(GETTY_PIPELINE_TMP_PATH)/aata.pdf
@@ -49,7 +49,7 @@ nt: jsonlist
 	mkdir -p $(GETTY_PIPELINE_TMP_PATH)
 	curl -s 'https://linked.art/ns/v1/linked-art.json' > $(GETTY_PIPELINE_TMP_PATH)/linked-art.json
 	echo 'Transcoding JSON-LD to N-Triples...'
-	cat $(GETTY_PIPELINE_TMP_PATH)/json_files.txt | sort | xargs -n 128 -P 10 $(PYTHON) ./scripts/json2nt.py $(GETTY_PIPELINE_TMP_PATH)/linked-art.json
+	cat $(GETTY_PIPELINE_TMP_PATH)/json_files.txt | sort | xargs -n 128 -P 16 $(PYTHON) ./scripts/json2nt.py $(GETTY_PIPELINE_TMP_PATH)/linked-art.json
 
 nq: jsonlist
 	mkdir -p $(GETTY_PIPELINE_TMP_PATH)
@@ -59,24 +59,43 @@ nq: jsonlist
 	find $(GETTY_PIPELINE_OUTPUT) -name '[0-9a-f][0-9a-f]*.nq' | xargs -n 256 cat | gzip - > $(GETTY_PIPELINE_OUTPUT)/all.nq.gz
 	gzip -k $(GETTY_PIPELINE_OUTPUT)/meta.nq
 
-pirdata:
+salespipeline:
 	mkdir -p $(GETTY_PIPELINE_TMP_PATH)/pipeline
 	QUIET=$(QUIET) GETTY_PIPELINE_DEBUG=$(DEBUG) GETTY_PIPELINE_LIMIT=$(LIMIT) $(PYTHON) ./pir.py
-	PYTHONPATH=`pwd` $(PYTHON) ./scripts/rewrite_post_sales_uris.py "${GETTY_PIPELINE_TMP_PATH}/post_sale_rewrite_map.json"
-	PYTHONPATH=`pwd` $(PYTHON) ./scripts/rewrite_uris_to_uuids.py 'tag:getty.edu,2019:digital:pipeline:provenance:REPLACE-WITH-UUID#' "${GETTY_PIPELINE_TMP_PATH}/uri_to_uuid_map.json"
 
 postprocessjson:
 	ls $(GETTY_PIPELINE_OUTPUT) | PYTHONPATH=`pwd` xargs -n 1 -P 8 -I '{}' $(PYTHON) ./scripts/coalesce_json.py "${GETTY_PIPELINE_OUTPUT}/{}"
+
+scripts/generate_uri_uuids: scripts/generate_uri_uuids.swift
+	swiftc scripts/generate_uri_uuids.swift -o scripts/generate_uri_uuids
+
+scripts/find_matching_json_files: scripts/find_matching_json_files.swift
+	swiftc scripts/find_matching_json_files.swift -o scripts/find_matching_json_files
+
+salespostsalefilelist: scripts/find_matching_json_files
+	time ./scripts/find_matching_json_files "${GETTY_PIPELINE_TMP_PATH}/post_sale_rewrite_map.json" $(GETTY_PIPELINE_OUTPUT) > $(GETTY_PIPELINE_OUTPUT)/post-sale-matching-files.txt
+
+salespostsalerewrite: salespostsalefilelist
+	cat $(GETTY_PIPELINE_OUTPUT)/post-sale-matching-files.txt | PYTHONPATH=`pwd`  xargs -n 256 $(PYTHON) ./scripts/rewrite_post_sales_uris.py "${GETTY_PIPELINE_TMP_PATH}/post_sale_rewrite_map.json"
+
+postprocessing_uuidmap: ./scripts/generate_uri_uuids
+	./scripts/generate_uri_uuids "${GETTY_PIPELINE_TMP_PATH}/uri_to_uuid_map.json" $(GETTY_PIPELINE_OUTPUT) 'tag:getty.edu,2019:digital:pipeline:REPLACE-WITH-UUID:'
+
+postprocessing_rewrite_uris:
+	PYTHONPATH=`pwd` $(PYTHON) ./scripts/rewrite_uris_to_uuids_parallel.py 'tag:getty.edu,2019:digital:pipeline:REPLACE-WITH-UUID:' "${GETTY_PIPELINE_TMP_PATH}/uri_to_uuid_map.json"
+
+salespostprocessing: salespostsalerewrite postprocessing_uuidmap postprocessing_rewrite_uris postprocessjson
 	PYTHONPATH=`pwd` $(PYTHON) ./scripts/remove_meaningless_ids.py
 	# Reorganizing JSON files...
 	find $(GETTY_PIPELINE_OUTPUT) -name '*.json' | PYTHONPATH=`pwd` xargs -n 256 -P 16 $(PYTHON) ./scripts/reorganize_json.py
-	# Done
+
+salesdata: salespipeline salespostprocessing
 	find $(GETTY_PIPELINE_OUTPUT) -type d -empty -delete
 
 jsonlist:
 	find $(GETTY_PIPELINE_OUTPUT) -name '*.json' > $(GETTY_PIPELINE_TMP_PATH)/json_files.txt
 
-pir: pirdata postprocessjson jsonlist
+pir: salesdata jsonlist
 	cat $(GETTY_PIPELINE_TMP_PATH)/json_files.txt | PYTHONPATH=`pwd` $(PYTHON) ./scripts/generate_metadata_graph.py sales
 
 pirgraph: $(GETTY_PIPELINE_TMP_PATH)/pir.pdf
@@ -131,4 +150,4 @@ clean:
 	rm -f $(GETTY_PIPELINE_TMP_PATH)/sales-tree.data
 	rm -f "${GETTY_PIPELINE_TMP_PATH}/post_sale_rewrite_map.json"
 
-.PHONY: aata aatagraph knoedler knoedlergraph pir pirgraph test upload nt docker dockerimage dockertest fetch fetchaata fetchpir fetchknoedler jsonlist pirdata postprocessjson
+.PHONY: aata aatagraph knoedler knoedlergraph pir pirgraph test upload nt docker dockerimage dockertest fetch fetchaata fetchpir fetchknoedler jsonlist salesdata salespipeline salespostprocessing salespostsalefilelist postprocessing_uuidmap postprocessing_rewrite_uris postprocessjson

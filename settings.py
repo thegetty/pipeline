@@ -10,6 +10,7 @@ arches_models = {
 	'Activity': 'auction',
 	'AuctionOfLot': 'auction_of_lot',
 	'Bidding': 'bidding',
+	'Drawing': 'drawing',
 	'HumanMadeObject': 'physical_thing',
 	'Inventorying': 'inventorying',
 	'LinguisticObject': 'textual_work',

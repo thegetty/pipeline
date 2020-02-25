@@ -38,7 +38,12 @@ class PIRModelingTest_EventLocation(TestProvenancePipelineOutput):
 		while place:
 			name = place['_label']
 			names.append(name)
-			place = place.get('part_of', [None])[0]
+			parent = place.get('part_of', [None])[0]
+			if parent:
+				parent_id = parent['id']
+				place = places.get(parent_id, None)
+			else:
+				place = None
 		self.assertEqual(names, ['Kaiserstr. 187, Karlsruhe, Germany', 'Karlsruhe, Germany', 'Germany'])
 
 

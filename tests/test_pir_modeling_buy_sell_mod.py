@@ -55,7 +55,7 @@ class PIRModelingTest_AttributionModifiers(TestProvenancePipelineOutput):
 		self.assertEqual(len(people), 16)
 
 		# buyer 'for'/'through' is modeled an AGENT who carries out the payment and acquisition, and a BUYER who pays for the object and to whom the object's title is transferred
-		b_ft_obj = activities['tag:getty.edu,2019:digital:pipeline:provenance:REPLACE-WITH-UUID#AUCTION-TX,Br-A450,1751-03-08,0044']
+		b_ft_obj = activities['tag:getty.edu,2019:digital:pipeline:REPLACE-WITH-UUID:provenance#PROV,Br-A450,1751-03-08,0044']
 		acq = [p for p in b_ft_obj['part'] if p['type'] == 'Acquisition'][0]
 		pay = [p for p in b_ft_obj['part'] if p['type'] == 'Payment'][0]
 		self.assertIn('Ewing', {p['_label'] for p in acq['carried_out_by']})
@@ -65,7 +65,7 @@ class PIRModelingTest_AttributionModifiers(TestProvenancePipelineOutput):
 		self.assertIn('Ewing', {p['_label'] for p in pay['carried_out_by']})
 
 		# buyer 'and' is modeled as a procurement with multiple records for both transferred_title_to and paid_from
-		b_and_obj = activities['tag:getty.edu,2019:digital:pipeline:provenance:REPLACE-WITH-UUID#AUCTION-TX,Br-A458,1751-06-13,0031']
+		b_and_obj = activities['tag:getty.edu,2019:digital:pipeline:REPLACE-WITH-UUID:provenance#PROV,Br-A458,1751-06-13,0031']
 		acq = [p for p in b_and_obj['part'] if p['type'] == 'Acquisition'][0]
 		pay = [p for p in b_and_obj['part'] if p['type'] == 'Payment'][0]
 		acq_people = {p['_label'] for p in acq['transferred_title_to']}
@@ -79,7 +79,7 @@ class PIRModelingTest_AttributionModifiers(TestProvenancePipelineOutput):
 		
 		# TODO: this transaction is not modeled, as it is 'Bought In'
 		# seller 'and' is modeled as a procurement with multiple records for both transferred_title_from and paid_to
-# 		s_and_obj = activities['tag:getty.edu,2019:digital:pipeline:provenance:REPLACE-WITH-UUID#AUCTION-TX,Br-1299,1815-06-10,0060']
+# 		s_and_obj = activities['tag:getty.edu,2019:digital:pipeline:REPLACE-WITH-UUID:provenance#PROV,Br-1299,1815-06-10,0060']
 # 		acq = [p for p in s_and_obj['part'] if p['type'] == 'Acquisition'][0]
 # 		pay = [p for p in s_and_obj['part'] if p['type'] == 'Payment'][0]
 # 		acq_people = {p['_label'] for p in acq['transferred_title_from']}
@@ -88,7 +88,7 @@ class PIRModelingTest_AttributionModifiers(TestProvenancePipelineOutput):
 # 		self.assertEqual(acq_people, {'Grey, Charles', 'Gent, G.W.'})
 
 		# seller 'for'/'through' is modeled an AGENT who carries out the payment and acquisition, and a SELLER who is paid for the object and from whom the object's title is transferred
-		s_ft_obj = activities['tag:getty.edu,2019:digital:pipeline:provenance:REPLACE-WITH-UUID#AUCTION-TX,Br-1344,1815-12-02,0075']
+		s_ft_obj = activities['tag:getty.edu,2019:digital:pipeline:REPLACE-WITH-UUID:provenance#PROV,Br-1344,1815-12-02,0075']
 		acq = [p for p in s_ft_obj['part'] if p['type'] == 'Acquisition'][0]
 		pay = [p for p in s_ft_obj['part'] if p['type'] == 'Payment'][0]
 		self.assertIn('Nelthorpe', {p['_label'] for p in acq['carried_out_by']})

@@ -10,12 +10,12 @@ import inspect
 from pathlib import Path
 import warnings
 
-from tests import TestProvenancePipelineOutput
+from tests import TestSalesPipelineOutput
 from cromulent import vocab
 
 vocab.add_attribute_assignment_check()
 
-class PIRModelingTest_OrAnonymousModifiers(TestProvenancePipelineOutput):
+class PIRModelingTest_OrAnonymousModifiers(TestSalesPipelineOutput):
 	def test_modeling_for_or_anonymous_artist(self):
 		'''
 		This object record has one named artist, and another anonymous artist, modified
@@ -27,7 +27,7 @@ class PIRModelingTest_OrAnonymousModifiers(TestProvenancePipelineOutput):
 		objects = output['model-object']
 		people = output['model-person']
 		
-		or_anon_obj = objects['tag:getty.edu,2019:digital:pipeline:REPLACE-WITH-UUID:provenance#OBJ,Br-A559,0103,1758-05-24']
+		or_anon_obj = objects['tag:getty.edu,2019:digital:pipeline:REPLACE-WITH-UUID:sales#OBJ,Br-A559,0103,1758-05-24']
 		production = or_anon_obj['produced_by']
 		attr_assignment = production['attributed_by'][0]
 		self.assertEqual(attr_assignment['assigned_property'], 'part')

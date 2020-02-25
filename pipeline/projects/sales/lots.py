@@ -8,7 +8,7 @@ from bonobo.config import Option, Service, Configurable
 from cromulent import model, vocab
 
 import pipeline.execution
-from pipeline.projects.provenance.util import object_key
+from pipeline.projects.sales.util import object_key
 from pipeline.util import \
 		implode_date, \
 		timespan_from_outer_bounds, \

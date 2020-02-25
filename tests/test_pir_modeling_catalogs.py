@@ -10,12 +10,12 @@ import inspect
 from pathlib import Path
 import warnings
 
-from tests import TestProvenancePipelineOutput
+from tests import TestSalesPipelineOutput
 from cromulent import vocab
 
 vocab.add_attribute_assignment_check()
 
-class PIRModelingTest_Catalog(TestProvenancePipelineOutput):
+class PIRModelingTest_Catalog(TestSalesPipelineOutput):
 	def test_modeling_for_catalogs(self):
 		'''
 		Test modeling of both linguistic auction catalogs, as well as known physical

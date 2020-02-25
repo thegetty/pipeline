@@ -10,12 +10,12 @@ import inspect
 from pathlib import Path
 import warnings
 
-from tests import TestProvenancePipelineOutput
+from tests import TestSalesPipelineOutput
 from cromulent import vocab
 
 vocab.add_attribute_assignment_check()
 
-class PIRModelingTest_MultiArtist(TestProvenancePipelineOutput):
+class PIRModelingTest_MultiArtist(TestSalesPipelineOutput):
 	def test_modeling_for_multi_artists(self):
 		'''
 		The object in this set has a production event that has 3 sub-events, pointing to

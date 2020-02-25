@@ -11,12 +11,12 @@ from itertools import groupby
 from pathlib import Path
 import warnings
 
-from tests import TestProvenancePipelineOutput
+from tests import TestSalesPipelineOutput
 from cromulent import vocab
 
 vocab.add_attribute_assignment_check()
 
-class PIRModelingTest_MultiLot(TestProvenancePipelineOutput):
+class PIRModelingTest_MultiLot(TestSalesPipelineOutput):
 	def test_modeling_for_multi_lot_procurements(self):
 		'''
 		Test for modeling of single procurements for which a single payment was made

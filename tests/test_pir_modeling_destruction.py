@@ -10,12 +10,12 @@ import inspect
 from pathlib import Path
 import warnings
 
-from tests import TestProvenancePipelineOutput
+from tests import TestSalesPipelineOutput
 from cromulent import vocab
 
 vocab.add_attribute_assignment_check()
 
-class PIRModelingTest_Destruction(TestProvenancePipelineOutput):
+class PIRModelingTest_Destruction(TestSalesPipelineOutput):
 	def test_modeling_for_destruction(self):
 		'''
 		All objects in this set have a 'destroyed_by' property that has type 'Destruction'.

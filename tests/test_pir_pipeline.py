@@ -7,12 +7,12 @@ import json
 import uuid
 import pprint
 
-from tests import TestWriter, ProvenanceTestPipeline
+from tests import TestWriter, SalesTestPipeline
 from cromulent import vocab
 
 vocab.add_attribute_assignment_check()
 
-class TestProvenancePipelineOutput(unittest.TestCase):
+class TestSalesPipelineOutput(unittest.TestCase):
 	'''
 	Parse test CSV data and run the Provenance pipeline with the in-memory TestWriter.
 	Then verify that the serializations in the TestWriter object are what was expected.
@@ -37,7 +37,7 @@ class TestProvenancePipelineOutput(unittest.TestCase):
 
 	def run_pipeline(self, models, input_path):
 		writer = TestWriter()
-		pipeline = ProvenanceTestPipeline(
+		pipeline = SalesTestPipeline(
 				writer,
 				input_path,
 				catalogs=self.catalogs,
@@ -103,8 +103,8 @@ class TestProvenancePipelineOutput(unittest.TestCase):
 		people_names = {o['_label'] for o in people.values()}
 		self.assertEqual(people_names, {'Frits Lugt', '[Anonymous]', 'GILLEMANS, JAN PAUWEL', 'VINCKEBOONS, DAVID'})
 
-		key_119 = 'tag:getty.edu,2019:digital:pipeline:REPLACE-WITH-UUID:provenance#AUCTION,B-A139,0119,1774-05-31'
-		key_120 = 'tag:getty.edu,2019:digital:pipeline:REPLACE-WITH-UUID:provenance#AUCTION,B-A139,0120,1774-05-31'
+		key_119 = 'tag:getty.edu,2019:digital:pipeline:REPLACE-WITH-UUID:sales#AUCTION,B-A139,0119,1774-05-31'
+		key_120 = 'tag:getty.edu,2019:digital:pipeline:REPLACE-WITH-UUID:sales#AUCTION,B-A139,0120,1774-05-31'
 
 		auction_B_A139_0119 = auctions[key_119]
 		self.verify_auction(auction_B_A139_0119, event='B-A139', idents={'0119[a]', '0119[b]'})

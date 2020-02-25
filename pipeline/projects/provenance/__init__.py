@@ -180,7 +180,6 @@ class PersonIdentity:
 			dated_match = self.anon_dated_re.match(auth_name)
 			if dated_match:
 				with suppress(ValueError):
-					print(dated_match.group(1))
 					century = int(dated_match.group(1))
 					ord = make_ordinal(century)
 					data['label'] = f'anonymous {role}s of the {ord} century'
@@ -194,7 +193,6 @@ class PersonIdentity:
 			if period_match:
 				period = period_match.group(1).lower()
 				data['label'] = f'anonymous {period} {role}s'
-				print(data['label'])
 
 	def add_names(self, data:dict, referrer=None, role=None):
 		'''

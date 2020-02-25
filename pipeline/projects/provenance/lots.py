@@ -729,7 +729,6 @@ class AddAcquisitionOrBidding(Configurable):
 					houses = [add_crom_data(data={}, what=h) for h in auction_houses.get(cno, [])]
 					for i, h in enumerate(houses):
 						house = get_crom_object(h)
-						print(f'sold auction house: {h}')
 						if hasattr(house, 'label'):
 							house._label = f'{house._label}, private sale organizer for {cno} {shared_lot_number} ({date})'
 						else:

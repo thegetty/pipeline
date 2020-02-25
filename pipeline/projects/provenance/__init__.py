@@ -58,13 +58,13 @@ import pipeline.linkedart
 from pipeline.linkedart import add_crom_data, get_crom_object
 from pipeline.io.csv import CurriedCSVReader
 from pipeline.nodes.basic import \
-			AddFieldNames, \
 			GroupRepeatingKeys, \
 			GroupKeys, \
 			AddArchesModel, \
 			Serializer, \
 			OnlyRecordsOfType, \
 			Trace
+from pipeline.nodes.basic import AddFieldNamesSimple as AddFieldNames
 from pipeline.util.rewriting import rewrite_output_files, JSONValueRewriter
 import pipeline.projects.provenance.events
 import pipeline.projects.provenance.lots
@@ -1193,7 +1193,7 @@ class ProvenanceFilePipeline(ProvenancePipeline):
 				w.flush()
 
 		print('====================================================')
-		print('Running post-processing of post-sale data...')
+		print('Compiling post-sale data...')
 		post_map = services['post_sale_map']
 		self.generate_prev_post_sales_data(post_map)
 		print(f'>>> {len(post_map)} post sales records')

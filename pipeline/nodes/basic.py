@@ -163,6 +163,16 @@ class AddFieldNames(Configurable):
 		d = dict(zip(names, data))
 		return d
 
+class AddFieldNamesSimple(Configurable):
+	field_names = Option()
+
+	def __call__(self, data):
+		d = {}
+		names = self.field_names
+		for i in range(len(names)):
+			d[names[i]] = data[i]
+		return d
+
 class AddFieldNamesService(Configurable):
 	key = Option(required=False) # This is passed into __init__ as a kwarg but not into __call__
 	field_names = Service('header_names')   # This is passed into __call__ as a kwarg not at __init__  

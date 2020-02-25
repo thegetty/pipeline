@@ -118,3 +118,4 @@ endpoint
 
 scripts/find_matching_json_files
 scripts/generate_uri_uuids
+scripts/rewrite_uris_to_uuids

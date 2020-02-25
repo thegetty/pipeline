@@ -107,9 +107,13 @@ class PopulateObject(Configurable):
 
 		record_uri = self.helper.make_proj_uri('CATALOG', cno, 'RECORD', rec_num)
 		lot_object_id = parent['lot_object_id']
+		
+		puid = parent.get('persistent_puid')
+		puid_id = self.helper.gri_number_id(puid)
+
 		record = vocab.ParagraphText(ident=record_uri, label=f'Sale recorded in catalog: {lot_object_id} (record number {rec_num})')
 		record_data	= {'uri': record_uri}
-		record_data['identifiers'] = [model.Name(ident='', content=f'Record of sale {lot_object_id}')]
+		record_data['identifiers'] = [model.Name(ident='', content=f'Record of sale {lot_object_id}'), puid_id]
 		record.part_of = catalog
 
 		if parent.get('transaction'):

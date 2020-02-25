@@ -94,6 +94,7 @@ class AddPhysicalCatalogOwners(Configurable):
 
 class PopulateAuctionCatalog(Configurable):
 	'''Add modeling data for an auction catalog'''
+	helper = Option(required=True)
 	static_instances = Option(default="static_instances")
 
 	def lugt_number_id(self, content):
@@ -103,13 +104,6 @@ class PopulateAuctionCatalog(Configurable):
 		assignment.carried_out_by = self.static_instances.get_instance('Person', 'lugt')
 		lugt_id.assigned_by = assignment
 		return lugt_id
-
-	def gri_number_id(self, content):
-		catalog_id = vocab.LocalNumber(ident='', content=content)
-		assignment = model.AttributeAssignment(ident='')
-		assignment.carried_out_by = self.static_instances.get_instance('Group', 'gri')
-		catalog_id.assigned_by = assignment
-		return catalog_id
 
 	def __call__(self, data):
 		d = {k: v for k, v in data.items()}
@@ -124,7 +118,8 @@ class PopulateAuctionCatalog(Configurable):
 
 		if not cno:
 			warnings.warn(f'Setting empty identifier on {catalog.id}')
-		catalog.identified_by = self.gri_number_id(cno)
+		
+		catalog.identified_by = self.helper.gri_number_id(cno)
 
 		if not sno:
 			warnings.warn(f'Setting empty identifier on {catalog.id}')

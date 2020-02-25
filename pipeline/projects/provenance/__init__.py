@@ -482,7 +482,6 @@ class ProvenanceUtilityHelper(UtilityHelper):
 		add_crom_data(data=a, what=house)
 		return a
 
-
 def add_crom_price(data, parent, services, add_citations=False):
 	'''
 	Add modeling data for `MonetaryAmount`, `StartingPrice`, or `EstimatedPrice`,
@@ -585,7 +584,7 @@ class ProvenancePipeline(PipelineBase):
 		'''Add modeling of auction catalogs as linguistic objects.'''
 		los = graph.add_chain(
 			ExtractKeyedValue(key='_catalog'),
-			pipeline.projects.provenance.catalogs.PopulateAuctionCatalog(static_instances=self.static_instances),
+			pipeline.projects.provenance.catalogs.PopulateAuctionCatalog(helper=self.helper, static_instances=self.static_instances),
 			_input=events.output
 		)
 		if serialize:

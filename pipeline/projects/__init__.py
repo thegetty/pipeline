@@ -51,6 +51,7 @@ class PipelineBase:
 		self.helper = helper
 		self.static_instances = StaticInstanceHolder(self.setup_static_instances())
 		helper.add_services(self.get_services())
+		helper.add_static_instances(self.static_instances)
 
 	def setup_static_instances(self):
 		'''
@@ -159,6 +160,9 @@ class UtilityHelper:
 		'''
 		self.services = services
 
+	def add_static_instances(self, static_instances):
+		self.static_instances = static_instances
+
 	def make_uri_path(self, *values):
 		return ','.join([urllib.parse.quote(str(v)) for v in values])
 
@@ -234,3 +238,12 @@ class UtilityHelper:
 			p.part_of = parent
 			data['part_of'] = parent_data
 		return add_crom_data(data=data, what=p)
+
+	def gri_number_id(self, content, id_class=None):
+		if id_class is None:
+			id_class = vocab.LocalNumber
+		catalog_id = id_class(ident='', content=content)
+		assignment = model.AttributeAssignment(ident='')
+		assignment.carried_out_by = self.static_instances.get_instance('Group', 'gri')
+		catalog_id.assigned_by = assignment
+		return catalog_id

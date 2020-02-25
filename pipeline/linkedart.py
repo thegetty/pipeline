@@ -277,9 +277,8 @@ class MakeLinkedArtOrganization(MakeLinkedArtRecord):
 			if ulan:
 				thing.exact_match = model.BaseResource(ident=f'http://vocab.getty.edu/ulan/{ulan}')
 
-		if 'events' in data:
-			for event in data['events']:
-				thing.carried_out = event
+		for event in data.get('events', []):
+			thing.carried_out = event
 
 	def __call__(self, data: dict):
 		if 'object_type' not in data:

@@ -165,7 +165,13 @@ class PersonIdentity:
 		data['uri'] = make(*keys)
 
 	def timespan_for_century(self, century):
-		pass
+		ord = make_ordinal(century)
+		ts = model.TimeSpan(ident='', label=f'{ord} century')
+		from_year = 100 * (century-1)
+		to_year = from_year + 100
+		ts.end_of_the_begin = "%04d-%02d-%02dT%02d:%02d:%02dZ" % (from_year, 1, 1, 0, 0, 0)
+		ts.begin_of_the_end = "%04d-%02d-%02dT%02d:%02d:%02dZ" % (to_year, 1, 1, 0, 0, 0)
+		return ts
 
 	def add_props(self, data:dict, role=None, **kwargs):
 		role = role if role else 'person'
@@ -173,11 +179,17 @@ class PersonIdentity:
 		if self.is_anonymous_group(auth_name):
 			dated_match = self.anon_dated_re.match(auth_name)
 			if dated_match:
-				century = dated_match.group(1)
-				data['label'] = f'anonymous {role}s of the {make_ordinal(century)} century'
-				print(data['label'])
-# 				ts = self.timespan_for_century(century)
-				warnings.warn('TODO: add timespan to anonymous group')
+				with suppress(ValueError):
+					print(dated_match.group(1))
+					century = int(dated_match.group(1))
+					ord = make_ordinal(century)
+					data['label'] = f'anonymous {role}s of the {ord} century'
+					a = vocab.Active(ident='', label=f'Professional activity of {role}s in the {ord} century')
+					ts = self.timespan_for_century(century)
+					a.timespan = ts
+					if 'events' not in data:
+						data['events'] = []
+					data['events'].append(a)
 			period_match = self.anon_period_re.match(auth_name)
 			if period_match:
 				period = period_match.group(1).lower()

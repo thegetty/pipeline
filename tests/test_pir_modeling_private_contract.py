@@ -110,7 +110,7 @@ class PIRModelingTest_PrivateContractSales(TestProvenancePipelineOutput):
 		# seller   : Havre, Jean-Michel-Antoine-Joseph-Louis, baron van		500439105
 		# buyer    : Stier d'Aertselaer, Henri-Joseph, baron				500440144
 		# organizer: Anonymous												22949
-		event_organizer = 'tag:getty.edu,2019:digital:pipeline:REPLACE-WITH-UUID:provenance#HOUSE,PI,22949,0' # TODO this should be pulled from the data
+		event_organizer = 'tag:getty.edu,2019:digital:pipeline:REPLACE-WITH-UUID:provenance#HOUSE,STAR,226,0' # TODO this should be pulled from the data
 
 		buyers = acq['transferred_title_to']
 		self.assertEqual(len(buyers), 1)

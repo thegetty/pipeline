@@ -180,7 +180,6 @@ class PersonIdentity:
 			dated_match = self.anon_dated_re.match(auth_name)
 			if dated_match:
 				with suppress(ValueError):
-					print(dated_match.group(1))
 					century = int(dated_match.group(1))
 					ord = make_ordinal(century)
 					data['label'] = f'anonymous {role}s of the {ord} century'
@@ -194,7 +193,6 @@ class PersonIdentity:
 			if period_match:
 				period = period_match.group(1).lower()
 				data['label'] = f'anonymous {period} {role}s'
-				print(data['label'])
 
 	def add_names(self, data:dict, referrer=None, role=None):
 		'''
@@ -436,35 +434,52 @@ class ProvenanceUtilityHelper(UtilityHelper):
 				return True
 		return False
 
-	def add_auction_house_data(self, a, sequence=1, event_record=None):
+	def auction_house_uri(self, data:dict, sequence=1):
+		key = self.auction_house_uri_keys(data, sequence=sequence)
+		type = key[1]
+		if type in ('ULAN', 'AUTH'):
+			return self.make_shared_uri(*key)
+		else:
+			return self.make_proj_uri(*key)
+
+	def auction_house_uri_keys(self, data:dict, sequence=1):
+		ulan = None
+		with suppress(ValueError, TypeError):
+			ulan = int(data.get('ulan'))
+		auth_name = data.get('auth')
+		if ulan:
+			return ('HOUSE', 'ULAN', ulan)
+		elif auth_name and auth_name not in self.ignore_house_authnames:
+			return ('HOUSE', 'AUTH', auth_name)
+		else:
+			# not enough information to identify this house uniquely, so use the source location in the input file
+			if 'pi_record_no' in data:
+				return ('HOUSE', 'PI', data['pi_record_no'], sequence)
+			else:
+				return ('HOUSE', 'STAR', data['star_record_no'], sequence)
+
+	def add_auction_house_data(self, a:dict, sequence=1, event_record=None):
 		'''Add modeling data for an auction house organization.'''
 		catalog = a.get('_catalog')
 
+		auction_house_uri_keys = self.auction_house_uri_keys(a, sequence=sequence)
+		a['uri'] = self.auction_house_uri(a, sequence=sequence)
+		a['uid'] = '-'.join([str(k) for k in auction_house_uri_keys])
+		house = vocab.AuctionHouseOrg(ident=a['uri'])
 		ulan = None
 		with suppress(ValueError, TypeError):
 			ulan = int(a.get('ulan'))
 		auth_name = a.get('auth')
 		a['identifiers'] = []
 		if ulan:
-			key = f'HOUSE-ULAN-{ulan}'
-			a['uid'] = key
-			a['uri'] = self.make_proj_uri('HOUSE', 'ULAN', ulan)
 			a['ulan'] = ulan
-			house = vocab.AuctionHouseOrg(ident=a['uri'])
 		elif auth_name and auth_name not in self.ignore_house_authnames:
-			a['uri'] = self.make_proj_uri('HOUSE', 'AUTH', auth_name)
 			pname = vocab.PrimaryName(ident='', content=auth_name)
 			if event_record:
 				pname.referred_to_by = event_record
 			a['identifiers'].append(pname)
-			house = vocab.AuctionHouseOrg(ident=a['uri'], label=auth_name)
-		else:
-			# not enough information to identify this house uniquely, so use the source location in the input file
-			if 'pi_record_no' in a:
-				a['uri'] = self.make_proj_uri('HOUSE', 'PI', a['pi_record_no'], sequence)
-			else:
-				a['uri'] = self.make_proj_uri('HOUSE', 'STAR', a['star_record_no'], sequence)
-			house = vocab.AuctionHouseOrg(ident=a['uri'])
+			a['label'] = auth_name
+			house._label = auth_name
 
 		name = a.get('name')
 		if name:
@@ -472,8 +487,8 @@ class ProvenanceUtilityHelper(UtilityHelper):
 			if event_record:
 				n.referred_to_by = event_record
 			a['identifiers'].append(n)
-			a['label'] = name
 			if not hasattr(house, 'label'):
+				a['label'] = name
 				house._label = a['label']
 		else:
 			a['label'] = '(Anonymous)'
@@ -510,6 +525,10 @@ class ProvenancePipeline(PipelineBase):
 		project_name = 'provenance'
 		helper = ProvenanceUtilityHelper(project_name)
 		self.uid_tag_prefix = UID_TAG_PREFIX
+
+		vocab.register_instance('act of selling', {'parent': model.Activity, 'id': 'XXXXXX001', 'label': 'Act of Selling'})
+		vocab.register_instance('act of returning', {'parent': model.Activity, 'id': 'XXXXXX002', 'label': 'Act of Returning'})
+		vocab.register_instance('act of completing sale', {'parent': model.Activity, 'id': 'XXXXXX003', 'label': 'Act of Completing Sale'})
 
 		vocab.register_instance('fire', {'parent': model.Type, 'id': '300068986', 'label': 'Fire'})
 		vocab.register_instance('animal', {'parent': model.Type, 'id': '300249395', 'label': 'Animal'})

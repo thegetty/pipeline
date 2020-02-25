@@ -60,12 +60,13 @@ class PIRModelingTest_AttributionModifiers(TestProvenancePipelineOutput):
 		#   "Dr. S. (Berlin W 15, Kaiserallee 208)" (seller of an unsold transaction ("Unverkauft"))
 		self.assertEqual(len(people), 16)
 
-		# there are 4 groups:
+		# there are 5 groups:
 		# 	'FollowerGroup of artist “RUBENS, PETER PAUL”' (influencer of the formation of the "follower of" group)
 		# 	'School of artist “RUBENS, PETER PAUL”' (influencer of the formation of the "school of" group)
 		# 	'Workshop of artist “WEST, BENJAMIN”' (influencer of the formation of the "workshop of" group)
 		# 	'Circle of artist “POUSSIN, NICOLAS”' (influencer of the formation of the "circle of" group)
-		self.assertEqual(len(groups), 4)
+		# 	GRI (used as the assigner of a LocalNumber)
+		self.assertEqual(len(groups), 5)
 		
 		# 'style of' modifiers use an AttributeAssignment that classifies the 'influenced_by' property as being 'Style of'
 		style_of_obj = objects['tag:getty.edu,2019:digital:pipeline:REPLACE-WITH-UUID:provenance#OBJ,Br-A2493,0029%5Bb%5D,1800-03-01']

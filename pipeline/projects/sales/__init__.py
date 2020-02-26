@@ -238,7 +238,8 @@ class PersonIdentity:
 			n = vocab.instances.get(key)
 			if n:
 				data['nationality'].append(n)
-		pprint.pprint(data)
+			else:
+				warnings.warn(f'No nationality instance found in crom for: {nationality}')
 
 	def add_names(self, data:dict, referrer=None, role=None):
 		'''

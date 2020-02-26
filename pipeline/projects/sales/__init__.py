@@ -169,6 +169,7 @@ class PersonIdentity:
 		data['uri'] = make(*keys)
 
 	def timespan_for_century(self, century):
+		ord = make_ordinal(century)
 		ts = model.TimeSpan(ident='', label=f'{ord} century')
 		from_year = 100 * (century-1)
 		to_year = from_year + 100
@@ -179,17 +180,17 @@ class PersonIdentity:
 	def anonymous_group_label(self, role, century=None, nationality=None):
 		if century and nationality:
 			ord = make_ordinal(century)
-			return f'{nationality} {role}s in the {ord} century'
+			return f'{nationality.capitalize()} {role}s in the {ord} century'
 		elif century:
 			ord = make_ordinal(century)
 			return f'{role}s in the {ord} century'
 		elif nationality:
-			return f'{nationality} {role}s'
+			return f'{nationality.capitalize()} {role}s'
 		else:
 			return f'{role}s'
 		return a
 		
-	def professional_activity(self, group_label, century=None, nationality=None):
+	def professional_activity(self, group_label, century=None):
 		a = vocab.Active(ident='', label=f'Professional activity of {group_label}')
 		if century:
 			ts = self.timespan_for_century(century)
@@ -199,6 +200,15 @@ class PersonIdentity:
 	def add_props(self, data:dict, role=None, **kwargs):
 		role = role if role else 'person'
 		auth_name = data.get('auth_name')
+		period_match = self.anon_period_re.match(auth_name)
+		nationalities = []
+		if 'nationality' in data:
+			if isinstance(data['nationality'], str):
+				nationalities.append(data['nationality'])
+			elif isinstance(data['nationality'], list):
+				nationalities += data['nationality']
+		data['nationality'] = []
+		
 		if self.is_anonymous_group(auth_name):
 			nationality_match = self.anon_dated_nationality_re.match(auth_name)
 			dated_match = self.anon_dated_re.match(auth_name)
@@ -206,11 +216,12 @@ class PersonIdentity:
 				data['events'] = []
 			if nationality_match:
 				with suppress(ValueError):
-					nationality = nationality_match.group(1)
+					nationality = nationality_match.group(1).lower()
+					nationalities.append(nationality)
 					century = int(nationality_match.group(2))
 					group_label = self.anonymous_group_label(role, century=century, nationality=nationality)
 					data['label'] = group_label
-					a = self.professional_activity(group_label, century=century, nationality=nationality)
+					a = self.professional_activity(group_label, century=century)
 					data['events'].append(a)
 			elif dated_match:
 				with suppress(ValueError):
@@ -219,10 +230,15 @@ class PersonIdentity:
 					data['label'] = group_label
 					a = self.professional_activity(group_label, century=century)
 					data['events'].append(a)
-			period_match = self.anon_period_re.match(auth_name)
-			if period_match:
+			elif period_match:
 				period = period_match.group(1).lower()
 				data['label'] = f'anonymous {period} {role}s'
+		for nationality in nationalities:
+			key = f'{nationality} nationality'
+			n = vocab.instances.get(key)
+			if n:
+				data['nationality'].append(n)
+		pprint.pprint(data)
 
 	def add_names(self, data:dict, referrer=None, role=None):
 		'''

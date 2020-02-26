@@ -11,12 +11,12 @@ from itertools import groupby
 from pathlib import Path
 import warnings
 
-from tests import TestProvenancePipelineOutput
+from tests import TestSalesPipelineOutput
 from cromulent import vocab
 
 vocab.add_attribute_assignment_check()
 
-class PIRModelingTest_PrivateContractSales(TestProvenancePipelineOutput):
+class PIRModelingTest_PrivateContractSales(TestSalesPipelineOutput):
 	def test_modeling_private_contract_sales(self):
 		'''
 		Test for modeling of Private Contract Sales.
@@ -35,10 +35,10 @@ class PIRModelingTest_PrivateContractSales(TestProvenancePipelineOutput):
 		activities = output['model-activity']
 		texts = output['model-lo']
 
-		expected_catalog_text_id = 'tag:getty.edu,2019:digital:pipeline:REPLACE-WITH-UUID:provenance#CATALOG,B-267'
+		expected_catalog_text_id = 'tag:getty.edu,2019:digital:pipeline:REPLACE-WITH-UUID:sales#CATALOG,B-267'
 		
 		# there is a single non-auction 'Private Contract Sale' event, and it is referred to by the catalog text
-		pvt_sale = activities['tag:getty.edu,2019:digital:pipeline:REPLACE-WITH-UUID:provenance#PRIVATE_CONTRACT_SALE-EVENT,B-267']
+		pvt_sale = activities['tag:getty.edu,2019:digital:pipeline:REPLACE-WITH-UUID:sales#PRIVATE_CONTRACT_SALE-EVENT,B-267']
 		self.assertEqual(pvt_sale['_label'], 'Private Contract Sale Event for B-267')
 		self.assertIn(expected_catalog_text_id, {r.get('id') for r in pvt_sale['referred_to_by']})
 		
@@ -78,16 +78,16 @@ class PIRModelingTest_PrivateContractSales(TestProvenancePipelineOutput):
 		sets = output['model-set']
 		texts = output['model-lo']
 
-		hmo_key = 'tag:getty.edu,2019:digital:pipeline:REPLACE-WITH-UUID:provenance#OBJ,B-267,0001,1817'
+		hmo_key = 'tag:getty.edu,2019:digital:pipeline:REPLACE-WITH-UUID:sales#OBJ,B-267,0001,1817'
 		hmo = objects[hmo_key]
 		
-		prov_entry_curr = activities['tag:getty.edu,2019:digital:pipeline:REPLACE-WITH-UUID:provenance#PROV,B-267,1817,0001']
-		prov_entry_prev = activities['tag:getty.edu,2019:digital:pipeline:REPLACE-WITH-UUID:provenance#OBJ,B-267,0001,1817-seller-0-ProvenanceEntry']
+		prov_entry_curr = activities['tag:getty.edu,2019:digital:pipeline:REPLACE-WITH-UUID:sales#PROV,B-267,1817,0001']
+		prov_entry_prev = activities['tag:getty.edu,2019:digital:pipeline:REPLACE-WITH-UUID:sales#OBJ,B-267,0001,1817-seller-0-ProvenanceEntry']
 		
-		event_key = 'tag:getty.edu,2019:digital:pipeline:REPLACE-WITH-UUID:provenance#PRIVATE_CONTRACT_SALE-EVENT,B-267'
+		event_key = 'tag:getty.edu,2019:digital:pipeline:REPLACE-WITH-UUID:sales#PRIVATE_CONTRACT_SALE-EVENT,B-267'
 		sale_event = activities[event_key]
 		
-		object_set_key = 'tag:getty.edu,2019:digital:pipeline:REPLACE-WITH-UUID:provenance#AUCTION,B-267,0001,1817-Set'
+		object_set_key = 'tag:getty.edu,2019:digital:pipeline:REPLACE-WITH-UUID:sales#AUCTION,B-267,0001,1817-Set'
 		object_set = sets[object_set_key]
 		
 		self.assertEqual({c['_label'] for c in sale_event['classified_as']}, {'Exhibiting'})
@@ -110,7 +110,7 @@ class PIRModelingTest_PrivateContractSales(TestProvenancePipelineOutput):
 		# seller   : Havre, Jean-Michel-Antoine-Joseph-Louis, baron van		500439105
 		# buyer    : Stier d'Aertselaer, Henri-Joseph, baron				500440144
 		# organizer: Anonymous												22949
-		event_organizer = 'tag:getty.edu,2019:digital:pipeline:REPLACE-WITH-UUID:provenance#HOUSE,STAR,226,0' # TODO this should be pulled from the data
+		event_organizer = 'tag:getty.edu,2019:digital:pipeline:REPLACE-WITH-UUID:sales#HOUSE,STAR,226,0' # TODO this should be pulled from the data
 
 		buyers = acq['transferred_title_to']
 		self.assertEqual(len(buyers), 1)

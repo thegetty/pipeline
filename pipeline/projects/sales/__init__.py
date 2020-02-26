@@ -39,7 +39,7 @@ from cromulent.extract import extract_physical_dimensions, extract_monetary_amou
 
 import pipeline.execution
 from pipeline.projects import PipelineBase, UtilityHelper
-from pipeline.projects.provenance.util import *
+from pipeline.projects.sales.util import *
 from pipeline.util import \
 			GraphListSource, \
 			CaseFoldingSet, \
@@ -66,10 +66,10 @@ from pipeline.nodes.basic import \
 			Trace
 from pipeline.nodes.basic import AddFieldNamesSimple as AddFieldNames
 from pipeline.util.rewriting import rewrite_output_files, JSONValueRewriter
-import pipeline.projects.provenance.events
-import pipeline.projects.provenance.lots
-import pipeline.projects.provenance.objects
-import pipeline.projects.provenance.catalogs
+import pipeline.projects.sales.events
+import pipeline.projects.sales.lots
+import pipeline.projects.sales.objects
+import pipeline.projects.sales.catalogs
 
 #mark - utility functions and classes
 
@@ -243,7 +243,7 @@ class ProvenanceUtilityHelper(UtilityHelper):
 		self.shared_lot_number_re = re.compile(r'(\[[a-z]\])')
 		self.ignore_house_authnames = CaseFoldingSet(('Anonymous',))
 		self.csv_source_columns = ['pi_record_no', 'star_record_no', 'catalog_number']
-		self.problematic_record_uri = 'tag:getty.edu,2019:digital:pipeline:provenance:ProblematicRecord'
+		self.problematic_record_uri = f'tag:getty.edu,2019:digital:pipeline:{project_name}:ProblematicRecord'
 		self.person_identity = PersonIdentity(make_shared_uri=self.make_shared_uri, make_proj_uri=self.make_proj_uri)
 		self.uid_tag_prefix = UID_TAG_PREFIX
 
@@ -519,10 +519,10 @@ def add_crom_price(data, parent, services, add_citations=False):
 
 #mark - Provenance Pipeline class
 
-class ProvenancePipeline(PipelineBase):
+class SalesPipeline(PipelineBase):
 	'''Bonobo-based pipeline for transforming Provenance data from CSV into JSON-LD.'''
 	def __init__(self, input_path, catalogs, auction_events, contents, **kwargs):
-		project_name = 'provenance'
+		project_name = 'sales'
 		helper = ProvenanceUtilityHelper(project_name)
 		self.uid_tag_prefix = UID_TAG_PREFIX
 
@@ -587,9 +587,9 @@ class ProvenancePipeline(PipelineBase):
 	def add_physical_catalogs_chain(self, graph, records, serialize=True):
 		'''Add modeling of physical copies of auction catalogs.'''
 		catalogs = graph.add_chain(
-			pipeline.projects.provenance.catalogs.AddAuctionCatalog(helper=self.helper),
-			pipeline.projects.provenance.catalogs.AddPhysicalCatalogObjects(helper=self.helper),
-			pipeline.projects.provenance.catalogs.AddPhysicalCatalogOwners(helper=self.helper),
+			pipeline.projects.sales.catalogs.AddAuctionCatalog(helper=self.helper),
+			pipeline.projects.sales.catalogs.AddPhysicalCatalogObjects(helper=self.helper),
+			pipeline.projects.sales.catalogs.AddPhysicalCatalogOwners(helper=self.helper),
 			_input=records.output
 		)
 		if serialize:
@@ -601,7 +601,7 @@ class ProvenancePipeline(PipelineBase):
 		'''Add modeling of auction catalogs as linguistic objects.'''
 		los = graph.add_chain(
 			ExtractKeyedValue(key='_catalog'),
-			pipeline.projects.provenance.catalogs.PopulateAuctionCatalog(helper=self.helper, static_instances=self.static_instances),
+			pipeline.projects.sales.catalogs.PopulateAuctionCatalog(helper=self.helper, static_instances=self.static_instances),
 			_input=events.output
 		)
 		if serialize:
@@ -651,10 +651,10 @@ class ProvenancePipeline(PipelineBase):
 							'specific_loc')},
 				}
 			),
-			pipeline.projects.provenance.catalogs.AddAuctionCatalog(helper=self.helper),
-			pipeline.projects.provenance.events.AddAuctionEvent(helper=self.helper),
-			pipeline.projects.provenance.events.AddAuctionHouses(helper=self.helper),
-			pipeline.projects.provenance.events.PopulateAuctionEvent(helper=self.helper),
+			pipeline.projects.sales.catalogs.AddAuctionCatalog(helper=self.helper),
+			pipeline.projects.sales.events.AddAuctionEvent(helper=self.helper),
+			pipeline.projects.sales.events.AddAuctionHouses(helper=self.helper),
+			pipeline.projects.sales.events.PopulateAuctionEvent(helper=self.helper),
 			_input=records.output
 		)
 		if serialize:
@@ -681,7 +681,7 @@ class ProvenancePipeline(PipelineBase):
 	def add_acquisitions_chain(self, graph, sales, serialize=True):
 		'''Add modeling of the acquisitions and bidding on lots being auctioned.'''
 		bid_acqs = graph.add_chain(
-			pipeline.projects.provenance.lots.AddAcquisitionOrBidding(helper=self.helper),
+			pipeline.projects.sales.lots.AddAcquisitionOrBidding(helper=self.helper),
 			_input=sales.output
 		)
 		
@@ -902,7 +902,7 @@ class ProvenancePipeline(PipelineBase):
 						'ask_price_curr',
 						'ask_price_so')},
 			}),
-			pipeline.projects.provenance.lots.AddAuctionOfLot(helper=self.helper),
+			pipeline.projects.sales.lots.AddAuctionOfLot(helper=self.helper),
 			_input=records.output
 		)
 		
@@ -935,10 +935,10 @@ class ProvenancePipeline(PipelineBase):
 		'''Add modeling of the objects described by sales records.'''
 		objects = graph.add_chain(
 			ExtractKeyedValue(key='_object'),
-			pipeline.projects.provenance.objects.add_object_type,
-			pipeline.projects.provenance.objects.PopulateObject(helper=self.helper),
+			pipeline.projects.sales.objects.add_object_type,
+			pipeline.projects.sales.objects.PopulateObject(helper=self.helper),
 			pipeline.linkedart.MakeLinkedArtHumanMadeObject(),
-			pipeline.projects.provenance.objects.AddArtists(helper=self.helper),
+			pipeline.projects.sales.objects.AddArtists(helper=self.helper),
 			_input=sales.output
 		)
 
@@ -1053,8 +1053,8 @@ class ProvenancePipeline(PipelineBase):
 		component3 = [graph0] if single_graph else [graph3]
 		for g in component1:
 			auction_events_records = g.add_chain(
-				MatchingFiles(path='/', pattern=self.auction_events_files_pattern, fs='fs.data.provenance'),
-				CurriedCSVReader(fs='fs.data.provenance', limit=self.limit),
+				MatchingFiles(path='/', pattern=self.auction_events_files_pattern, fs='fs.data.sales'),
+				CurriedCSVReader(fs='fs.data.sales', limit=self.limit),
 				AddFieldNames(field_names=self.auction_events_headers)
 			)
 
@@ -1071,8 +1071,8 @@ class ProvenancePipeline(PipelineBase):
 
 		for g in component2:
 			physical_catalog_records = g.add_chain(
-				MatchingFiles(path='/', pattern=self.catalogs_files_pattern, fs='fs.data.provenance'),
-				CurriedCSVReader(fs='fs.data.provenance', limit=self.limit),
+				MatchingFiles(path='/', pattern=self.catalogs_files_pattern, fs='fs.data.sales'),
+				CurriedCSVReader(fs='fs.data.sales', limit=self.limit),
 				AddFieldNames(field_names=self.catalogs_headers),
 			)
 
@@ -1087,8 +1087,8 @@ class ProvenancePipeline(PipelineBase):
 
 		for g in component3:
 			contents_records = g.add_chain(
-				MatchingFiles(path='/', pattern=self.contents_files_pattern, fs='fs.data.provenance'),
-				CurriedCSVReader(fs='fs.data.provenance', limit=self.limit),
+				MatchingFiles(path='/', pattern=self.contents_files_pattern, fs='fs.data.sales'),
+				CurriedCSVReader(fs='fs.data.sales', limit=self.limit),
 				AddFieldNames(field_names=self.contents_headers),
 			)
 			sales = self.add_sales_chain(g, contents_records, services, serialize=True)
@@ -1200,7 +1200,7 @@ class ProvenancePipeline(PipelineBase):
 		dot.save(filename=dot_filename)
 		self.persist_sales_tree(g)
 
-class ProvenanceFilePipeline(ProvenancePipeline):
+class SalesFilePipeline(SalesPipeline):
 	'''
 	Provenance pipeline with serialization to files based on Arches model and resource UUID.
 

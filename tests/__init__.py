@@ -10,8 +10,8 @@ from pathlib import Path
 from cromulent import model, vocab, reader
 from cromulent.model import factory
 from pipeline.util import CromObjectMerger
-from pipeline.projects.provenance import ProvenancePipeline
-from pipeline.projects.provenance.util import SalesTree
+from pipeline.projects.sales import SalesPipeline
+from pipeline.projects.sales.util import SalesTree
 from pipeline.nodes.basic import Serializer, AddArchesModel
 
 MODELS = {
@@ -94,7 +94,7 @@ class TestWriter():
 		return self.process_output(self.output)
 
 
-class ProvenanceTestPipeline(ProvenancePipeline):
+class SalesTestPipeline(SalesPipeline):
 	'''
 	Test Provenance pipeline subclass that allows using a custom Writer.
 	'''
@@ -141,7 +141,7 @@ class ProvenanceTestPipeline(ProvenancePipeline):
 		self.sales_tree = g
 
 
-class TestProvenancePipelineOutput(unittest.TestCase):
+class TestSalesPipelineOutput(unittest.TestCase):
 	'''
 	Parse test CSV data and run the Provenance pipeline with the in-memory TestWriter.
 	Then verify that the serializations in the TestWriter object are what was expected.
@@ -185,7 +185,7 @@ class TestProvenancePipelineOutput(unittest.TestCase):
 			contents['files_pattern'] = str(tests_path / 'sales_contents*')
 		
 		writer = TestWriter()
-		pipeline = ProvenanceTestPipeline(
+		pipeline = SalesTestPipeline(
 				writer,
 				input_path,
 				catalogs=catalogs,

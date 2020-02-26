@@ -14,12 +14,12 @@ from cromulent.model import factory
 
 from pipeline.util import CromObjectMerger
 from pipeline.util.rewriting import JSONValueRewriter
-from tests import TestProvenancePipelineOutput
+from tests import TestSalesPipelineOutput
 from cromulent import vocab
 
 vocab.add_attribute_assignment_check()
 
-class PIRModelingTest_PrevSaleMerge(TestProvenancePipelineOutput):
+class PIRModelingTest_PrevSaleMerge(TestSalesPipelineOutput):
 	def merge_objects(self, objects):
 		r = JSONValueRewriter(self.prev_post_sales_map)
 		for k in list(objects.keys()):

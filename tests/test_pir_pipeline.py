@@ -7,12 +7,12 @@ import json
 import uuid
 import pprint
 
-from tests import TestWriter, ProvenanceTestPipeline
+from tests import TestWriter, SalesTestPipeline
 from cromulent import vocab
 
 vocab.add_attribute_assignment_check()
 
-class TestProvenancePipelineOutput(unittest.TestCase):
+class TestSalesPipelineOutput(unittest.TestCase):
 	'''
 	Parse test CSV data and run the Provenance pipeline with the in-memory TestWriter.
 	Then verify that the serializations in the TestWriter object are what was expected.
@@ -37,7 +37,7 @@ class TestProvenancePipelineOutput(unittest.TestCase):
 
 	def run_pipeline(self, models, input_path):
 		writer = TestWriter()
-		pipeline = ProvenanceTestPipeline(
+		pipeline = SalesTestPipeline(
 				writer,
 				input_path,
 				catalogs=self.catalogs,
@@ -90,7 +90,7 @@ class TestProvenancePipelineOutput(unittest.TestCase):
 		self.assertEqual(len(people), 4, 'expected count of people') # 3 from the data, and 1 (Lugt) which is a static instance
 		self.assertEqual(len(objects), 6, 'expected count of physical objects')
 		self.assertEqual(len(los), 4, 'expected count of linguistic objects')
-		self.assertEqual(len(activities), 1, 'expected count of activities')
+		self.assertEqual(len(activities), 3, 'expected count of activities') # 1 auction event and 2 prov entries
 		self.assertEqual(len(auctions), 2, 'expected count of auctions of lot')
 		self.assertEqual(len(houses), 1, 'expected count of auction houses')
 
@@ -103,8 +103,8 @@ class TestProvenancePipelineOutput(unittest.TestCase):
 		people_names = {o['_label'] for o in people.values()}
 		self.assertEqual(people_names, {'Frits Lugt', '[Anonymous]', 'GILLEMANS, JAN PAUWEL', 'VINCKEBOONS, DAVID'})
 
-		key_119 = 'tag:getty.edu,2019:digital:pipeline:REPLACE-WITH-UUID:provenance#AUCTION,B-A139,0119,1774-05-31'
-		key_120 = 'tag:getty.edu,2019:digital:pipeline:REPLACE-WITH-UUID:provenance#AUCTION,B-A139,0120,1774-05-31'
+		key_119 = 'tag:getty.edu,2019:digital:pipeline:REPLACE-WITH-UUID:sales#AUCTION,B-A139,0119,1774-05-31'
+		key_120 = 'tag:getty.edu,2019:digital:pipeline:REPLACE-WITH-UUID:sales#AUCTION,B-A139,0120,1774-05-31'
 
 		auction_B_A139_0119 = auctions[key_119]
 		self.verify_auction(auction_B_A139_0119, event='B-A139', idents={'0119[a]', '0119[b]'})
@@ -121,7 +121,7 @@ class TestProvenancePipelineOutput(unittest.TestCase):
 		events = [activities[k] for k in activities if k not in {key_119, key_120}]
 		event_labels = {e['_label'] for e in events}
 		carried_out_by = {h['id'] for e in events for h in e.get('carried_out_by', [])}
-		self.assertEqual(event_labels, {'Auction Event for B-A139'})
+		self.assertEqual(event_labels, {'Auction Event for B-A139', 'Offer of B-A139 0119 (1774-05-31)', 'Offer of B-A139 0120 (1774-05-31)'})
 		self.assertEqual(carried_out_by, house_ids)
 
 

@@ -126,7 +126,6 @@ class AddAuctionHouses(Configurable):
 			self.helper.add_auction_house_data(self.helper.copy_source_information(h, data), sequence=i, event_record=event_record)
 			house = get_crom_object(h)
 			auction.carried_out_by = house
-			if auction_houses:
-				house_objects.append(house)
+			house_objects.append(house)
 		auction_houses[cno] = house_objects
 		return d

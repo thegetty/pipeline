@@ -7,7 +7,7 @@ import bonobo
 from cromulent import model, vocab
 from cromulent.model import factory
 
-from pipeline.projects.provenance import ProvenanceFilePipeline, ProvenancePipeline
+from pipeline.projects.sales import SalesFilePipeline, SalesPipeline
 from settings import project_data_path, output_file_path, arches_models, DEBUG
 
 ### Pipeline
@@ -43,8 +43,8 @@ if __name__ == '__main__':
 	parser = bonobo.get_argument_parser()
 	with bonobo.parse_args(parser) as options:
 		try:
-			pir_data_path = project_data_path('provenance')
-			pipeline = ProvenanceFilePipeline( # ProvenancePipeline
+			pir_data_path = project_data_path('sales')
+			pipeline = SalesFilePipeline( # SalesPipeline
 				pir_data_path,
 				catalogs=catalogs,
 				auction_events=auction_events,

@@ -110,8 +110,8 @@ data/aata/*.xml
 data/knoedler/*.csv
 data/knoedler/*.sql*
 data/knoedler/*.xlsx
-data/provenance/*.csv
-data/provenance/*.sql*
+data/sales/*.csv
+data/sales/*.sql*
 data/*.sqlite
 output
 endpoint

@@ -381,10 +381,9 @@ class AddArtists(Configurable):
 			person = pi.add_person(a, sales_record, relative_id=f'artist-{seq_no+1}', role='artist')
 			artist_label = a.get('role_label')
 
-			mod = a.get('attrib_mod_auth')
-			if mod:
-				mods = CaseFoldingSet({m.lower().strip() for m in mod.split(';')})
-
+			mod = a.get('attrib_mod_auth', '')
+			mods = CaseFoldingSet({m.lower().strip() for m in mod.split(';')}) - {''}
+			if mods:
 				# TODO: this should probably be in its own JSON service file:
 				STYLE_OF = CaseFoldingSet(attribution_modifiers['style of'])
 				FORMERLY_ATTRIBUTED_TO = CaseFoldingSet(attribution_modifiers['formerly attributed to'])
@@ -396,9 +395,6 @@ class AddArtists(Configurable):
 
 				GROUP_TYPES = set(attribution_group_types.values())
 				GROUP_MODS = {k for k, v in attribution_group_types.items() if v in GROUP_TYPES}
-
-				if 'or' in mods:
-					warnings.warn('Handle OR attribution modifier') # TODO: some way to model this uncertainty?
 
 				if 'copy by' in mods:
 					# equivalent to no modifier
@@ -489,7 +485,7 @@ class AddArtists(Configurable):
 			subevent_id = event_id + f'-{subprod_path}'
 			subevent = model.Production(ident=subevent_id, label=f'Production sub-event for {artist_label}')
 			subevent.carried_out_by = person
-			if uncertain_attribution:
+			if uncertain_attribution or 'or' in mods:
 				assignment = vocab.make_multitype_obj(*attrib_assignment_classes, ident='', label=f'Possibly attributed to {artist_label}')
 				event.attributed_by = assignment
 				assignment.assigned_property = 'part'

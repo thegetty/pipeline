@@ -527,7 +527,7 @@ class SalesPipeline(PipelineBase):
 		self.uid_tag_prefix = UID_TAG_PREFIX
 
 		vocab.register_instance('act of selling', {'parent': model.Activity, 'id': 'XXXXXX001', 'label': 'Act of Selling'})
-		vocab.register_instance('act of returning', {'parent': model.Activity, 'id': 'XXXXXX002', 'label': 'Act of Returning'})
+		vocab.register_instance('act of returning', {'parent': model.Activity, 'id': '300438467', 'label': 'Returning'})
 		vocab.register_instance('act of completing sale', {'parent': model.Activity, 'id': 'XXXXXX003', 'label': 'Act of Completing Sale'})
 
 		vocab.register_instance('fire', {'parent': model.Type, 'id': '300068986', 'label': 'Fire'})

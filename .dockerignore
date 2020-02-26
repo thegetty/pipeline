@@ -1,6 +1,6 @@
 output*
 data/*.sqlite
-data/provenance
+data/sales
 data/aata/*.xml
 data/knoedler/*.csv
 endpoint

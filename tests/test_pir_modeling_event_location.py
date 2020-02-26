@@ -11,12 +11,12 @@ from pathlib import Path
 import warnings
 from contextlib import suppress
 
-from tests import TestProvenancePipelineOutput
+from tests import TestSalesPipelineOutput
 from cromulent import vocab
 
 vocab.add_attribute_assignment_check()
 
-class PIRModelingTest_EventLocation(TestProvenancePipelineOutput):
+class PIRModelingTest_EventLocation(TestSalesPipelineOutput):
 	def test_modeling_for_event_locations(self):
 		'''
 		Test for modeling of the locations of auction events, including a Place hierarchy.

@@ -11,12 +11,12 @@ from itertools import groupby
 from pathlib import Path
 import warnings
 
-from tests import TestProvenancePipelineOutput
+from tests import TestSalesPipelineOutput
 from cromulent import vocab
 
 vocab.add_attribute_assignment_check()
 
-class PIRModelingTest_StockListSales(TestProvenancePipelineOutput):
+class PIRModelingTest_StockListSales(TestSalesPipelineOutput):
 	def test_modeling_stock_list_sales(self):
 		'''
 		Test for modeling of Stock List Sales.
@@ -35,8 +35,8 @@ class PIRModelingTest_StockListSales(TestProvenancePipelineOutput):
 		activities = output['model-activity']
 		texts = output['model-lo']
 
-		expected_catalog_text_id = 'tag:getty.edu,2019:digital:pipeline:REPLACE-WITH-UUID:provenance#CATALOG,Br-541'
-		expected_event_id = 'tag:getty.edu,2019:digital:pipeline:REPLACE-WITH-UUID:provenance#STOCK_LIST-EVENT,Br-541'
+		expected_catalog_text_id = 'tag:getty.edu,2019:digital:pipeline:REPLACE-WITH-UUID:sales#CATALOG,Br-541'
+		expected_event_id = 'tag:getty.edu,2019:digital:pipeline:REPLACE-WITH-UUID:sales#STOCK_LIST-EVENT,Br-541'
 		
 		# there is a single non-auction 'Private Contract Sale' event, and it is referred to by the catalog text
 		pvt_sale = activities[expected_event_id]
@@ -73,15 +73,15 @@ class PIRModelingTest_StockListSales(TestProvenancePipelineOutput):
 		sets = output['model-set']
 		texts = output['model-lo']
 
-		hmo_key = 'tag:getty.edu,2019:digital:pipeline:REPLACE-WITH-UUID:provenance#OBJ,Br-541,%5B0001%5D,1808'
+		hmo_key = 'tag:getty.edu,2019:digital:pipeline:REPLACE-WITH-UUID:sales#OBJ,Br-541,%5B0001%5D,1808'
 		hmo = objects[hmo_key]
 		
-		sale_curr = activities['tag:getty.edu,2019:digital:pipeline:REPLACE-WITH-UUID:provenance#AUCTION,Br-541,%5B0001%5D,1808']
+		sale_curr = activities['tag:getty.edu,2019:digital:pipeline:REPLACE-WITH-UUID:sales#AUCTION,Br-541,%5B0001%5D,1808']
 		
-		event_key = 'tag:getty.edu,2019:digital:pipeline:REPLACE-WITH-UUID:provenance#STOCK_LIST-EVENT,Br-541'
+		event_key = 'tag:getty.edu,2019:digital:pipeline:REPLACE-WITH-UUID:sales#STOCK_LIST-EVENT,Br-541'
 		sale_event = activities[event_key]
 		
-		object_set_key = 'tag:getty.edu,2019:digital:pipeline:REPLACE-WITH-UUID:provenance#AUCTION,Br-541,%5B0001%5D,1808-Set'
+		object_set_key = 'tag:getty.edu,2019:digital:pipeline:REPLACE-WITH-UUID:sales#AUCTION,Br-541,%5B0001%5D,1808-Set'
 		object_set = sets[object_set_key]
 		
 		self.assertEqual({c['_label'] for c in sale_event['classified_as']}, {'Exhibiting'})

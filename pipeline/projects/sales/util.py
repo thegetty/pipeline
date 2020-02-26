@@ -8,7 +8,7 @@ import warnings
 from pipeline.util import implode_date
 from pipeline.projects import UtilityHelper
 
-UID_TAG_PREFIX = 'tag:getty.edu,2019:digital:pipeline:REPLACE-WITH-UUID:provenance#'
+UID_TAG_PREFIX = 'tag:getty.edu,2019:digital:pipeline:REPLACE-WITH-UUID:sales#'
 
 def filter_empty_person(data: dict, _):
 	'''
@@ -65,7 +65,7 @@ def add_pir_object_uri(data, parent, helper):
 
 class SalesTree:
 	'''
-	This class is used to represent the repeated sales of objects in provenance data.
+	This class is used to represent the repeated sales of objects in sales data.
 	It stores a graph of trees where each node is a lot sale, and edges connect sales
 	of the same object over time.
 
@@ -95,7 +95,7 @@ class SalesTree:
 		return i
 
 	def largest_component_canonical_keys(self, limit=None):
-		helper = UtilityHelper('provenance')
+		helper = UtilityHelper('sales')
 		components = Counter()
 		for src in self.nodes.keys():
 			key, _ = self.canonical_key(src)

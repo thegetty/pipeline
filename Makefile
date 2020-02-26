@@ -11,7 +11,7 @@ GETTY_PIPELINE_COMMON_SERVICE_FILES_PATH?=`pwd`/data/common
 SHELL := /bin/bash
 
 docker: dockerimage
-	docker run -t --env GETTY_PIPELINE_COMMON_SERVICE_FILES_PATH=$(GETTY_PIPELINE_COMMON_SERVICE_FILES_PATH) --env AWS_ACCESS_KEY_ID=$(AWS_ACCESS_KEY_ID) --env AWS_SECRET_ACCESS_KEY=$(AWS_SECRET_ACCESS_KEY) -v$(GETTY_PIPELINE_INPUT):/data -v$(GETTY_PIPELINE_OUTPUT):/output pipeline make pir nt
+	docker run -t --env GETTY_PIPELINE_COMMON_SERVICE_FILES_PATH=$(GETTY_PIPELINE_COMMON_SERVICE_FILES_PATH) --env AWS_ACCESS_KEY_ID=$(AWS_ACCESS_KEY_ID) --env AWS_SECRET_ACCESS_KEY=$(AWS_SECRET_ACCESS_KEY) -v$(GETTY_PIPELINE_INPUT):/data -v$(GETTY_PIPELINE_OUTPUT):/output pipeline make sales nt
 
 cleandocker: dockerimage
 	docker run -t --env AWS_ACCESS_KEY_ID=$(AWS_ACCESS_KEY_ID) --env AWS_SECRET_ACCESS_KEY=$(AWS_SECRET_ACCESS_KEY) -v$(GETTY_PIPELINE_OUTPUT):/output pipeline make fetch aata nt
@@ -22,17 +22,17 @@ dockertest: dockerimage
 dockerimage: Dockerfile
 	docker build -t pipeline .
 
-fetch: fetchaata fetchpir fetchknoedler
+fetch: fetchaata fetchsales fetchknoedler
 
 fetchaata:
 	mkdir -p $(GETTY_PIPELINE_INPUT)/aata
 	aws s3 sync s3://jpgt-or-provenance-01/provenance_batch/data/aata $(GETTY_PIPELINE_INPUT)/aata
 
-fetchpir:
+fetchsales:
 	mkdir -p $(GETTY_PIPELINE_TMP_PATH)/pipeline
-	mkdir -p $(GETTY_PIPELINE_INPUT)/provenance
-	aws s3 sync s3://jpgt-or-provenance-01/provenance_batch/data/provenance $(GETTY_PIPELINE_INPUT)/provenance
-	cp $(GETTY_PIPELINE_INPUT)/provenance/uri_to_uuid_map.json "${GETTY_PIPELINE_TMP_PATH}/uri_to_uuid_map.json"
+	mkdir -p $(GETTY_PIPELINE_INPUT)/sales
+	aws s3 sync s3://jpgt-or-provenance-01/provenance_batch/data/provenance $(GETTY_PIPELINE_INPUT)/sales
+	cp $(GETTY_PIPELINE_INPUT)/sales/uri_to_uuid_map.json "${GETTY_PIPELINE_TMP_PATH}/uri_to_uuid_map.json"
 
 fetchknoedler:
 	mkdir -p $(GETTY_PIPELINE_INPUT)/knoedler
@@ -61,7 +61,7 @@ nq: jsonlist
 
 salespipeline:
 	mkdir -p $(GETTY_PIPELINE_TMP_PATH)/pipeline
-	QUIET=$(QUIET) GETTY_PIPELINE_DEBUG=$(DEBUG) GETTY_PIPELINE_LIMIT=$(LIMIT) $(PYTHON) ./pir.py
+	QUIET=$(QUIET) GETTY_PIPELINE_DEBUG=$(DEBUG) GETTY_PIPELINE_LIMIT=$(LIMIT) $(PYTHON) ./sales.py
 
 postprocessjson:
 	ls $(GETTY_PIPELINE_OUTPUT) | PYTHONPATH=`pwd` xargs -n 1 -P 8 -I '{}' $(PYTHON) ./scripts/coalesce_json.py "${GETTY_PIPELINE_OUTPUT}/{}"
@@ -95,11 +95,11 @@ salesdata: salespipeline salespostprocessing
 jsonlist:
 	find $(GETTY_PIPELINE_OUTPUT) -name '*.json' > $(GETTY_PIPELINE_TMP_PATH)/json_files.txt
 
-pir: salesdata jsonlist
+sales: salesdata jsonlist
 	cat $(GETTY_PIPELINE_TMP_PATH)/json_files.txt | PYTHONPATH=`pwd` $(PYTHON) ./scripts/generate_metadata_graph.py sales
 
-pirgraph: $(GETTY_PIPELINE_TMP_PATH)/pir.pdf
-	open -a Preview $(GETTY_PIPELINE_TMP_PATH)/pir.pdf
+salesgraph: $(GETTY_PIPELINE_TMP_PATH)/sales.pdf
+	open -a Preview $(GETTY_PIPELINE_TMP_PATH)/sales.pdf
 
 knoedlerdata:
 	mkdir -p $(GETTY_PIPELINE_TMP_PATH)/pipeline
@@ -125,14 +125,14 @@ $(GETTY_PIPELINE_TMP_PATH)/aata.dot: aata.py
 $(GETTY_PIPELINE_TMP_PATH)/aata.pdf: $(GETTY_PIPELINE_TMP_PATH)/aata.dot
 	$(DOT) -Tpdf -o $(GETTY_PIPELINE_TMP_PATH)/aata.pdf $(GETTY_PIPELINE_TMP_PATH)/aata.dot
 
-$(GETTY_PIPELINE_TMP_PATH)/pir.dot: pir.py
-	./pir.py dot > $(GETTY_PIPELINE_TMP_PATH)/pir.dot
+$(GETTY_PIPELINE_TMP_PATH)/sales.dot: sales.py
+	./sales.py dot > $(GETTY_PIPELINE_TMP_PATH)/sales.dot
 
 $(GETTY_PIPELINE_TMP_PATH)/knoedler.dot: knoedler.py
 	./knoedler.py dot > $(GETTY_PIPELINE_TMP_PATH)/knoedler.dot
 
-$(GETTY_PIPELINE_TMP_PATH)/pir.pdf: $(GETTY_PIPELINE_TMP_PATH)/pir.dot
-	$(DOT) -Tpdf -o $(GETTY_PIPELINE_TMP_PATH)/pir.pdf $(GETTY_PIPELINE_TMP_PATH)/pir.dot
+$(GETTY_PIPELINE_TMP_PATH)/sales.pdf: $(GETTY_PIPELINE_TMP_PATH)/sales.dot
+	$(DOT) -Tpdf -o $(GETTY_PIPELINE_TMP_PATH)/sales.pdf $(GETTY_PIPELINE_TMP_PATH)/sales.dot
 
 $(GETTY_PIPELINE_TMP_PATH)/knoedler.pdf: $(GETTY_PIPELINE_TMP_PATH)/knoedler.dot
 	$(DOT) -Tpdf -o $(GETTY_PIPELINE_TMP_PATH)/knoedler.pdf $(GETTY_PIPELINE_TMP_PATH)/knoedler.dot
@@ -143,11 +143,11 @@ clean:
 	rm -f $(GETTY_PIPELINE_TMP_PATH)/json_files.txt
 	rm -f $(GETTY_PIPELINE_TMP_PATH)/aata.pdf
 	rm -f $(GETTY_PIPELINE_TMP_PATH)/aata.dot
-	rm -f $(GETTY_PIPELINE_TMP_PATH)/pir.pdf
+	rm -f $(GETTY_PIPELINE_TMP_PATH)/sales.pdf
 	rm -f $(GETTY_PIPELINE_TMP_PATH)/knoedler.pdf
-	rm -f $(GETTY_PIPELINE_TMP_PATH)/pir.dot
+	rm -f $(GETTY_PIPELINE_TMP_PATH)/sales.dot
 	rm -f $(GETTY_PIPELINE_TMP_PATH)/knoedler.dot
 	rm -f $(GETTY_PIPELINE_TMP_PATH)/sales-tree.data
 	rm -f "${GETTY_PIPELINE_TMP_PATH}/post_sale_rewrite_map.json"
 
-.PHONY: aata aatagraph knoedler knoedlergraph pir pirgraph test upload nt docker dockerimage dockertest fetch fetchaata fetchpir fetchknoedler jsonlist salesdata salespipeline salespostprocessing salespostsalefilelist postprocessing_uuidmap postprocessing_rewrite_uris postprocessjson
+.PHONY: aata aatagraph knoedler knoedlergraph sales salesgraph test upload nt docker dockerimage dockertest fetch fetchaata fetchsales fetchknoedler jsonlist salesdata salespipeline salespostprocessing salespostsalefilelist postprocessing_uuidmap postprocessing_rewrite_uris postprocessjson

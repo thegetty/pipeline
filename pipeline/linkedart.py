@@ -280,6 +280,9 @@ class MakeLinkedArtOrganization(MakeLinkedArtRecord):
 		for event in data.get('events', []):
 			thing.carried_out = event
 
+		for n in data.get('nationality', []):
+			thing.classified_as = n
+
 	def __call__(self, data: dict):
 		if 'object_type' not in data:
 			data['object_type'] = model.Group

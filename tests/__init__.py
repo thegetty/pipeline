@@ -148,16 +148,16 @@ class TestSalesPipelineOutput(unittest.TestCase):
 	'''
 	def setUp(self):
 		self.catalogs = {
-			'header_file': 'tests/data/pir/sales_catalogs_info_0.csv',
-			'files_pattern': 'tests/data/pir/empty.csv',
+			'header_file': 'tests/data/sales/sales_catalogs_info_0.csv',
+			'files_pattern': 'tests/data/sales/empty.csv',
 		}
 		self.contents = {
-			'header_file': 'tests/data/pir/sales_contents_0.csv',
-			'files_pattern': 'tests/data/pir/empty.csv',
+			'header_file': 'tests/data/sales/sales_contents_0.csv',
+			'files_pattern': 'tests/data/sales/empty.csv',
 		}
 		self.auction_events = {
-			'header_file': 'tests/data/pir/sales_descriptions_0.csv',
-			'files_pattern': 'tests/data/pir/empty.csv',
+			'header_file': 'tests/data/sales/sales_descriptions_0.csv',
+			'files_pattern': 'tests/data/sales/empty.csv',
 		}
 		os.environ['QUIET'] = '1'
 
@@ -170,7 +170,7 @@ class TestSalesPipelineOutput(unittest.TestCase):
 		events = self.auction_events.copy()
 		contents = self.contents.copy()
 		
-		tests_path = Path(f'tests/data/pir/{test_name}')
+		tests_path = Path(f'tests/data/sales/{test_name}')
 		catalog_files = list(tests_path.rglob('sales_catalogs_info*'))
 		event_files = list(tests_path.rglob('sales_descriptions*'))
 		content_files = list(tests_path.rglob('sales_contents*'))

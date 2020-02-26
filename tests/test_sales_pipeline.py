@@ -19,16 +19,16 @@ class TestSalesPipelineOutput(unittest.TestCase):
 	'''
 	def setUp(self):
 		self.catalogs = {
-			'header_file': 'tests/data/pir/sales_catalogs_info_0.csv',
-			'files_pattern': 'tests/data/pir/sales_catalogs_info.csv',
+			'header_file': 'tests/data/sales/sales_catalogs_info_0.csv',
+			'files_pattern': 'tests/data/sales/sales_catalogs_info.csv',
 		}
 		self.contents = {
-			'header_file': 'tests/data/pir/sales_contents_0.csv',
-			'files_pattern': 'tests/data/pir/sales_contents_1.csv',
+			'header_file': 'tests/data/sales/sales_contents_0.csv',
+			'files_pattern': 'tests/data/sales/sales_contents_1.csv',
 		}
 		self.auction_events = {
-			'header_file': 'tests/data/pir/sales_descriptions_0.csv',
-			'files_pattern': 'tests/data/pir/sales_descriptions.csv',
+			'header_file': 'tests/data/sales/sales_descriptions_0.csv',
+			'files_pattern': 'tests/data/sales/sales_descriptions.csv',
 		}
 		os.environ['QUIET'] = '1'
 
@@ -56,7 +56,7 @@ class TestSalesPipelineOutput(unittest.TestCase):
 		got_idents = {c['content'] for c in a.get('identified_by', [])}
 		self.assertEqual(got_idents, idents)
 
-	def test_pipeline_pir(self):
+	def test_pipeline_sales(self):
 		input_path = os.getcwd()
 		models = {
 			'Bidding': 'model-bidding',

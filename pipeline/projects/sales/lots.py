@@ -219,7 +219,7 @@ class AddAcquisitionOrBidding(Configurable):
 
 	def __init__(self, *args, **kwargs):
 		self.custody_xfer_purposes = {
-			'to sell': vocab.instances['act of selling'],
+			'selling': vocab.instances['act of selling'],
 			'returning': vocab.instances['act of returning'],
 			'completing sale': vocab.instances['act of completing sale'],
 		}
@@ -321,12 +321,13 @@ class AddAcquisitionOrBidding(Configurable):
 		cno, lno, date = object_key(auction_data)
 		
 		xfer_label = None
+		purpose_label = f'(for {purpose}) ' if purpose else ''
 		try:
 			object_label = f'“{hmo._label}”'
-			xfer_label = f'Transfer of Custody for {cno} {lno} ({date}): {object_label}'
+			xfer_label = f'Transfer of Custody {purpose_label}of {cno} {lno} ({date}): {object_label}'
 		except AttributeError:
 			object_label = '(object)'
-			xfer_label = f'Transfer of Custody for {cno} {lno} ({date})'
+			xfer_label = f'Transfer of Custody {purpose_label}of {cno} {lno} ({date})'
 
 		# TODO: pass in the tx to use instead of getting it from `parent`
 		tx_data = parent['_prov_entry_data']
@@ -340,12 +341,10 @@ class AddAcquisitionOrBidding(Configurable):
 
 		for seller_data in sellers:
 			seller = get_crom_object(seller_data)
-			mod = seller_data.get('auth_mod_a', '')
 			xfer.transferred_custody_from = seller
 
 		for buyer_data in buyers:
 			buyer = get_crom_object(buyer_data)
-			mod = buyer_data.get('auth_mod_a', '')
 			xfer.transferred_custody_to = buyer
 
 		current_tx.part = xfer
@@ -607,9 +606,8 @@ class AddAcquisitionOrBidding(Configurable):
 		tx_data = parent.get('_prov_entry_data')
 		tx = get_crom_object(tx_data)
 		houses = [add_crom_data(data={}, what=h) for h in auction_houses.get(cno, [])]
-		self.add_transfer_of_custody(data, tx, xfer_to=houses, xfer_from=sellers, sequence=1, purpose='to sell')
+		self.add_transfer_of_custody(data, tx, xfer_to=houses, xfer_from=sellers, sequence=1, purpose='selling')
 		if model_custody_return:
-			print(f'*** transfer of custody back to seller: {tx.id} ; {tx._label}')
 			self.add_transfer_of_custody(data, tx, xfer_to=sellers, xfer_from=houses, sequence=2, purpose='returning')
 
 		if '_procurements' not in data:
@@ -722,7 +720,7 @@ class AddAcquisitionOrBidding(Configurable):
 			
 			for data, current_tx in self.add_acquisition(data, buyers, sellers, non_auctions, buy_sell_modifiers, transaction, transaction_types):
 				if sale_type == 'Auction':
-					self.add_transfer_of_custody(data, current_tx, xfer_to=buyers, xfer_from=sellers, purpose='to sell')
+					self.add_transfer_of_custody(data, current_tx, xfer_to=buyers, xfer_from=sellers, purpose='selling')
 				elif sale_type in ('Private Contract Sale', 'Stock List'):
 					# 'Stock List' is treated just like a Private Contract Sale, except for the catalogs
 					metadata = {
@@ -737,7 +735,7 @@ class AddAcquisitionOrBidding(Configurable):
 						else:
 							house._label = f'Private sale organizer for {cno} {shared_lot_number} ({date})'
 
-						self.add_transfer_of_custody(data, current_tx, xfer_to=[h], xfer_from=sellers, sequence=1, purpose='to sell')
+						self.add_transfer_of_custody(data, current_tx, xfer_to=[h], xfer_from=sellers, sequence=1, purpose='selling')
 						self.add_transfer_of_custody(data, current_tx, xfer_to=buyers, xfer_from=[h], sequence=2, purpose='completing sale')
 						data['_organizations'].append(h)
 					prev_procurements = self.add_private_sellers(data, sellers, sale_type, transaction, transaction_types)

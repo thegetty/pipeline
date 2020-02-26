@@ -92,6 +92,7 @@ class PersonIdentity:
 		self.make_la_org = pipeline.linkedart.MakeLinkedArtOrganization()
 		self.anon_dated_re = re.compile(r'\[ANONYMOUS - (\d+)TH C[.]\]')
 		self.anon_period_re = re.compile(r'\[ANONYMOUS - (MODERN|ANTIQUE)\]')
+		self.anon_dated_nationality_re = re.compile(r'\[(\w+) - (\d+)TH C[.]\]')
 
 	def acceptable_person_auth_name(self, auth_name):
 		if not auth_name or auth_name in self.ignore_authnames:
@@ -101,16 +102,19 @@ class PersonIdentity:
 		return True
 
 	def is_anonymous_group(self, auth_name):
-		if self.anon_dated_re.match(auth_name):
+		if self.anon_dated_nationality_re.match(auth_name):
+			return True
+		elif self.anon_dated_re.match(auth_name):
 			return True
 		elif self.anon_period_re.match(auth_name):
 			return True
 		return False
 
-	@staticmethod
-	def is_anonymous(data:dict):
+	def is_anonymous(self, data:dict):
 		auth_name = data.get('auth_name')
 		if auth_name:
+			if self.is_anonymous_group(auth_name):
+				return False
 			return '[ANONYMOUS' in auth_name
 		elif data.get('name'):
 			return False
@@ -173,26 +177,69 @@ class PersonIdentity:
 		ts.begin_of_the_end = "%04d-%02d-%02dT%02d:%02d:%02dZ" % (to_year, 1, 1, 0, 0, 0)
 		return ts
 
+	def anonymous_group_label(self, role, century=None, nationality=None):
+		if century and nationality:
+			ord = make_ordinal(century)
+			return f'{nationality.capitalize()} {role}s in the {ord} century'
+		elif century:
+			ord = make_ordinal(century)
+			return f'{role}s in the {ord} century'
+		elif nationality:
+			return f'{nationality.capitalize()} {role}s'
+		else:
+			return f'{role}s'
+		return a
+		
+	def professional_activity(self, group_label, century=None):
+		a = vocab.Active(ident='', label=f'Professional activity of {group_label}')
+		if century:
+			ts = self.timespan_for_century(century)
+			a.timespan = ts
+		return a
+
 	def add_props(self, data:dict, role=None, **kwargs):
 		role = role if role else 'person'
 		auth_name = data.get('auth_name')
+		period_match = self.anon_period_re.match(auth_name)
+		nationalities = []
+		if 'nationality' in data:
+			if isinstance(data['nationality'], str):
+				nationalities.append(data['nationality'])
+			elif isinstance(data['nationality'], list):
+				nationalities += data['nationality']
+		data['nationality'] = []
+		
 		if self.is_anonymous_group(auth_name):
+			nationality_match = self.anon_dated_nationality_re.match(auth_name)
 			dated_match = self.anon_dated_re.match(auth_name)
-			if dated_match:
+			if 'events' not in data:
+				data['events'] = []
+			if nationality_match:
+				with suppress(ValueError):
+					nationality = nationality_match.group(1).lower()
+					nationalities.append(nationality)
+					century = int(nationality_match.group(2))
+					group_label = self.anonymous_group_label(role, century=century, nationality=nationality)
+					data['label'] = group_label
+					a = self.professional_activity(group_label, century=century)
+					data['events'].append(a)
+			elif dated_match:
 				with suppress(ValueError):
 					century = int(dated_match.group(1))
-					ord = make_ordinal(century)
-					data['label'] = f'anonymous {role}s of the {ord} century'
-					a = vocab.Active(ident='', label=f'Professional activity of {role}s in the {ord} century')
-					ts = self.timespan_for_century(century)
-					a.timespan = ts
-					if 'events' not in data:
-						data['events'] = []
+					group_label = self.anonymous_group_label(role, century=century)
+					data['label'] = group_label
+					a = self.professional_activity(group_label, century=century)
 					data['events'].append(a)
-			period_match = self.anon_period_re.match(auth_name)
-			if period_match:
+			elif period_match:
 				period = period_match.group(1).lower()
 				data['label'] = f'anonymous {period} {role}s'
+		for nationality in nationalities:
+			key = f'{nationality} nationality'
+			n = vocab.instances.get(key)
+			if n:
+				data['nationality'].append(n)
+			else:
+				warnings.warn(f'No nationality instance found in crom for: {nationality}')
 
 	def add_names(self, data:dict, referrer=None, role=None):
 		'''

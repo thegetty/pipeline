@@ -372,9 +372,6 @@ class AddArtists(Configurable):
 		or_anon_records = [is_or_anon(a) for a in artists]
 		uncertain_attribution = any(or_anon_records)
 		for seq_no, a in enumerate(artists):
-			attrib_assignment_classes = [model.AttributeAssignment]
-			if uncertain_attribution:
-				attrib_assignment_classes.append(vocab.PossibleAssignment)
 			if is_or_anon(a):
 				# do not model the "or anonymous" records; they turn into uncertainty on the other records
 				continue
@@ -383,6 +380,11 @@ class AddArtists(Configurable):
 
 			mod = a.get('attrib_mod_auth', '')
 			mods = CaseFoldingSet({m.lower().strip() for m in mod.split(';')}) - {''}
+			attrib_assignment_classes = [model.AttributeAssignment]
+			
+			if uncertain_attribution or 'or' in mods:
+				attrib_assignment_classes.append(vocab.PossibleAssignment)
+				
 			if mods:
 				# TODO: this should probably be in its own JSON service file:
 				STYLE_OF = CaseFoldingSet(attribution_modifiers['style of'])

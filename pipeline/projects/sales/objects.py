@@ -51,7 +51,7 @@ class PopulateObject(Configurable):
 		if m:
 			method = m.group(1)
 			year = m.group(2)
-			dest_id = hmo.id + '-Destruction'
+			dest_id = hmo.id + '-Destr'
 			d = model.Destruction(ident=dest_id, label=f'Destruction of “{short_title}”')
 			d.referred_to_by = vocab.Note(ident='', content=note)
 			if year is not None:
@@ -85,7 +85,7 @@ class PopulateObject(Configurable):
 		title = data.get('title')
 		title = truncate_with_ellipsis(title, 100) or title
 
-		vi_id = hmo.id + '-VisualItem'
+		vi_id = hmo.id + '-VisItem'
 		vi = model.VisualItem(ident=vi_id)
 		vidata = {'uri': vi_id}
 		if title:
@@ -347,7 +347,7 @@ class AddArtists(Configurable):
 			hmo_label = f'{hmo._label}'
 		except AttributeError:
 			hmo_label = 'object'
-		event_id = hmo.id + '-Production'
+		event_id = hmo.id + '-Prod'
 		event = model.Production(ident=event_id, label=f'Production event for {hmo_label}')
 		hmo.produced_by = event
 
@@ -372,9 +372,6 @@ class AddArtists(Configurable):
 		or_anon_records = [is_or_anon(a) for a in artists]
 		uncertain_attribution = any(or_anon_records)
 		for seq_no, a in enumerate(artists):
-			attrib_assignment_classes = [model.AttributeAssignment]
-			if uncertain_attribution:
-				attrib_assignment_classes.append(vocab.PossibleAssignment)
 			if is_or_anon(a):
 				# do not model the "or anonymous" records; they turn into uncertainty on the other records
 				continue
@@ -383,6 +380,11 @@ class AddArtists(Configurable):
 
 			mod = a.get('attrib_mod_auth', '')
 			mods = CaseFoldingSet({m.lower().strip() for m in mod.split(';')}) - {''}
+			attrib_assignment_classes = [model.AttributeAssignment]
+			
+			if uncertain_attribution or 'or' in mods:
+				attrib_assignment_classes.append(vocab.PossibleAssignment)
+				
 			if mods:
 				# TODO: this should probably be in its own JSON service file:
 				STYLE_OF = CaseFoldingSet(attribution_modifiers['style of'])
@@ -459,10 +461,10 @@ class AddArtists(Configurable):
 					# the {uncertain_attribution} flag does not apply to this branch, because this branch is not making a statement
 					# about the artist of the work, but about the artist of the original work that this work is a copy of.
 					cls = type(hmo)
-					original_id = hmo.id + '-Original'
+					original_id = hmo.id + '-Orig'
 					original_label = f'Original of {hmo_label}'
 					original_hmo = cls(ident=original_id, label=original_label)
-					original_event_id = original_hmo.id + '-Production'
+					original_event_id = original_hmo.id + '-Prod'
 					original_event = model.Production(ident=original_event_id, label=f'Production event for {original_label}')
 					original_hmo.produced_by = original_event
 

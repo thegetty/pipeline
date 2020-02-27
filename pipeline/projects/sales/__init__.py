@@ -93,6 +93,7 @@ class PersonIdentity:
 		self.anon_dated_re = re.compile(r'\[ANONYMOUS - (\d+)TH C[.]\]')
 		self.anon_period_re = re.compile(r'\[ANONYMOUS - (MODERN|ANTIQUE)\]')
 		self.anon_dated_nationality_re = re.compile(r'\[(\w+) - (\d+)TH C[.]\]')
+		self.anon_nationality_re = re.compile(r'\[(?!ANON)(\w+)\]', re.IGNORECASE)
 
 	def acceptable_person_auth_name(self, auth_name):
 		if not auth_name or auth_name in self.ignore_authnames:
@@ -102,6 +103,8 @@ class PersonIdentity:
 		return True
 
 	def is_anonymous_group(self, auth_name):
+		if self.anon_nationality_re.match(auth_name):
+			return True
 		if self.anon_dated_nationality_re.match(auth_name):
 			return True
 		elif self.anon_dated_re.match(auth_name):
@@ -210,7 +213,8 @@ class PersonIdentity:
 		data['nationality'] = []
 		
 		if self.is_anonymous_group(auth_name):
-			nationality_match = self.anon_dated_nationality_re.match(auth_name)
+			nationality_match = self.anon_nationality_re.match(auth_name)
+			dated_nationality_match = self.anon_dated_nationality_re.match(auth_name)
 			dated_match = self.anon_dated_re.match(auth_name)
 			if 'events' not in data:
 				data['events'] = []
@@ -218,7 +222,13 @@ class PersonIdentity:
 				with suppress(ValueError):
 					nationality = nationality_match.group(1).lower()
 					nationalities.append(nationality)
-					century = int(nationality_match.group(2))
+					group_label = self.anonymous_group_label(role, nationality=nationality)
+					data['label'] = group_label
+			elif dated_nationality_match:
+				with suppress(ValueError):
+					nationality = dated_nationality_match.group(1).lower()
+					nationalities.append(nationality)
+					century = int(dated_nationality_match.group(2))
 					group_label = self.anonymous_group_label(role, century=century, nationality=nationality)
 					data['label'] = group_label
 					a = self.professional_activity(group_label, century=century)
@@ -288,7 +298,7 @@ class ProvenanceUtilityHelper(UtilityHelper):
 		super().__init__(project_name)
 		# TODO: does this handle all the cases of data packed into the lot_number string that need to be stripped?
 		self.shared_lot_number_re = re.compile(r'(\[[a-z]\])')
-		self.ignore_house_authnames = CaseFoldingSet(('Anonymous',))
+		self.ignore_house_authnames = CaseFoldingSet(('Anonymous', '[Anonymous]'))
 		self.csv_source_columns = ['pi_record_no', 'star_record_no', 'catalog_number']
 		self.problematic_record_uri = f'tag:getty.edu,2019:digital:pipeline:{project_name}:ProblematicRecord'
 		self.person_identity = PersonIdentity(make_shared_uri=self.make_shared_uri, make_proj_uri=self.make_proj_uri)

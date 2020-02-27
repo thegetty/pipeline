@@ -115,7 +115,7 @@ class TestSalesPipelineOutput(unittest.TestCase):
 		house_names = {o['_label'] for o in houses.values()}
 		house_ids = {o['id'] for o in houses.values()}
 		house_types = {c['_label'] for o in houses.values() for c in o.get('classified_as', [])}
-		self.assertEqual(house_names, {'Paul de Cock'})
+		self.assertEqual(house_names, {'Cock (Paulus)'})
 		self.assertEqual(house_types, {'Auction House (organization)'})
 
 		events = [activities[k] for k in activities if k not in {key_119, key_120}]

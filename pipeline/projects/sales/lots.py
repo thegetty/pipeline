@@ -26,8 +26,7 @@ class AddAuctionOfLot(Configurable):
 
 	helper = Option(required=True)
 	problematic_records = Service('problematic_records')
-	auction_locations = Service('auction_locations')
-	auction_houses = Service('auction_houses')
+	event_properties = Service('event_properties')
 	non_auctions = Service('non_auctions')
 	transaction_types = Service('transaction_types')
 	def __init__(self, *args, **kwargs):
@@ -98,10 +97,12 @@ class AddAuctionOfLot(Configurable):
 		lot.used_specific_object = coll
 		data['_lot_object_set'] = add_crom_data(data={}, what=coll)
 
-	def __call__(self, data, non_auctions, auction_houses, auction_locations, problematic_records, transaction_types):
+	def __call__(self, data, non_auctions, event_properties, problematic_records, transaction_types):
 		'''Add modeling data for the auction of a lot of objects.'''
 		self.helper.copy_source_information(data['_object'], data)
 
+		auction_houses = event_properties['auction_houses']
+		auction_locations = event_properties['auction_locations']
 		auction_data = data['auction_of_lot']
 		try:
 			lot_object_key = object_key(auction_data)
@@ -213,7 +214,7 @@ def prov_entry_label(sale_type, transaction, transaction_types, cno, lots, date,
 class AddAcquisitionOrBidding(Configurable):
 	helper = Option(required=True)
 	non_auctions = Service('non_auctions')
-	auction_houses = Service('auction_houses')
+	event_properties = Service('event_properties')
 	buy_sell_modifiers = Service('buy_sell_modifiers')
 	transaction_types = Service('transaction_types')
 
@@ -682,9 +683,10 @@ class AddAcquisitionOrBidding(Configurable):
 		pi.add_person(data, sales_record, relative_id=rec_id)
 		return data
 
-	def __call__(self, data:dict, non_auctions, auction_houses, buy_sell_modifiers, transaction_types):
+	def __call__(self, data:dict, non_auctions, event_properties, buy_sell_modifiers, transaction_types):
 		'''Determine if this record has an acquisition or bidding, and add appropriate modeling'''
 		parent = data['parent_data']
+		auction_houses = event_properties['auction_houses']
 		sales_record = get_crom_object(data['_record'])
 		transaction = parent['transaction']
 		transaction = transaction.replace('[?]', '').rstrip()

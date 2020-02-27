@@ -525,7 +525,7 @@ class AddAcquisitionOrBidding(Configurable):
 			data['_other_owners'] = []
 		data['_other_owners'].append(owner_record)
 
-		tx_uri = hmo.id + f'-{record_id}-ProvenanceEntry'
+		tx_uri = hmo.id + f'-{record_id}-Prov'
 		tx_label_args = tuple([sale_type, 'Sold', transaction_types] + list(lot_object_key) + [rel])
 		tx = self.related_procurement(hmo, tx_label_args, current_tx, ts, buyer=owner, previous=rev, ident=tx_uri)
 
@@ -550,7 +550,7 @@ class AddAcquisitionOrBidding(Configurable):
 		tx_label_args = tuple([sale_type, 'Sold', transaction_types] + list(lot_object_key) + [rel])
 		for i, seller_data in enumerate(sellers):
 			seller = get_crom_object(seller_data)
-			tx_uri = hmo.id + f'-seller-{i}-ProvenanceEntry'
+			tx_uri = hmo.id + f'-seller-{i}-Prov'
 			tx = self.related_procurement(hmo, tx_label_args, current_ts=ts, buyer=seller, previous=True, ident=tx_uri)
 			if source:
 				tx.referred_to_by = source

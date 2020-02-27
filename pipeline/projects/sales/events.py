@@ -67,7 +67,7 @@ class PopulateAuctionEvent(Configurable):
 		# helper.make_place is called here instead of using make_la_place as a separate graph node because the Place object
 		# gets stored in the `auction_locations` object to be used in the second graph component
 		# which uses the data to associate the place with auction lots.
-		base_uri = self.helper.make_proj_uri('AUCTION-EVENT', 'CATALOGNUMBER', cno, 'PLACE', '')
+		base_uri = self.helper.make_proj_uri('AUCTION-EVENT', cno, 'PLACE', '')
 		place_data = self.helper.make_place(current, base_uri=base_uri)
 		place = get_crom_object(place_data)
 		if place:
@@ -86,13 +86,21 @@ class PopulateAuctionEvent(Configurable):
 		event_record = get_crom_object(data['_record'])
 		pi = self.helper.person_identity
 		for seq_no, expert in enumerate(data.get('expert', [])):
-			expert['object_type'] = vocab.Expert
 			person = pi.add_person(expert, event_record, relative_id=f'expert-{seq_no+1}', role='expert')
 			event_experts[cno].append(person)
+			data['_organizers'].append(add_crom_data(data={}, what=person))
+			role_id = self.helper.make_proj_uri('AUCTION-EVENT', cno, 'Expert', seq_no)
+			role = vocab.Expert(ident=role_id, label=f'Role of Expert in the event {cno}')
+			role.carried_out_by = person
+			auction.part = role
 		for seq_no, commissaire in enumerate(data.get('commissaire', [])):
-			expert['object_type'] = vocab.CommissairePriseur
-			person = pi.add_person(expert, event_record, relative_id=f'commissaire-{seq_no+1}', role='commissaire')
+			person = pi.add_person(commissaire, event_record, relative_id=f'commissaire-{seq_no+1}', role='commissaire')
 			event_commissaires[cno].append(person)
+			data['_organizers'].append(add_crom_data(data={}, what=person))
+			role_id = self.helper.make_proj_uri('AUCTION-EVENT', cno, 'Commissaire', seq_no)
+			role = vocab.CommissairePriseur(ident=role_id, label=f'Role of Commissaire-priseur in the event {cno}')
+			role.carried_out_by = person
+			auction.part = role
 
 		notes = data.get('notes')
 		if notes:

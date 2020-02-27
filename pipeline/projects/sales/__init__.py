@@ -58,6 +58,7 @@ import pipeline.linkedart
 from pipeline.linkedart import add_crom_data, get_crom_object
 from pipeline.io.csv import CurriedCSVReader
 from pipeline.nodes.basic import \
+			RemoveKeys, \
 			GroupRepeatingKeys, \
 			GroupKeys, \
 			AddArchesModel, \
@@ -778,6 +779,37 @@ class SalesPipeline(PipelineBase):
 	def add_sales_chain(self, graph, records, services, serialize=True):
 		'''Add transformation of sales records to the bonobo pipeline.'''
 		sales = graph.add_chain(
+			RemoveKeys(
+				# these are fields that are duplicated here in the contents data,
+				# but should only be used in the (event) descriptions data.
+				# removing them here ensures that they are not mistakenly used.
+				keys={
+					'expert_auth_1',
+					'expert_ulan_1',
+					'expert_auth_2',
+					'expert_ulan_2',
+					'expert_auth_3',
+					'expert_ulan_3',
+					'expert_auth_4',
+					'expert_ulan_4',
+					'commissaire_pr_1',
+					'comm_ulan_1',
+					'commissaire_pr_2',
+					'comm_ulan_2',
+					'commissaire_pr_3',
+					'comm_ulan_3',
+					'commissaire_pr_4',
+					'comm_ulan_4',
+					'auction_house_1',
+					'house_ulan_1',
+					'auction_house_2',
+					'house_ulan_2',
+					'auction_house_3',
+					'house_ulan_3',
+					'auction_house_4',
+					'house_ulan_4',
+				}
+			),
 			GroupRepeatingKeys(
 				drop_empty=True,
 				mapping={

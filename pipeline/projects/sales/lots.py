@@ -71,7 +71,7 @@ class AddAuctionOfLot(Configurable):
 		cno, lno, _ = object_key(auction_data)
 		notes = auction_data.get('lot_notes')
 		if notes:
-			note_id = lot.id + '-LotNotes'
+			note_id = lot.id + '-Notes'
 			lot.referred_to_by = vocab.Note(ident=note_id, content=notes)
 		if not lno:
 			warnings.warn(f'Setting empty identifier on {lot.id}')
@@ -308,7 +308,7 @@ class AddAcquisitionOrBidding(Configurable):
 		return label
 
 	def final_owner_procurement(self, tx_label_args, final_owner, current_tx, hmo, current_ts):
-		tx_uri = hmo.id + '-FinalOwnerProvenanceEntry'
+		tx_uri = hmo.id + '-FinalOwnerProv'
 		tx = self.related_procurement(hmo, tx_label_args, current_tx, current_ts, buyer=final_owner, ident=tx_uri)
 		return tx
 
@@ -375,9 +375,9 @@ class AddAcquisitionOrBidding(Configurable):
 
 		tx_data = parent['_prov_entry_data']
 		current_tx = get_crom_object(tx_data)
-		payment_id = current_tx.id + '-Payment'
+		payment_id = current_tx.id + '-Pay'
 
-		acq_id = hmo.id + '-Acquisition'
+		acq_id = hmo.id + '-Acq'
 		acq = model.Acquisition(ident=acq_id, label=acq_label)
 		acq.transferred_title_of = hmo
 
@@ -525,7 +525,7 @@ class AddAcquisitionOrBidding(Configurable):
 			data['_other_owners'] = []
 		data['_other_owners'].append(owner_record)
 
-		tx_uri = hmo.id + f'-{record_id}-ProvenanceEntry'
+		tx_uri = hmo.id + f'-{record_id}-Prov'
 		tx_label_args = tuple([sale_type, 'Sold', transaction_types] + list(lot_object_key) + [rel])
 		tx = self.related_procurement(hmo, tx_label_args, current_tx, ts, buyer=owner, previous=rev, ident=tx_uri)
 
@@ -550,7 +550,7 @@ class AddAcquisitionOrBidding(Configurable):
 		tx_label_args = tuple([sale_type, 'Sold', transaction_types] + list(lot_object_key) + [rel])
 		for i, seller_data in enumerate(sellers):
 			seller = get_crom_object(seller_data)
-			tx_uri = hmo.id + f'-seller-{i}-ProvenanceEntry'
+			tx_uri = hmo.id + f'-seller-{i}-Prov'
 			tx = self.related_procurement(hmo, tx_label_args, current_ts=ts, buyer=seller, previous=True, ident=tx_uri)
 			if source:
 				tx.referred_to_by = source

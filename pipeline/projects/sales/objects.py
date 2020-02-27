@@ -51,7 +51,7 @@ class PopulateObject(Configurable):
 		if m:
 			method = m.group(1)
 			year = m.group(2)
-			dest_id = hmo.id + '-Destruction'
+			dest_id = hmo.id + '-Destr'
 			d = model.Destruction(ident=dest_id, label=f'Destruction of “{short_title}”')
 			d.referred_to_by = vocab.Note(ident='', content=note)
 			if year is not None:
@@ -85,7 +85,7 @@ class PopulateObject(Configurable):
 		title = data.get('title')
 		title = truncate_with_ellipsis(title, 100) or title
 
-		vi_id = hmo.id + '-VisualItem'
+		vi_id = hmo.id + '-VisItem'
 		vi = model.VisualItem(ident=vi_id)
 		vidata = {'uri': vi_id}
 		if title:
@@ -347,7 +347,7 @@ class AddArtists(Configurable):
 			hmo_label = f'{hmo._label}'
 		except AttributeError:
 			hmo_label = 'object'
-		event_id = hmo.id + '-Production'
+		event_id = hmo.id + '-Prod'
 		event = model.Production(ident=event_id, label=f'Production event for {hmo_label}')
 		hmo.produced_by = event
 
@@ -461,10 +461,10 @@ class AddArtists(Configurable):
 					# the {uncertain_attribution} flag does not apply to this branch, because this branch is not making a statement
 					# about the artist of the work, but about the artist of the original work that this work is a copy of.
 					cls = type(hmo)
-					original_id = hmo.id + '-Original'
+					original_id = hmo.id + '-Orig'
 					original_label = f'Original of {hmo_label}'
 					original_hmo = cls(ident=original_id, label=original_label)
-					original_event_id = original_hmo.id + '-Production'
+					original_event_id = original_hmo.id + '-Prod'
 					original_event = model.Production(ident=original_event_id, label=f'Production event for {original_label}')
 					original_hmo.produced_by = original_event
 

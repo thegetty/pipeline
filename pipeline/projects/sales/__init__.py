@@ -451,7 +451,8 @@ class ProvenanceUtilityHelper(UtilityHelper):
 		for p in prices:
 			n = p.get('price_note')
 			if n and n.startswith('for lots '):
-				return self.make_proj_uri('PROV-MULTI', cno, date, n[9:])
+				lot_list = n[9:].split(' & ')
+				return self.make_proj_uri('PROV-MULTI', cno, date, *lot_list)
 		return self.make_proj_uri('PROV', cno, date, shared_lot_number)
 
 	def lots_in_transaction(self, data, metadata):

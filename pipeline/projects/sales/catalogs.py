@@ -27,6 +27,11 @@ class AddAuctionCatalog(Configurable):
 		sale_type = sale_type or 'Auction'
 		catalog = self.helper.catalog_text(cno, sale_type)
 		cdata = {'uri': catalog.id}
+		puid = data.get('persistent_puid')
+		if puid:
+			puid_id = self.helper.gri_number_id(puid)
+			catalog.identified_by = puid_id
+			cdata['identifiers'] = [puid_id]
 		
 		data['_catalog'] = add_crom_data(data=cdata, what=catalog)
 		yield data

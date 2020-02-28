@@ -63,6 +63,14 @@ class CleanDateToSpan(Configurable):
 				pprint.pprint(data)
 		return NOT_MODIFIED
 
+class RemoveKeys(Configurable):
+	keys = Option(set)
+	def __call__(self, data:dict):
+		for key in self.keys:
+			with suppress(KeyError):
+				del data[key]
+		return data
+
 class GroupRepeatingKeys(Configurable):
 	mapping = Option(dict)
 	drop_empty = Option(bool, default=True)

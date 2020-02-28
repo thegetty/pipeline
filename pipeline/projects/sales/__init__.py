@@ -58,6 +58,7 @@ import pipeline.linkedart
 from pipeline.linkedart import add_crom_data, get_crom_object
 from pipeline.io.csv import CurriedCSVReader
 from pipeline.nodes.basic import \
+			RemoveKeys, \
 			GroupRepeatingKeys, \
 			GroupKeys, \
 			AddArchesModel, \
@@ -160,7 +161,7 @@ class PersonIdentity:
 		self.add_names(a, referrer=sales_record, **kwargs)
 		self.add_props(a, **kwargs)
 		auth_name = a.get('auth_name')
-		if self.is_anonymous_group(auth_name):
+		if auth_name and self.is_anonymous_group(auth_name):
 			self.make_la_org(a)
 		else:
 			self.make_la_person(a)
@@ -202,7 +203,7 @@ class PersonIdentity:
 
 	def add_props(self, data:dict, role=None, **kwargs):
 		role = role if role else 'person'
-		auth_name = data.get('auth_name')
+		auth_name = data.get('auth_name', '')
 		period_match = self.anon_period_re.match(auth_name)
 		nationalities = []
 		if 'nationality' in data:
@@ -260,7 +261,7 @@ class PersonIdentity:
 		If the `role` string is given (e.g. 'artist'), also sets the `role_label` key
 		to a value (e.g. 'artist “RUBENS, PETER PAUL”').
 		'''
-		auth_name = data.get('auth_name')
+		auth_name = data.get('auth_name', '')
 		role_label = None
 		if self.acceptable_person_auth_name(auth_name):
 			if role:
@@ -523,7 +524,6 @@ class ProvenanceUtilityHelper(UtilityHelper):
 		auction_house_uri_keys = self.auction_house_uri_keys(a, sequence=sequence)
 		a['uri'] = self.auction_house_uri(a, sequence=sequence)
 		a['uid'] = '-'.join([str(k) for k in auction_house_uri_keys])
-		house = vocab.AuctionHouseOrg(ident=a['uri'])
 		ulan = None
 		with suppress(ValueError, TypeError):
 			ulan = int(a.get('ulan'))
@@ -537,7 +537,6 @@ class ProvenanceUtilityHelper(UtilityHelper):
 				pname.referred_to_by = event_record
 			a['identifiers'].append(pname)
 			a['label'] = auth_name
-			house._label = auth_name
 
 		name = a.get('name')
 		if name:
@@ -545,15 +544,16 @@ class ProvenanceUtilityHelper(UtilityHelper):
 			if event_record:
 				n.referred_to_by = event_record
 			a['identifiers'].append(n)
-			if not hasattr(house, 'label'):
+			if 'label' not in a:
 				a['label'] = name
-				house._label = a['label']
 		else:
 			a['label'] = '(Anonymous)'
 
+		make_house = pipeline.linkedart.MakeLinkedArtAuctionHouseOrganization()
+		make_house(a)
+		house = get_crom_object(a)
 
-		add_crom_data(data=a, what=house)
-		return a
+		return add_crom_data(data=a, what=house)
 
 def add_crom_price(data, parent, services, add_citations=False):
 	'''
@@ -636,9 +636,13 @@ class SalesPipeline(PipelineBase):
 			'make_la_person': pipeline.linkedart.MakeLinkedArtPerson(),
 			'unique_catalogs': {},
 			'post_sale_map': {},
-			'auction_houses': {},
+			'event_properties': {
+				'auction_houses': defaultdict(list),
+				'auction_locations': {},
+				'experts': defaultdict(list),
+				'commissaire': defaultdict(list),
+			},
 			'non_auctions': {},
-			'auction_locations': {},
 		})
 		return services
 
@@ -674,8 +678,22 @@ class SalesPipeline(PipelineBase):
 				drop_empty=True,
 				mapping={
 					'seller': {'prefixes': ('sell_auth_name', 'sell_auth_q')},
-					'expert': {'prefixes': ('expert', 'expert_auth', 'expert_ulan')},
-					'commissaire': {'prefixes': ('comm_pr', 'comm_pr_auth', 'comm_pr_ulan')},
+					'expert': {
+						'postprocess': [
+							lambda x, _: replace_key_pattern(r'^(expert)$', 'expert_name', x),
+							lambda x, _: strip_key_prefix('expert_', x),
+							lambda x, _: replace_key_pattern(r'^(auth)$', 'auth_name', x),
+						],
+						'prefixes': ('expert', 'expert_auth', 'expert_ulan')
+					},
+					'commissaire': {
+						'postprocess': [
+							lambda x, _: replace_key_pattern(r'^(comm_pr)$', 'comm_pr_name', x),
+							lambda x, _: strip_key_prefix('comm_pr_', x),
+							lambda x, _: replace_key_pattern(r'^(auth)$', 'auth_name', x),
+						],
+						'prefixes': ('comm_pr', 'comm_pr_auth', 'comm_pr_ulan')
+					},
 					'auction_house': {
 						'postprocess': [
 							lambda x, _: strip_key_prefix('auc_house_', x),
@@ -772,6 +790,37 @@ class SalesPipeline(PipelineBase):
 	def add_sales_chain(self, graph, records, services, serialize=True):
 		'''Add transformation of sales records to the bonobo pipeline.'''
 		sales = graph.add_chain(
+			RemoveKeys(
+				# these are fields that are duplicated here in the contents data,
+				# but should only be used in the (event) descriptions data.
+				# removing them here ensures that they are not mistakenly used.
+				keys={
+					'expert_auth_1',
+					'expert_ulan_1',
+					'expert_auth_2',
+					'expert_ulan_2',
+					'expert_auth_3',
+					'expert_ulan_3',
+					'expert_auth_4',
+					'expert_ulan_4',
+					'commissaire_pr_1',
+					'comm_ulan_1',
+					'commissaire_pr_2',
+					'comm_ulan_2',
+					'commissaire_pr_3',
+					'comm_ulan_3',
+					'commissaire_pr_4',
+					'comm_ulan_4',
+					'auction_house_1',
+					'house_ulan_1',
+					'auction_house_2',
+					'house_ulan_2',
+					'auction_house_3',
+					'house_ulan_3',
+					'auction_house_4',
+					'house_ulan_4',
+				}
+			),
 			GroupRepeatingKeys(
 				drop_empty=True,
 				mapping={
@@ -1120,12 +1169,11 @@ class SalesPipeline(PipelineBase):
 			_ = self.add_catalog_linguistic_objects_chain(g, auction_events, serialize=True)
 			_ = self.add_places_chain(g, auction_events, serialize=True)
 
-			houses = g.add_chain(
-				ExtractKeyedValues(key='auction_house'),
-				pipeline.linkedart.MakeLinkedArtAuctionHouseOrganization(),
+			organizers = g.add_chain(
+				ExtractKeyedValues(key='_organizers'),
 				_input=auction_events.output
 			)
-			_ = self.add_person_or_group_chain(g, houses, serialize=True)
+			_ = self.add_person_or_group_chain(g, organizers, serialize=True)
 
 		for g in component2:
 			physical_catalog_records = g.add_chain(

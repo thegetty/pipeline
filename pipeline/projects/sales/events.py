@@ -33,7 +33,7 @@ class AddAuctionEvent(Configurable):
 
 class PopulateAuctionEvent(Configurable):
 	helper = Option(required=True)
-	auction_locations = Service('auction_locations')
+	event_properties = Service('event_properties')
 
 	def auction_event_location(self, data:dict):
 		'''
@@ -51,9 +51,13 @@ class PopulateAuctionEvent(Configurable):
 		loc = parse_location(*parts, uri_base=self.helper.uid_tag_prefix, types=('Place', 'City', 'Country'))
 		return loc
 
-	def __call__(self, data:dict, auction_locations):
+	def __call__(self, data:dict, event_properties):
 		'''Add modeling data for an auction event'''
 		cno = data['catalog_number']
+		auction_locations = event_properties['auction_locations']
+		event_experts = event_properties['experts']
+		event_commissaires = event_properties['commissaire']
+		
 		auction = get_crom_object(data)
 		catalog = data['_catalog']['_LOD_OBJECT']
 
@@ -63,7 +67,7 @@ class PopulateAuctionEvent(Configurable):
 		# helper.make_place is called here instead of using make_la_place as a separate graph node because the Place object
 		# gets stored in the `auction_locations` object to be used in the second graph component
 		# which uses the data to associate the place with auction lots.
-		base_uri = self.helper.make_proj_uri('AUCTION-EVENT', 'CATALOGNUMBER', cno, 'PLACE', '')
+		base_uri = self.helper.make_proj_uri('AUCTION-EVENT', cno, 'PLACE', '')
 		place_data = self.helper.make_place(current, base_uri=base_uri)
 		place = get_crom_object(place_data)
 		if place:
@@ -78,6 +82,25 @@ class PopulateAuctionEvent(Configurable):
 			end=end,
 			inclusive=True
 		)
+
+		event_record = get_crom_object(data['_record'])
+		pi = self.helper.person_identity
+		for seq_no, expert in enumerate(data.get('expert', [])):
+			person = pi.add_person(expert, event_record, relative_id=f'expert-{seq_no+1}', role='expert')
+			event_experts[cno].append(person)
+			data['_organizers'].append(add_crom_data(data={}, what=person))
+			role_id = '' # self.helper.make_proj_uri('AUCTION-EVENT', cno, 'Expert', seq_no)
+			role = vocab.Expert(ident=role_id, label=f'Role of Expert in the event {cno}')
+			role.carried_out_by = person
+			auction.part = role
+		for seq_no, commissaire in enumerate(data.get('commissaire', [])):
+			person = pi.add_person(commissaire, event_record, relative_id=f'commissaire-{seq_no+1}', role='commissaire')
+			event_commissaires[cno].append(person)
+			data['_organizers'].append(add_crom_data(data={}, what=person))
+			role_id = '' # self.helper.make_proj_uri('AUCTION-EVENT', cno, 'Commissaire', seq_no)
+			role = vocab.CommissairePriseur(ident=role_id, label=f'Role of Commissaire-priseur in the event {cno}')
+			role.carried_out_by = person
+			auction.part = role
 
 		notes = data.get('notes')
 		if notes:
@@ -105,9 +128,9 @@ class PopulateAuctionEvent(Configurable):
 
 class AddAuctionHouses(Configurable):
 	helper = Option(required=True)
-	auction_houses = Service('auction_houses')
+	event_properties = Service('event_properties')
 
-	def __call__(self, data:dict, auction_houses):
+	def __call__(self, data:dict, event_properties):
 		'''
 		Add modeling data for the auction house organization(s) associated with an auction
 		event.
@@ -121,11 +144,13 @@ class AddAuctionHouses(Configurable):
 
 		house_objects = []
 		event_record = get_crom_object(data['_record'])
+		d['_organizers'] = []
 		for i, h in enumerate(houses):
 			h['_catalog'] = catalog
 			self.helper.add_auction_house_data(self.helper.copy_source_information(h, data), sequence=i, event_record=event_record)
 			house = get_crom_object(h)
 			auction.carried_out_by = house
 			house_objects.append(house)
-		auction_houses[cno] = house_objects
+			d['_organizers'].append(h)
+		event_properties['auction_houses'][cno] += house_objects
 		return d

@@ -352,7 +352,7 @@ class ProvenanceUtilityHelper(UtilityHelper):
 		elif sale_type in ('Auction'):
 			return vocab.AuctionEvent
 		else:
-			warnings.warn(f'Unexpected sale type: {sale_type!r}')
+			warnings.warn(f'*** Unexpected sale type: {sale_type!r}')
 
 	def sale_type_for_sale_type(self, sale_type):
 		if sale_type in ('Private Contract Sale', 'Stock List'):
@@ -363,7 +363,7 @@ class ProvenanceUtilityHelper(UtilityHelper):
 		elif sale_type in ('Auction'):
 			return vocab.Auction
 		else:
-			warnings.warn(f'Unexpected sale type: {sale_type!r}')
+			warnings.warn(f'*** Unexpected sale type: {sale_type!r}')
 
 	def catalog_type_for_sale_type(self, sale_type):
 		if sale_type == 'Private Contract Sale':
@@ -375,7 +375,7 @@ class ProvenanceUtilityHelper(UtilityHelper):
 		elif sale_type == 'Auction':
 			return vocab.AuctionCatalog
 		else:
-			warnings.warn(f'Unexpected sale type: {sale_type!r}')
+			warnings.warn(f'*** Unexpected sale type: {sale_type!r}')
 
 	def catalog_text(self, cno, sale_type='Auction'):
 		uri = self.make_proj_uri('CATALOG', cno)
@@ -431,7 +431,7 @@ class ProvenanceUtilityHelper(UtilityHelper):
 			labels = [f'Lottery Catalog {cno}'] + labels
 			catalog = catalog_type(ident=uri, label=', '.join(labels))
 		else:
-			warnings.warn(f'Unexpected sale type: {sale_type!r}')
+			warnings.warn(f'*** Unexpected sale type: {sale_type!r}')
 		return catalog
 
 	def sale_for_sale_type(self, sale_type, lot_object_key):
@@ -455,7 +455,7 @@ class ProvenanceUtilityHelper(UtilityHelper):
 			lot_label = f'Lottery Drawing for {lot_id}'
 			lot._label = lot_label
 		else:
-			warnings.warn(f'Unexpected sale type: {sale_type!r}')
+			warnings.warn(f'*** Unexpected sale type: {sale_type!r}')
 		return lot
 
 	def sale_event_for_catalog_number(self, catalog_number, sale_type='Auction'):
@@ -644,7 +644,7 @@ class SalesPipeline(PipelineBase):
 		vocab.register_instance('animal', {'parent': model.Type, 'id': '300249395', 'label': 'Animal'})
 		vocab.register_instance('history', {'parent': model.Type, 'id': '300033898', 'label': 'History'})
 
-		warnings.warn(f'TODO: NEED TO USE CORRECT CLASSIFICATION FOR NON-AUCTION SALES ACTIVITIES, LOTTERY CATALOG')
+		warnings.warn(f'*** TODO: NEED TO USE CORRECT CLASSIFICATION FOR NON-AUCTION SALES ACTIVITIES, LOTTERY CATALOG')
 		vocab.register_vocab_class('LotteryDrawing', {"parent": model.Activity, "id":"000000000", "label": "Lottery Drawing"})
 		vocab.register_vocab_class('Lottery', {"parent": model.Activity, "id":"000000000", "label": "Lottery"})
 		vocab.register_vocab_class('LotteryCatalog', {"parent": model.HumanMadeObject, "id":"000000000", "label": "Lottery Catalog", "metatype": "work type"})

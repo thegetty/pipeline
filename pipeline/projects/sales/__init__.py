@@ -587,6 +587,9 @@ class SalesPipeline(PipelineBase):
 	'''Bonobo-based pipeline for transforming Provenance data from CSV into JSON-LD.'''
 	def __init__(self, input_path, catalogs, auction_events, contents, **kwargs):
 		project_name = 'sales'
+		self.input_path = input_path
+		self.services = None
+
 		helper = ProvenanceUtilityHelper(project_name)
 		self.uid_tag_prefix = UID_TAG_PREFIX
 
@@ -619,7 +622,6 @@ class SalesPipeline(PipelineBase):
 		self.contents_files_pattern = contents['files_pattern']
 		self.limit = kwargs.get('limit')
 		self.debug = kwargs.get('debug', False)
-		self.input_path = input_path
 
 		fs = bonobo.open_fs(input_path)
 		with fs.open(self.catalogs_header_file, newline='') as csvfile:
@@ -632,15 +634,15 @@ class SalesPipeline(PipelineBase):
 			r = csv.reader(csvfile)
 			self.contents_headers = [v.lower() for v in next(r)]
 
+	def setup_services(self):
 	# Set up environment
-	def get_services(self):
 		'''Return a `dict` of named services available to the bonobo pipeline.'''
-		services = super().get_services()
+		services = super().setup_services()
 		services.update({
 			# to avoid constructing new MakeLinkedArtPerson objects millions of times, this
 			# is passed around as a service to the functions and classes that require it.
 			'make_la_person': pipeline.linkedart.MakeLinkedArtPerson(),
-			'unique_catalogs': {},
+			'unique_catalogs': defaultdict(set),
 			'post_sale_map': {},
 			'event_properties': {
 				'auction_houses': defaultdict(list),

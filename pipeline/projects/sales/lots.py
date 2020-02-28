@@ -531,7 +531,7 @@ class AddAcquisitionOrBidding(Configurable):
 			'auth_name': owner_record['own_auth'],
 			'name': owner_record['own']
 		})
-		self.add_person(owner_record, sales_record, relative_id=record_id, role='artist')
+		self.add_person(owner_record, sales_record, rec_id=record_id, role='artist')
 		owner = get_crom_object(owner_record)
 
 		# TODO: handle other fields of owner_record: own_auth_d, own_auth_q, own_ques, own_so

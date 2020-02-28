@@ -375,7 +375,7 @@ class AddArtists(Configurable):
 			if is_or_anon(a):
 				# do not model the "or anonymous" records; they turn into uncertainty on the other records
 				continue
-			person = pi.add_person(a, sales_record, relative_id=f'artist-{seq_no+1}', role='artist')
+			person = self.helper.add_person(a, sales_record, relative_id=f'artist-{seq_no+1}', role='artist')
 			artist_label = a.get('role_label')
 
 			mod = a.get('attrib_mod_auth', '')

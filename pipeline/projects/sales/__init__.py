@@ -215,6 +215,7 @@ class PersonIdentity:
 		
 		if 'referred_to_by' not in data:
 			data['referred_to_by'] = []
+
 		if data.get('name_cite'):
 			cite = vocab.BibliographyStatement(ident='', content=data['name_cite'])
 			data['referred_to_by'].append(cite)
@@ -258,7 +259,7 @@ class PersonIdentity:
 			else:
 				warnings.warn(f'No nationality instance found in crom for: {nationality}')
 
-	def add_names(self, data:dict, referrer=None, role=None):
+	def add_names(self, data:dict, referrer=None, role=None, **kwargs):
 		'''
 		Based on the presence of `auth_name` and/or `name` fields in `data`, sets the
 		`label`, `names`, and `identifier` keys to appropriate strings/`model.Identifier`
@@ -317,6 +318,31 @@ class ProvenanceUtilityHelper(UtilityHelper):
 				dst[k] = src[k]
 		return dst
 
+	def add_person(self, data, record, relative_id, **kwargs):
+		if data.get('name_so'):
+			# handling of the name_so field happens here and not in the PersonIdentity methods,
+			# because it requires access to the services data on catalogs
+			source = data['name_so']
+			components = source.split(' ')
+			if len(components) == 2:
+				owner_code, copy_number = components
+			else:
+				owner_code = source
+				copy_number = ''
+			cno = kwargs['catalog_number']
+			owner_uri = self.physical_catalog_uri(cno, owner_code, None)
+			copy_uri = self.physical_catalog_uri(cno, owner_code, copy_number)
+			unique_catalogs = self.services['unique_catalogs']
+			owned_copies = unique_catalogs.get(owner_uri)
+			if owned_copies:
+				if copy_uri in owned_copies:
+					data['_name_source_catalog_key'] = (cno, owner_code, copy_number)
+				else:
+					warnings.warn(f'*** SPECIFIC PHYSICAL CATALOG COPY NOT FOUND FOR NAME SOURCE {source} in catalog {cno}')
+			else:
+				warnings.warn(f'*** NO CATALOG OWNER FOUND FOR NAME SOURCE {source} on catalog {cno}')
+		return self.person_identity.add_person(data, record, relative_id, **kwargs)
+
 	def event_type_for_sale_type(self, sale_type):
 		if sale_type in ('Private Contract Sale', 'Stock List'):
 			# 'Stock List' is treated just like a Private Contract Sale, except for the catalogs
@@ -365,9 +391,26 @@ class ProvenanceUtilityHelper(UtilityHelper):
 			catalog = vocab.SalesCatalogText(ident=uri, label=f'Sale Catalog {cno}')
 		return catalog
 
-	def physical_catalog(self, cno, sale_type, owner=None, copy=None):
+	def physical_catalog_notes(self, cno, owner, copy):
+		cat_uri = self.physical_catalog_uri(cno, owner, copy)
+		uri = cat_uri + '-HandNotes'
+		labels = []
+		if owner:
+			labels.append(f'owned by “{owner}”')
+		if copy:
+			labels.append(f'copy {copy}')
+		phys_label = ', '.join(labels)
+		label = f'Handwritten notes in Catalog {cno}'
+		catalog = model.LinguisticObject(ident=uri, label=label)
+		return catalog
+
+	def physical_catalog_uri(self, cno, owner=None, copy=None):
 		keys = [v for v in [cno, owner, copy] if v]
 		uri = self.make_proj_uri('PHYS-CAT', *keys)
+		return uri
+	
+	def physical_catalog(self, cno, sale_type, owner=None, copy=None):
+		uri = self.physical_catalog_uri(cno, owner, copy)
 		labels = []
 		if owner:
 			labels.append(f'owned by “{owner}”')
@@ -786,10 +829,20 @@ class SalesPipeline(PipelineBase):
 			ExtractKeyedValue(key='_drawing'),
 			_input=bid_acqs.output
 		)
+		notes = graph.add_chain(
+			ExtractKeyedValues(key='_phys_catalog_notes'),
+			_input=bid_acqs.output
+		)
+		catalogs = graph.add_chain(
+			ExtractKeyedValues(key='_phys_catalogs'),
+			_input=bid_acqs.output
+		)
 		_ = self.add_places_chain(graph, bid_acqs, key='_owner_locations', serialize=True)
 
 		if serialize:
 			# write SALES data
+			self.add_serialization_chain(graph, catalogs.output, model=self.models['HumanMadeObject'])
+			self.add_serialization_chain(graph, notes.output, model=self.models['LinguisticObject'])
 			self.add_serialization_chain(graph, refs.output, model=self.models['LinguisticObject'])
 			self.add_serialization_chain(graph, bids.output, model=self.models['Bidding'])
 			self.add_serialization_chain(graph, drawing.output, model=self.models['Drawing'])

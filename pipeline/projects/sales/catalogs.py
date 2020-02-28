@@ -69,6 +69,7 @@ class AddPhysicalCatalogOwners(Configurable):
 		# and owner code (e.g. for owners who do not have multiple copies of a catalog).
 		cno = data['catalog_number']
 		owner_code = data['owner_code']
+		copy_number = data.get('copy_number', '')
 		owner_name = None
 		with suppress(KeyError):
 			owner_name = location_codes[owner_code]
@@ -89,10 +90,9 @@ class AddPhysicalCatalogOwners(Configurable):
 			catalog = get_crom_object(data)
 			catalog.current_owner = owner
 
-		uri = self.helper.make_proj_uri('CATALOG', cno, owner_code, None)
-		if uri not in unique_catalogs:
-			unique_catalogs[uri] = set()
-		unique_catalogs[uri].add(uri)
+		owner_uri = self.helper.physical_catalog_uri(cno, owner_code, None) # None here because we want a key that will stand in for all the copies belonging to a single owner
+		copy_uri = self.helper.physical_catalog_uri(cno, owner_code, copy_number)
+		unique_catalogs[owner_uri].add(copy_uri)
 		return data
 
 #mark - Physical Catalogs - Informational Catalogs

@@ -384,7 +384,7 @@ class AddArtists(Configurable):
 			artist_label = a.get('role_label')
 
 			mod = a.get('attrib_mod_auth', '')
-			mods = CaseFoldingSet({m.lower().strip() for m in mod.split(';')}) - {''}
+			mods = CaseFoldingSet({m.strip() for m in mod.split(';')} - {''})
 			attrib_assignment_classes = [model.AttributeAssignment]
 			
 			if uncertain_attribution or 'or' in mods:

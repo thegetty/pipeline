@@ -213,6 +213,12 @@ class PersonIdentity:
 				nationalities += data['nationality']
 		data['nationality'] = []
 		
+		if 'referred_to_by' not in data:
+			data['referred_to_by'] = []
+		if data.get('name_cite'):
+			cite = vocab.BibliographyStatement(ident='', content=data['name_cite'])
+			data['referred_to_by'].append(cite)
+
 		if self.is_anonymous_group(auth_name):
 			nationality_match = self.anon_nationality_re.match(auth_name)
 			dated_nationality_match = self.anon_dated_nationality_re.match(auth_name)

@@ -47,11 +47,35 @@ class StaticInstanceHolder:
 class PipelineBase:
 	def __init__(self, project_name, *, helper):
 		self.project_name = project_name
-		self.input_path = None
 		self.helper = helper
 		self.static_instances = StaticInstanceHolder(self.setup_static_instances())
-		helper.add_services(self.get_services())
+		self.services = self.setup_services()
+		helper.add_services(self.services)
 		helper.add_static_instances(self.static_instances)
+
+	def setup_services(self):
+		services = {
+			'trace_counter': itertools.count(),
+			f'fs.data.{self.project_name}': bonobo.open_fs(self.input_path)
+		}
+
+		common_path = pathlib.Path(settings.pipeline_common_service_files_path)
+		print(f'Common path: {common_path}', file=sys.stderr)
+		for file in common_path.rglob('*'):
+			service = self._service_from_path(file)
+			if service:
+				services[file.stem] = service
+
+		proj_path = pathlib.Path(settings.pipeline_project_service_files_path(self.project_name))
+		print(f'Project path: {proj_path}', file=sys.stderr)
+		for file in proj_path.rglob('*'):
+			service = self._service_from_path(file)
+			if service:
+				if file.stem in services:
+					warnings.warn(f'*** Project is overloading a shared service file: {file}')
+				services[file.stem] = service
+
+		return services
 
 	def setup_static_instances(self):
 		'''
@@ -94,28 +118,7 @@ class PipelineBase:
 
 	def get_services(self):
 		'''Return a `dict` of named services available to the bonobo pipeline.'''
-		services = {
-			'trace_counter': itertools.count(),
-			f'fs.data.{self.project_name}': bonobo.open_fs(self.input_path)
-		}
-
-		common_path = pathlib.Path(settings.pipeline_common_service_files_path)
-		print(f'Common path: {common_path}', file=sys.stderr)
-		for file in common_path.rglob('*'):
-			service = self._service_from_path(file)
-			if service:
-				services[file.stem] = service
-
-		proj_path = pathlib.Path(settings.pipeline_project_service_files_path(self.project_name))
-		print(f'Project path: {proj_path}', file=sys.stderr)
-		for file in proj_path.rglob('*'):
-			service = self._service_from_path(file)
-			if service:
-				if file.stem in services:
-					warnings.warn(f'*** Project is overloading a shared service file: {file}')
-				services[file.stem] = service
-
-		return services
+		return self.services
 
 	def serializer_nodes_for_model(self, model=None, *args, **kwargs):
 		nodes = []

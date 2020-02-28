@@ -226,8 +226,7 @@ class AddAcquisitionOrBidding(Configurable):
 		}
 		super().__init__(*args, **kwargs)
 
-	@staticmethod
-	def related_procurement(hmo, tx_label_args, current_tx=None, current_ts=None, buyer=None, seller=None, previous=False, ident=None):
+	def related_procurement(self, hmo, tx_label_args, current_tx=None, current_ts=None, buyer=None, seller=None, previous=False, ident=None):
 		'''
 		Returns a new `vocab.ProvenanceEntry` object (and related acquisition) that is temporally
 		related to the supplied procurement and associated data. The new procurement is for
@@ -260,6 +259,7 @@ class AddAcquisitionOrBidding(Configurable):
 		if seller:
 			pacq.transferred_title_from = seller
 			pxfer.transferred_custody_from = seller
+
 		tx.part = pacq
 		tx.part = pxfer
 		if current_ts:
@@ -267,7 +267,7 @@ class AddAcquisitionOrBidding(Configurable):
 				pacq.timespan = timespan_before(current_ts)
 			else:
 				pacq.timespan = timespan_after(current_ts)
-		return tx
+		return tx, pacq
 
 	def _price_note(self, price):
 		'''
@@ -310,7 +310,7 @@ class AddAcquisitionOrBidding(Configurable):
 
 	def final_owner_procurement(self, tx_label_args, final_owner, current_tx, hmo, current_ts):
 		tx_uri = hmo.id + '-FinalOwnerProv'
-		tx = self.related_procurement(hmo, tx_label_args, current_tx, current_ts, buyer=final_owner, ident=tx_uri)
+		tx, _ = self.related_procurement(hmo, tx_label_args, current_tx, current_ts, buyer=final_owner, ident=tx_uri)
 		return tx
 
 	def add_transfer_of_custody(self, data, current_tx, xfer_to, xfer_from, sequence=1, purpose=None):
@@ -350,6 +350,27 @@ class AddAcquisitionOrBidding(Configurable):
 
 		current_tx.part = xfer
 
+	def attach_source_catalog(self, data, acq, people):
+		phys_catalog_notes = {}
+		phys_catalogs = {}
+		for p in people:
+			if '_name_source_catalog_key' in p:
+				source_catalog_key = p['_name_source_catalog_key']
+				so_cno, so_owner, so_copy = source_catalog_key
+				if source_catalog_key in phys_catalog_notes:
+					hand_notes = phys_catalog_notes[source_catalog_key]
+					catalog = phys_catalogs[source_catalog_key]
+				else:
+					hand_notes = self.helper.physical_catalog_notes(so_cno, so_owner, so_copy)
+					catalog_uri = self.helper.physical_catalog_uri(so_cno, so_owner, so_copy)
+					catalog = model.HumanMadeObject(ident=catalog_uri)
+					phys_catalog_notes[source_catalog_key] = hand_notes
+					phys_catalogs[source_catalog_key] = catalog
+					catalog.carries = hand_notes
+				acq.referred_to_by = hand_notes
+		data['_phys_catalog_notes'] = [add_crom_data(data={}, what=n) for n in phys_catalog_notes.values()]
+		data['_phys_catalogs'] = [add_crom_data(data={}, what=c) for c in phys_catalogs.values()]
+
 	def add_acquisition(self, data, buyers, sellers, non_auctions, buy_sell_modifiers, transaction, transaction_types):
 		'''Add modeling of an acquisition as a transfer of title from the seller to the buyer'''
 		hmo = get_crom_object(data)
@@ -381,6 +402,8 @@ class AddAcquisitionOrBidding(Configurable):
 		acq_id = hmo.id + '-Acq'
 		acq = model.Acquisition(ident=acq_id, label=acq_label)
 		acq.transferred_title_of = hmo
+
+		self.attach_source_catalog(data, acq, buyers + sellers)
 
 		multi = tx_data.get('multi_lot_tx')
 		paym_label = f'multiple lots {multi}' if multi else object_label
@@ -508,8 +531,7 @@ class AddAcquisitionOrBidding(Configurable):
 			'auth_name': owner_record['own_auth'],
 			'name': owner_record['own']
 		})
-		pi = self.helper.person_identity
-		pi.add_person(owner_record, sales_record, relative_id=record_id, role='artist')
+		self.add_person(owner_record, sales_record, relative_id=record_id, role='artist')
 		owner = get_crom_object(owner_record)
 
 		# TODO: handle other fields of owner_record: own_auth_d, own_auth_q, own_ques, own_so
@@ -528,7 +550,7 @@ class AddAcquisitionOrBidding(Configurable):
 
 		tx_uri = hmo.id + f'-{record_id}-Prov'
 		tx_label_args = tuple([sale_type, 'Sold', transaction_types] + list(lot_object_key) + [rel])
-		tx = self.related_procurement(hmo, tx_label_args, current_tx, ts, buyer=owner, previous=rev, ident=tx_uri)
+		tx, _ = self.related_procurement(hmo, tx_label_args, current_tx, ts, buyer=owner, previous=rev, ident=tx_uri)
 
 		own_info_source = owner_record.get('own_so')
 		if own_info_source:
@@ -552,7 +574,8 @@ class AddAcquisitionOrBidding(Configurable):
 		for i, seller_data in enumerate(sellers):
 			seller = get_crom_object(seller_data)
 			tx_uri = hmo.id + f'-seller-{i}-Prov'
-			tx = self.related_procurement(hmo, tx_label_args, current_ts=ts, buyer=seller, previous=True, ident=tx_uri)
+			tx, acq = self.related_procurement(hmo, tx_label_args, current_ts=ts, buyer=seller, previous=True, ident=tx_uri)
+			self.attach_source_catalog(data, acq, [seller_data])
 			if source:
 				tx.referred_to_by = source
 			prev_procurements.append(add_crom_data(data={}, what=tx))
@@ -672,15 +695,14 @@ class AddAcquisitionOrBidding(Configurable):
 			warnings.warn(f'*** No price data found for {parent["transaction"]!r} transaction')
 			yield data
 
-	def add_person(self, data:dict, sales_record, rec_id):
+	def add_person(self, data:dict, sales_record, rec_id, **kwargs):
 		'''
 		Add modeling data for people, based on properties of the supplied `data` dict.
 
 		This function adds properties to `data` before calling
 		`pipeline.linkedart.MakeLinkedArtPerson` to construct the model objects.
 		'''
-		pi = self.helper.person_identity
-		pi.add_person(data, sales_record, relative_id=rec_id)
+		self.helper.add_person(data, sales_record, relative_id=rec_id, **kwargs)
 		return data
 
 	def __call__(self, data:dict, non_auctions, event_properties, buy_sell_modifiers, transaction_types):
@@ -697,7 +719,8 @@ class AddAcquisitionOrBidding(Configurable):
 			self.add_person(
 				self.helper.copy_source_information(p, parent),
 				sales_record,
-				f'buyer_{i+1}'
+				f'buyer_{i+1}',
+				catalog_number=cno
 			) for i, p in enumerate(parent['buyer'])
 		]
 
@@ -705,7 +728,8 @@ class AddAcquisitionOrBidding(Configurable):
 			self.add_person(
 				self.helper.copy_source_information(p, parent),
 				sales_record,
-				f'seller_{i+1}'
+				f'seller_{i+1}',
+				catalog_number=cno
 			) for i, p in enumerate(parent['seller'])
 		]
 
@@ -719,7 +743,6 @@ class AddAcquisitionOrBidding(Configurable):
 		sale_type = non_auctions.get(cno, 'Auction')
 		if transaction in SOLD:
 			data['_owner_locations'] = []
-			
 			for data, current_tx in self.add_acquisition(data, buyers, sellers, non_auctions, buy_sell_modifiers, transaction, transaction_types):
 				if sale_type == 'Auction':
 					self.add_transfer_of_custody(data, current_tx, xfer_to=buyers, xfer_from=sellers, purpose='selling')

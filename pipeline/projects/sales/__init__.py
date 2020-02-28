@@ -962,13 +962,16 @@ class SalesPipeline(PipelineBase):
 							'prev_own_auth_l',
 							'prev_own_auth_q',
 							'prev_own_ulan')},
-					'prev_titles': {
+					'other_titles': {
 						'postprocess': [
 							lambda x, _: strip_key_prefix('prev_sale_', x),
-							lambda x, _: replace_key_pattern(r'(ttlx)', 'title', x)
+							lambda x, _: strip_key_prefix('post_sale_', x),
+							lambda x, _: replace_key_pattern(r'(ttlx)', 'title', x),
+							lambda x, _: replace_key_pattern(r'(ttl)', 'title', x)
 						],
 						'prefixes': (
-							'prev_sale_ttlx',)},
+							'prev_sale_ttlx',
+							'post_sale_ttl')},
 					'prev_sale': {
 						'postprocess': lambda x, _: strip_key_prefix('prev_sale_', x),
 						'prefixes': (
@@ -993,7 +996,6 @@ class SalesPipeline(PipelineBase):
 							'post_sale_lot',
 							'post_sale_q',
 							'post_sale_art',
-							'post_sale_ttl',
 							'post_sale_nte',
 							'post_sale_col',
 							'post_sale_cat')},
@@ -1039,7 +1041,7 @@ class SalesPipeline(PipelineBase):
 					'postprocess': add_pir_object_uri_factory(self.helper),
 					'properties': (
 						'title',
-						'prev_titles',
+						'other_titles',
 						'title_modifier',
 						'object_type',
 						'materials',

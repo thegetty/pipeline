@@ -962,6 +962,13 @@ class SalesPipeline(PipelineBase):
 							'prev_own_auth_l',
 							'prev_own_auth_q',
 							'prev_own_ulan')},
+					'prev_titles': {
+						'postprocess': [
+							lambda x, _: strip_key_prefix('prev_sale_', x),
+							lambda x, _: replace_key_pattern(r'(ttlx)', 'title', x)
+						],
+						'prefixes': (
+							'prev_sale_ttlx',)},
 					'prev_sale': {
 						'postprocess': lambda x, _: strip_key_prefix('prev_sale_', x),
 						'prefixes': (
@@ -1032,6 +1039,7 @@ class SalesPipeline(PipelineBase):
 					'postprocess': add_pir_object_uri_factory(self.helper),
 					'properties': (
 						'title',
+						'prev_titles',
 						'title_modifier',
 						'object_type',
 						'materials',

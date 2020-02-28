@@ -300,6 +300,12 @@ class PopulateObject(Configurable):
 			t.referred_to_by = record
 			data['identifiers'].append(t)
 
+		for d in data.get('prev_titles', []):
+			title = d['title']
+			t = vocab.Name(ident='', content=title)
+			data['identifiers'].append(t)
+			print(f'*** previous sale title: {pprint.pformat(title)}')
+
 		return data
 
 @use('vocab_type_map')

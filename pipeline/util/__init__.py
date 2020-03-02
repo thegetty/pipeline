@@ -414,13 +414,24 @@ def make_ordinal(n):
 		suffix = 'th'
 	return f'{n}{suffix}'
 
-def timespan_for_century(century):
+def timespan_for_century(century, narrow=False):
+	'''
+	Given a integer representing a century (e.g. 17 for the 17th century), return a
+	TimeSpan object for the bounds of that century.
+	
+	If `narrow` is True, the bounding properties will be `end_of_the_begin` and
+	`begin_of_the_end`; otherwise they will be `begin_of_the_begin` and `end_of_the_end`.
+	'''
 	ord = make_ordinal(century)
 	ts = model.TimeSpan(ident='', label=f'{ord} century')
 	from_year = 100 * (century-1)
 	to_year = from_year + 100
-	ts.end_of_the_begin = "%04d-%02d-%02dT%02d:%02d:%02dZ" % (from_year, 1, 1, 0, 0, 0)
-	ts.begin_of_the_end = "%04d-%02d-%02dT%02d:%02d:%02dZ" % (to_year, 1, 1, 0, 0, 0)
+	if narrow:
+		ts.end_of_the_begin = "%04d-%02d-%02dT%02d:%02d:%02dZ" % (from_year, 1, 1, 0, 0, 0)
+		ts.begin_of_the_end = "%04d-%02d-%02dT%02d:%02d:%02dZ" % (to_year, 1, 1, 0, 0, 0)
+	else:
+		ts.begin_of_the_begin = "%04d-%02d-%02dT%02d:%02d:%02dZ" % (from_year, 1, 1, 0, 0, 0)
+		ts.end_of_the_end = "%04d-%02d-%02dT%02d:%02d:%02dZ" % (to_year, 1, 1, 0, 0, 0)
 	return ts
 
 def timespan_before(after):

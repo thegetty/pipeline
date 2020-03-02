@@ -141,10 +141,10 @@ class PersonIdentity:
 			return f'{role}s'
 		return a
 		
-	def professional_activity(self, name, century=None, date_range=None):
+	def professional_activity(self, name, century=None, date_range=None, **kwargs):
 		a = vocab.Active(ident='', label=f'Professional activity of {name}')
 		if century:
-			ts = timespan_for_century(century)
+			ts = timespan_for_century(century, **kwargs)
 			a.timespan = ts
 		elif date_range:
 			b, e = date_range
@@ -218,14 +218,14 @@ class PersonIdentity:
 					century = int(dated_nationality_match.group(2))
 					group_label = self.anonymous_group_label(role, century=century, nationality=nationality)
 					data['label'] = group_label
-					a = self.professional_activity(group_label, century=century)
+					a = self.professional_activity(group_label, century=century, narrow=True)
 					data['events'].append(a)
 			elif dated_match:
 				with suppress(ValueError):
 					century = int(dated_match.group(1))
 					group_label = self.anonymous_group_label(role, century=century)
 					data['label'] = group_label
-					a = self.professional_activity(group_label, century=century)
+					a = self.professional_activity(group_label, century=century, narrow=True)
 					data['events'].append(a)
 			elif period_match:
 				period = period_match.group(1).lower()

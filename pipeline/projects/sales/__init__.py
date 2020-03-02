@@ -1311,6 +1311,9 @@ class SalesPipeline(PipelineBase):
 			self._construct_graph(**kwargs)
 		return self.graph_3
 
+	def checkpoint(self):
+		pass
+
 	def run(self, services=None, **options):
 		'''Run the Provenance bonobo pipeline.'''
 		print(f'- Limiting to {self.limit} records per file', file=sys.stderr)
@@ -1321,13 +1324,19 @@ class SalesPipeline(PipelineBase):
 		graph1 = self.get_graph_1(**options, services=services)
 		self.run_graph(graph1, services=services)
 
+		self.checkpoint()
+		
 		print('Running graph component 2...', file=sys.stderr)
 		graph2 = self.get_graph_2(**options, services=services)
 		self.run_graph(graph2, services=services)
 
+		self.checkpoint()
+
 		print('Running graph component 3...', file=sys.stderr)
 		graph3 = self.get_graph_3(**options, services=services)
 		self.run_graph(graph3, services=services)
+
+		self.checkpoint()
 
 		print('Serializing static instances...', file=sys.stderr)
 		for model, instances in self.static_instances.used_instances().items():
@@ -1434,6 +1443,17 @@ class SalesFilePipeline(SalesPipeline):
 			json.dump(post_sale_rewrite_map, f)
 			print(f'Saved post-sales rewrite map to {rewrite_map_filename}')
 
+	def checkpoint(self):
+		self.flush_writers()
+		super().checkpoint()
+
+	def flush_writers(self):
+		count = len(self.writers)
+		for seq_no, w in enumerate(self.writers):
+			print('[%d/%d] writers being flushed' % (seq_no+1, count))
+			if isinstance(w, MergingMemoryWriter):
+				w.flush()
+
 	def run(self, **options):
 		'''Run the Provenance bonobo pipeline.'''
 		start = timeit.default_timer()
@@ -1441,15 +1461,15 @@ class SalesFilePipeline(SalesPipeline):
 		super().run(services=services, **options)
 		print(f'Pipeline runtime: {timeit.default_timer() - start}', file=sys.stderr)
 
-		count = len(self.writers)
-		for seq_no, w in enumerate(self.writers):
-			print('[%d/%d] writers being flushed' % (seq_no+1, count))
-			if isinstance(w, MergingMemoryWriter):
-				w.flush()
+		self.flush_writers()
 
 		print('====================================================')
 		print('Compiling post-sale data...')
 		post_map = services['post_sale_map']
 		self.generate_prev_post_sales_data(post_map)
 		print(f'>>> {len(post_map)} post sales records')
+		
+		sizes = {k: sys.getsizeof(v) for k, v in services.items()}
+		for k in sorted(services.keys(), key=lambda k: sizes[k]):
+			print(f'{k:<20}  {sizes[k]}')
 		print('Total runtime: ', timeit.default_timer() - start)

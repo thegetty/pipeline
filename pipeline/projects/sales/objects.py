@@ -196,6 +196,15 @@ class PopulateObject(Configurable):
 					make_la_org = pipeline.linkedart.MakeLinkedArtOrganization()
 					owner_data = make_la_org(owner_data)
 					owner = get_crom_object(owner_data)
+
+					acc = location.get('acc')
+					if acc:
+						acc_number = vocab.AccessionNumber(ident='', content=acc)
+						hmo.identified_by = acc_number
+						assignment = model.AttributeAssignment(ident='')
+						assignment.carried_out_by = owner
+						acc_number.assigned_by = assignment
+
 					owner.residence = place
 					data['_locations'].append(place_data)
 					data['_final_org'] = owner_data

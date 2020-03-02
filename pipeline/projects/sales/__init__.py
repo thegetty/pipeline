@@ -1,6 +1,6 @@
 '''
 Classes and utility functions for instantiating, configuring, and
-running a bonobo pipeline for converting Provenance Index CSV data into JSON-LD.
+running a bonobo pipeline for converting Sales Index CSV data into JSON-LD.
 '''
 
 # PIR Extracters
@@ -38,7 +38,7 @@ from cromulent.model import factory
 from cromulent.extract import extract_physical_dimensions, extract_monetary_amount
 
 import pipeline.execution
-from pipeline.projects import PipelineBase, UtilityHelper
+from pipeline.projects import PipelineBase, UtilityHelper, PersonIdentity
 from pipeline.projects.sales.util import *
 from pipeline.util import \
 			GraphListSource, \
@@ -74,231 +74,10 @@ import pipeline.projects.sales.catalogs
 
 #mark - utility functions and classes
 
-def make_ordinal(n):
-	n = int(n)
-	suffix = ['th', 'st', 'nd', 'rd', 'th'][min(n % 10, 4)]
-	if 11 <= (n % 100) <= 13:
-		suffix = 'th'
-	return f'{n}{suffix}'
+class SalesPersonIdentity(PersonIdentity):
+	pass
 
-class PersonIdentity:
-	'''
-	Utility class to help assign records for people with properties such as `uri` and identifiers.
-	'''
-	def __init__(self, *, make_shared_uri, make_proj_uri):
-		self.make_shared_uri = make_shared_uri
-		self.make_proj_uri = make_proj_uri
-		self.ignore_authnames = CaseFoldingSet(('NEW', 'NON-UNIQUE'))
-		self.make_la_person = pipeline.linkedart.MakeLinkedArtPerson()
-		self.make_la_org = pipeline.linkedart.MakeLinkedArtOrganization()
-		self.anon_dated_re = re.compile(r'\[ANONYMOUS - (\d+)TH C[.]\]')
-		self.anon_period_re = re.compile(r'\[ANONYMOUS - (MODERN|ANTIQUE)\]')
-		self.anon_dated_nationality_re = re.compile(r'\[(\w+) - (\d+)TH C[.]\]')
-		self.anon_nationality_re = re.compile(r'\[(?!ANON)(\w+)\]', re.IGNORECASE)
-
-	def acceptable_person_auth_name(self, auth_name):
-		if not auth_name or auth_name in self.ignore_authnames:
-			return False
-		elif '[' in auth_name:
-			return False
-		return True
-
-	def is_anonymous_group(self, auth_name):
-		if self.anon_nationality_re.match(auth_name):
-			return True
-		if self.anon_dated_nationality_re.match(auth_name):
-			return True
-		elif self.anon_dated_re.match(auth_name):
-			return True
-		elif self.anon_period_re.match(auth_name):
-			return True
-		return False
-
-	def is_anonymous(self, data:dict):
-		auth_name = data.get('auth_name')
-		if auth_name:
-			if self.is_anonymous_group(auth_name):
-				return False
-			return '[ANONYMOUS' in auth_name
-		elif data.get('name'):
-			return False
-
-		with suppress(ValueError, TypeError):
-			if int(data.get('ulan')):
-				return False
-		return True
-
-	def _uri_keys(self, data:dict, record_id=None):
-		ulan = None
-		with suppress(ValueError, TypeError):
-			ulan = int(data.get('ulan'))
-
-		auth_name = data.get('auth_name')
-		auth_name_q = '?' in data.get('auth_nameq', '')
-
-		if ulan:
-			key = ('PERSON', 'ULAN', ulan)
-			return key, self.make_shared_uri
-		elif self.is_anonymous_group(auth_name):
-			key = ('GROUP', 'AUTH', auth_name)
-			return key, self.make_shared_uri
-		elif self.acceptable_person_auth_name(auth_name):
-			key = ('PERSON', 'AUTH', auth_name)
-			return key, self.make_shared_uri
-		else:
-			# not enough information to identify this person uniquely, so use the source location in the input file
-			pi_rec_no = data['pi_record_no']
-			if record_id:
-				key = ('PERSON', 'PI', pi_rec_no, record_id)
-				return key, self.make_proj_uri
-			else:
-				warnings.warn(f'*** No record identifier given for person identified only by pi_record_number {pi_rec_no}')
-				key = ('PERSON', 'PI', pi_rec_no)
-				return key, self.make_proj_uri
-
-	def add_person(self, a, sales_record, relative_id, **kwargs):
-		self.add_uri(a, record_id=relative_id)
-		self.add_names(a, referrer=sales_record, **kwargs)
-		self.add_props(a, **kwargs)
-		auth_name = a.get('auth_name')
-		if auth_name and self.is_anonymous_group(auth_name):
-			self.make_la_org(a)
-		else:
-			self.make_la_person(a)
-		return get_crom_object(a)
-
-	def add_uri(self, data:dict, **kwargs):
-		keys, make = self._uri_keys(data, **kwargs)
-		data['uri_keys'] = keys
-		data['uri'] = make(*keys)
-
-	def timespan_for_century(self, century):
-		ord = make_ordinal(century)
-		ts = model.TimeSpan(ident='', label=f'{ord} century')
-		from_year = 100 * (century-1)
-		to_year = from_year + 100
-		ts.end_of_the_begin = "%04d-%02d-%02dT%02d:%02d:%02dZ" % (from_year, 1, 1, 0, 0, 0)
-		ts.begin_of_the_end = "%04d-%02d-%02dT%02d:%02d:%02dZ" % (to_year, 1, 1, 0, 0, 0)
-		return ts
-
-	def anonymous_group_label(self, role, century=None, nationality=None):
-		if century and nationality:
-			ord = make_ordinal(century)
-			return f'{nationality.capitalize()} {role}s in the {ord} century'
-		elif century:
-			ord = make_ordinal(century)
-			return f'{role}s in the {ord} century'
-		elif nationality:
-			return f'{nationality.capitalize()} {role}s'
-		else:
-			return f'{role}s'
-		return a
-		
-	def professional_activity(self, group_label, century=None):
-		a = vocab.Active(ident='', label=f'Professional activity of {group_label}')
-		if century:
-			ts = self.timespan_for_century(century)
-			a.timespan = ts
-		return a
-
-	def add_props(self, data:dict, role=None, **kwargs):
-		role = role if role else 'person'
-		auth_name = data.get('auth_name', '')
-		period_match = self.anon_period_re.match(auth_name)
-		nationalities = []
-		if 'nationality' in data:
-			if isinstance(data['nationality'], str):
-				nationalities.append(data['nationality'])
-			elif isinstance(data['nationality'], list):
-				nationalities += data['nationality']
-		data['nationality'] = []
-		
-		if 'referred_to_by' not in data:
-			data['referred_to_by'] = []
-
-		if data.get('name_cite'):
-			cite = vocab.BibliographyStatement(ident='', content=data['name_cite'])
-			data['referred_to_by'].append(cite)
-
-		if self.is_anonymous_group(auth_name):
-			nationality_match = self.anon_nationality_re.match(auth_name)
-			dated_nationality_match = self.anon_dated_nationality_re.match(auth_name)
-			dated_match = self.anon_dated_re.match(auth_name)
-			if 'events' not in data:
-				data['events'] = []
-			if nationality_match:
-				with suppress(ValueError):
-					nationality = nationality_match.group(1).lower()
-					nationalities.append(nationality)
-					group_label = self.anonymous_group_label(role, nationality=nationality)
-					data['label'] = group_label
-			elif dated_nationality_match:
-				with suppress(ValueError):
-					nationality = dated_nationality_match.group(1).lower()
-					nationalities.append(nationality)
-					century = int(dated_nationality_match.group(2))
-					group_label = self.anonymous_group_label(role, century=century, nationality=nationality)
-					data['label'] = group_label
-					a = self.professional_activity(group_label, century=century)
-					data['events'].append(a)
-			elif dated_match:
-				with suppress(ValueError):
-					century = int(dated_match.group(1))
-					group_label = self.anonymous_group_label(role, century=century)
-					data['label'] = group_label
-					a = self.professional_activity(group_label, century=century)
-					data['events'].append(a)
-			elif period_match:
-				period = period_match.group(1).lower()
-				data['label'] = f'anonymous {period} {role}s'
-		for nationality in nationalities:
-			key = f'{nationality} nationality'
-			n = vocab.instances.get(key)
-			if n:
-				data['nationality'].append(n)
-			else:
-				warnings.warn(f'No nationality instance found in crom for: {nationality}')
-
-	def add_names(self, data:dict, referrer=None, role=None, **kwargs):
-		'''
-		Based on the presence of `auth_name` and/or `name` fields in `data`, sets the
-		`label`, `names`, and `identifier` keys to appropriate strings/`model.Identifier`
-		values.
-
-		If the `role` string is given (e.g. 'artist'), also sets the `role_label` key
-		to a value (e.g. 'artist “RUBENS, PETER PAUL”').
-		'''
-		auth_name = data.get('auth_name', '')
-		role_label = None
-		if self.acceptable_person_auth_name(auth_name):
-			if role:
-				role_label = f'{role} “{auth_name}”'
-			data['label'] = auth_name
-			pname = vocab.PrimaryName(ident='', content=auth_name) # NOTE: most of these are also vocab.SortName, but not 100%, so witholding that assertion for now
-			if referrer:
-				pname.referred_to_by = referrer
-			data['identifiers'] = [pname]
-
-		name = data.get('name')
-		if name:
-			if role and not role_label:
-				role_label = f'{role} “{name}”'
-			if referrer:
-				data['names'] = [(name, {'referred_to_by': [referrer]})]
-			else:
-				data['names'] = [name]
-			if 'label' not in data:
-				data['label'] = name
-		if 'label' not in data:
-			data['label'] = '(Anonymous)'
-
-		if role and not role_label:
-			role_label = f'anonymous {role}'
-
-		if role:
-			data['role_label'] = role_label
-
-class ProvenanceUtilityHelper(UtilityHelper):
+class SalesUtilityHelper(UtilityHelper):
 	'''
 	Project-specific code for accessing and interpreting sales data.
 	'''
@@ -309,7 +88,7 @@ class ProvenanceUtilityHelper(UtilityHelper):
 		self.ignore_house_authnames = CaseFoldingSet(('Anonymous', '[Anonymous]'))
 		self.csv_source_columns = ['pi_record_no', 'star_record_no', 'catalog_number']
 		self.problematic_record_uri = f'tag:getty.edu,2019:digital:pipeline:{project_name}:ProblematicRecord'
-		self.person_identity = PersonIdentity(make_shared_uri=self.make_shared_uri, make_proj_uri=self.make_proj_uri)
+		self.person_identity = SalesPersonIdentity(make_shared_uri=self.make_shared_uri, make_proj_uri=self.make_proj_uri)
 		self.uid_tag_prefix = UID_TAG_PREFIX
 
 	def copy_source_information(self, dst: dict, src: dict):
@@ -318,9 +97,9 @@ class ProvenanceUtilityHelper(UtilityHelper):
 				dst[k] = src[k]
 		return dst
 
-	def add_person(self, data, record, relative_id, **kwargs):
+	def add_person(self, data, **kwargs):
 		if data.get('name_so'):
-			# handling of the name_so field happens here and not in the PersonIdentity methods,
+			# handling of the name_so field happens here and not in the SalesPersonIdentity methods,
 			# because it requires access to the services data on catalogs
 			source = data['name_so']
 			components = source.split(' ')
@@ -341,7 +120,7 @@ class ProvenanceUtilityHelper(UtilityHelper):
 					warnings.warn(f'*** SPECIFIC PHYSICAL CATALOG COPY NOT FOUND FOR NAME SOURCE {source} in catalog {cno}')
 			else:
 				warnings.warn(f'*** NO CATALOG OWNER FOUND FOR NAME SOURCE {source} on catalog {cno}')
-		return self.person_identity.add_person(data, record, relative_id, **kwargs)
+		return self.person_identity.add_person(data, **kwargs)
 
 	def event_type_for_sale_type(self, sale_type):
 		if sale_type in ('Private Contract Sale', 'Stock List'):
@@ -624,16 +403,16 @@ def add_crom_price(data, parent, services, add_citations=False):
 	return data
 
 
-#mark - Provenance Pipeline class
+#mark - Sales Pipeline class
 
 class SalesPipeline(PipelineBase):
-	'''Bonobo-based pipeline for transforming Provenance data from CSV into JSON-LD.'''
+	'''Bonobo-based pipeline for transforming Sales data from CSV into JSON-LD.'''
 	def __init__(self, input_path, catalogs, auction_events, contents, **kwargs):
 		project_name = 'sales'
 		self.input_path = input_path
 		self.services = None
 
-		helper = ProvenanceUtilityHelper(project_name)
+		helper = SalesUtilityHelper(project_name)
 		self.uid_tag_prefix = UID_TAG_PREFIX
 
 		vocab.register_instance('act of selling', {'parent': model.Activity, 'id': 'XXXXXX001', 'label': 'Act of Selling'})
@@ -1161,30 +940,6 @@ class SalesPipeline(PipelineBase):
 			self.add_serialization_chain(graph, places.output, model=self.models['Place'])
 		return places
 
-	def add_person_or_group_chain(self, graph, input, key=None, serialize=True):
-		'''Add extraction and serialization of people and groups.'''
-		if key:
-			extracted = graph.add_chain(
-				ExtractKeyedValues(key=key),
-				_input=input.output
-			)
-		else:
-			extracted = input
-
-		people = graph.add_chain(
-			OnlyRecordsOfType(type=model.Person),
-			_input=extracted.output
-		)
-		groups = graph.add_chain(
-			OnlyRecordsOfType(type=model.Group),
-			_input=extracted.output
-		)
-		if serialize:
-			# write OBJECTS data
-			self.add_serialization_chain(graph, people.output, model=self.models['Person'])
-			self.add_serialization_chain(graph, groups.output, model=self.models['Group'])
-		return people
-
 	def add_visual_item_chain(self, graph, objects, serialize=True):
 		'''Add transformation of visual items to the bonobo pipeline.'''
 		items = graph.add_chain(
@@ -1294,25 +1049,25 @@ class SalesPipeline(PipelineBase):
 		return self.graph_0
 
 	def get_graph_1(self, **kwargs):
-		'''Construct the bonobo pipeline to fully transform Provenance data from CSV to JSON-LD.'''
+		'''Construct the bonobo pipeline to fully transform Sales data from CSV to JSON-LD.'''
 		if not self.graph_1:
 			self._construct_graph(**kwargs)
 		return self.graph_1
 
 	def get_graph_2(self, **kwargs):
-		'''Construct the bonobo pipeline to fully transform Provenance data from CSV to JSON-LD.'''
+		'''Construct the bonobo pipeline to fully transform Sales data from CSV to JSON-LD.'''
 		if not self.graph_2:
 			self._construct_graph(**kwargs)
 		return self.graph_2
 
 	def get_graph_3(self, **kwargs):
-		'''Construct the bonobo pipeline to fully transform Provenance data from CSV to JSON-LD.'''
+		'''Construct the bonobo pipeline to fully transform Sales data from CSV to JSON-LD.'''
 		if not self.graph_3:
 			self._construct_graph(**kwargs)
 		return self.graph_3
 
 	def run(self, services=None, **options):
-		'''Run the Provenance bonobo pipeline.'''
+		'''Run the Sales bonobo pipeline.'''
 		print(f'- Limiting to {self.limit} records per file', file=sys.stderr)
 		if not services:
 			services = self.get_services(**options)
@@ -1379,7 +1134,7 @@ class SalesPipeline(PipelineBase):
 
 class SalesFilePipeline(SalesPipeline):
 	'''
-	Provenance pipeline with serialization to files based on Arches model and resource UUID.
+	Sales pipeline with serialization to files based on Arches model and resource UUID.
 
 	If in `debug` mode, JSON serialization will use pretty-printing. Otherwise,
 	serialization will be compact.
@@ -1435,7 +1190,7 @@ class SalesFilePipeline(SalesPipeline):
 			print(f'Saved post-sales rewrite map to {rewrite_map_filename}')
 
 	def run(self, **options):
-		'''Run the Provenance bonobo pipeline.'''
+		'''Run the Sales bonobo pipeline.'''
 		start = timeit.default_timer()
 		services = self.get_services(**options)
 		super().run(services=services, **options)

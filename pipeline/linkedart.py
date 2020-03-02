@@ -98,7 +98,11 @@ class MakeLinkedArtRecord:
 			# namedata should take the form of:
 			# ["A. Name"]
 			# ["A. Name", {'referred_to_by': [{'uri': 'URI-OF-LINGUISTIC_OBJECT'}, model.LinguisticObject()]}]
-			name, *properties = namedata
+			if isinstance(namedata, tuple):
+				name, *properties = namedata
+			else:
+				name = namedata
+				properties = {}
 			n = set_la_name(thing, name)
 			self.set_lo_properties(n, *properties)
 
@@ -362,6 +366,8 @@ class MakeLinkedArtPerson(MakeLinkedArtRecord):
 				natl._label = str(data[ns+'_label'])
 			else:
 				break
+		for n in data.get('nationality', []):
+			who.classified_as = n
 
 		# nationality field can contain other information, but not useful.
 		# XXX Intentionally ignored but validate with GRI

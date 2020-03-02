@@ -84,9 +84,8 @@ class PopulateAuctionEvent(Configurable):
 		)
 
 		event_record = get_crom_object(data['_record'])
-		pi = self.helper.person_identity
 		for seq_no, expert in enumerate(data.get('expert', [])):
-			person = pi.add_person(expert, event_record, relative_id=f'expert-{seq_no+1}', role='expert')
+			person = self.helper.add_person(expert, record=event_record, relative_id=f'expert-{seq_no+1}', role='expert')
 			event_experts[cno].append(person)
 			data['_organizers'].append(add_crom_data(data={}, what=person))
 			role_id = '' # self.helper.make_proj_uri('AUCTION-EVENT', cno, 'Expert', seq_no)
@@ -94,7 +93,7 @@ class PopulateAuctionEvent(Configurable):
 			role.carried_out_by = person
 			auction.part = role
 		for seq_no, commissaire in enumerate(data.get('commissaire', [])):
-			person = pi.add_person(commissaire, event_record, relative_id=f'commissaire-{seq_no+1}', role='commissaire')
+			person = self.helper.add_person(commissaire, record=event_record, relative_id=f'commissaire-{seq_no+1}', role='commissaire')
 			event_commissaires[cno].append(person)
 			data['_organizers'].append(add_crom_data(data={}, what=person))
 			role_id = '' # self.helper.make_proj_uri('AUCTION-EVENT', cno, 'Commissaire', seq_no)

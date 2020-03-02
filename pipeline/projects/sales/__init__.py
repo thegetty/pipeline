@@ -707,7 +707,7 @@ class SalesPipeline(PipelineBase):
 		)
 		if serialize:
 			# write SALES data
-			self.add_serialization_chain(graph, catalogs.output, model=self.models['HumanMadeObject'])
+			self.add_serialization_chain(graph, catalogs.output, model=self.models['HumanMadeObject'], use_memory_writer=False)
 		return catalogs
 
 	def add_catalog_linguistic_objects_chain(self, graph, events, serialize=True):
@@ -719,7 +719,7 @@ class SalesPipeline(PipelineBase):
 		)
 		if serialize:
 			# write SALES data
-			self.add_serialization_chain(graph, los.output, model=self.models['LinguisticObject'])
+			self.add_serialization_chain(graph, los.output, model=self.models['LinguisticObject'], use_memory_writer=False)
 		return los
 
 	def add_auction_events_chain(self, graph, records, serialize=True):
@@ -842,10 +842,10 @@ class SalesPipeline(PipelineBase):
 		if serialize:
 			# write SALES data
 			self.add_serialization_chain(graph, catalogs.output, model=self.models['HumanMadeObject'])
-			self.add_serialization_chain(graph, notes.output, model=self.models['LinguisticObject'])
-			self.add_serialization_chain(graph, refs.output, model=self.models['LinguisticObject'])
-			self.add_serialization_chain(graph, bids.output, model=self.models['Bidding'])
-			self.add_serialization_chain(graph, drawing.output, model=self.models['Drawing'])
+			self.add_serialization_chain(graph, notes.output, model=self.models['LinguisticObject'], use_memory_writer=False)
+			self.add_serialization_chain(graph, refs.output, model=self.models['LinguisticObject'], use_memory_writer=False)
+			self.add_serialization_chain(graph, bids.output, model=self.models['Bidding'], use_memory_writer=False)
+			self.add_serialization_chain(graph, drawing.output, model=self.models['Drawing'], use_memory_writer=False)
 		return bid_acqs
 
 	def add_sales_chain(self, graph, records, services, serialize=True):
@@ -1133,8 +1133,8 @@ class SalesPipeline(PipelineBase):
 		if serialize:
 			# write OBJECTS data
 			self.add_serialization_chain(graph, events.output, model=self.models['Event'])
-			self.add_serialization_chain(graph, objects.output, model=self.models['HumanMadeObject'])
-			self.add_serialization_chain(graph, original_objects.output, model=self.models['HumanMadeObject'])
+			self.add_serialization_chain(graph, objects.output, model=self.models['HumanMadeObject'], use_memory_writer=False)
+			self.add_serialization_chain(graph, original_objects.output, model=self.models['HumanMadeObject'], use_memory_writer=False)
 
 		return objects
 

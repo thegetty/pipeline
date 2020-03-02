@@ -189,6 +189,9 @@ class PopulateObject(Configurable):
 							'uri': self.helper.make_proj_uri('ORG', 'CURR-OWN', *now_key),
 						}
 
+					if note:
+						owner_data['note'] = note
+
 					base_uri = hmo.id + '-Place,'
 					place_data = self.helper.make_place(current, base_uri=base_uri)
 					place = get_crom_object(place_data)
@@ -210,9 +213,6 @@ class PopulateObject(Configurable):
 					data['_final_org'] = owner_data
 			else:
 				pass # there is no present location place string
-			if note:
-				pass
-				# TODO: the acquisition_note needs to be attached as a Note to the final post owner acquisition
 
 	def _populate_object_notes(self, data:dict, parent, unique_catalogs):
 		hmo = get_crom_object(data)

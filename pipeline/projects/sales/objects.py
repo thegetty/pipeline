@@ -236,7 +236,7 @@ class PopulateObject(Configurable):
 				pdate = implode_date(sale_record, '')
 				if pcno and plno and pdate:
 					if pcno == 'NA':
-						desc = f'Also sold in an unidentified sale: {plot} ({pdate})'
+						desc = f'Also sold in an unidentified sale: {plno} ({pdate})'
 						note = vocab.Note(ident='', content=desc)
 						hmo.referred_to_by = note
 					else:

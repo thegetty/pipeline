@@ -147,13 +147,23 @@ class PersonIdentity:
 			return key, self.make_shared_uri
 		else:
 			# not enough information to identify this person uniquely, so use the source location in the input file
-			pi_rec_no = data['pi_record_no']
+			try:
+				if 'pi_record_no' in data:
+					id_value = data['pi_record_no']
+					id_key = 'PI'
+				else:
+					id_value = data['star_record_no']
+					id_key = 'STAR'
+			except KeyError as e:
+				warnings.warn(f'*** No identifying property with which to construct a URI key: {e}')
+				print(pprint.pformat(data), file=sys.stderr)
+				raise
 			if record_id:
-				key = ('PERSON', 'PI', pi_rec_no, record_id)
+				key = ('PERSON', id_key, id_value, record_id)
 				return key, self.make_proj_uri
 			else:
-				warnings.warn(f'*** No record identifier given for person identified only by pi_record_number {pi_rec_no}')
-				key = ('PERSON', 'PI', pi_rec_no)
+				warnings.warn(f'*** No record identifier given for person identified only by {id_key} {id_value}')
+				key = ('PERSON', id_key, id_value)
 				return key, self.make_proj_uri
 
 	def add_person(self, a, sales_record, relative_id, **kwargs):

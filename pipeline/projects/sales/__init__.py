@@ -699,6 +699,7 @@ class SalesPipeline(PipelineBase):
 			'post_sale_map': {},
 			'event_properties': {
 				'auction_houses': defaultdict(list),
+				'auction_dates': {},
 				'auction_locations': {},
 				'experts': defaultdict(list),
 				'commissaire': defaultdict(list),
@@ -1040,6 +1041,7 @@ class SalesPipeline(PipelineBase):
 			GroupKeys(mapping={
 				'auction_of_lot': {
 					'properties': (
+						'link_to_pdf',
 						'catalog_number',
 						'lot_number',
 						'lot_sale_year',
@@ -1219,6 +1221,16 @@ class SalesPipeline(PipelineBase):
 			self.add_serialization_chain(graph, texts.output, model=self.models['LinguisticObject'])
 		return texts
 
+	def add_texts_chain(self, graph, objects, serialize=True):
+		texts = graph.add_chain(
+			ExtractKeyedValues(key='_texts'),
+			_input=objects.output
+		)
+		if serialize:
+			# write RECORD data
+			self.add_serialization_chain(graph, texts.output, model=self.models['LinguisticObject'])
+		return texts
+
 	def _construct_graph(self, single_graph=False, services=None):
 		'''
 		Construct bonobo.Graph object(s) for the entire pipeline.
@@ -1280,6 +1292,7 @@ class SalesPipeline(PipelineBase):
 			)
 			sales = self.add_sales_chain(g, contents_records, services, serialize=True)
 			_ = self.add_lot_set_chain(g, sales, serialize=True)
+			_ = self.add_texts_chain(g, sales, serialize=True)
 			objects = self.add_object_chain(g, sales, serialize=True)
 			_ = self.add_places_chain(g, objects, serialize=True)
 			acquisitions = self.add_acquisitions_chain(g, objects, serialize=True)

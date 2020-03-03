@@ -252,12 +252,12 @@ class PersonIdentity:
 				period = period_match.group(1).lower()
 				data['label'] = f'anonymous {period} {role}s'
 		for nationality in nationalities:
-			key = f'{nationality} nationality'
+			key = f'{nationality.lower()} nationality'
 			n = vocab.instances.get(key)
 			if n:
 				data['nationality'].append(n)
 			else:
-				warnings.warn(f'No nationality instance found in crom for: {nationality}')
+				warnings.warn(f'No nationality instance found in crom for: {key!r}')
 
 	def add_names(self, data:dict, referrer=None, role=None, **kwargs):
 		'''
@@ -1104,9 +1104,9 @@ class SalesPipeline(PipelineBase):
 		
 		if serialize:
 			# write SALES data
-			self.add_serialization_chain(graph, auctions_of_lot.output, model=self.models['AuctionOfLot'])
-			self.add_serialization_chain(graph, private_sale_activities.output, model=self.models['Activity'])
-			self.add_serialization_chain(graph, lottery_drawings.output, model=self.models['Drawing'])
+			self.add_serialization_chain(graph, auctions_of_lot.output, model=self.models['AuctionOfLot'], limit=1000)
+			self.add_serialization_chain(graph, private_sale_activities.output, model=self.models['Activity'], limit=1000)
+			self.add_serialization_chain(graph, lottery_drawings.output, model=self.models['Drawing'], limit=1000)
 		return sales
 
 	def add_object_chain(self, graph, sales, serialize=True):
@@ -1146,7 +1146,7 @@ class SalesPipeline(PipelineBase):
 		)
 		if serialize:
 			# write SETS data
-			self.add_serialization_chain(graph, sets.output, model=self.models['Set'])
+			self.add_serialization_chain(graph, sets.output, model=self.models['Set'], limit=1000)
 		return sets
 
 	def add_places_chain(self, graph, auction_events, key='_locations', serialize=True):
@@ -1206,7 +1206,7 @@ class SalesPipeline(PipelineBase):
 		)
 		if serialize:
 			# write RECORD data
-			self.add_serialization_chain(graph, texts.output, model=self.models['LinguisticObject'])
+			self.add_serialization_chain(graph, texts.output, model=self.models['LinguisticObject'], limit=1000)
 		return texts
 
 	def _construct_graph(self, single_graph=False, services=None):

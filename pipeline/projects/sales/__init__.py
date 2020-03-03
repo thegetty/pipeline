@@ -147,13 +147,23 @@ class PersonIdentity:
 			return key, self.make_shared_uri
 		else:
 			# not enough information to identify this person uniquely, so use the source location in the input file
-			pi_rec_no = data['pi_record_no']
+			try:
+				if 'pi_record_no' in data:
+					id_value = data['pi_record_no']
+					id_key = 'PI'
+				else:
+					id_value = data['star_record_no']
+					id_key = 'STAR'
+			except KeyError as e:
+				warnings.warn(f'*** No identifying property with which to construct a URI key: {e}')
+				print(pprint.pformat(data), file=sys.stderr)
+				raise
 			if record_id:
-				key = ('PERSON', 'PI', pi_rec_no, record_id)
+				key = ('PERSON', id_key, id_value, record_id)
 				return key, self.make_proj_uri
 			else:
-				warnings.warn(f'*** No record identifier given for person identified only by pi_record_number {pi_rec_no}')
-				key = ('PERSON', 'PI', pi_rec_no)
+				warnings.warn(f'*** No record identifier given for person identified only by {id_key} {id_value}')
+				key = ('PERSON', id_key, id_value)
 				return key, self.make_proj_uri
 
 	def add_person(self, a, sales_record, relative_id, **kwargs):
@@ -349,7 +359,7 @@ class ProvenanceUtilityHelper(UtilityHelper):
 			return vocab.Exhibition
 		elif sale_type == 'Lottery':
 			return vocab.Lottery
-		elif sale_type in ('Auction'):
+		elif sale_type in ('Auction', 'Collection Catalog'):
 			return vocab.AuctionEvent
 		else:
 			warnings.warn(f'*** Unexpected sale type: {sale_type!r}')
@@ -360,7 +370,7 @@ class ProvenanceUtilityHelper(UtilityHelper):
 			return vocab.Negotiating
 		elif sale_type == 'Lottery':
 			return vocab.LotteryDrawing
-		elif sale_type in ('Auction'):
+		elif sale_type in ('Auction', 'Collection Catalog'):
 			return vocab.Auction
 		else:
 			warnings.warn(f'*** Unexpected sale type: {sale_type!r}')
@@ -372,14 +382,14 @@ class ProvenanceUtilityHelper(UtilityHelper):
 			return vocab.AccessionCatalog
 		elif sale_type == 'Lottery':
 			return vocab.LotteryCatalog
-		elif sale_type == 'Auction':
+		elif sale_type in ('Auction', 'Collection Catalog'):
 			return vocab.AuctionCatalog
 		else:
 			warnings.warn(f'*** Unexpected sale type: {sale_type!r}')
 
 	def catalog_text(self, cno, sale_type='Auction'):
 		uri = self.make_proj_uri('CATALOG', cno)
-		if sale_type == 'Auction':
+		if sale_type in ('Auction', 'Collection Catalog'):
 			catalog = vocab.AuctionCatalogText(ident=uri, label=f'Sale Catalog {cno}')
 		elif sale_type == 'Private Contract Sale':
 			catalog = vocab.ExhibitionCatalogText(ident=uri, label=f'Private Sale Exhibition Catalog {cno}')
@@ -689,6 +699,7 @@ class SalesPipeline(PipelineBase):
 			'post_sale_map': {},
 			'event_properties': {
 				'auction_houses': defaultdict(list),
+				'auction_dates': {},
 				'auction_locations': {},
 				'experts': defaultdict(list),
 				'commissaire': defaultdict(list),
@@ -1030,6 +1041,7 @@ class SalesPipeline(PipelineBase):
 			GroupKeys(mapping={
 				'auction_of_lot': {
 					'properties': (
+						'link_to_pdf',
 						'catalog_number',
 						'lot_number',
 						'lot_sale_year',
@@ -1209,6 +1221,16 @@ class SalesPipeline(PipelineBase):
 			self.add_serialization_chain(graph, texts.output, model=self.models['LinguisticObject'], limit=1000)
 		return texts
 
+	def add_texts_chain(self, graph, objects, serialize=True):
+		texts = graph.add_chain(
+			ExtractKeyedValues(key='_texts'),
+			_input=objects.output
+		)
+		if serialize:
+			# write RECORD data
+			self.add_serialization_chain(graph, texts.output, model=self.models['LinguisticObject'])
+		return texts
+
 	def _construct_graph(self, single_graph=False, services=None):
 		'''
 		Construct bonobo.Graph object(s) for the entire pipeline.
@@ -1270,6 +1292,7 @@ class SalesPipeline(PipelineBase):
 			)
 			sales = self.add_sales_chain(g, contents_records, services, serialize=True)
 			_ = self.add_lot_set_chain(g, sales, serialize=True)
+			_ = self.add_texts_chain(g, sales, serialize=True)
 			objects = self.add_object_chain(g, sales, serialize=True)
 			_ = self.add_places_chain(g, objects, serialize=True)
 			acquisitions = self.add_acquisitions_chain(g, objects, serialize=True)

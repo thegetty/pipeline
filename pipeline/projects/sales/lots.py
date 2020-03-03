@@ -144,6 +144,16 @@ class AddAuctionOfLot(Configurable):
 		lot = self.helper.sale_for_sale_type(sale_type, lot_object_key)
 		data['lot_object_id'] = f'{cno} {lno} ({date})'
 
+		if 'link_to_pdf' in auction_data:
+			url = auction_data['link_to_pdf']
+			page_url = self.helper.make_shared_uri('WEB', url)
+			page = vocab.WebPage(ident=page_url, label=url)
+			page.digitally_carried_by = model.DigitalObject(ident=url)
+			lot.referred_to_by = page
+			if '_texts' not in data:
+				data['_texts'] = []
+			data['_texts'].append(add_crom_data(data={}, what=page))
+		
 		for problem_key, problem in problematic_records.get('lots', []):
 			# TODO: this is inefficient, but will probably be OK so long as the number
 			#       of problematic records is small. We do it this way because we can't

@@ -49,18 +49,25 @@ class AddAuctionOfLot(Configurable):
 			lot.took_place_at = place
 
 	@staticmethod
-	def set_lot_date(lot, auction_data):
+	def set_lot_date(lot, auction_data, event_dates):
 		'''Associate a timespan with the auction lot.'''
 		date = implode_date(auction_data, 'lot_sale_')
-# 		dates = date_parse(date, delim='-')
-# 		if dates:
 		if date:
 			begin = implode_date(auction_data, 'lot_sale_', clamp='begin')
 			end = implode_date(auction_data, 'lot_sale_', clamp='eoe')
 			bounds = [begin, end]
 		else:
 			bounds = []
+
 		if bounds:
+			if auction_data.get('lot_sale_mod'):
+				# if the lot sale date is marked as uncertain:
+				#   - use the event end date as the lot sale's end_of_the_end
+				#   - if the event doesn't have a known end date, assert no end_of_the_end for the lot sale
+				if event_dates[1]:
+					bounds[1] = event_dates[1]
+				else:
+					bounds[1] = None
 			ts = timespan_from_outer_bounds(*bounds)
 			ts.identified_by = model.Name(ident='', content=date)
 			lot.timespan = ts
@@ -186,9 +193,10 @@ class AddAuctionOfLot(Configurable):
 		auction, _, _ = self.helper.sale_event_for_catalog_number(cno, sale_type)
 		if transaction not in WITHDRAWN:
 			lot.part_of = auction
+			event_dates = event_properties['auction_dates'].get(cno)
 			self.set_lot_auction_houses(lot, cno, auction_houses)
 			self.set_lot_location(lot, cno, auction_locations)
-			self.set_lot_date(lot, auction_data)
+			self.set_lot_date(lot, auction_data, event_dates)
 			self.set_lot_notes(lot, auction_data, sale_type)
 
 			tx_uri = self.helper.transaction_uri_for_lot(auction_data, data)

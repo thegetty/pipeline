@@ -82,6 +82,8 @@ class PopulateAuctionEvent(Configurable):
 			end=end,
 			inclusive=True
 		)
+		
+		event_properties['auction_dates'][cno] = (begin, end)
 
 		event_record = get_crom_object(data['_record'])
 		pi = self.helper.person_identity

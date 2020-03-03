@@ -689,6 +689,7 @@ class SalesPipeline(PipelineBase):
 			'post_sale_map': {},
 			'event_properties': {
 				'auction_houses': defaultdict(list),
+				'auction_dates': {},
 				'auction_locations': {},
 				'experts': defaultdict(list),
 				'commissaire': defaultdict(list),

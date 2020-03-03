@@ -310,8 +310,8 @@ class AddAcquisitionOrBidding(Configurable):
 
 	def final_owner_procurement(self, tx_label_args, final_owner, current_tx, hmo, current_ts):
 		tx_uri = hmo.id + '-FinalOwnerProv'
-		tx, _ = self.related_procurement(hmo, tx_label_args, current_tx, current_ts, buyer=final_owner, ident=tx_uri)
-		return tx
+		tx, acq = self.related_procurement(hmo, tx_label_args, current_tx, current_ts, buyer=final_owner, ident=tx_uri)
+		return tx, acq
 
 	def add_transfer_of_custody(self, data, current_tx, xfer_to, xfer_from, sequence=1, purpose=None):
 		buyers = xfer_to
@@ -494,7 +494,10 @@ class AddAcquisitionOrBidding(Configurable):
 			data['_organizations'].append(final_owner_data)
 			final_owner = get_crom_object(final_owner_data)
 			tx_label_args = tuple([sale_type, 'Sold', transaction_types] + list(lot_object_key) + ['leading to the currently known location of'])
-			tx = self.final_owner_procurement(tx_label_args, final_owner, current_tx, hmo, ts)
+			tx, acq = self.final_owner_procurement(tx_label_args, final_owner, current_tx, hmo, ts)
+			note = final_owner_data.get('note')
+			if note:
+				acq.referred_to_by = vocab.Note(ident='', content=note)
 			data['_procurements'].append(add_crom_data(data={}, what=tx))
 
 		post_own = data.get('post_owner', [])
@@ -685,7 +688,10 @@ class AddAcquisitionOrBidding(Configurable):
 				final_owner = get_crom_object(final_owner_data)
 				hmo = get_crom_object(data)
 				tx_label_args = tuple([sale_type, 'Sold', transaction_types] + list(lot_object_key) + ['leading to the currently known location of'])
-				tx = self.final_owner_procurement(tx_label_args, final_owner, None, hmo, ts)
+				tx, acq = self.final_owner_procurement(tx_label_args, final_owner, None, hmo, ts)
+				note = final_owner_data.get('note')
+				if note:
+					acq.referred_to_by = vocab.Note(ident='', content=note)
 				data['_procurements'].append(add_crom_data(data={}, what=tx))
 
 			data['_bidding'] = {'uri': bidding_id}

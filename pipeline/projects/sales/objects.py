@@ -131,17 +131,24 @@ class PopulateObject(Configurable):
 	@staticmethod
 	def _populate_object_statements(data:dict):
 		hmo = get_crom_object(data)
+		sales_record = get_crom_object(data['_record'])
+		
+		format = data.get('format')
+		if format:
+			formatstmt = vocab.PhysicalStatement(ident='', content=format)
+			formatstmt.referred_to_by = sales_record
+			hmo.referred_to_by = formatstmt
+			print(f'*** FORMAT: {pprint.pformat(format)}')
+
 		materials = data.get('materials')
 		if materials:
 			matstmt = vocab.MaterialStatement(ident='', content=materials)
-			sales_record = get_crom_object(data['_record'])
 			matstmt.referred_to_by = sales_record
 			hmo.referred_to_by = matstmt
 
 		dimstr = data.get('dimensions')
 		if dimstr:
 			dimstmt = vocab.DimensionStatement(ident='', content=dimstr)
-			sales_record = get_crom_object(data['_record'])
 			dimstmt.referred_to_by = sales_record
 			hmo.referred_to_by = dimstmt
 			for dim in extract_physical_dimensions(dimstr):

@@ -349,7 +349,7 @@ class ProvenanceUtilityHelper(UtilityHelper):
 			return vocab.Exhibition
 		elif sale_type == 'Lottery':
 			return vocab.Lottery
-		elif sale_type in ('Auction'):
+		elif sale_type in ('Auction', 'Collection Catalog'):
 			return vocab.AuctionEvent
 		else:
 			warnings.warn(f'*** Unexpected sale type: {sale_type!r}')
@@ -360,7 +360,7 @@ class ProvenanceUtilityHelper(UtilityHelper):
 			return vocab.Negotiating
 		elif sale_type == 'Lottery':
 			return vocab.LotteryDrawing
-		elif sale_type in ('Auction'):
+		elif sale_type in ('Auction', 'Collection Catalog'):
 			return vocab.Auction
 		else:
 			warnings.warn(f'*** Unexpected sale type: {sale_type!r}')
@@ -372,14 +372,14 @@ class ProvenanceUtilityHelper(UtilityHelper):
 			return vocab.AccessionCatalog
 		elif sale_type == 'Lottery':
 			return vocab.LotteryCatalog
-		elif sale_type == 'Auction':
+		elif sale_type in ('Auction', 'Collection Catalog'):
 			return vocab.AuctionCatalog
 		else:
 			warnings.warn(f'*** Unexpected sale type: {sale_type!r}')
 
 	def catalog_text(self, cno, sale_type='Auction'):
 		uri = self.make_proj_uri('CATALOG', cno)
-		if sale_type == 'Auction':
+		if sale_type in ('Auction', 'Collection Catalog'):
 			catalog = vocab.AuctionCatalogText(ident=uri, label=f'Sale Catalog {cno}')
 		elif sale_type == 'Private Contract Sale':
 			catalog = vocab.ExhibitionCatalogText(ident=uri, label=f'Private Sale Exhibition Catalog {cno}')

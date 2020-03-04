@@ -110,6 +110,7 @@ class KeyManagement(Configurable):
 					for key, mapping in op_data.items():
 						property_prefixes = mapping['prefixes']
 						postprocess = mapping.get('postprocess')
+						rename = mapping.get('rename_keys', {})
 						data[key] = []
 						to_delete = set()
 						with suppress(KeyError):
@@ -117,7 +118,8 @@ class KeyManagement(Configurable):
 								ks = ((prefix, f'{prefix}_{i}') for prefix in property_prefixes)
 								subd = {}
 								for p, k in ks:
-									subd[p] = data[k]
+									sub_key = rename.get(p, p)
+									subd[sub_key] = data[k]
 									to_delete.add(k)
 								if self.drop_empty:
 									values_unset = list(map(lambda v: not bool(v), subd.values()))

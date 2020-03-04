@@ -107,8 +107,22 @@ venv.bak/
 ### PIPELINE
 
 data/aata/*.xml
-data/provenance/*.csv
-data/provenance/*.sql*
+data/aata/*.xsd
+data/aata/*.txt
+data/aata/*.py
+data/knoedler/*.csv
+data/knoedler/*.sql*
+data/knoedler/*.xlsx
+data/sales/*.csv
+data/sales/*.sql*
+data/sales/data_dictionary
+data/sales/headers
 data/*.sqlite
 output
 endpoint
+
+scripts/find_matching_json_files
+scripts/generate_uri_uuids
+scripts/rewrite_uris_to_uuids
+
+tmp

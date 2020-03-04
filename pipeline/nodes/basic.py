@@ -11,6 +11,7 @@ import itertools
 from contextlib import suppress
 from pipeline.util.cleaners import date_cleaner
 from cromulent import model
+from pipeline.linkedart import get_crom_object
 
 # ~~~~ Core Functions ~~~~
 
@@ -62,6 +63,14 @@ class CleanDateToSpan(Configurable):
 				pprint.pprint(data)
 		return NOT_MODIFIED
 
+class RemoveKeys(Configurable):
+	keys = Option(set)
+	def __call__(self, data:dict):
+		for key in self.keys:
+			with suppress(KeyError):
+				del data[key]
+		return data
+
 class GroupRepeatingKeys(Configurable):
 	mapping = Option(dict)
 	drop_empty = Option(bool, default=True)
@@ -81,7 +90,7 @@ class GroupRepeatingKeys(Configurable):
 					if self.drop_empty:
 						values_unset = list(map(lambda v: not bool(v), subd.values()))
 						if all(values_unset):
-							break
+							continue
 					if postprocess and subd:
 						if callable(postprocess):
 							postprocess = [postprocess]
@@ -105,7 +114,7 @@ class GroupKeys(Configurable):
 			properties = mapping['properties']
 			postprocess = mapping.get('postprocess')
 			for k in properties:
-				v = data[k]
+				v = data.get(k)
 				to_delete.add(k)
 				if self.drop_empty and not v:
 					continue
@@ -162,6 +171,16 @@ class AddFieldNames(Configurable):
 		d = dict(zip(names, data))
 		return d
 
+class AddFieldNamesSimple(Configurable):
+	field_names = Option()
+
+	def __call__(self, data):
+		d = {}
+		names = self.field_names
+		for i in range(len(names)):
+			d[names[i]] = data[i]
+		return d
+
 class AddFieldNamesService(Configurable):
 	key = Option(required=False) # This is passed into __init__ as a kwarg but not into __call__
 	field_names = Service('header_names')   # This is passed into __call__ as a kwarg not at __init__  
@@ -192,6 +211,20 @@ class Offset(Configurable):
 			return None
 		else:
 			return data
+
+class OnlyCromModeledRecords:
+	def __call__(self, data):
+		o = get_crom_object(data)
+		if o:
+			yield data
+
+class OnlyRecordsOfType(Configurable):
+	type = Option()
+
+	def __call__(self, data):
+		o = get_crom_object(data)
+		if isinstance(o, self.type):
+			yield data
 
 class Trace(Configurable):
 	name = Option()

@@ -8,7 +8,7 @@ import bonobo
 import bonobo_sqlalchemy
 
 PROJECT_NAME = "knoedler"
-UID_TAG_PREFIX = f'tag:getty.edu,2019:digital:pipeline:{PROJECT_NAME}:REPLACE-WITH-UUID#'
+UID_TAG_PREFIX = f'tag:getty.edu,2019:digital:pipeline:REPLACE-WITH-UUID:{PROJECT_NAME}#'
 
 from pipeline.projects import PipelineBase
 from pipeline.nodes.basic import AddArchesModel, AddFieldNamesService, Serializer, deep_copy, Offset, Trace
@@ -23,8 +23,8 @@ import settings
 class Pipeline(PipelineBase):
 	'''Bonobo-based pipeline for transforming Knoedler data into JSON-LD.'''
 	def __init__(self, output_path, **kwargs):
-		super().__init__()
-		self.project_name = 'knoedler'
+		project_name = 'knoedler'
+		super().__init__(project_name)
 		self.graph = None
 		self.models = kwargs.get('models', settings.arches_models)
 		self.pack_size = kwargs.get('pack_size')

@@ -1,0 +1,36 @@
+{
+	"sold": [
+		"Sold [?]",
+		"Sold",
+		"Vendu [?]",
+		"Vendu",
+		"Verkauft [?]",
+		"Verkauft"
+	],
+	"unsold": [
+		"Bought In [?]",
+		"Bought In",
+		"Non Vendu [?]",
+		"Non Vendu",
+		"Passed",
+		"Retiré [?]",
+		"Retiré",
+		"Unverkauft [?]",
+		"Unverkauft",
+		"Withdrawn [?]",
+		"Withdrawn",
+		"Zurückgezogen"
+	],
+	"unknown": [
+		"Inconnue",
+		"Unbekannt",
+		"Unknown"
+	],
+	"withdrawn": [
+		"Withdrawn [?]",
+		"Withdrawn",
+		"Retiré",
+		"Retiré [?]",
+		"Zurückgezogen"
+	]
+}

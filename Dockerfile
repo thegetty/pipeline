@@ -1,5 +1,4 @@
 FROM python:3
-
 WORKDIR /usr/src/app
 
 RUN pip install --no-cache-dir awscli
@@ -22,10 +21,33 @@ COPY pipeline pipeline
 COPY tests tests
 COPY data/common /data/common
 COPY data/aata/*.json /data/aata/
-COPY Makefile setup.py aata.py pir.py knoedler.py settings.py ./
+COPY Makefile setup.py aata.py sales.py knoedler.py settings.py ./
+
+FROM swift:latest
+WORKDIR /usr/src/swift
+
+RUN mkdir scripts
+COPY Makefile ./
+COPY scripts/find_matching_json_files.swift ./scripts/
+COPY scripts/generate_uri_uuids.swift ./scripts/
+RUN make scripts/generate_uri_uuids
+RUN make scripts/find_matching_json_files
+
+FROM python:3
+WORKDIR /usr/src/app
+
+RUN pip install --no-cache-dir awscli
+
+COPY requirements.txt ./
+RUN pip install --no-cache-dir -r requirements.txt
+
+COPY --from=0 /usr/src/app ./
+COPY --from=1 /usr/src/swift/scripts/find_matching_json_files scripts/
+COPY --from=1 /usr/src/swift/scripts/generate_uri_uuids scripts/
+COPY --from=1 /usr/lib/swift /usr/lib/swift
 
 EXPOSE 8080
 VOLUME ["/data"]
 VOLUME ["/output"]
 VOLUME ["/services"]
-CMD [ "make", "pir", "LIMIT=100" ]
+CMD [ "make", "sales", "LIMIT=100" ]

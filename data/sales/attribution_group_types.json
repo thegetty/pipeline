@@ -1,0 +1,30 @@
+{
+	"ecole de": "School",
+	"dans l'école de": "School",
+	"de l'Ecole de": "School",
+	"ecole": "School",
+	"school of": "School",
+	"schule der": "School",
+
+	"studio of": "Studio",
+
+	"workshop of": "Workshop",
+	"werkstatt": "Workshop",
+	
+	"atelier de": "Atelier",
+	"atelier of": "Atelier",
+	
+	"cercle de": "Circle",
+	"circle of": "Circle",
+	"kreis": "Circle",
+
+	"élève de": "PupilGroup",
+	"disciple de": "PupilGroup",
+	"student of": "PupilGroup",
+	"disciple of": "PupilGroup",
+	"discipel van": "PupilGroup",
+	"pupil of": "PupilGroup",
+
+	"follower of": "FollowerGroup",
+	"volger van": "FollowerGroup"
+}

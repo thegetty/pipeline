@@ -1,8 +1,8 @@
 import os
 import sys
-import inspect
-import types
 import pprint
+# import sys
+import types
 from functools import partial
 import time
 from collections import Counter, defaultdict, namedtuple
@@ -10,10 +10,13 @@ from collections import Counter, defaultdict, namedtuple
 from bonobo.config import use, Option, Service, Configurable
 from bonobo.constants import BEGIN, NOT_MODIFIED
 from bonobo.util import get_name, isconfigurabletype, isconfigurable
-import bonobo
 import settings
 
 class GraphExecutor(object):
+	'''
+	Run a bonobo graph sequentially on a single thread, allowing easier debugging
+	and profiling.
+	'''
 	def __init__(self, graph, services):
 		file = open(os.path.join(settings.output_file_path, 'pipeline.counters'), 'wt', buffering=1)
 # 		if not file:
@@ -30,7 +33,7 @@ class GraphExecutor(object):
 		self.runtime_bindings = {}
 		for ix in graph.topologically_sorted_indexes:
 			node = graph[ix]
-			name = get_name(node)
+# 			name = get_name(node)
 			options = dict(getattr(node, '__options__', {}))
 			self.service_bindings[ix] = []
 			self.runtime_bindings[ix] = []
@@ -99,7 +102,7 @@ class GraphExecutor(object):
 # 			print(f'{indent}{name} {services.keys()}')
 # 		else:
 # 			print(f'{indent}{name}')
-		
+
 		try:
 			# print(f'calling {node!r}({input})')
 			start = time.time()

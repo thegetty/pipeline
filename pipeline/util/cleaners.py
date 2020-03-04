@@ -1,3 +1,4 @@
+import warnings
 import locale
 import re
 import calendar
@@ -40,9 +41,10 @@ _COUNTRY_NAMES = {
 	'Ireland': 'Ireland',
 	'Eire': 'Ireland',
 	'England': 'England',
-	'Espagne': 'Spain',
-	'Espana': 'Spain',
+	'Spain': 'Spain',
 	'España': 'Spain',
+	'Espana': 'Spain',
+	'Espagne': 'Spain',
 	'France': 'France',
 	'Great Britain': 'Great Britain',
 	'Hungary': 'Hungary',
@@ -82,8 +84,9 @@ _COUNTRY_NAMES = {
 	'UK': 'United Kingdom',
 	'Ukraine': 'Ukraine',
 	'Ukraïna': 'Ukraine',
-	'USA': 'United States of America',
-	'US': 'United States of America',
+	'United States of America': 'USA',
+	'USA': 'USA',
+	'US': 'USA',
 	'Wales': 'Wales',
 }
 
@@ -151,15 +154,18 @@ _US_STATES = {
 }
 
 def _parse_us_location(parts, *, uri_base):
-	city_name, state_name, country_name = parts
+	try:
+		city_name, state_name, country_name = parts
+	except ValueError:
+		return None
 	state_type = None
 	city_type = None
 	state_uri = None
 	city_uri = None
 	if state_name in _US_STATES or state_name in _US_STATES.values():
 		state_name = _US_STATES.get(state_name, state_name)
-		state_uri = f'{uri_base}PLACE-COUNTRY-' + urllib.parse.quote(country_name) + '-STATE-' + urllib.parse.quote(state_name)
-		city_uri = state_uri + '-CITY-' + urllib.parse.quote(city_name)
+		state_uri = f'{uri_base}PLACE,COUNTRY-' + urllib.parse.quote(country_name) + ',' + urllib.parse.quote(state_name)
+		city_uri = state_uri + ',' + urllib.parse.quote(city_name)
 		state_type = 'State'
 		city_type = 'City'
 	else:
@@ -170,7 +176,7 @@ def _parse_us_location(parts, *, uri_base):
 	country = {
 		'type': 'Country',
 		'name': country_name,
-		'uri': f'{uri_base}PLACE-COUNTRY-' + urllib.parse.quote(country_name),
+		'uri': f'{uri_base}PLACE,COUNTRY-' + urllib.parse.quote(country_name),
 	}
 
 	state = {
@@ -206,13 +212,13 @@ def _parse_uk_location(parts, *, uri_base):
 			'part_of': {
 				'type': 'Country',
 				'name': country_name,
-				'uri': f'{uri_base}PLACE-COUNTRY-' + urllib.parse.quote(country_name),
+				'uri': f'{uri_base}PLACE,COUNTRY-' + urllib.parse.quote(country_name),
 			}
 		}
 	return None
 
 _COUNTRY_HANDLERS = {
-	'United States of America': _parse_us_location,
+	'USA': _parse_us_location,
 	'United Kingdom': _parse_uk_location,
 }
 
@@ -231,12 +237,11 @@ def parse_location(*parts, uri_base=None, types=None):
 	to `pipeline.linkedart.make_la_place`.
 
 	If the iterable `types` is given, it supplies the type names of the associated names
-	(e.g. `('City', 'Country')`). Otherwise, heuristics are used to guide the parsing,
-	with the caveat that the final 
+	(e.g. `('City', 'Country')`). Otherwise, heuristics are used to guide the parsing.
 	'''
 	value = ', '.join(parts)
 	if uri_base is None:
-		uri_base = 'tag:getty.edu,2019:digital:pipeline:REPLACE-WITH-UUID#'
+		uri_base = 'tag:getty.edu,2019:digital:REPLACE-WITH-UUID:pipeline#'
 
 	if types:
 		current = None
@@ -246,7 +251,7 @@ def parse_location(*parts, uri_base=None, types=None):
 			if t.upper() in ('COUNTRY', 'STATE', 'PROVINCE'):
 				uri_parts.append(t.upper())
 				uri_parts.append(urllib.parse.quote(name))
-				uri = f'{uri_base}PLACE-' + '-'.join(uri_parts)
+				uri = f'{uri_base}PLACE,' + '-'.join(uri_parts)
 			current = {
 				'type': t,
 				'name': name,
@@ -259,25 +264,26 @@ def parse_location(*parts, uri_base=None, types=None):
 		return current
 
 	current = None
-	country_name = parts[-1]
+	country_name = re.sub(r'[.].*$', '', parts[-1])
 	country_type = None
 	if country_name in _COUNTRIES:
 		country_type = 'Country'
 		country_name = _COUNTRY_NAMES.get(country_name, country_name)
 	else:
-		print(f'*** Expecting country name, but found unexpected value: {country_name!r}')
+		warnings.warn(f'*** Expecting country name, but found unexpected value: {country_name!r}')
 		# not a recognized place name format; assert a generic Place with the associated value as a name
 		return {'name': value}
 
 	if country_name in _COUNTRY_HANDLERS:
-		loc = _COUNTRY_HANDLERS[country_name](parts, uri_base=uri_base)
+		_parts = list(parts[:-1]) + [country_name]
+		loc = _COUNTRY_HANDLERS[country_name](_parts, uri_base=uri_base)
 		if loc:
 			return loc
 
 	current = {
 		'type': country_type,
 		'name': country_name,
-		'uri': f'{uri_base}PLACE-COUNTRY-' + urllib.parse.quote(country_name),
+		'uri': f'{uri_base}PLACE,COUNTRY-' + urllib.parse.quote(country_name),
 	}
 
 	if len(parts) == 2:

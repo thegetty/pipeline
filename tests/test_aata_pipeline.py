@@ -9,9 +9,89 @@ import hashlib
 import json
 import uuid
 
-from tests import TestWriter, merge
+from cromulent import vocab
+from tests import TestWriter
+from pipeline.util import CromObjectMerger
 from pipeline.projects.aata import AATAPipeline
 from pipeline.nodes.basic import Serializer, AddArchesModel
+
+def merge_lists(l, r):
+	'''
+	Given two lists `l` and `r`, return a generator of the combined items from both lists.
+
+	If any two items l' in l and r' in r are both `dict`s and have the same value for the
+	`id` key, they will be `merge`d and the resulting `dict` included in the results in
+	place of l' or r'.
+	'''
+	identified = {}
+	all_items = l + r
+	other = []
+	for item in all_items:
+		try:
+			item_id = item['id']
+			if item_id in identified:
+				identified[item_id] += [item]
+			else:
+				identified[item_id] = [item]
+		except:
+			other.append(item)
+
+	for ident, items in identified.items():
+		r = items[:]
+		while len(r) > 1:
+			a = r.pop(0)
+			b = r.pop(0)
+			m = merge(a, b)
+			r.insert(0, m)
+		yield from r
+
+	yield from other
+
+def merge(l, r):
+	'''
+	Given two items `l` and `r` of the same type, merge their contents and return the
+	result. Raise an exception if `l` and `r` are of differing types.
+
+	If the items are of type `dict`, recursively merge any values with shared keys, and
+	also include data from any non-shared keys. If `l` and `r` both have values for the
+	`id` key and they differ in value, raise an exception.
+
+	If the items are of type `list`, merge them with `merge_lists`.
+
+	If the items are of type `str` or `bytes`, return the value if `l` and `r` are equal.
+	Otherwise raise and exception.
+	'''
+	if l is None:
+		return r
+	if r is None:
+		return l
+
+	if not isinstance(l, type(r)):
+		pprint.pprint(l)
+		pprint.pprint(r)
+		raise Exception('bad data in json merge')
+
+	if isinstance(l, dict):
+		keys = set(list(l.keys()) + list(r.keys()))
+		intersection = {k for k in keys if k in l and k in r}
+		if 'id' in intersection:
+			lid = l['id']
+			rid = r['id']
+			if lid != rid:
+				pprint.pprint(l)
+				pprint.pprint(r)
+				raise Exception('attempt to merge two dicts with different ids: (%r, %r)' % (lid, rid))
+		return {k: merge(l.get(k), r.get(k)) for k in keys}
+	elif isinstance(l, list):
+		return list(merge_lists(l, r))
+	elif isinstance(l, (str, bytes)):
+		if l == r:
+			return l
+		else:
+			raise Exception('data conflict: %r <=> %r' % (l, r))
+	else:
+		raise NotImplementedError('unhandled type: %r' % (type(l)))
+	return l
 
 class AATATestPipeline(AATAPipeline):
 	'''
@@ -65,6 +145,8 @@ class TestAATAPipelineOutput_Abstracts(unittest.TestCase):
 		os.environ['QUIET'] = '1'
 
 	def run_pipeline(self, models, input_path):
+		vocab.add_linked_art_boundary_check()
+		vocab.add_attribute_assignment_check()
 		writer = TestWriter()
 		pipeline = AATATestPipeline(
 			writer,
@@ -97,7 +179,7 @@ class TestAATAPipelineOutput_Abstracts(unittest.TestCase):
 		self.assertIn('The Forbidden City in Beijing', abstract['content'])
 		self.assertEqual('http://vocab.getty.edu/aat/300026032', abstract['classified_as'][0]['id']) # abstract
 		self.assertEqual('AATA140375', abstract['identified_by'][0]['content'])
-		self.assertEqual('Local Number', abstract['identified_by'][0]['classified_as'][0]['_label'])
+		self.assertEqual('Owner-Assigned Number', abstract['identified_by'][0]['classified_as'][0]['_label'])
 		self.assertEqual('English', abstract['language'][0]['_label'])
 		self.assertEqual('LinguisticObject', abstract['type'])
 		
@@ -117,7 +199,7 @@ class TestAATAPipelineOutput_Abstracts(unittest.TestCase):
 		self.assertEqual(dict(identifiers), {
 			'Title': {'Secrets of the Forbidden City'},
 			'ISBN Identifier': {'1531703461', '9781531703462'},
-			'Local Number': {'AATA140375'},
+			'Owner-Assigned Number': {'AATA140375'},
 		})
 
 		about = defaultdict(set)
@@ -206,7 +288,7 @@ class TestAATAPipelineOutput_Abstracts(unittest.TestCase):
 		models = {
 			'Person': 'model-person',
 			'LinguisticObject': 'model-lo',
-			'Organization': 'model-org',
+			'Group': 'model-groups',
 			'Journal': 'model-journal',
 			'Series': 'model-series',
 		}
@@ -215,7 +297,7 @@ class TestAATAPipelineOutput_Abstracts(unittest.TestCase):
 
 		lo_model = models['LinguisticObject']
 		people_model = models['Person']
-		orgs_model = models['Organization']
+		orgs_model = models['Group']
 
 		self.verify_model_counts_for_AATA140375(output, lo_model, people_model, orgs_model)
 		people_creation_events = self.verify_people_for_AATA140375(output, people_model)
@@ -248,7 +330,7 @@ class TestAATAPipelineOutput_Journals(unittest.TestCase):
 		models = {
 			'Person': 'model-person',
 			'LinguisticObject': 'model-lo',
-			'Organization': 'model-org',
+			'Group': 'model-org',
 			'Journal': 'model-journal',
 			'Series': 'model-series',
 		}
@@ -258,7 +340,7 @@ class TestAATAPipelineOutput_Journals(unittest.TestCase):
 		lo_model = models['LinguisticObject']
 		journal_model = models['Journal']
 		
-		TAG_PREFIX = 'tag:getty.edu,2019:digital:pipeline:aata:REPLACE-WITH-UUID#'
+		TAG_PREFIX = 'tag:getty.edu,2019:digital:pipeline:REPLACE-WITH-UUID:aata#'
 		
 		journal = output[journal_model].get(f'{TAG_PREFIX}AATA,Journal,2')
 		issue = output[lo_model].get(f'{TAG_PREFIX}AATA,Journal,2,Issue,9')
@@ -280,13 +362,13 @@ class TestAATAPipelineOutput_Journals(unittest.TestCase):
 					'type': 'Type'
 				}
 			],
-			'id': 'tag:getty.edu,2019:digital:pipeline:aata:REPLACE-WITH-UUID#AATA,Journal,2',
+			'id': 'tag:getty.edu,2019:digital:pipeline:REPLACE-WITH-UUID:aata#AATA,Journal,2',
 			'identified_by': [
 				{
 					'classified_as': [
 						{
 							'_label': 'ISSN Identifier',
-							'id': 'http://vocab.getty.edu/aat/300417443',
+							'id': 'http://vocab.getty.edu/aat/300417430',
 							'type': 'Type'
 						}
 					],
@@ -301,8 +383,8 @@ class TestAATAPipelineOutput_Journals(unittest.TestCase):
 					'classified_as': [
 						{
 							'_label': 'Title',
-						'id': 'http://vocab.getty.edu/aat/300055726',
-						'type': 'Type'
+							'id': 'http://vocab.getty.edu/aat/300417193',
+							'type': 'Type'
 						}
 					],
 					'content': 'Green chemistry',
@@ -313,9 +395,24 @@ class TestAATAPipelineOutput_Journals(unittest.TestCase):
 		}
 		self.assertEqual(journal, journal_expected)
 		
-		for i in [i for p in issue['part_of'] for i in p['identified_by']]:
-			with suppress(KeyError):
-				del i['id'] # remove UUIDs that will not be stable across runs
+		# stitch together the part-of hierarchy
+		parts = []
+		for p in issue.get('part_of', []):
+			i = p['id']
+			part = None
+			for k, model in output.items():
+				if i in model:
+					d = model[i].copy()
+					del d['@context']
+					part = d
+					break
+			if part:
+				parts.append(part)
+			else:
+				parts.append(p)
+# 				print(f'*** Did not find id {i}')
+		issue['part_of'] = parts
+
 		for i in issue['identified_by'] + issue['referred_to_by']:
 			with suppress(KeyError):
 				del i['id'] # remove UUIDs that will not be stable across runs
@@ -329,7 +426,7 @@ class TestAATAPipelineOutput_Journals(unittest.TestCase):
 					'type': 'Type'
 				}
 			],
-			'id': 'tag:getty.edu,2019:digital:pipeline:aata:REPLACE-WITH-UUID#AATA,Journal,2,Issue,9',
+			'id': 'tag:getty.edu,2019:digital:pipeline:REPLACE-WITH-UUID:aata#AATA,Journal,2,Issue,9',
 			'identified_by': [
 				{
 					'classified_as': [
@@ -346,7 +443,7 @@ class TestAATAPipelineOutput_Journals(unittest.TestCase):
 					'classified_as': [
 						{
 							'_label': 'Title',
-							'id': 'http://vocab.getty.edu/aat/300055726',
+							'id': 'http://vocab.getty.edu/aat/300417193',
 							'type': 'Type'
 						}
 					],
@@ -364,13 +461,13 @@ class TestAATAPipelineOutput_Journals(unittest.TestCase):
 							'type': 'Type'
 						}
 					],
-					'id': 'tag:getty.edu,2019:digital:pipeline:aata:REPLACE-WITH-UUID#AATA,Journal,2',
+					'id': 'tag:getty.edu,2019:digital:pipeline:REPLACE-WITH-UUID:aata#AATA,Journal,2',
 					'identified_by': [
 						{
 							'classified_as': [
 								{
 								'_label': 'ISSN Identifier',
-								'id': 'http://vocab.getty.edu/aat/300417443',
+								'id': 'http://vocab.getty.edu/aat/300417430',
 								'type': 'Type'
 								}
 							],
@@ -385,7 +482,7 @@ class TestAATAPipelineOutput_Journals(unittest.TestCase):
 							'classified_as': [
 								{
 									'_label': 'Title',
-									'id': 'http://vocab.getty.edu/aat/300055726',
+									'id': 'http://vocab.getty.edu/aat/300417193',
 									'type': 'Type'
 								}
 							],
@@ -397,38 +494,7 @@ class TestAATAPipelineOutput_Journals(unittest.TestCase):
 				},
 				{
 					'_label': 'Volume 9 of “Green chemistry”',
-					'classified_as': [
-						{
-							'_label': 'Volume',
-							'id': 'http://vocab.getty.edu/aat/300265632',
-							'type': 'Type'
-						}
-					],
-					'id': 'tag:getty.edu,2019:digital:pipeline:aata:REPLACE-WITH-UUID#AATA,Journal,2,Volume,9',
-					'identified_by': [
-						{
-							'classified_as': [
-								{
-									'_label': 'Volume',
-									'id': 'http://vocab.getty.edu/aat/300265632',
-									'type': 'Type'
-								}
-							],
-							'content': '9',
-							'type': 'Identifier'
-						},
-						{
-							'classified_as': [
-								{
-									'_label': 'Title',
-									'id': 'http://vocab.getty.edu/aat/300055726',
-									'type': 'Type'
-								}
-							],
-							'content': 'Volume 9 of “Green chemistry”',
-							'type': 'Name'
-						}
-					],
+					'id': 'tag:getty.edu,2019:digital:pipeline:REPLACE-WITH-UUID:aata#AATA,Journal,2,Volume,9',
 					'type': 'LinguisticObject'
 				}
 			],
@@ -437,14 +503,16 @@ class TestAATAPipelineOutput_Journals(unittest.TestCase):
 					'classified_as': [
 						{
 							'_label': 'Note',
+							'classified_as': [
+								{
+									'_label': 'Brief Text',
+									'id': 'http://vocab.getty.edu/aat/300418049',
+									'type': 'Type'
+								}
+							],
 							'id': 'http://vocab.getty.edu/aat/300027200',
 							'type': 'Type'
 						},
-						{
-							'_label': 'Brief Text',
-							'id': 'http://vocab.getty.edu/aat/300418049',
-							'type': 'Type'
-						}
 					],
 					'content': 'v. 24 (2005)',
 					'type': 'LinguisticObject'

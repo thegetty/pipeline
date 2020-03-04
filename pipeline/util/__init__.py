@@ -15,8 +15,11 @@ from bonobo.config import Configurable, Option, Service
 
 import settings
 import pipeline.io.arches
-from cromulent import model
+from cromulent import model, vocab
 from cromulent.model import factory, BaseResource
+from pipeline.linkedart import add_crom_data
+
+UNKNOWN_DIMENSION = 'http://vocab.getty.edu/aat/300055642'
 
 # Dimension = namedtuple("Dimension", [
 # 	'value',	# numeric value
@@ -40,7 +43,7 @@ def identity(d):
 	'''
 	yield d
 
-def implode_date(data: dict, prefix: str, clamp:str=None):
+def implode_date(data:dict, prefix:str='', clamp:str=None):
 	'''
 	Given a dict `data` and a string `prefix`, extract year, month, and day elements
 	from `data` (e.g. '{prefix}year', '{prefix}month', and '{prefix}day'), and return
@@ -53,6 +56,10 @@ def implode_date(data: dict, prefix: str, clamp:str=None):
 
 	If `clamp='end'`, clamping occurs using the latest valid values. For example,
 	'1800-02' would become '1800-02-28'.
+
+	If `clamp='eoe'` ('end of the end'), clamping occurs using the first value that is
+	*not* valid. That is, the returned value may be used as an exclusive endpoint for a
+	date range. For example, '1800-02' would become '1800-03-01'.
 	'''
 	year = data.get(f'{prefix}year')
 	try:
@@ -61,32 +68,66 @@ def implode_date(data: dict, prefix: str, clamp:str=None):
 		return None
 	month = data.get(f'{prefix}month', data.get(f'{prefix}mo'))
 	day = data.get(f'{prefix}day')
+
 	try:
 		month = int(month)
 		if month < 1 or month > 12:
-			raise Exception
-	except:
+			raise ValueError(f'Month value is not valid: {month}')
+	except Exception as e:
 		if clamp == 'begin':
 			month = 1
+			day = 1
+			return '%04d-%02d-%02d' % (int(year), month, day)
 		elif clamp == 'end':
+			day = 31
 			month = 12
+			return '%04d-%02d-%02d' % (int(year), month, day)
+		elif clamp == 'eoe':
+			day = 1
+			month = 1
+			year += 1
+			return '%04d-%02d-%02d' % (int(year), month, day)
+		else:
+			return '%04d' % (int(year),)
 
+	max_day = calendar.monthrange(year, month)[1]
 	try:
 		day = int(day)
 		if day < 1 or day > 31:
-			raise Exception
-	except:
+			raise ValueError(f'Day value is not valid: {day}')
+		if clamp == 'eoe':
+			day += 1
+			if day > max_day:
+				day = 1
+				month += 1
+				if month > 12:
+					month = 1
+					year += 1
+	except Exception as e:
 		if clamp == 'begin':
 			day = 1
 		elif clamp == 'end':
-			day = calendar.monthrange(year, month)[1]
+			day = max_day
+		elif clamp == 'eoe':
+			day = 1
+			month += 1
+			if month > 12:
+				month = 1
+				year += 1
+		else:
+			if type(e) not in (TypeError, ValueError):
+				warnings.warn(f'Failed to interpret day value {day!r} in implode_date: {e}')
+				pprint.pprint(data)
 
-	if year and month and day:
-		return '%04d-%02d-%02d' % (int(year), month, day)
-	elif year and month:
-		return '%04d-%02d' % (int(year), month)
-	elif year:
-		return '%04d' % (int(year),)
+	try:
+		if year and month and day:
+			return '%04d-%02d-%02d' % (int(year), month, day)
+		elif year and month:
+			return '%04d-%02d' % (int(year), month)
+		elif year:
+			return '%04d' % (int(year),)
+	except TypeError as e:
+		warnings.warn(f'*** {e}: {pprint.pformat([int(year), month, day])}')
 	return None
 
 class ExclusiveValue(ContextDecorator):
@@ -131,7 +172,26 @@ class CromObjectMerger:
 			#       referencing an `id` value that is dropped will be left with a dangling
 			#       pointer).
 			'content': (model.Name, model.Identifier),
+			'value': (model.Dimension,),
 		}
+		self.classified_attribute_based_identity = {
+			# This is similar to `self.attribute_based_identity`, but instead of being
+			# based on the `type` of the object, it is based on the `classified_as` value
+			# of the object
+			'content': (vocab.MaterialStatement, vocab.DimensionStatement, vocab._BriefText),
+		}
+		
+		# instead of mapping to a tuple of classes, `self._classified_attribute_based_identity`
+		# maps to a list of sets of URIs (the set of classifications that must be present to be
+		# interpreted as a member of the class)
+		self._classified_attribute_based_identity = {}
+		for attr, classes in self.classified_attribute_based_identity.items():
+			id_sets = []
+			for c in classes:
+				o = c()
+				ids = {cl.id for cl in o.classified_as}
+				id_sets.append(ids)
+			self._classified_attribute_based_identity[attr] = id_sets
 
 	def merge(self, obj, *to_merge):
 		if not to_merge:
@@ -158,12 +218,30 @@ class CromObjectMerger:
 			for attr, classes in self.attribute_based_identity.items():
 				if isinstance(v, classes) and hasattr(v, attr):
 					identified[getattr(v, attr)].append(v)
+					handled = True
 					break
-			else:
+			for attr, id_sets in self._classified_attribute_based_identity.items():
+				if handled:
+					break
+				if hasattr(v, 'classified_as') and hasattr(v, attr):
+					obj_ids = {c.id for c in v.classified_as}
+					for id_set in id_sets:
+						if id_set <= obj_ids:
+							identified[getattr(v, attr)].append(v)
+							handled = True
+							break
+			if not handled:
 				try:
-					identified[v.id].append(v)
+					i = v.id
+					if i:
+						identified[i].append(v)
+					else:
+						unidentified.append(v)
 				except AttributeError:
 					unidentified.append(v)
+		if len(identified) > 1 and UNKNOWN_DIMENSION in identified:
+			# drop the Unknown physical dimension (300055642)
+			del(identified[UNKNOWN_DIMENSION])
 
 	def set_or_merge(self, obj, p, *values):
 		if p == 'type':
@@ -183,31 +261,47 @@ class CromObjectMerger:
 		identified = defaultdict(list)
 		unidentified = []
 		self._classify_values(values, identified, unidentified)
-		
+
 		allows_multiple = obj.allows_multiple(p)
 		if identified:
 			# there are values in the new objects that have to be merged with existing identifiable values
 			self._classify_values(existing, identified, unidentified)
 
 			setattr(obj, p, None) # clear out all the existing values
-			for v in identified.values():
-				if not allows_multiple:
+			if allows_multiple:
+				for v in identified.values():
 					setattr(obj, p, self.merge(*v))
-					return
-				setattr(obj, p, self.merge(*v))
-			for v in unidentified:
-				if not allows_multiple:
+				for v in unidentified:
 					setattr(obj, p, v)
-					return
-				setattr(obj, p, v)
+			else:
+				try:
+					identified_values = sorted(identified.values())[0]
+				except TypeError:
+					# in case the values cannot be sorted
+					identified_values = list(identified.values())[0]
+				setattr(obj, p, self.merge(*identified_values))
+
+				if unidentified:
+					warnings.warn(f'*** Dropping {len(unidentified)} unidentified values for property {p} of {obj}')
+# 					unidentified_value = sorted(unidentified)[0]
+# 					setattr(obj, p, unidentified_value)
 		else:
 			# there are no identifiable values in the new objects, so we can just append them
-			for v in unidentified:
-				if not allows_multiple:
-					setattr(obj, p, None)
+			if allows_multiple:
+				for v in unidentified:
 					setattr(obj, p, v)
-					return
-				setattr(obj, p, v)
+			else:
+				if unidentified:
+					if len(unidentified) > 1:
+						warnings.warn(f'*** Dropping {len(unidentified)-1} extra unidentified values for property {p} of {obj}')
+					try:
+						values = set(unidentified + [getattr(obj, p)])
+						value = sorted(values)[0]
+					except TypeError:
+						# in case the values cannot be sorted
+						value = unidentified[0]
+					setattr(obj, p, None)
+					setattr(obj, p, value)
 
 class ExtractKeyedValues(Configurable):
 	'''
@@ -314,17 +408,25 @@ class MatchingFiles(Configurable):
 			sys.stderr.write(f'*** No files matching {pattern} found in {fullpath}\n')
 
 def timespan_before(after):
-	ts = model.TimeSpan()
+	ts = model.TimeSpan(ident='')
 	try:
 		ts.end_of_the_end = after.begin_of_the_begin
+		with suppress(AttributeError):
+			l = f'Before {after._label}'
+			l.identified_by = model.Name(ident='', content=l)
+			ts._label = l
 		return ts
 	except AttributeError:
 		return None
 
 def timespan_after(before):
-	ts = model.TimeSpan()
+	ts = model.TimeSpan(ident='')
 	try:
 		ts.begin_of_the_begin = before.end_of_the_end
+		with suppress(AttributeError):
+			l = f'After {before._label}'
+			l.identified_by = model.Name(ident='', content=l)
+			ts._label = l
 		return ts
 	except AttributeError:
 		return None
@@ -353,7 +455,75 @@ def strip_key_prefix(prefix, value):
 			d[k] = v
 	return d
 
-def timespan_from_outer_bounds(begin=None, end=None):
+
+def label_for_timespan_range(begin, end, inclusive=False):
+	'''
+	Returns a human-readable string for labeling the timespan with the given bounds.
+	
+	The {inclusive} indicates if the upper bound given by {end} is inclusive or exclusive.
+	
+	If {end} is exclusive, the label will take this into account in creating a
+	human-readable string. For example, if the upper bound was '2019-12-01', exclusive,
+	the human-readable label should indicate the timespan ending at the end of November.
+	'''
+	if begin == end:
+		return begin
+	
+	if isinstance(begin, datetime.datetime):
+		begin = begin.strftime("%Y-%m-%d")
+	if isinstance(end, datetime.datetime):
+		end = end.strftime("%Y-%m-%d")
+
+
+	orig_begin = begin
+	orig_end = end
+	if begin.count('-') != 2:
+		if not inclusive:
+			raise Exception(f'truncated date strings must operate in inclusive mode in label_for_timespan_range: {begin}')
+		begin = implode_date(dict(zip(('year', 'month', 'day'), (begin.split('-', 3) + ['', '', ''])[:3])), clamp='begin')
+	if end.count('-') != 2:
+		if not inclusive:
+			raise Exception(f'truncated date strings must operate in inclusive mode in label_for_timespan_range: {end}')
+		end = implode_date(dict(zip(('year', 'month', 'day'), (end.split('-', 3) + ['', '', ''])[:3])), clamp='end' if inclusive else 'eoe')
+	
+	beginparts = list(map(int, begin.split('-')))
+	endparts = list(map(int, end.split('-')))
+
+	from_y, from_m, from_d = beginparts
+	to_y, to_m, to_d = endparts
+	if inclusive:
+		maxday = calendar.monthrange(to_y, to_m)[1]
+		if from_y == to_y and from_m == to_m and from_d == 1 and to_d == maxday:
+			# 1 month range
+			return '%04d-%02d' % (from_y, from_m)
+		elif from_y == to_y and from_m == 1 and to_m == 12 and from_d == 1 and to_d == 31:
+			# 1 year range
+			return str(from_y)
+		else:
+			return f'{orig_begin} to {orig_end}'
+	else:
+		if from_y == to_y and from_m == to_m and from_d == to_d - 1:
+			# 1 day range
+			return begin
+		elif from_y == to_y and from_m == to_m - 1 and from_d == to_d and to_d == 1:
+			# 1 month range
+			return '%04d-%02d' % (from_y, from_m)
+		elif from_y == to_y - 1 and from_m == to_m and to_m == 1 and from_d == to_d and to_d == 1:
+			# 1 year range
+			return str(from_y)
+		else:
+			to_d -= 1
+			if to_d == 0:
+				to_m -= 1
+				if to_m == 0:
+					to_m = 12
+					to_y -= 1
+				to_d = calendar.monthrange(to_y, to_m)[1]
+			end = '%04d-%02d-%02d' % (to_y, to_m, to_d)
+			return f'{begin} to {end}'
+
+
+def timespan_from_outer_bounds(begin=None, end=None, inclusive=False):
 	'''
 	Return a `TimeSpan` based on the (optional) `begin` and `end` date strings.
 
@@ -361,6 +531,13 @@ def timespan_from_outer_bounds(begin=None, end=None):
 	'''
 	if begin or end:
 		ts = model.TimeSpan(ident='')
+		if begin and end:
+			ts._label = label_for_timespan_range(begin, end, inclusive=inclusive)
+		elif begin:
+			ts._label = f'{begin} onwards'
+		elif end:
+			ts._label = f'up to {end}'
+
 		if begin is not None:
 			try:
 				if not isinstance(begin, datetime.datetime):
@@ -374,9 +551,70 @@ def timespan_from_outer_bounds(begin=None, end=None):
 			try:
 				if not isinstance(end, datetime.datetime):
 					end = dateutil.parser.parse(end)
+				if inclusive:
+					end += datetime.timedelta(days=1)
 				end = end.strftime("%Y-%m-%dT%H:%M:%SZ")
 				ts.end_of_the_end = end
 			except ValueError:
 				warnings.warn(f'*** failed to parse end date: {end}')
 		return ts
 	return None
+
+class CaseFoldingSet(set):
+	def __init__(self, iterable):
+		super().__init__(self)
+		for v in iterable:
+			if isinstance(v, str):
+				self.add(v.casefold())
+			else:
+				self.add(v)
+
+	def __and__(self, value):
+		return CaseFoldingSet({s for s in value if s in self})
+
+	def __or__(self, value):
+		s = CaseFoldingSet(self)
+		for v in value:
+			s.add(v)
+		return s
+
+	def add(self, v):
+		super().add(v.casefold())
+
+	def remove(self, v):
+		super().remove(v.casefold())
+
+	def __contains__(self, v):
+		return super().__contains__(v.casefold())
+
+def truncate_with_ellipsis(s, length=100):
+	'''
+	If the string is too long to represent as a title-like identifier, return a new,
+	truncated string with a trailing ellipsis that can be used as a title (with the
+	assumption that the long original value will be represented as a more suitable
+	string such as a description).
+	'''
+	if not isinstance(s, str):
+		return None
+	if len(s) <= length:
+		return None
+	shorter = ' '.join(s[:length].split(' ')[0:-1]) + '…'
+	if len(shorter) == 1:
+		# breaking on spaces did not yield a shorter string;
+		# {s} must start with at least 100 non-space characters
+		shorter = s[:length-1] + '…'
+	return shorter
+
+class GraphListSource:
+	'''
+	Act as a bonobo graph source node for a set of crom objects.
+	Yields the supplied objects wrapped in data dicts.
+	'''
+	def __init__(self, values, *args, **kwargs):
+		super().__init__(*args, **kwargs)
+		self.values = values
+
+	def __call__(self):
+		for v in self.values:
+			yield add_crom_data({}, v)
+

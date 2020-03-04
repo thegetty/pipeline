@@ -3,6 +3,7 @@ import os.path
 import hashlib
 import uuid
 import pprint
+import warnings
 from collections import Counter, defaultdict, namedtuple
 # import multiprocessing
 # from multiprocessing.pool import ThreadPool
@@ -47,8 +48,8 @@ class MergingMemoryWriter(Configurable):
 			else:
 				merger.merge(m, model_object)
 				return m
-		except model.DataError:
-			print(f'Exception caught while merging data:')
+		except Exception as e:
+			print(f'Exception caught while merging data ({e}):')
 			print(d)
 			print(content)
 			raise
@@ -63,16 +64,19 @@ class MergingMemoryWriter(Configurable):
 		else:
 			self.counter['non-collision'] += 1
 			self.data[ident] = model_object
+
 		return None
 
 	def flush(self):
 		writer = MergingFileWriter(directory=self.directory, partition_directories=self.partition_directories, compact=self.compact, model=self.model)
 		count = len(self.data)
 		skip = max(int(count / 100), 1)
-		for i, k in enumerate(self.data):
+		for i, k in enumerate(sorted(self.data)):
 			o = self.data[k]
 			if (i % skip) == 0:
 				pct = 100.0 * float(i) / float(count)
 				print('[%d/%d] %.1f%% writing objects for model %s' % (i+1, count, pct, self.model))
 			d = add_crom_data(data={}, what=o)
 			writer(d)
+		warnings.warn(f'MergingMemoryWriter flush for model {self.model} with {len(self.data)} items')
+		self.data = {}

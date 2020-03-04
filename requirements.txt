@@ -1,5 +1,6 @@
-#cromulent==0.14.0
+#cromulent==0.15.2
 git+git://github.com/thegetty/crom@master
+ujson==1.35
 python-dateutil==2.8.0
 bonobo==0.6.4
 bonobo-sqlalchemy==0.6.1

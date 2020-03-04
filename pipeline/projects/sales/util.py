@@ -3,38 +3,34 @@ import urllib.parse
 from collections import Counter
 import uuid
 import json
-import datetime
-import dateutil.parser
-from pipeline.util import implode_date
-from cromulent import model
 import warnings
 
-UID_TAG_PREFIX = 'tag:getty.edu,2019:digital:pipeline:provenance:REPLACE-WITH-UUID#'
+from pipeline.util import implode_date
+from pipeline.projects import UtilityHelper
 
-def pir_uri(*values):
-	'''Convert a set of identifying `values` into a URI'''
-	if values:
-		suffix = ','.join([urllib.parse.quote(str(v)) for v in values])
-		return UID_TAG_PREFIX + suffix
+UID_TAG_PREFIX = 'tag:getty.edu,2019:digital:pipeline:REPLACE-WITH-UUID:sales#'
+
+def filter_empty_person(data: dict, _):
+	'''
+	If all the values of the supplied dictionary are false (or false after int conversion
+	for keys ending with 'ulan'), return `None`. Otherwise return the dictionary.
+	'''
+	set_flags = []
+	for k, v in data.items():
+		if k.endswith('ulan'):
+			if v in ('', '0'):
+				s = False
+			else:
+				s = True
+		elif k in ('pi_record_no', 'star_rec_no'):
+			s = False
+		else:
+			s = bool(v)
+		set_flags.append(s)
+	if any(set_flags):
+		return data
 	else:
-		suffix = str(uuid.uuid4())
-		return UID_TAG_PREFIX + suffix
-
-def filter_empty_people(*people):
-	'''Yield only the `people` dicts that have relevant properties set'''
-	for p in people:
-		keys = set(p.keys())
-		data_keys = keys - {
-			'_CROM_FACTORY',
-			'_LOD_OBJECT',
-			'pi_record_no',
-			'star_rec_no',
-			'persistent_puid',
-			'parent_data'
-		}
-		d = {k: p[k] for k in data_keys if p[k] and p[k] != '0'}
-		if d:
-			yield p
+		return None
 
 def add_pir_record_ids(data, parent):
 	'''Copy identifying key-value pairs from `parent` to `data`, returning `data`'''
@@ -52,21 +48,24 @@ def object_key(data):
 	date = implode_date(data, 'lot_sale_')
 	return (cno, lno, date)
 
-def object_uri(data):
+def object_uri(data, helper):
 	key = object_key(data)
-	return pir_uri('OBJECT', *key)
+	return helper.make_proj_uri('OBJ', *key)
 
-def add_pir_object_uri(data, parent):
+def add_pir_object_uri_factory(helper):
+	return lambda d, p: add_pir_object_uri(d, p, helper)
+
+def add_pir_object_uri(data, parent, helper):
 	'''
 	Set 'uri' keys in `data` based on its identifying properties, returning `data`.
 	'''
 	add_pir_record_ids(data, parent)
-	data['uri'] = object_uri(parent)
+	data['uri'] = object_uri(parent, helper)
 	return data
 
 class SalesTree:
 	'''
-	This class is used to represent the repeated sales of objects in provenance data.
+	This class is used to represent the repeated sales of objects in sales data.
 	It stores a graph of trees where each node is a lot sale, and edges connect sales
 	of the same object over time.
 
@@ -86,7 +85,6 @@ class SalesTree:
 		self.nodes = {}
 		self.nodes_rev = {}
 		self.outgoing_edges = {}
-		self.incoming_edges = {}
 
 	def add_node(self, node):
 		if node not in self.nodes:
@@ -97,26 +95,26 @@ class SalesTree:
 		return i
 
 	def largest_component_canonical_keys(self, limit=None):
+		helper = UtilityHelper('sales')
 		components = Counter()
 		for src in self.nodes.keys():
 			key, _ = self.canonical_key(src)
 			components[key] += 1
-		print(f'Post sales records connected component sizes (top {limit}):')
+# 		print(f'Post sales records connected component sizes (top {limit}):')
 		for key, count in components.most_common(limit):
-			uri = pir_uri('OBJECT', *key)
-			print(f'{count}\t{key!s:>40}\t\t{uri}')
+			uri = helper.make_proj_uri('OBJ', *key)
+# 			print(f'{count}\t{key!s:>40}\t\t{uri}')
 			yield key
 
 	def add_edge(self, src, dst):
 		i = self.add_node(src)
 		j = self.add_node(dst)
-		if i in self.outgoing_edges:
-			if self.outgoing_edges[i] == j:
-				warnings.warn(f'*** re-asserted sale edge: {src!s:<40} -> {dst}')
-			else:
-				warnings.warn(f'*** {src} already has an outgoing edge: {self.outgoing_edges[i]}')
+# 		if i in self.outgoing_edges:
+# 			if self.outgoing_edges[i] == j:
+# 				warnings.warn(f'*** re-asserted sale edge: {src!s:<40} -> {dst}')
+# 			else:
+# 				warnings.warn(f'*** {src} already has an outgoing edge: {self.outgoing_edges[i]}')
 		self.outgoing_edges[i] = j
-		self.incoming_edges[j] = i
 
 	def __iter__(self):
 		for i in self.outgoing_edges.keys():
@@ -133,7 +131,6 @@ class SalesTree:
 		g.nodes_rev = {int(i): tuple(n) for i, n in d['nodes'].items()}
 		g.nodes = {n: i for i, n in g.nodes_rev.items()}
 		g.outgoing_edges = {int(k): int(v) for k, v in d['outgoing'].items()}
-		g.incoming_edges = {v: k for k, v in g.outgoing_edges.items()}
 		return g
 
 	def dump(self, f):
@@ -149,6 +146,7 @@ class SalesTree:
 		key = src
 		steps = 0
 		seen = {key}
+		path = [key]
 		while True:
 			if key not in self.nodes:
 				break
@@ -162,9 +160,12 @@ class SalesTree:
 				warnings.warn(f'*** Self-loop found in post sale data: {key!s:<40}')
 				break
 			if parent in seen:
-				warnings.warn(f'*** Loop found in post sale data: {key!s:<40} -> {parent!s:<40}')
+				path.append(parent)
+				warnings.warn(f'*** Loop found in post sale data: {path}')
+# 				warnings.warn(f'*** Loop found in post sale data: {key!s:<40} -> {parent!s:<40}')
 				break
-			seen.add(parent)
 			key = parent
+			seen.add(key)
+			path.append(key)
 			steps += 1
 		return key, steps

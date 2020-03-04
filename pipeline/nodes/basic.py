@@ -92,12 +92,14 @@ class KeyManagement(Configurable):
 						subd = {}
 						properties = mapping['properties']
 						postprocess = mapping.get('postprocess')
+						rename = mapping.get('rename_keys', {})
 						for k in properties:
 							v = data.get(k)
 							to_delete.add(k)
 							if self.drop_empty and not v:
 								continue
-							subd[k] = v
+							sub_key = rename.get(k, k)
+							subd[sub_key] = v
 						if postprocess:
 							if callable(postprocess):
 								postprocess = [postprocess]

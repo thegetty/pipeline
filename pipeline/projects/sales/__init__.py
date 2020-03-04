@@ -744,25 +744,40 @@ class SalesPipeline(PipelineBase):
 						'group_repeating': {
 							'seller': {'prefixes': ('sell_auth_name', 'sell_auth_q')},
 							'expert': {
-								'postprocess': [
-									lambda x, _: replace_key_pattern(r'^(expert)$', 'expert_name', x),
-									lambda x, _: strip_key_prefix('expert_', x),
-									lambda x, _: replace_key_pattern(r'^(auth)$', 'auth_name', x),
-								],
+								'rename_keys': {
+									'expert': 'name',
+									'expert_auth': 'auth_name',
+									'expert_ulan': 'ulan'
+								},
+# 								'postprocess': [
+# 									lambda x, _: replace_key_pattern(r'^(expert)$', 'expert_name', x),
+# 									lambda x, _: strip_key_prefix('expert_', x),
+# 									lambda x, _: replace_key_pattern(r'^(auth)$', 'auth_name', x),
+# 								],
 								'prefixes': ('expert', 'expert_auth', 'expert_ulan')
 							},
 							'commissaire': {
-								'postprocess': [
-									lambda x, _: replace_key_pattern(r'^(comm_pr)$', 'comm_pr_name', x),
-									lambda x, _: strip_key_prefix('comm_pr_', x),
-									lambda x, _: replace_key_pattern(r'^(auth)$', 'auth_name', x),
-								],
+								'rename_keys': {
+									'comm_pr': 'name',
+									'comm_pr_auth': 'auth_name',
+									'comm_pr_ulan': 'ulan'
+								},
+# 								'postprocess': [
+# 									lambda x, _: replace_key_pattern(r'^(comm_pr)$', 'comm_pr_name', x),
+# 									lambda x, _: strip_key_prefix('comm_pr_', x),
+# 									lambda x, _: replace_key_pattern(r'^(auth)$', 'auth_name', x),
+# 								],
 								'prefixes': ('comm_pr', 'comm_pr_auth', 'comm_pr_ulan')
 							},
 							'auction_house': {
-								'postprocess': [
-									lambda x, _: strip_key_prefix('auc_house_', x),
-								],
+								'rename_keys': {
+									'auc_house_name': 'name',
+									'auc_house_auth': 'auth_name',
+									'auc_house_ulan': 'ulan'
+								},
+# 								'postprocess': [
+# 									lambda x, _: strip_key_prefix('auc_house_', x),
+# 								],
 								'prefixes': ('auc_house_name', 'auc_house_auth', 'auc_house_ulan')
 							},
 							'portal': {'prefixes': ('portal_url',)},
@@ -877,10 +892,14 @@ class SalesPipeline(PipelineBase):
 							'expert': {'prefixes': ('expert_auth', 'expert_ulan')},
 							'commissaire': {'prefixes': ('commissaire_pr', 'comm_ulan')},
 							'auction_house': {
-								'postprocess': [
-									lambda x, _: replace_key_pattern(r'(auction_house)', 'house_name', x),
-									lambda x, _: strip_key_prefix('house_', x),
-								],
+								'rename_keys': {
+									'auction_house': 'name',
+									'house_ulan': 'ulan'
+								},
+# 								'postprocess': [
+# 									lambda x, _: replace_key_pattern(r'(auction_house)', 'house_name', x),
+# 									lambda x, _: strip_key_prefix('house_', x),
+# 								],
 								'prefixes': ('auction_house', 'house_ulan')
 							},
 							'_artists': {
@@ -896,14 +915,30 @@ class SalesPipeline(PipelineBase):
 							},
 							'hand_note': {'prefixes': ('hand_note', 'hand_note_so')},
 							'seller': {
+								'rename_keys': {
+									'sell_name': 'name',
+									'sell_name_so': 'so',
+									'sell_name_ques': 'ques',
+									'sell_mod': 'mod',
+									'sell_auth_mod': 'auth_mod',
+									'sell_auth_mod_a': 'auth_mod_a',
+									'sell_auth_name': 'auth_name',
+									'sell_auth_nameq': 'auth_nameq',
+									'sell_ulan': 'ulan'
+								},
 								'postprocess': [
-									lambda x, _: strip_key_prefix('sell_', x),
+# 									lambda x, _: strip_key_prefix('sell_', x),
 									filter_empty_person
 								],
 								'prefixes': (
-									'sell_name', 'sell_name_so', 'sell_name_ques',
-									'sell_mod', 'sell_auth_mod', 'sell_auth_mod_a',
-									'sell_auth_name', 'sell_auth_nameq',
+									'sell_name',
+									'sell_name_so',
+									'sell_name_ques',
+									'sell_mod',
+									'sell_auth_mod',
+									'sell_auth_mod_a',
+									'sell_auth_name',
+									'sell_auth_nameq',
 									'sell_ulan'
 								)
 							},
@@ -916,58 +951,151 @@ class SalesPipeline(PipelineBase):
 									'price_source',
 									'price_citation')},
 							'buyer': {
+								'rename_keys': {
+									'buy_name': 'name',
+									'buy_name_so': 'name_so',
+									'buy_name_ques': 'name_ques',
+									'buy_name_cite': 'name_cite',
+									'buy_auth_name': 'auth_name',
+									'buy_auth_nameq': 'auth_nameq',
+									'buy_mod': 'mod',
+									'buy_auth_mod': 'auth_mod',
+									'buy_auth_mod_a': 'auth_mod_a',
+									'buy_ulan': 'ulan'
+								},
 								'postprocess': [
-									lambda x, _: strip_key_prefix('buy_', x),
+# 									lambda x, _: strip_key_prefix('buy_', x),
 									filter_empty_person
 								],
 								'prefixes': (
-									'buy_name', 'buy_name_so', 'buy_name_ques', 'buy_name_cite',
-									'buy_auth_name', 'buy_auth_nameq',
-									'buy_mod', 'buy_auth_mod', 'buy_auth_mod_a', 'buy_ulan'
+									'buy_name',
+									'buy_name_so',
+									'buy_name_ques',
+									'buy_name_cite',
+									'buy_auth_name',
+									'buy_auth_nameq',
+									'buy_mod',
+									'buy_auth_mod',
+									'buy_auth_mod_a',
+									'buy_ulan'
 								)
 							},
 							'prev_owner': {
-								'postprocess': [
-									lambda x, _: replace_key_pattern(r'(prev_owner)', 'prev_own', x),
-									lambda x, _: strip_key_prefix('prev_', x),
-								],
+								'rename_keys': {
+									'prev_owner': 'own',
+									'prev_own_ques': 'own_ques',
+									'prev_own_so': 'own_so',
+									'prev_own_auth': 'own_auth',
+									'prev_own_auth_d': 'own_auth_d',
+									'prev_own_auth_l': 'own_auth_l',
+									'prev_own_auth_q': 'own_auth_q',
+									'prev_own_ulan': 'own_ulan'
+								},
+# 								'postprocess': [
+# 									lambda x, _: replace_key_pattern(r'(prev_owner)', 'prev_own', x),
+# 									lambda x, _: strip_key_prefix('prev_', x),
+# 								],
 								'prefixes': (
-									'prev_owner', 'prev_own_ques', 'prev_own_so',
-									'prev_own_auth', 'prev_own_auth_d', 'prev_own_auth_l', 'prev_own_auth_q',
+									'prev_owner',
+									'prev_own_ques',
+									'prev_own_so',
+									'prev_own_auth',
+									'prev_own_auth_d',
+									'prev_own_auth_l',
+									'prev_own_auth_q',
 									'prev_own_ulan'
 								)
 							},
 							'other_titles': {
-								'postprocess': [
-									lambda x, _: strip_key_prefix('prev_sale_', x),
-									lambda x, _: strip_key_prefix('post_sale_', x),
-									lambda x, _: replace_key_pattern(r'(ttlx)', 'title', x),
-									lambda x, _: replace_key_pattern(r'(ttl)', 'title', x)
-								],
+								'rename_keys': {
+									'prev_sale_ttlx': 'title',
+									'post_sale_ttl': 'title' # TODO: does this ever cause a collision?
+								},
+# 								'postprocess': [
+# 									lambda x, _: strip_key_prefix('prev_sale_', x),
+# 									lambda x, _: strip_key_prefix('post_sale_', x),
+# 									lambda x, _: replace_key_pattern(r'(ttlx)', 'title', x),
+# 									lambda x, _: replace_key_pattern(r'(ttl)', 'title', x)
+# 								],
 								'prefixes': (
 									'prev_sale_ttlx',
 									'post_sale_ttl')},
 							'prev_sale': {
-								'postprocess': lambda x, _: strip_key_prefix('prev_sale_', x),
+								'rename_keys': {
+									'prev_sale_year': 'year',
+									'prev_sale_mo': 'mo',
+									'prev_sale_day': 'day',
+									'prev_sale_lot': 'lot',
+									'prev_sale_loc': 'loc',
+									'prev_sale_ques': 'ques',
+									'prev_sale_artx': 'artx',
+									'prev_sale_ttlx': 'ttlx',
+									'prev_sale_note': 'note',
+									'prev_sale_coll': 'coll',
+									'prev_sale_cat': 'cat'
+								},
+# 								'postprocess': lambda x, _: strip_key_prefix('prev_sale_', x),
 								'prefixes': (
-									'prev_sale_year', 'prev_sale_mo', 'prev_sale_day',
+									'prev_sale_year',
+									'prev_sale_mo',
+									'prev_sale_day',
 									'prev_sale_lot',
-									'prev_sale_loc', 'prev_sale_ques', 'prev_sale_artx', 'prev_sale_ttlx', 'prev_sale_note', 'prev_sale_coll', 'prev_sale_cat'
+									'prev_sale_loc',
+									'prev_sale_ques',
+									'prev_sale_artx',
+									'prev_sale_ttlx',
+									'prev_sale_note',
+									'prev_sale_coll',
+									'prev_sale_cat'
 								)
 							},
 							'post_sale': {
-								'postprocess': lambda x, _: strip_key_prefix('post_sale_', x),
+								'rename_keys': {
+									'post_sale_year': 'year',
+									'post_sale_mo': 'mo',
+									'post_sale_day': 'day',
+									'post_sale_lot': 'lot',
+									'post_sale_loc': 'loc',
+									'post_sale_q': 'q',
+									'post_sale_art': 'art',
+									'post_sale_nte': 'nte',
+									'post_sale_col': 'col',
+									'post_sale_cat': 'cat'
+								},
+# 								'postprocess': lambda x, _: strip_key_prefix('post_sale_', x),
 								'prefixes': (
-									'post_sale_year', 'post_sale_mo', 'post_sale_day',
+									'post_sale_year',
+									'post_sale_mo',
+									'post_sale_day',
 									'post_sale_lot',
-									'post_sale_loc', 'post_sale_q', 'post_sale_art', 'post_sale_nte', 'post_sale_col', 'post_sale_cat'
+									'post_sale_loc',
+									'post_sale_q',
+									'post_sale_art',
+									'post_sale_nte',
+									'post_sale_col',
+									'post_sale_cat'
 								)
 							},
 							'post_owner': {
-								'postprocess': lambda x, _: strip_key_prefix('post_', x),
+								'rename_keys': {
+									'post_own': 'own',
+									'post_own_q': 'own_q',
+									'post_own_so': 'own_so',
+									'post_own_auth': 'own_auth',
+									'post_own_auth_d': 'own_auth_d',
+									'post_own_auth_l': 'own_auth_l',
+									'post_own_auth_q': 'own_auth_q',
+									'post_own_ulan': 'own_ulan'
+								},
+# 								'postprocess': lambda x, _: strip_key_prefix('post_', x),
 								'prefixes': (
-									'post_own', 'post_own_q', 'post_own_so',
-									'post_own_auth', 'post_own_auth_d', 'post_own_auth_l', 'post_own_auth_q',
+									'post_own',
+									'post_own_q',
+									'post_own_so',
+									'post_own_auth',
+									'post_own_auth_d',
+									'post_own_auth_l',
+									'post_own_auth_q',
 									'post_own_ulan'
 								)
 							},
@@ -975,7 +1103,16 @@ class SalesPipeline(PipelineBase):
 						},
 						'group': {
 							'present_location': {
-								'postprocess': lambda x, _: strip_key_prefix('present_loc_', x),
+								'rename_keys': {
+									'present_loc_geog': 'geog',
+									'present_loc_inst': 'inst',
+									'present_loc_insq': 'insq',
+									'present_loc_insi': 'insi',
+									'present_loc_acc': 'acc',
+									'present_loc_accq': 'accq',
+									'present_loc_note': 'note',
+								},
+# 								'postprocess': lambda x, _: strip_key_prefix('present_loc_', x),
 								'properties': (
 									'present_loc_geog',
 									'present_loc_inst',

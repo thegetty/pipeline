@@ -220,6 +220,14 @@ class OnlyCromModeledRecords:
 
 class OnlyRecordsOfType(Configurable):
 	type = Option()
+	def __init__(self, *v, **kw):
+		'''
+		Sets the __name__ property to include the relevant options so that when the
+		bonobo graph is serialized as a GraphViz document, different objects can be
+		visually differentiated.
+		'''
+		super().__init__(*v, **kw)
+		self.__name__ = f'{type(self).__name__} ({self.type})'
 
 	def __call__(self, data):
 		o = get_crom_object(data)

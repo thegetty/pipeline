@@ -581,9 +581,11 @@ class ProvenanceUtilityHelper(UtilityHelper):
 		'''Add modeling data for an auction house organization.'''
 		catalog = a.get('_catalog')
 
-		auction_house_uri_keys = self.auction_house_uri_keys(a, sequence=sequence)
-		a['uri'] = self.auction_house_uri(a, sequence=sequence)
-		a['uid'] = '-'.join([str(k) for k in auction_house_uri_keys])
+		if 'uri' not in a:
+			auction_house_uri_keys = self.auction_house_uri_keys(a, sequence=sequence)
+			a['uri'] = self.auction_house_uri(a, sequence=sequence)
+			a['uid'] = '-'.join([str(k) for k in auction_house_uri_keys])
+
 		ulan = None
 		with suppress(ValueError, TypeError):
 			ulan = int(a.get('ulan'))

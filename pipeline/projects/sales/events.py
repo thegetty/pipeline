@@ -156,15 +156,18 @@ class AddAuctionHouses(Configurable):
 		houses = data.get('auction_house', [])
 		cno = data['catalog_number']
 
-		house_objects = []
+		house_dicts = []
 		event_record = get_crom_object(data['_record'])
 		d['_organizers'] = []
 		for i, h in enumerate(houses):
+			house_dict = self.helper.copy_source_information(h, data)
+			house_dict_copy = house_dict.copy()
 			h['_catalog'] = catalog
-			self.helper.add_auction_house_data(self.helper.copy_source_information(h, data), sequence=i, event_record=event_record)
+			self.helper.add_auction_house_data(house_dict, sequence=i, event_record=event_record)
+			house_dict_copy['uri'] = house_dict['uri']
+			house_dicts.append(house_dict_copy)
 			house = get_crom_object(h)
 			auction.carried_out_by = house
-			house_objects.append(house)
 			d['_organizers'].append(h)
-		event_properties['auction_houses'][cno] += house_objects
+		event_properties['auction_houses'][cno] += house_dicts
 		return d

@@ -332,7 +332,7 @@ class ProvenanceUtilityHelper(UtilityHelper):
 		if data.get('name_so'):
 			# handling of the name_so field happens here and not in the PersonIdentity methods,
 			# because it requires access to the services data on catalogs
-			source = data['name_so']
+			source = data.get('name_so', '').strip()
 			components = source.split(' ')
 			if len(components) == 2:
 				owner_code, copy_number = components

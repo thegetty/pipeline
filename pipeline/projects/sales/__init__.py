@@ -1421,15 +1421,17 @@ class SalesFilePipeline(SalesPipeline):
 			print(f'Saved post-sales rewrite map to {rewrite_map_filename}')
 
 	def checkpoint(self):
-		self.flush_writers()
+		self.flush_writers(verbose=False)
 		super().checkpoint()
 
-	def flush_writers(self):
+	def flush_writers(self, **kwargs):
+		verbose = kwargs.get('verbose', True)
 		count = len(self.writers)
 		for seq_no, w in enumerate(self.writers):
-			print('[%d/%d] writers being flushed' % (seq_no+1, count))
+			if verbose:
+				print('[%d/%d] writers being flushed' % (seq_no+1, count))
 			if isinstance(w, MergingMemoryWriter):
-				w.flush()
+				w.flush(**kwargs)
 
 	def run(self, **options):
 		'''Run the Provenance bonobo pipeline.'''

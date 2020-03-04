@@ -196,7 +196,7 @@ class AddAuctionOfLot(Configurable):
 			event_dates = event_properties['auction_dates'].get(cno)
 
 			auction_houses = [
-				get_crom_object(self.helper.add_auction_house_data(h))
+				get_crom_object(self.helper.add_auction_house_data(h.copy()))
 				for h in auction_houses_data.get(cno, [])
 			]
 
@@ -785,7 +785,7 @@ class AddAcquisitionOrBidding(Configurable):
 						'catalog_number': cno
 					}
 					houses = [
-						self.helper.add_auction_house_data(h)
+						self.helper.add_auction_house_data(h.copy())
 						for h in auction_houses_data.get(cno, [])
 					]
 					for i, h in enumerate(houses):

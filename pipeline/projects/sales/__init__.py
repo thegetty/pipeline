@@ -204,7 +204,7 @@ class PersonIdentity:
 		else:
 			return f'{role}s'
 		return a
-		
+
 	def professional_activity(self, group_label, century=None):
 		a = vocab.Active(ident='', label=f'Professional activity of {group_label}')
 		if century:
@@ -223,7 +223,7 @@ class PersonIdentity:
 			elif isinstance(data['nationality'], list):
 				nationalities += data['nationality']
 		data['nationality'] = []
-		
+
 		if 'referred_to_by' not in data:
 			data['referred_to_by'] = []
 
@@ -419,7 +419,7 @@ class ProvenanceUtilityHelper(UtilityHelper):
 		keys = [v for v in [cno, owner, copy] if v]
 		uri = self.make_proj_uri('PHYS-CAT', *keys)
 		return uri
-	
+
 	def physical_catalog(self, cno, sale_type, owner=None, copy=None):
 		uri = self.physical_catalog_uri(cno, owner, copy)
 		labels = []
@@ -841,7 +841,7 @@ class SalesPipeline(PipelineBase):
 			pipeline.projects.sales.lots.AddAcquisitionOrBidding(helper=self.helper),
 			_input=sales.output
 		)
-		
+
 		orgs = self.add_person_or_group_chain(graph, bid_acqs, key='_organizations', serialize=serialize)
 		refs = graph.add_chain(
 			ExtractKeyedValues(key='_citation_references'),
@@ -1188,25 +1188,25 @@ class SalesPipeline(PipelineBase):
 			pipeline.projects.sales.lots.AddAuctionOfLot(helper=self.helper),
 			_input=records.output
 		)
-		
+
 		auctions_of_lot = graph.add_chain(
 			ExtractKeyedValue(key='_event_causing_prov_entry'),
 			OnlyRecordsOfType(type=vocab.Auction),
 			_input=sales.output
 		)
-		
+
 		private_sale_activities = graph.add_chain(
 			ExtractKeyedValue(key='_event_causing_prov_entry'),
 			OnlyRecordsOfType(type=vocab.Negotiating),
 			_input=sales.output
 		)
-		
+
 		lottery_drawings = graph.add_chain(
 			ExtractKeyedValue(key='_event_causing_prov_entry'),
 			OnlyRecordsOfType(type=vocab.LotteryDrawing),
 			_input=sales.output
 		)
-		
+
 		if serialize:
 			# write SALES data
 			self.add_serialization_chain(graph, auctions_of_lot.output, model=self.models['AuctionOfLot'], limit=1000)
@@ -1441,7 +1441,7 @@ class SalesPipeline(PipelineBase):
 		self.run_graph(graph1, services=services)
 
 		self.checkpoint()
-		
+
 		print('Running graph component 2...', file=sys.stderr)
 		graph2 = self.get_graph_2(**options, services=services)
 		self.run_graph(graph2, services=services)
@@ -1586,7 +1586,7 @@ class SalesFilePipeline(SalesPipeline):
 		post_map = services['post_sale_map']
 		self.generate_prev_post_sales_data(post_map)
 		print(f'>>> {len(post_map)} post sales records')
-		
+
 		sizes = {k: sys.getsizeof(v) for k, v in services.items()}
 		for k in sorted(services.keys(), key=lambda k: sizes[k]):
 			print(f'{k:<20}  {sizes[k]}')

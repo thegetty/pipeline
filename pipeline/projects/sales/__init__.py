@@ -5,6 +5,8 @@ running a bonobo pipeline for converting Provenance Index CSV data into JSON-LD.
 
 # PIR Extracters
 
+import random
+import objgraph
 import re
 import os
 import json
@@ -1590,4 +1592,17 @@ class SalesFilePipeline(SalesPipeline):
 		sizes = {k: sys.getsizeof(v) for k, v in services.items()}
 		for k in sorted(services.keys(), key=lambda k: sizes[k]):
 			print(f'{k:<20}  {sizes[k]}')
+		objgraph.show_most_common_types(limit=50)
 		print('Total runtime: ', timeit.default_timer() - start)
+
+		for type in ('AttributeAssignment', 'Person', 'Production', 'Painting'):
+			objects = objgraph.by_type(type)
+			for i in range(min(5, len(objects))):
+				objgraph.show_chain(
+					objgraph.find_backref_chain(
+						random.choice(objects),
+						objgraph.is_proper_module
+					),
+					filename=f'chain.{type}.{i}.png'
+				)
+

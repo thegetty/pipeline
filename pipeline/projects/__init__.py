@@ -139,7 +139,7 @@ class PipelineBase:
 			sys.stderr.write('*** No serialization chain defined\n')
 
 	def run_graph(self, graph, *, services):
-		if True:
+		if False:
 			print('Running with PARALLEL bonobo executor')
 			bonobo.run(graph, services=services)
 		else:

@@ -40,12 +40,16 @@ class AddAuctionOfLot(Configurable):
 			for house in auction_houses:
 				lot.carried_out_by = house
 
-	@staticmethod
-	def set_lot_location(lot, cno, auction_locations):
+	def set_lot_location(self, lot, cno, auction_locations):
 		'''Associate the location with the auction lot.'''
-		place = auction_locations.get(cno)
-		if place:
+		place_uri = auction_locations.get(cno)
+		base_uri = self.helper.make_proj_uri('AUCTION-EVENT', cno, 'PLACE', '')
+		if place_uri:
+			place_data = self.helper.make_place({'uri': place_uri}, base_uri=base_uri)
+			place = get_crom_object(place_data)
 			lot.took_place_at = place
+		else:
+			print(f'*** No place URI found for lot in catalog {cno}')
 
 	@staticmethod
 	def set_lot_date(lot, auction_data, event_dates):
@@ -63,7 +67,7 @@ class AddAuctionOfLot(Configurable):
 				# if the lot sale date is marked as uncertain:
 				#   - use the event end date as the lot sale's end_of_the_end
 				#   - if the event doesn't have a known end date, assert no end_of_the_end for the lot sale
-				if event_dates[1]:
+				if event_dates and event_dates[1]:
 					bounds[1] = event_dates[1]
 				else:
 					bounds[1] = None

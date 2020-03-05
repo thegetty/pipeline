@@ -10,7 +10,7 @@ import pipeline.execution
 from pipeline.util import implode_date, timespan_from_outer_bounds
 from pipeline.util.cleaners import parse_location
 import pipeline.linkedart
-from pipeline.linkedart import add_crom_data, get_crom_object
+from pipeline.linkedart import add_crom_data, get_crom_object, remove_crom_object
 
 #mark - Auction Events
 
@@ -73,7 +73,7 @@ class PopulateAuctionEvent(Configurable):
 		if place:
 			data['_locations'] = [place_data]
 			auction.took_place_at = place
-			auction_locations[cno] = place
+			auction_locations[cno] = place.id
 
 		begin = implode_date(data, 'sale_begin_', clamp='begin')
 		end = implode_date(data, 'sale_end_', clamp='eoe')

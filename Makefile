@@ -59,8 +59,12 @@ nq: jsonlist
 	find $(GETTY_PIPELINE_OUTPUT) -name '[0-9a-f][0-9a-f]*.nq' | xargs -n 256 cat | gzip - > $(GETTY_PIPELINE_OUTPUT)/all.nq.gz
 	gzip -k $(GETTY_PIPELINE_OUTPUT)/meta.nq
 
-profile:
-	QUIET=$(QUIET) GETTY_PIPELINE_DEBUG=$(DEBUG) GETTY_PIPELINE_LIMIT=$(LIMIT) $(PYTHON) -m cProfile -o $(GETTY_PIPELINE_OUTPUT)/pipeline.prof ./pir.py
+salesprofile:
+	mkdir -p $(GETTY_PIPELINE_TMP_PATH)/pipeline
+	QUIET=$(QUIET) GETTY_PIPELINE_DEBUG=$(DEBUG) GETTY_PIPELINE_LIMIT=$(LIMIT) $(PYTHON) -m cProfile -o $(GETTY_PIPELINE_OUTPUT)/pipeline.prof ./sales.py
+	snakeviz $(GETTY_PIPELINE_OUTPUT)/pipeline.prof
+# 	QUIET=$(QUIET) GETTY_PIPELINE_DEBUG=$(DEBUG) GETTY_PIPELINE_LIMIT=$(LIMIT) $(PYTHON) -m flamegraph -o $(GETTY_PIPELINE_OUTPUT)/pipeline.flame.log ./sales.py
+# 	perl ~/data/prog/ext/FlameGraph/flamegraph.pl --title "Sales Pipeline" $(GETTY_PIPELINE_OUTPUT)/pipeline.flame.log > $(GETTY_PIPELINE_OUTPUT)/pipeline.flame.svg
 
 salespipeline:
 	mkdir -p $(GETTY_PIPELINE_TMP_PATH)/pipeline

@@ -140,8 +140,10 @@ class PipelineBase:
 
 	def run_graph(self, graph, *, services):
 		if True:
+			print('Running with PARALLEL bonobo executor')
 			bonobo.run(graph, services=services)
 		else:
+			print('Running with SERIAL custom executor')
 			e = pipeline.execution.GraphExecutor(graph, services)
 			e.run()
 

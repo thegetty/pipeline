@@ -37,7 +37,7 @@ with open(rewrite_map_filename, 'r') as f:
 	prefix = os.path.commonprefix(list(post_sale_rewrite_map.keys()))
 	if len(prefix) > 20:
 		kwargs['content_filter_re'] = re.compile(re.escape(prefix))
-	rewrite_output_files(r, parallel=True, **kwargs)
+	rewrite_output_files(r, parallel=True, concurrency=8, **kwargs)
 cur = time.time()
 elapsed = cur - start_time
 print(f'Done (%.1fs)' % (elapsed,))

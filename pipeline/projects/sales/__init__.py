@@ -621,10 +621,18 @@ class ProvenanceUtilityHelper(UtilityHelper):
 
 class RecordCounter(Configurable):
 	counts = Service('counts')
+	verbose = Option(bool, default=False)
 	name = Option()
+
+	def __init__(self, *args, **kwargs):
+		super().__init__(self, *args, **kwargs)
+		self.mod = 100
 
 	def __call__(self, data, counts):
 		counts[self.name] += 1
+		count = counts[self.name]
+		if count % self.mod == 0:
+			print(f'\r{count} {self.name}', end='', file=sys.stderr)
 		return data
 
 def add_crom_price(data, parent, services, add_citations=False):
@@ -728,7 +736,7 @@ class SalesPipeline(PipelineBase):
 			pipeline.projects.sales.catalogs.AddAuctionCatalog(helper=self.helper),
 			pipeline.projects.sales.catalogs.AddPhysicalCatalogObjects(helper=self.helper),
 			pipeline.projects.sales.catalogs.AddPhysicalCatalogOwners(helper=self.helper),
-			RecordCounter(name='physical_catalogs'),
+			RecordCounter(name='physical_catalogs', verbose=self.debug),
 			_input=records.output
 		)
 		if serialize:
@@ -824,7 +832,7 @@ class SalesPipeline(PipelineBase):
 			pipeline.projects.sales.events.AddAuctionEvent(helper=self.helper),
 			pipeline.projects.sales.events.AddAuctionHouses(helper=self.helper),
 			pipeline.projects.sales.events.PopulateAuctionEvent(helper=self.helper),
-			RecordCounter(name='auction_events'),
+			RecordCounter(name='auction_events', verbose=self.debug),
 			_input=records.output
 		)
 		if serialize:
@@ -1235,7 +1243,7 @@ class SalesPipeline(PipelineBase):
 			pipeline.projects.sales.objects.PopulateObject(helper=self.helper),
 			pipeline.linkedart.MakeLinkedArtHumanMadeObject(),
 			pipeline.projects.sales.objects.AddArtists(helper=self.helper),
-			RecordCounter(name='sales_records'),
+			RecordCounter(name='sales_records', verbose=self.debug),
 			_input=sales.output
 		)
 

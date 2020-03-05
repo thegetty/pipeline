@@ -619,6 +619,14 @@ class ProvenanceUtilityHelper(UtilityHelper):
 
 		return add_crom_data(data=a, what=house)
 
+class RecordCounter(Configurable):
+	counts = Service('counts')
+	name = Option()
+
+	def __call__(self, data, counts):
+		counts[self.name] += 1
+		return data
+
 def add_crom_price(data, parent, services, add_citations=False):
 	'''
 	Add modeling data for `MonetaryAmount`, `StartingPrice`, or `EstimatedPrice`,
@@ -710,6 +718,7 @@ class SalesPipeline(PipelineBase):
 				'commissaire': defaultdict(list),
 			},
 			'non_auctions': {},
+			'counts': defaultdict(int)
 		})
 		return services
 
@@ -719,6 +728,7 @@ class SalesPipeline(PipelineBase):
 			pipeline.projects.sales.catalogs.AddAuctionCatalog(helper=self.helper),
 			pipeline.projects.sales.catalogs.AddPhysicalCatalogObjects(helper=self.helper),
 			pipeline.projects.sales.catalogs.AddPhysicalCatalogOwners(helper=self.helper),
+			RecordCounter(name='physical_catalogs'),
 			_input=records.output
 		)
 		if serialize:
@@ -814,6 +824,7 @@ class SalesPipeline(PipelineBase):
 			pipeline.projects.sales.events.AddAuctionEvent(helper=self.helper),
 			pipeline.projects.sales.events.AddAuctionHouses(helper=self.helper),
 			pipeline.projects.sales.events.PopulateAuctionEvent(helper=self.helper),
+			RecordCounter(name='auction_events'),
 			_input=records.output
 		)
 		if serialize:
@@ -1224,6 +1235,7 @@ class SalesPipeline(PipelineBase):
 			pipeline.projects.sales.objects.PopulateObject(helper=self.helper),
 			pipeline.linkedart.MakeLinkedArtHumanMadeObject(),
 			pipeline.projects.sales.objects.AddArtists(helper=self.helper),
+			RecordCounter(name='sales_records'),
 			_input=sales.output
 		)
 
@@ -1593,16 +1605,21 @@ class SalesFilePipeline(SalesPipeline):
 		for k in sorted(services.keys(), key=lambda k: sizes[k]):
 			print(f'{k:<20}  {sizes[k]}')
 		objgraph.show_most_common_types(limit=50)
+		
+		print('Record counts:')
+		for k, v in services['counts'].items():
+			print(f'{v:<10} {k}')
+		print('\n\n')
 		print('Total runtime: ', timeit.default_timer() - start)
 
-		for type in ('AttributeAssignment', 'Person', 'Production', 'Painting'):
-			objects = objgraph.by_type(type)
-			for i in range(min(5, len(objects))):
-				objgraph.show_chain(
-					objgraph.find_backref_chain(
-						random.choice(objects),
-						objgraph.is_proper_module
-					),
-					filename=f'chain.{type}.{i}.png'
-				)
+# 		for type in ('AttributeAssignment', 'Person', 'Production', 'Painting'):
+# 			objects = objgraph.by_type(type)
+# 			for i in range(min(5, len(objects))):
+# 				objgraph.show_chain(
+# 					objgraph.find_backref_chain(
+# 						random.choice(objects),
+# 						objgraph.is_proper_module
+# 					),
+# 					filename=f'chain.{type}.{i}.png'
+# 				)
 

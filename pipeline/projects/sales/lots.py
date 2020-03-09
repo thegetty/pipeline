@@ -13,8 +13,7 @@ from pipeline.util import \
 		implode_date, \
 		timespan_from_outer_bounds, \
 		timespan_before, \
-		timespan_after, \
-		CaseFoldingSet
+		timespan_after
 from pipeline.util.cleaners import parse_location_name
 import pipeline.linkedart
 from pipeline.linkedart import add_crom_data, get_crom_object

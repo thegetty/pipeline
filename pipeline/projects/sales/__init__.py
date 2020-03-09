@@ -712,6 +712,14 @@ class SalesPipeline(PipelineBase):
 	# Set up environment
 		'''Return a `dict` of named services available to the bonobo pipeline.'''
 		services = super().setup_services()
+		for name in ('transaction_types', 'attribution_modifiers'):
+			services[name] = {k: CaseFoldingSet(v) for k, v in services[name].items()}
+
+		attribution_modifiers = services['attribution_modifiers']
+		PROBABLY = attribution_modifiers['probably by']
+		POSSIBLY = attribution_modifiers['possibly by']
+		attribution_modifiers['uncertain'] = PROBABLY | POSSIBLY
+
 		services.update({
 			# to avoid constructing new MakeLinkedArtPerson objects millions of times, this
 			# is passed around as a service to the functions and classes that require it.

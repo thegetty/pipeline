@@ -37,8 +37,10 @@ func assign_uuids(for uris: Set<String>, prefix: String) -> [String:String] {
 	print("Assigning \(uris.count) UUIDs")
 	var m = [String:String]()
 	for s in uris {
-		let u = UUID().uuidString
-		m[s] = "urn:uuid:\(u.lowercased())"
+		let u = UUID()
+        let d = withUnsafePointer(to: u.uuid) { Data(bytes: $0, count: MemoryLayout.size(ofValue: u.uuid)) }
+        let b64 = d.base64EncodedString().lowercased()
+		m[s] = b64
 	}
 	return m
 }

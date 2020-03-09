@@ -123,7 +123,7 @@ class SalesUtilityHelper(UtilityHelper):
 					warnings.warn(f'*** SPECIFIC PHYSICAL CATALOG COPY NOT FOUND FOR NAME SOURCE {source} in catalog {cno}')
 			else:
 				warnings.warn(f'*** NO CATALOG OWNER FOUND FOR NAME SOURCE {source} on catalog {cno}')
-		return self.person_identity.add_person(data, **kwargs)
+		return super().add_person(data, **kwargs)
 
 	def event_type_for_sale_type(self, sale_type):
 		if sale_type in ('Private Contract Sale', 'Stock List'):
@@ -1044,18 +1044,6 @@ class SalesPipeline(PipelineBase):
 			# write SETS data
 			self.add_serialization_chain(graph, sets.output, model=self.models['Set'], limit=1000)
 		return sets
-
-	def add_places_chain(self, graph, auction_events, key='_locations', serialize=True):
-		'''Add extraction and serialization of locations.'''
-		places = graph.add_chain(
-			ExtractKeyedValues(key=key),
-			RecursiveExtractKeyedValue(key='part_of'),
-			_input=auction_events.output
-		)
-		if serialize:
-			# write OBJECTS data
-			self.add_serialization_chain(graph, places.output, model=self.models['Place'])
-		return places
 
 	def add_visual_item_chain(self, graph, objects, serialize=True):
 		'''Add transformation of visual items to the bonobo pipeline.'''

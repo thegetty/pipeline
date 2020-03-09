@@ -20,6 +20,7 @@ from cromulent import model, vocab
 from pipeline.util import \
 			CaseFoldingSet, \
 			ExtractKeyedValues, \
+			RecursiveExtractKeyedValue, \
 			timespan_for_century, \
 			timespan_from_outer_bounds, \
 			make_ordinal
@@ -121,6 +122,13 @@ class PersonIdentity:
 			self.make_la_org(a)
 		else:
 			self.make_la_person(a)
+		return get_crom_object(a)
+
+	def add_group(self, a, record=None, relative_id=None, **kwargs):
+		self.add_uri(a, record_id=relative_id)
+		self.add_names(a, referrer=record, **kwargs)
+		self.add_props(a, **kwargs)
+		self.make_la_org(a)
 		return get_crom_object(a)
 
 	def add_uri(self, data:dict, **kwargs):
@@ -405,6 +413,18 @@ class PipelineBase:
 		else:
 			sys.stderr.write('*** No serialization chain defined\n')
 
+	def add_places_chain(self, graph, auction_events, key='_locations', serialize=True):
+		'''Add extraction and serialization of locations.'''
+		places = graph.add_chain(
+			ExtractKeyedValues(key=key),
+			RecursiveExtractKeyedValue(key='part_of'),
+			_input=auction_events.output
+		)
+		if serialize:
+			# write OBJECTS data
+			self.add_serialization_chain(graph, places.output, model=self.models['Place'])
+		return places
+
 	def add_person_or_group_chain(self, graph, input, key=None, serialize=True):
 		'''Add extraction and serialization of people and groups.'''
 		if key:
@@ -547,3 +567,10 @@ class UtilityHelper:
 		assignment.carried_out_by = self.static_instances.get_instance('Group', 'gri')
 		catalog_id.assigned_by = assignment
 		return catalog_id
+
+	def add_group(self, data, **kwargs):
+		return self.person_identity.add_group(data, **kwargs)
+
+	def add_person(self, data, **kwargs):
+		return self.person_identity.add_person(data, **kwargs)
+	

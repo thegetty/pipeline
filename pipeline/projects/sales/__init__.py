@@ -335,7 +335,7 @@ class ProvenanceUtilityHelper(UtilityHelper):
 		if data.get('name_so'):
 			# handling of the name_so field happens here and not in the PersonIdentity methods,
 			# because it requires access to the services data on catalogs
-			source = data['name_so']
+			source = data.get('name_so', '').strip()
 			components = source.split(' ')
 			if len(components) == 2:
 				owner_code, copy_number = components
@@ -431,7 +431,7 @@ class ProvenanceUtilityHelper(UtilityHelper):
 			labels.append(f'copy {copy}')
 		label = ', '.join(labels)
 		catalog_type = self.catalog_type_for_sale_type(sale_type)
-		if sale_type == 'Auction':
+		if sale_type in ('Auction', 'Collection Catalog'):
 			labels = [f'Sale Catalog {cno}'] + labels
 			catalog = catalog_type(ident=uri, label=', '.join(labels))
 		elif sale_type == 'Private Contract Sale':
@@ -455,7 +455,7 @@ class ProvenanceUtilityHelper(UtilityHelper):
 		lot_type = self.sale_type_for_sale_type(sale_type)
 		lot = lot_type(ident=uri)
 
-		if sale_type == 'Auction':
+		if sale_type in ('Auction', 'Collection Catalog'):
 			lot_id = f'{cno} {shared_lot_number} ({date})'
 			lot_label = f'Auction of Lot {lot_id}'
 			lot._label = lot_label

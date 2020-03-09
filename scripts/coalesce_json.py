@@ -74,4 +74,6 @@ for id in sorted(counter):
 						seen[id] = filename
 				except model.DataError as e:
 					print(f'*** Failed to read CRM data from {filename}: {e}')
+					print(f'{filename}:\n=======\n{content}')
+					print(f'{canon_file}:\n=======\n{canon_content}')
 print(f'Coalesced {coalesce_count} JSON files in {path}')

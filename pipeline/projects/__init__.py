@@ -149,8 +149,14 @@ class PersonIdentity:
 			return f'{role}s'
 		return a
 		
-	def professional_activity(self, name, century=None, date_range=None, **kwargs):
-		a = vocab.Active(ident='', label=f'Professional activity of {name}')
+	def professional_activity(self, name, century=None, date_range=None, classified_as=None, **kwargs):
+		if classified_as:
+			classified_as.append(vocab.Active)
+		else:
+			classified_as = [vocab.Active]
+		
+		a = vocab.make_multitype_obj(*classified_as, ident='', label=f'Professional activity of {name}')
+
 		if century:
 			ts = timespan_for_century(century, **kwargs)
 			a.timespan = ts
@@ -163,6 +169,7 @@ class PersonIdentity:
 	def add_props(self, data:dict, role=None, **kwargs):
 		if 'events' not in data:
 			data['events'] = []
+		uri = data['uri']
 		role = role if role else 'person'
 		auth_name = data.get('auth_name', '')
 		period_match = self.anon_period_re.match(auth_name)

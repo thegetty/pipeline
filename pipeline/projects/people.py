@@ -43,6 +43,7 @@ from pipeline.util import \
 			identity, \
 			replace_key_pattern, \
 			strip_key_prefix
+from pipeline.util.cleaners import parse_location_name
 from pipeline.io.file import MergingFileWriter
 from pipeline.io.memory import MergingMemoryWriter
 import pipeline.linkedart
@@ -50,6 +51,7 @@ from pipeline.linkedart import add_crom_data, get_crom_object
 from pipeline.io.csv import CurriedCSVReader
 from pipeline.nodes.basic import \
 			RemoveKeys, \
+			KeyManagement, \
 			GroupRepeatingKeys, \
 			GroupKeys, \
 			AddArchesModel, \
@@ -77,11 +79,11 @@ class PeopleUtilityHelper(UtilityHelper):
 				dst[k] = src[k]
 		return dst
 
-	def add_person(self, data, record=None, relative_id=None, **kwargs):
+	def add_person(self, data, **kwargs):
 		auth_name = data.get('auth_name')
 		names = data.get('variant_names')
 		if self.person_identity.acceptable_person_auth_name(auth_name) or names:
-			return self.person_identity.add_person(data, record, relative_id, **kwargs)
+			return super().add_person(data, **kwargs)
 		else:
 			return None
 
@@ -89,8 +91,67 @@ class AddPerson(Configurable):
 	helper = Option(required=True)
 	
 	def __call__(self, data:dict):
-		if self.helper.add_person(data):
-			yield data
+		if 'referred_to_by' not in data:
+			data['referred_to_by'] = []
+
+		name = data['auth_name']
+		data['events'] = []
+		data['places'] = []
+		data['contact_point'] = []
+
+		text_content = data.get('text')
+		if text_content:
+			cite = vocab.BiographyStatement(ident='', content=text_content)
+			data['referred_to_by'].append(cite)
+
+		source_content = data.get('source')
+		if source_content:
+			cite = vocab.BibliographyStatement(ident='', content=source_content)
+			data['referred_to_by'].append(cite)
+
+		locations = {l.strip() for l in data.get('location', '').split(';')} - {''}
+		base_uri = self.helper.make_proj_uri('PLACE', '')
+		for l in locations:
+			current = parse_location_name(l, uri_base=self.helper.proj_prefix)
+			place_data = self.helper.make_place(current, base_uri=base_uri)
+			data['places'].append(place_data)
+
+		addresses = {l.strip() for l in data.get('address', '').split(';')} - {''}
+		for address in addresses:
+			contact = vocab.Name(ident='', content=address)
+			contact_data = add_crom_data(data={}, what=contact)
+			data['contact_point'].append(contact_data)
+
+		project = data.get('project')
+		if project:
+			data['referred_to_by'].append(vocab.SourceStatement(ident='', content=project))
+		
+		
+		type = {t.strip() for t in data.get('type', '').lower().split(';')} - {''}
+		if type & {'institution', 'museum'}:
+			# This is an Organization
+			with suppress(KeyError):
+				del data['nationality']
+			if 'museum' in type:
+				data['object_type'] = vocab.MuseumOrg
+			if self.helper.add_group(data):
+				yield data
+		else:
+			# This is a Person
+			types = []
+			if 'collector' in type:
+				types.append(vocab.Collecting)
+			if 'artist' in type:
+				types.append(vocab.Creating)
+			if 'dealer' in type:
+				types.append(vocab.Dealing)
+			if 'owner' in type:
+				types.append(vocab.Owning)
+	
+			a = self.helper.person_identity.professional_activity(name, classified_as=types)
+			data['events'].append(a)
+			if self.helper.add_person(data):
+				yield data
 
 
 #mark - People Pipeline class
@@ -137,48 +198,56 @@ class PeoplePipeline(PipelineBase):
 
 		contents_records = g.add_chain(
 			MatchingFiles(path='/', pattern=self.contents_files_pattern, fs='fs.data.people'),
-			CurriedCSVReader(fs='fs.data.people', limit=self.limit),
-			AddFieldNames(field_names=self.contents_headers),
-			GroupKeys(mapping={
-				'person': {
-					'postprocess': [
-						lambda x, _: replace_key_pattern(r'(person_authority)', 'auth_name', x),
-						lambda x, _: replace_key_pattern(r'(ulan_id)', 'ulan', x),
-						lambda x, _: replace_key_pattern(r'(birth_date)', 'birth', x),
-						lambda x, _: replace_key_pattern(r'(death_date)', 'death', x),
-					],
-					'properties': (
-						'star_record_no',
-						'person_authority',
-						'variant_names',
-						'type',
-						'project',
-						'birth_date',
-						'death_date',
-						'period_active',
-						'century_active',
-						'active_city_date',
-						'nationality',
-						'location',
-						'address',
-						'subjects_painted',
-						'source',
-						'medal_received',
-						'text',
-						'notes',
-						'brief_notes',
-						'working_notes',
-						'bibliography',
-						'ulan_id',
-						'segment',
-					)
-				}
-			}),
+			CurriedCSVReader(fs='fs.data.people', limit=self.limit, field_names=self.contents_headers),
+			KeyManagement(
+				operations=[
+					{
+						'group': {
+							'person': {
+								'rename_keys': {
+									'person_authority': 'auth_name',
+									'ulan_id': 'ulan',
+									'bith_date': 'birth',
+									'death_date': 'death',
+								},
+								'properties': (
+									'star_record_no',
+									'person_authority',
+									'variant_names',
+									'type',
+									'project',
+									'birth_date',
+									'death_date',
+									'period_active',
+									'century_active',
+									'active_city_date',
+									'nationality',
+									'location',
+									'address',
+									'subjects_painted',
+									'source',
+									'medal_received',
+									'text',
+									'notes',
+									'brief_notes',
+									'working_notes',
+									'bibliography',
+									'ulan_id',
+									'segment',
+								)
+							}
+						}
+					}
+				]
+			),
+# 			Trace(name='foo', ordinals=range(10)),
 			ExtractKeyedValue(key='person'),
 			AddPerson(helper=self.helper),
 		)
 
 		_ = self.add_person_or_group_chain(g, contents_records, serialize=True)
+		_ = self.add_places_chain(g, contents_records, key='places', serialize=True)
+		
 
 		self.graph = g
 

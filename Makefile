@@ -122,6 +122,13 @@ $(GETTY_PIPELINE_TMP_PATH)/people.pdf: $(GETTY_PIPELINE_TMP_PATH)/people.dot
 sales: salesdata jsonlist
 	cat $(GETTY_PIPELINE_TMP_PATH)/json_files.txt | PYTHONPATH=`pwd` $(PYTHON) ./scripts/generate_metadata_graph.py sales
 
+salesprofile:
+	mkdir -p $(GETTY_PIPELINE_TMP_PATH)/pipeline
+	QUIET=$(QUIET) GETTY_PIPELINE_DEBUG=$(DEBUG) GETTY_PIPELINE_LIMIT=$(LIMIT) $(PYTHON) -m cProfile -o $(GETTY_PIPELINE_OUTPUT)/pipeline.prof ./sales.py
+	snakeviz $(GETTY_PIPELINE_OUTPUT)/pipeline.prof
+# 	QUIET=$(QUIET) GETTY_PIPELINE_DEBUG=$(DEBUG) GETTY_PIPELINE_LIMIT=$(LIMIT) $(PYTHON) -m flamegraph -o $(GETTY_PIPELINE_OUTPUT)/pipeline.flame.log ./sales.py
+# 	perl ~/data/prog/ext/FlameGraph/flamegraph.pl --title "Sales Pipeline" $(GETTY_PIPELINE_OUTPUT)/pipeline.flame.log > $(GETTY_PIPELINE_OUTPUT)/pipeline.flame.svg
+
 salesdata: salespipeline salespostprocessing
 	find $(GETTY_PIPELINE_OUTPUT) -type d -empty -delete
 

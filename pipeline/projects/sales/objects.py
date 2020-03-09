@@ -23,22 +23,8 @@ class PopulateObject(Configurable):
 	helper = Option(required=True)
 	post_sale_map = Service('post_sale_map')
 	unique_catalogs = Service('unique_catalogs')
-	vocab_instance_map = Service('vocab_instance_map')
+	subject_genre = Service('subject_genre')
 	destruction_types_map = Service('destruction_types_map')
-
-	def genre_instance(self, value, vocab_instance_map):
-		'''Return the appropriate type instance for the supplied genre name'''
-		if value is None:
-			return None
-		value = value.lower()
-
-		instance_name = vocab_instance_map.get(value)
-		if instance_name:
-			instance = vocab.instances.get(instance_name)
-			if not instance:
-				warnings.warn(f'*** No genre instance available for {instance_name!r} in vocab_instance_map')
-			return instance
-		return None
 
 	def populate_destruction_events(self, data:dict, note, *, type_map, location=None):
 		destruction_types_map = type_map
@@ -80,7 +66,7 @@ class PopulateObject(Configurable):
 
 			hmo.destroyed_by = d
 
-	def _populate_object_visual_item(self, data:dict, vocab_instance_map):
+	def _populate_object_visual_item(self, data:dict, subject_genre):
 		hmo = get_crom_object(data)
 		title = data.get('title')
 		title = truncate_with_ellipsis(title, 100) or title
@@ -93,9 +79,15 @@ class PopulateObject(Configurable):
 			sales_record = get_crom_object(data['_record'])
 			vidata['names'] = [(title,{'referred_to_by': [sales_record]})]
 
-		genre = self.genre_instance(data.get('genre'), vocab_instance_map)
-		if genre:
-			vi.classified_as = genre
+		for key in ('genre', 'subject'):
+			if key in data:
+				values = [v.strip() for v in data[key].split(';')]
+				for value in values:
+					for prop, mapping in subject_genre.items():
+						if value in mapping:
+							aat_url = mapping[value]
+							type = model.Type(ident=aat_url, label=value)
+							setattr(vi, prop, type)
 		data['_visual_item'] = add_crom_data(data=vidata, what=vi)
 		hmo.shows = vi
 
@@ -131,17 +123,23 @@ class PopulateObject(Configurable):
 	@staticmethod
 	def _populate_object_statements(data:dict):
 		hmo = get_crom_object(data)
+		sales_record = get_crom_object(data['_record'])
+		
+		format = data.get('format')
+		if format:
+			formatstmt = vocab.PhysicalStatement(ident='', content=format)
+			formatstmt.referred_to_by = sales_record
+			hmo.referred_to_by = formatstmt
+
 		materials = data.get('materials')
 		if materials:
 			matstmt = vocab.MaterialStatement(ident='', content=materials)
-			sales_record = get_crom_object(data['_record'])
 			matstmt.referred_to_by = sales_record
 			hmo.referred_to_by = matstmt
 
 		dimstr = data.get('dimensions')
 		if dimstr:
 			dimstmt = vocab.DimensionStatement(ident='', content=dimstr)
-			sales_record = get_crom_object(data['_record'])
 			dimstmt.referred_to_by = sales_record
 			hmo.referred_to_by = dimstmt
 			for dim in extract_physical_dimensions(dimstr):
@@ -189,6 +187,9 @@ class PopulateObject(Configurable):
 							'uri': self.helper.make_proj_uri('ORG', 'CURR-OWN', *now_key),
 						}
 
+					if note:
+						owner_data['note'] = note
+
 					base_uri = hmo.id + '-Place,'
 					place_data = self.helper.make_place(current, base_uri=base_uri)
 					place = get_crom_object(place_data)
@@ -210,9 +211,6 @@ class PopulateObject(Configurable):
 					data['_final_org'] = owner_data
 			else:
 				pass # there is no present location place string
-			if note:
-				pass
-				# TODO: the acquisition_note needs to be attached as a Note to the final post owner acquisition
 
 	def _populate_object_notes(self, data:dict, parent, unique_catalogs):
 		hmo = get_crom_object(data)
@@ -257,7 +255,7 @@ class PopulateObject(Configurable):
 							# `that_key` is for a later sale for this object
 							post_sale_map[that_key] = this_key
 
-	def __call__(self, data:dict, post_sale_map, unique_catalogs, vocab_instance_map, destruction_types_map):
+	def __call__(self, data:dict, post_sale_map, unique_catalogs, subject_genre, destruction_types_map):
 		'''Add modeling for an object described by a sales record'''
 		hmo = get_crom_object(data)
 		parent = data['parent_data']
@@ -282,7 +280,7 @@ class PopulateObject(Configurable):
 		data['_locations'] = []
 		data['_events'] = []
 		record = self._populate_object_catalog_record(data, parent, lot, cno, parent['pi_record_no'])
-		self._populate_object_visual_item(data, vocab_instance_map)
+		self._populate_object_visual_item(data, subject_genre)
 		self._populate_object_destruction(data, parent, destruction_types_map)
 		self._populate_object_statements(data)
 		self._populate_object_present_location(data, now_key, destruction_types_map)

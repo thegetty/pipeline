@@ -430,9 +430,11 @@ class PipelineBase:
 		return people
 
 	def run_graph(self, graph, *, services):
-		if True:
+		if False:
+			print('Running with PARALLEL bonobo executor')
 			bonobo.run(graph, services=services)
 		else:
+			print('Running with SERIAL custom executor')
 			e = pipeline.execution.GraphExecutor(graph, services)
 			e.run()
 
@@ -500,7 +502,8 @@ class UtilityHelper:
 		if data is None:
 			return None
 		type_name = data.get('type', 'place').lower()
-		name = data['name']
+		
+		name = data.get('name')
 		label = name
 		parent_data = data.get('part_of')
 
@@ -509,9 +512,12 @@ class UtilityHelper:
 		if parent_data:
 			parent_data = self.make_place(parent_data, base_uri=base_uri)
 			parent = get_crom_object(parent_data)
-			label = f'{label}, {parent._label}'
+			if label:
+				label = f'{label}, {parent._label}'
 
-		placeargs = {'label': label}
+		placeargs = {}
+		if label:
+			placeargs['label'] = label
 		if data.get('uri'):
 			placeargs['ident'] = data['uri']
 		elif label in unique_locations:

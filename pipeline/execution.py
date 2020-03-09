@@ -1,5 +1,8 @@
 import os
+import sys
+import pprint
 # import sys
+import traceback
 import types
 from functools import partial
 import time
@@ -130,6 +133,7 @@ class GraphExecutor(object):
 					self.run_node(j, result, level=level+1)
 		except Exception as e:
 			print(f'**** ERROR: {e!r}')
+			traceback.print_exc()
 # 			raise
 
 	def print_tree(self, i, level=0):

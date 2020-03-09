@@ -20,6 +20,12 @@ def get_crom_object(data: dict):
 		return None
 	return data.get('_LOD_OBJECT')
 
+def remove_crom_object(data: dict):
+	with suppress(KeyError):
+		del data['_LOD_OBJECT']
+		del data['_CROM_FACTORY']
+	return data
+
 class MakeLinkedArtRecord:
 	def set_properties(self, data, thing):
 		'''

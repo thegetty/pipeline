@@ -10,7 +10,7 @@ import pipeline.execution
 from pipeline.util import implode_date, timespan_from_outer_bounds
 from pipeline.util.cleaners import parse_location
 import pipeline.linkedart
-from pipeline.linkedart import add_crom_data, get_crom_object
+from pipeline.linkedart import add_crom_data, get_crom_object, remove_crom_object
 
 #mark - Auction Events
 
@@ -73,7 +73,7 @@ class PopulateAuctionEvent(Configurable):
 		if place:
 			data['_locations'] = [place_data]
 			auction.took_place_at = place
-			auction_locations[cno] = place
+			auction_locations[cno] = place.id
 
 		begin = implode_date(data, 'sale_begin_', clamp='begin')
 		end = implode_date(data, 'sale_end_', clamp='eoe')
@@ -82,9 +82,12 @@ class PopulateAuctionEvent(Configurable):
 			end=end,
 			inclusive=True
 		)
+		
+		event_properties['auction_dates'][cno] = (begin, end)
 
 		event_record = get_crom_object(data['_record'])
 		for seq_no, expert in enumerate(data.get('expert', [])):
+			self.helper.copy_source_information(expert, data),
 			person = self.helper.add_person(expert, record=event_record, relative_id=f'expert-{seq_no+1}', role='expert')
 			event_experts[cno].append(person)
 			data['_organizers'].append(add_crom_data(data={}, what=person))
@@ -93,6 +96,7 @@ class PopulateAuctionEvent(Configurable):
 			role.carried_out_by = person
 			auction.part = role
 		for seq_no, commissaire in enumerate(data.get('commissaire', [])):
+			self.helper.copy_source_information(commissaire, data),
 			person = self.helper.add_person(commissaire, record=event_record, relative_id=f'commissaire-{seq_no+1}', role='commissaire')
 			event_commissaires[cno].append(person)
 			data['_organizers'].append(add_crom_data(data={}, what=person))
@@ -141,15 +145,18 @@ class AddAuctionHouses(Configurable):
 		houses = data.get('auction_house', [])
 		cno = data['catalog_number']
 
-		house_objects = []
+		house_dicts = []
 		event_record = get_crom_object(data['_record'])
 		d['_organizers'] = []
 		for i, h in enumerate(houses):
+			house_dict = self.helper.copy_source_information(h, data)
+			house_dict_copy = house_dict.copy()
 			h['_catalog'] = catalog
-			self.helper.add_auction_house_data(self.helper.copy_source_information(h, data), sequence=i, event_record=event_record)
+			self.helper.add_auction_house_data(house_dict, sequence=i, event_record=event_record)
+			house_dict_copy['uri'] = house_dict['uri']
+			house_dicts.append(house_dict_copy)
 			house = get_crom_object(h)
 			auction.carried_out_by = house
-			house_objects.append(house)
 			d['_organizers'].append(h)
-		event_properties['auction_houses'][cno] += house_objects
+		event_properties['auction_houses'][cno] += house_dicts
 		return d

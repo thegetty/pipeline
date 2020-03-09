@@ -5,6 +5,7 @@ import sys
 import json
 import uuid
 import pprint
+import base64
 import itertools
 from pathlib import Path
 from contextlib import suppress
@@ -34,7 +35,10 @@ class UUIDRewriter:
 			if d.startswith(self.prefix):
 				d = d[len(self.prefix):]
 				if d in self.map:
-					return self.map[d]
+					b64 = self.map[d]
+					bytes = base64.b64decode(b64)
+					u = uuid.UUID(bytes=bytes)
+					return f'urn:uuid:{u}'
 				else:
 					uu = str(uuid.uuid4())
 					u = f'urn:uuid:{uu}'

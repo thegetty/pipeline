@@ -20,8 +20,10 @@ from collections import defaultdict, Counter
 from settings import output_file_path
 from pipeline.util import CromObjectMerger
 from cromulent.model import factory
-from cromulent import model, reader
+from cromulent import model, vocab, reader
 
+vocab.add_linked_art_boundary_check()
+vocab.add_attribute_assignment_check()
 
 path = sys.argv[1] if len(sys.argv) > 1 else output_file_path
 files = sorted(Path(path).rglob('*.json'))
@@ -72,4 +74,6 @@ for id in sorted(counter):
 						seen[id] = filename
 				except model.DataError as e:
 					print(f'*** Failed to read CRM data from {filename}: {e}')
+					print(f'{filename}:\n=======\n{content}')
+					print(f'{canon_file}:\n=======\n{canon_content}')
 print(f'Coalesced {coalesce_count} JSON files in {path}')

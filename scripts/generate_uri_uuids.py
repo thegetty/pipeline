@@ -5,6 +5,7 @@ import sys
 import json
 import uuid
 import time
+import base64
 import pprint
 import itertools
 from pathlib import Path
@@ -105,9 +106,10 @@ uuid_map = {}
 for uri in uris:
 	if uri in map_data:
 		raise Exception(f'URI already has a UUID set: {uri}: {map_data[uri]}')
-	uu = str(uuid.uuid4())
-	u = f'urn:uuid:{uu}'
-	uuid_map[uri] = u
+	u = uuid.uuid4()
+	bytes = base64.b64encode(u.bytes)
+	b64 = bytes.decode('utf-8')
+	uuid_map[uri] = b64
 
 map_data.update(uuid_map)
 with open(map_file, 'w') as data_file:

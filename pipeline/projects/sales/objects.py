@@ -399,13 +399,13 @@ class AddArtists(Configurable):
 				
 			if mods:
 				# TODO: this should probably be in its own JSON service file:
-				STYLE_OF = CaseFoldingSet(attribution_modifiers['style of'])
-				FORMERLY_ATTRIBUTED_TO = CaseFoldingSet(attribution_modifiers['formerly attributed to'])
-				ATTRIBUTED_TO = CaseFoldingSet(attribution_modifiers['attributed to'])
-				COPY_AFTER = CaseFoldingSet(attribution_modifiers['copy after'])
-				PROBABLY = CaseFoldingSet(attribution_modifiers['probably by'])
-				POSSIBLY = CaseFoldingSet(attribution_modifiers['possibly by'])
-				UNCERTAIN = PROBABLY | POSSIBLY
+				STYLE_OF = attribution_modifiers['style of']
+				FORMERLY_ATTRIBUTED_TO = attribution_modifiers['formerly attributed to']
+				ATTRIBUTED_TO = attribution_modifiers['attributed to']
+				COPY_AFTER = attribution_modifiers['copy after']
+				PROBABLY = attribution_modifiers['probably by']
+				POSSIBLY = attribution_modifiers['possibly by']
+				UNCERTAIN = attribution_modifiers['uncertain']
 
 				GROUP_TYPES = set(attribution_group_types.values())
 				GROUP_MODS = {k for k, v in attribution_group_types.items() if v in GROUP_TYPES}
@@ -413,17 +413,17 @@ class AddArtists(Configurable):
 				if 'copy by' in mods:
 					# equivalent to no modifier
 					pass
-				elif ATTRIBUTED_TO & mods:
+				elif ATTRIBUTED_TO.intersects(mods):
 					# equivalent to no modifier
 					pass
-				elif STYLE_OF & mods:
+				elif STYLE_OF.intersects(mods):
 					assignment = vocab.make_multitype_obj(*attrib_assignment_classes, ident='', label=f'In the style of {artist_label}')
 					event.attributed_by = assignment
 					assignment.assigned_property = 'influenced_by'
 					assignment.property_classified_as = vocab.instances['style of']
 					assignment.assigned = person
 					continue
-				elif GROUP_MODS & mods:
+				elif mods.intersects(GROUP_MODS):
 					mod_name = list(GROUP_MODS & mods)[0] # TODO: use all matching types?
 					clsname = attribution_group_types[mod_name]
 					cls = getattr(vocab, clsname)
@@ -448,7 +448,7 @@ class AddArtists(Configurable):
 					else:
 						event.part = subevent
 					continue
-				elif FORMERLY_ATTRIBUTED_TO & mods:
+				elif FORMERLY_ATTRIBUTED_TO.intersects(mods):
 					# the {uncertain_attribution} flag does not apply to this branch, because this branch is not making a statement
 					# about a previous attribution. the uncertainty applies only to the current attribution.
 					assignment = vocab.ObsoleteAssignment(ident='', label=f'Formerly attributed to {artist_label}')
@@ -456,8 +456,8 @@ class AddArtists(Configurable):
 					assignment.assigned_property = 'carried_out_by'
 					assignment.assigned = person
 					continue
-				elif UNCERTAIN & mods:
-					if POSSIBLY & mods:
+				elif UNCERTAIN.intersects(mods):
+					if POSSIBLY.intersects(mods):
 						attrib_assignment_classes.append(vocab.PossibleAssignment)
 						assignment = vocab.make_multitype_obj(*attrib_assignment_classes, ident='', label=f'Possibly attributed to {artist_label}')
 						assignment._label = f'Possibly by {artist_label}'
@@ -469,7 +469,7 @@ class AddArtists(Configurable):
 					assignment.assigned_property = 'carried_out_by'
 					assignment.assigned = person
 					continue
-				elif COPY_AFTER & mods:
+				elif COPY_AFTER.intersects(mods):
 					# the {uncertain_attribution} flag does not apply to this branch, because this branch is not making a statement
 					# about the artist of the work, but about the artist of the original work that this work is a copy of.
 					cls = type(hmo)

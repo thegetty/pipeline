@@ -13,8 +13,7 @@ from pipeline.util import \
 		implode_date, \
 		timespan_from_outer_bounds, \
 		timespan_before, \
-		timespan_after, \
-		CaseFoldingSet
+		timespan_after
 from pipeline.util.cleaners import parse_location_name
 import pipeline.linkedart
 from pipeline.linkedart import add_crom_data, get_crom_object
@@ -191,7 +190,7 @@ class AddAuctionOfLot(Configurable):
 			lot.referred_to_by = cite
 
 		transaction = data.get('transaction')
-		SOLD = CaseFoldingSet(transaction_types['sold'])
+		SOLD = transaction_types['sold']
 		WITHDRAWN = transaction_types['withdrawn']
 		self.set_lot_objects(lot, cno, lno, sale_data['uri'], data, sale_type)
 		auction, _, _ = self.helper.sale_event_for_catalog_number(cno, sale_type)
@@ -229,7 +228,7 @@ class AddAuctionOfLot(Configurable):
 		yield data
 	
 def prov_entry_label(sale_type, transaction, transaction_types, cno, lots, date, rel):
-	SOLD = CaseFoldingSet(transaction_types['sold'])
+	SOLD = transaction_types['sold']
 	id = f'{cno} {lots} ({date})'
 	if sale_type == 'Auction':
 		if transaction in SOLD:
@@ -649,7 +648,7 @@ class AddAcquisitionOrBidding(Configurable):
 			return
 		ts = lot.timespan
 
-		UNSOLD = CaseFoldingSet(transaction_types['unsold'])
+		UNSOLD = transaction_types['unsold']
 		model_custody_return = transaction in UNSOLD
 		prev_procurements = self.add_non_sale_sellers(data, sellers, sale_type, transaction, transaction_types)
 
@@ -769,10 +768,10 @@ class AddAcquisitionOrBidding(Configurable):
 			) for i, p in enumerate(parent['seller'])
 		]
 
-		SOLD = CaseFoldingSet(transaction_types['sold'])
-		UNSOLD = CaseFoldingSet(transaction_types['unsold'])
-		UNKNOWN = CaseFoldingSet(transaction_types['unknown'])
-		
+		SOLD = transaction_types['sold']
+		UNSOLD = transaction_types['unsold']
+		UNKNOWN = transaction_types['unknown']
+
 		if '_procurements' not in data:
 			data['_procurements'] = []
 

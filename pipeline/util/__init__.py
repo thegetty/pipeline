@@ -564,16 +564,15 @@ class CaseFoldingSet(set):
 	def __init__(self, iterable):
 		super().__init__(self)
 		for v in iterable:
-			if isinstance(v, str):
-				self.add(v.casefold())
-			else:
-				self.add(v)
+			self.add(v)
 
 	def __and__(self, value):
 		return CaseFoldingSet({s for s in value if s in self})
 
 	def __or__(self, value):
-		s = CaseFoldingSet(self)
+		s = CaseFoldingSet({})
+		for v in self:
+			super().add(v)
 		for v in value:
 			s.add(v)
 		return s
@@ -586,6 +585,17 @@ class CaseFoldingSet(set):
 
 	def __contains__(self, v):
 		return super().__contains__(v.casefold())
+
+	def intersects(self, values):
+		if isinstance(values, CaseFoldingSet):
+			l = set(self)
+			r = set(values)
+			return l & r
+		else:
+			for v in values:
+				if v in self:
+					return True
+			return False
 
 def truncate_with_ellipsis(s, length=100):
 	'''

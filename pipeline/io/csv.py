@@ -30,6 +30,7 @@ class CurriedCSVReader(Configurable):
 		int,
 		__doc__='''Limit the number of rows read (to allow early pipeline termination).''',
 	)
+	field_names = Option()
 
 	def __init__(self, *args, **kwargs):
 		super().__init__(*args, **kwargs)
@@ -38,6 +39,7 @@ class CurriedCSVReader(Configurable):
 	def read(self, path, *, fs):
 		limit = self.limit
 		count = self.count
+		names = self.field_names
 		if not(limit) or (limit and count < limit):
 			sys.stderr.write('============================== %s\n' % (path,))
 			with fs.open(path, newline='') as csvfile:
@@ -46,7 +48,13 @@ class CurriedCSVReader(Configurable):
 					if limit and count >= limit:
 						break
 					count += 1
-					yield row
+					if names:
+						d = {}
+						for i in range(len(names)):
+							d[names[i]] = row[i]
+						yield d
+					else:
+						yield row
 			self.count = count
 
 	__call__ = read

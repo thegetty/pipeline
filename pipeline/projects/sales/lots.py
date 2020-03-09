@@ -36,17 +36,20 @@ class AddAuctionOfLot(Configurable):
 	@staticmethod
 	def set_lot_auction_houses(lot, cno, auction_houses):
 		'''Associate the auction house with the auction lot.'''
-		houses = auction_houses.get(cno)
-		if houses:
-			for house in houses:
+		if auction_houses:
+			for house in auction_houses:
 				lot.carried_out_by = house
 
-	@staticmethod
-	def set_lot_location(lot, cno, auction_locations):
+	def set_lot_location(self, lot, cno, auction_locations):
 		'''Associate the location with the auction lot.'''
-		place = auction_locations.get(cno)
-		if place:
+		place_uri = auction_locations.get(cno)
+		base_uri = self.helper.make_proj_uri('AUCTION-EVENT', cno, 'PLACE', '')
+		if place_uri:
+			place_data = self.helper.make_place({'uri': place_uri}, base_uri=base_uri)
+			place = get_crom_object(place_data)
 			lot.took_place_at = place
+		else:
+			print(f'*** No place URI found for lot in catalog {cno}')
 
 	@staticmethod
 	def set_lot_date(lot, auction_data, event_dates):
@@ -64,7 +67,7 @@ class AddAuctionOfLot(Configurable):
 				# if the lot sale date is marked as uncertain:
 				#   - use the event end date as the lot sale's end_of_the_end
 				#   - if the event doesn't have a known end date, assert no end_of_the_end for the lot sale
-				if event_dates[1]:
+				if event_dates and event_dates[1]:
 					bounds[1] = event_dates[1]
 				else:
 					bounds[1] = None
@@ -107,8 +110,9 @@ class AddAuctionOfLot(Configurable):
 	def __call__(self, data, non_auctions, event_properties, problematic_records, transaction_types):
 		'''Add modeling data for the auction of a lot of objects.'''
 		self.helper.copy_source_information(data['_object'], data)
+		
+		auction_houses_data = event_properties['auction_houses']
 
-		auction_houses = event_properties['auction_houses']
 		auction_locations = event_properties['auction_locations']
 		auction_data = data['auction_of_lot']
 		try:
@@ -194,6 +198,12 @@ class AddAuctionOfLot(Configurable):
 		if transaction not in WITHDRAWN:
 			lot.part_of = auction
 			event_dates = event_properties['auction_dates'].get(cno)
+
+			auction_houses = [
+				get_crom_object(self.helper.add_auction_house_data(h.copy()))
+				for h in auction_houses_data.get(cno, [])
+			]
+
 			self.set_lot_auction_houses(lot, cno, auction_houses)
 			self.set_lot_location(lot, cno, auction_locations)
 			self.set_lot_date(lot, auction_data, event_dates)
@@ -623,7 +633,7 @@ class AddAcquisitionOrBidding(Configurable):
 		rel = 'leading to the previous ownership of'
 		return self.add_sellers(data, sale_type, transaction, transaction_types, sellers, rel, source=note)
 
-	def add_bidding(self, data:dict, buyers, sellers, buy_sell_modifiers, sale_type, transaction, transaction_types, auction_houses):
+	def add_bidding(self, data:dict, buyers, sellers, buy_sell_modifiers, sale_type, transaction, transaction_types, auction_houses_data):
 		'''Add modeling of bids that did not lead to an acquisition'''
 		hmo = get_crom_object(data)
 		parent = data['parent_data']
@@ -650,7 +660,7 @@ class AddAcquisitionOrBidding(Configurable):
 
 		tx_data = parent.get('_prov_entry_data')
 		tx = get_crom_object(tx_data)
-		houses = [add_crom_data(data={}, what=h) for h in auction_houses.get(cno, [])]
+		houses = auction_houses_data
 		self.add_transfer_of_custody(data, tx, xfer_to=houses, xfer_from=sellers, sequence=1, purpose='selling')
 		if model_custody_return:
 			self.add_transfer_of_custody(data, tx, xfer_to=sellers, xfer_from=houses, sequence=2, purpose='returning')
@@ -732,7 +742,9 @@ class AddAcquisitionOrBidding(Configurable):
 	def __call__(self, data:dict, non_auctions, event_properties, buy_sell_modifiers, transaction_types):
 		'''Determine if this record has an acquisition or bidding, and add appropriate modeling'''
 		parent = data['parent_data']
-		auction_houses = event_properties['auction_houses']
+
+		auction_houses_data = event_properties['auction_houses']
+
 		sales_record = get_crom_object(data['_record'])
 		transaction = parent['transaction']
 		transaction = transaction.replace('[?]', '').rstrip()
@@ -776,7 +788,10 @@ class AddAcquisitionOrBidding(Configurable):
 						'pi_record_no': parent['pi_record_no'],
 						'catalog_number': cno
 					}
-					houses = [add_crom_data(data={}, what=h) for h in auction_houses.get(cno, [])]
+					houses = [
+						self.helper.add_auction_house_data(h.copy())
+						for h in auction_houses_data.get(cno, [])
+					]
 					for i, h in enumerate(houses):
 						house = get_crom_object(h)
 						if hasattr(house, 'label'):
@@ -790,12 +805,20 @@ class AddAcquisitionOrBidding(Configurable):
 					prev_procurements = self.add_private_sellers(data, sellers, sale_type, transaction, transaction_types)
 				yield data
 		elif transaction in UNSOLD:
-			yield from self.add_bidding(data, buyers, sellers, buy_sell_modifiers, sale_type, transaction, transaction_types, auction_houses)
+			houses = [
+				self.helper.add_auction_house_data(h)
+				for h in auction_houses_data.get(cno, [])
+			]
+			yield from self.add_bidding(data, buyers, sellers, buy_sell_modifiers, sale_type, transaction, transaction_types, houses)
 		elif transaction in UNKNOWN:
 			if sale_type == 'Lottery':
 				yield data
 			else:
-				yield from self.add_bidding(data, buyers, sellers, buy_sell_modifiers, sale_type, transaction, transaction_types, auction_houses)
+				houses = [
+					self.helper.add_auction_house_data(h)
+					for h in auction_houses_data.get(cno, [])
+				]
+				yield from self.add_bidding(data, buyers, sellers, buy_sell_modifiers, sale_type, transaction, transaction_types, houses)
 		else:
 			prev_procurements = self.add_non_sale_sellers(data, sellers, sale_type, transaction, transaction_types)
 			lot = get_crom_object(parent['_event_causing_prov_entry'])

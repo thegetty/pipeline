@@ -40,7 +40,7 @@ def chunks(l, size):
 		for i in range(0, len(l), size):
 			yield l[i:i+size]
 
-def rewrite_output_files(r, update_filename=False, parallel=False, path=None, files=None, **kwargs):
+def rewrite_output_files(r, update_filename=False, parallel=False, concurrency=4, path=None, files=None, **kwargs):
 	print(f'Rewriting JSON output files')
 	vocab.add_linked_art_boundary_check()
 	vocab.add_attribute_assignment_check()
@@ -54,10 +54,9 @@ def rewrite_output_files(r, update_filename=False, parallel=False, path=None, fi
 	if 'content_filter_re' in kwargs:
 		print(f'rewriting with content filter: {kwargs["content_filter_re"]}')
 	if parallel:
-		j = 4
-		pool = multiprocessing.Pool(j)
+		pool = multiprocessing.Pool(concurrency)
 
-		partition_size = max(min(25000, int(len(files)/j)), 10)
+		partition_size = max(min(25000, int(len(files)/concurrency)), 10)
 		file_partitions = list(chunks(files, partition_size))
 		args = list((file_partition, r, update_filename, i+1, len(file_partitions), kwargs) for i, file_partition in enumerate(file_partitions))
 		print(f'{len(args)} worker partitions with size {partition_size}')

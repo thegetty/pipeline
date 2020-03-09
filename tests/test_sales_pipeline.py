@@ -112,10 +112,8 @@ class TestSalesPipelineOutput(unittest.TestCase):
 		auction_B_A139_0120 = auctions[key_120]
 		self.verify_auction(auction_B_A139_0120, event='B-A139', idents={'0120'})
 
-		house_names = {o['_label'] for o in houses.values()}
 		house_ids = {o['id'] for o in houses.values()}
 		house_types = {c['_label'] for o in houses.values() for c in o.get('classified_as', [])}
-		self.assertEqual(house_names, {'Cock (Paulus)'})
 		self.assertEqual(house_types, {'Auction House (organization)'})
 
 		events = [activities[k] for k in activities if k not in {key_119, key_120}]

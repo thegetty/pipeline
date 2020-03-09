@@ -794,7 +794,7 @@ class AddAcquisitionOrBidding(Configurable):
 					houses = [self.helper.add_auction_house_data(h) for h in auction_houses_data.get(cno, [])]
 					experts = event_experts.get(cno, [])
 					commissaires = event_commissaires.get(cno, [])
-					custody_recievers = [add_crom_data(data={}, what=r) for r in houses + experts + commissaires]
+					custody_recievers = houses + [add_crom_data(data={}, what=r) for r in experts + commissaires]
 
 					for i, h in enumerate(custody_recievers):
 						house = get_crom_object(h)
@@ -813,7 +813,7 @@ class AddAcquisitionOrBidding(Configurable):
 			houses = [self.helper.add_auction_house_data(h) for h in auction_houses_data.get(cno, [])]
 			experts = event_experts.get(cno, [])
 			commissaires = event_commissaires.get(cno, [])
-			custody_recievers = [add_crom_data(data={}, what=r) for r in houses + experts + commissaires]
+			custody_recievers = houses + [add_crom_data(data={}, what=r) for r in experts + commissaires]
 			yield from self.add_bidding(data, buyers, sellers, buy_sell_modifiers, sale_type, transaction, transaction_types, custody_recievers)
 		elif transaction in UNKNOWN:
 			if sale_type == 'Lottery':

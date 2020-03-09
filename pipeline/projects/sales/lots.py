@@ -781,20 +781,21 @@ class AddAcquisitionOrBidding(Configurable):
 		if transaction in SOLD:
 			data['_owner_locations'] = []
 			for data, current_tx in self.add_acquisition(data, buyers, sellers, non_auctions, buy_sell_modifiers, transaction, transaction_types):
+				houses = [self.helper.add_auction_house_data(h) for h in auction_houses_data.get(cno, [])]
+				experts = event_experts.get(cno, [])
+				commissaires = event_commissaires.get(cno, [])
+				custody_recievers = houses + [add_crom_data(data={}, what=r) for r in experts + commissaires]
+
 				if sale_type in ('Auction', 'Collection Catalog'):
 					# 'Collection Catalog' is treated just like an Auction
-					self.add_transfer_of_custody(data, current_tx, xfer_to=buyers, xfer_from=sellers, purpose='selling')
+					self.add_transfer_of_custody(data, current_tx, xfer_to=custody_recievers, xfer_from=sellers, sequence=1, purpose='selling')
+					self.add_transfer_of_custody(data, current_tx, xfer_to=buyers, xfer_from=custody_recievers, sequence=2, purpose='completing sale')
 				elif sale_type in ('Private Contract Sale', 'Stock List'):
 					# 'Stock List' is treated just like a Private Contract Sale, except for the catalogs
 					metadata = {
 						'pi_record_no': parent['pi_record_no'],
 						'catalog_number': cno
 					}
-					houses = [self.helper.add_auction_house_data(h) for h in auction_houses_data.get(cno, [])]
-					experts = event_experts.get(cno, [])
-					commissaires = event_commissaires.get(cno, [])
-					custody_recievers = houses + [add_crom_data(data={}, what=r) for r in experts + commissaires]
-
 					for i, h in enumerate(custody_recievers):
 						house = get_crom_object(h)
 						if hasattr(house, 'label'):

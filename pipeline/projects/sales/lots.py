@@ -41,12 +41,9 @@ class AddAuctionOfLot(Configurable):
 
 	def set_lot_location(self, lot, cno, auction_locations):
 		'''Associate the location with the auction lot.'''
-		place_uri = auction_locations.get(cno)
-		base_uri = self.helper.make_proj_uri('AUCTION-EVENT', cno, 'PLACE', '')
-		if place_uri:
-			place_data = self.helper.make_place({'uri': place_uri}, base_uri=base_uri)
-			place = get_crom_object(place_data)
-			lot.took_place_at = place
+		place = auction_locations.get(cno)
+		if place:
+			lot.took_place_at = place.clone()
 		else:
 			print(f'*** No place URI found for lot in catalog {cno}')
 

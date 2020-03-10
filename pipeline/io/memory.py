@@ -51,8 +51,8 @@ class MergingMemoryWriter(Configurable):
 				return m
 		except Exception as e:
 			print(f'Exception caught while merging data ({e}):')
-			print(d)
-			print(content)
+			print(factory.toString(m, False))
+			print(factory.toString(model_object, False))
 			raise
 
 	def __call__(self, data: dict):

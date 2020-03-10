@@ -43,7 +43,7 @@ from pipeline.util import \
 			identity, \
 			replace_key_pattern, \
 			strip_key_prefix
-from pipeline.util.cleaners import parse_location_name
+from pipeline.util.cleaners import date_cleaner, parse_location_name
 from pipeline.io.file import MergingFileWriter
 from pipeline.io.memory import MergingMemoryWriter
 import pipeline.linkedart
@@ -99,6 +99,12 @@ class AddPerson(Configurable):
 		data['places'] = []
 		data['contact_point'] = []
 
+		if 'birth' in data:
+			data['birth_clean'] = date_cleaner(data['birth'])
+
+		if 'death' in data:
+			data['death_clean'] = date_cleaner(data['death'])
+
 		text_content = data.get('text')
 		if text_content:
 			cite = vocab.BiographyStatement(ident='', content=text_content)
@@ -126,7 +132,6 @@ class AddPerson(Configurable):
 		if project:
 			data['referred_to_by'].append(vocab.SourceStatement(ident='', content=project))
 		
-		
 		type = {t.strip() for t in data.get('type', '').lower().split(';')} - {''}
 		if type & {'institution', 'museum'}:
 			# This is an Organization
@@ -147,9 +152,20 @@ class AddPerson(Configurable):
 				types.append(vocab.Dealing)
 			if 'owner' in type:
 				types.append(vocab.Owning)
-	
-			a = self.helper.person_identity.professional_activity(name, classified_as=types)
-			data['events'].append(a)
+
+			remaining = type - {'collector', 'artist', 'dealer', 'owner'}
+			if remaining:
+				warnings.warn(f'UNHANDLED PEOPLE TYPES: {remaining}')
+
+			active_args = self.helper.person_identity.clamped_timespan_args(data, name)
+			for t in types:
+				a = self.helper.person_identity.professional_activity(name, classified_as=[t], **active_args)
+				data['events'].append(a)
+
+			for k in ('century_active', 'period_active'):
+				with suppress(KeyError):
+					del data[k]
+
 			if self.helper.add_person(data):
 				yield data
 
@@ -207,7 +223,7 @@ class PeoplePipeline(PipelineBase):
 								'rename_keys': {
 									'person_authority': 'auth_name',
 									'ulan_id': 'ulan',
-									'bith_date': 'birth',
+									'birth_date': 'birth',
 									'death_date': 'death',
 								},
 								'properties': (

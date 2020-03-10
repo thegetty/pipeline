@@ -434,6 +434,19 @@ def timespan_for_century(century, narrow=False):
 		ts.end_of_the_end = "%04d-%02d-%02dT%02d:%02d:%02dZ" % (to_year, 1, 1, 0, 0, 0)
 	return ts
 
+def dates_for_century(century):
+	'''
+	Given a integer representing a century (e.g. 17 for the 17th century), return a
+	tuple of dates for the bounds of that century.
+	'''
+	ord = make_ordinal(century)
+	ts = model.TimeSpan(ident='', label=f'{ord} century')
+	from_year = 100 * (century-1)
+	to_year = from_year + 100
+	begin = datetime.datetime(from_year, 1, 1)
+	end = datetime.datetime(to_year, 1, 1)
+	return (begin, end)
+
 def timespan_before(after):
 	ts = model.TimeSpan(ident='')
 	try:

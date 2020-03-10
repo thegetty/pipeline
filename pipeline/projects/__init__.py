@@ -22,6 +22,7 @@ from pipeline.util import \
 			ExtractKeyedValues, \
 			RecursiveExtractKeyedValue, \
 			timespan_for_century, \
+			dates_for_century, \
 			timespan_from_outer_bounds, \
 			make_ordinal
 from pipeline.util.cleaners import date_cleaner
@@ -149,7 +150,17 @@ class PersonIdentity:
 			return f'{role}s'
 		return a
 		
-	def professional_activity(self, name, century=None, date_range=None, classified_as=None, **kwargs):
+	def professional_activity(self, name:str, century=None, date_range=None, classified_as=None, **kwargs):
+		'''
+		Return a vocab.Active object representing the professional activities
+		of the `name`d person.
+		
+		If `century` or `date_range` arguments are supplied, they are used to
+		associate a timespan with the activity.
+		
+		If a `classified_as` list is supplied, it is used to further classify
+		the `vocab.Active` object.
+		'''
 		if classified_as:
 			classified_as.append(vocab.Active)
 		else:
@@ -157,14 +168,82 @@ class PersonIdentity:
 		
 		a = vocab.make_multitype_obj(*classified_as, ident='', label=f'Professional activity of {name}')
 
+		ts = self.active_timespan(century=century, date_range=date_range, **kwargs)
+		if ts:
+			a.timespan = ts
+		return a
+
+	def active_timespan(self, century=None, date_range=None, **kwargs):
+		'''
+		Return a TimeSpan object representing the period during which a
+		person was active in their professional activities. If no such
+		information is supplied, return None.
+		'''
 		if century:
 			ts = timespan_for_century(century, **kwargs)
-			a.timespan = ts
+			return ts
 		elif date_range:
 			b, e = date_range
 			ts = timespan_from_outer_bounds(begin=b, end=e, inclusive=True)
-			a.timespan = ts
-		return a
+			return ts
+		return None
+
+	def clamped_timespan_args(self, data:dict, name:str):
+		'''
+		This is shorthand for calling
+		
+		  clamp_timespan_args_to_lifespan(data, self.active_args(data, name)
+		
+		'''
+		return self.clamp_timespan_args_to_lifespan(data, self.active_args(data, name))
+		
+	def clamp_timespan_args_to_lifespan(self, data:dict, args:dict):
+		'''
+		Given a dict `data` containing keyword arguments for passing to
+		`professional_activity()`, which contains information on a time
+		period during which a person was active (e.g. derived from data
+		indicating that they were active in the 18th century), return a
+		new keyword argument dict that contains equivalent information
+		except with the bounds of the timespan narrowed to encompass only
+		the person's lifespan (if known).
+		'''
+		birth_pair = data.get('birth_clean')
+		death_pair = data.get('death_clean')
+		if birth_pair and death_pair:
+			birth = birth_pair[0]
+			death = death_pair[1]
+			if 'date_range' in args:
+				a_begin, a_end = args['date_range']
+				begin = max([d for d in (a_begin, birth) if d is not None])
+				end = min([d for d in (a_end, death) if d is not None])
+				args['date_range'] = (begin, end)
+			elif 'century' in args:
+				a_begin, a_end = dates_for_century(args['century'])
+				del args['century']
+				begin = max([d for d in (a_begin, birth) if d is not None])
+				end = min([d for d in (a_end, death) if d is not None])
+				args['date_range'] = (begin, end)
+		return args
+
+	def active_args(self, data:dict, name:str):
+		'''
+		Return a dict suitable for passing as keyword arguments to
+		`professional_activity` to indicate the time period during
+		which a person was active in their professional activities.
+		'''
+		period_active = data.get('period_active')
+		century_active = data.get('century_active')
+		if period_active:
+			date_range = date_cleaner(period_active)
+			if date_range:
+				return {'date_range': date_range}
+		elif century_active:
+			if len(century_active) == 4 and century_active.endswith('th'):
+				century = int(century_active[0:2])
+				return {'century': century}
+			else:
+				warnings.warn(f'TODO: better handling for century ranges: {century_active}')
+		return {}
 
 	def add_props(self, data:dict, role=None, **kwargs):
 		if 'events' not in data:
@@ -182,21 +261,11 @@ class PersonIdentity:
 				nationalities += [n.lower() for n in nationality]
 		data['nationality'] = []
 		
-		period_active = data.get('period_active')
-		century_active = data.get('century_active')
 		name = data['label']
-		if period_active:
-			date_range = date_cleaner(period_active)
-			if date_range:
-				a = self.professional_activity(name, date_range=date_range)
-				data['events'].append(a)
-		elif century_active:
-			if len(century_active) == 4 and century_active.endswith('th'):
-				century = int(century_active[0:2])
-				a = self.professional_activity(name, century=century)
-				data['events'].append(a)
-			else:
-				warnings.warn(f'TODO: better handling for century ranges: {century_active}')
+		active = self.clamped_timespan_args(data, name)
+		if active:
+			a = self.professional_activity(name, **active)
+			data['events'].append(a)
 
 		if 'referred_to_by' not in data:
 			data['referred_to_by'] = []

@@ -86,14 +86,14 @@ class PersonIdentity:
 		auth_name = data.get('auth_name')
 		auth_name_q = '?' in data.get('auth_nameq', '')
 
-		if ulan:
-			key = ('PERSON', 'ULAN', ulan)
-			return key, self.make_shared_uri
-		elif auth_name and self.is_anonymous_group(auth_name):
+		if auth_name and self.is_anonymous_group(auth_name):
 			key = ('GROUP', 'AUTH', auth_name)
 			return key, self.make_shared_uri
 		elif auth_name and self.acceptable_person_auth_name(auth_name):
 			key = ('PERSON', 'AUTH', auth_name)
+			return key, self.make_shared_uri
+		elif ulan:
+			key = ('PERSON', 'ULAN', ulan)
 			return key, self.make_shared_uri
 		else:
 			# not enough information to identify this person uniquely, so use the source location in the input file

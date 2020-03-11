@@ -225,7 +225,7 @@ class PersonIdentity:
 			elif isinstance(data['nationality'], list):
 				nationalities += data['nationality']
 
-		data.setdefault('nationality', [])
+		data['nationality'] = []
 		data.setdefault('referred_to_by', [])
 
 		if data.get('name_cite'):

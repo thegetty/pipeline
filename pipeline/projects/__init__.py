@@ -396,8 +396,9 @@ class StaticInstanceHolder:
 		return used
 
 class PipelineBase:
-	def __init__(self, project_name, *, helper):
+	def __init__(self, project_name, *, helper, parallel=False):
 		self.project_name = project_name
+		self.parallel = parallel
 		self.helper = helper
 		self.static_instances = StaticInstanceHolder(self.setup_static_instances())
 		self.services = self.setup_services()
@@ -526,7 +527,7 @@ class PipelineBase:
 		return people
 
 	def run_graph(self, graph, *, services):
-		if False:
+		if self.parallel:
 			print('Running with PARALLEL bonobo executor')
 			bonobo.run(graph, services=services)
 		else:
@@ -551,6 +552,7 @@ class UtilityHelper:
 		constructor instead.
 		'''
 		self.services = services
+		self.unique_locations = CaseFoldingSet(self.services.get('unique_locations', {}).get('place_names', []))
 
 	def add_static_instances(self, static_instances):
 		self.static_instances = static_instances
@@ -587,7 +589,7 @@ class UtilityHelper:
 		- type (one of: 'City', 'State', 'Province', or 'Country')
 		- part_of (a recursive place dictionary)
 		'''
-		unique_locations = CaseFoldingSet(self.services.get('unique_locations', {}).get('place_names', []))
+		unique_locations = self.unique_locations
 		TYPES = {
 			'city': vocab.instances['city'],
 			'province': vocab.instances['province'],

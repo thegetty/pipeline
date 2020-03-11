@@ -73,7 +73,7 @@ class PopulateAuctionEvent(Configurable):
 		if place:
 			data['_locations'] = [place_data]
 			auction.took_place_at = place
-			auction_locations[cno] = place.id
+			auction_locations[cno] = place.clone(minimal=True)
 
 		begin = implode_date(data, 'sale_begin_', clamp='begin')
 		end = implode_date(data, 'sale_end_', clamp='eoe')
@@ -88,8 +88,13 @@ class PopulateAuctionEvent(Configurable):
 		event_record = get_crom_object(data['_record'])
 		for seq_no, expert in enumerate(data.get('expert', [])):
 			self.helper.copy_source_information(expert, data),
-			person = self.helper.add_person(expert, record=event_record, relative_id=f'expert-{seq_no+1}', role='expert')
-			event_experts[cno].append(person)
+			person = self.helper.add_person(
+				expert,
+				event_record,
+				relative_id=f'expert-{seq_no+1}',
+				role='expert'
+			)
+			event_experts[cno].append(person.clone(minimal=True))
 			data['_organizers'].append(add_crom_data(data={}, what=person))
 			role_id = '' # self.helper.make_proj_uri('AUCTION-EVENT', cno, 'Expert', seq_no)
 			role = vocab.Expert(ident=role_id, label=f'Role of Expert in the event {cno}')
@@ -97,8 +102,13 @@ class PopulateAuctionEvent(Configurable):
 			auction.part = role
 		for seq_no, commissaire in enumerate(data.get('commissaire', [])):
 			self.helper.copy_source_information(commissaire, data),
-			person = self.helper.add_person(commissaire, record=event_record, relative_id=f'commissaire-{seq_no+1}', role='commissaire')
-			event_commissaires[cno].append(person)
+			person = self.helper.add_person(
+				commissaire,
+				event_record,
+				relative_id=f'commissaire-{seq_no+1}',
+				role='commissaire'
+			)
+			event_commissaires[cno].append(person.clone(minimal=True))
 			data['_organizers'].append(add_crom_data(data={}, what=person))
 			role_id = '' # self.helper.make_proj_uri('AUCTION-EVENT', cno, 'Commissaire', seq_no)
 			role = vocab.CommissairePriseur(ident=role_id, label=f'Role of Commissaire-priseur in the event {cno}')

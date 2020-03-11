@@ -18,25 +18,24 @@ ctx = json.load(fh)
 proc = jsonld.JsonLdProcessor()
 r = re.compile(r'_:(\S+)')
 
-count = 0
-for filename in sys.argv[2:]:
+def convert(p):
+	filename = str(p)
 	try:
-		p = Path(filename)
-		with open(filename, 'r') as fh:
+		with p.open('r') as fh:
 			bnode_map = {}
 			input = json.load(fh)
 			try:
 				id = input['id']
 			except KeyError as e:
 				print(f'*** Skipping {filename}')
-				continue
+				return 0
 			if not id.startswith('urn:uuid:'):
 				raise JSONLDError(f"file doesn't have a valid top-level UUID: {filename}")
 			gid = id
 			del(input['@context'])
 			input = {'@id': gid, '@graph': input}
 			triples = proc.to_rdf(input, {'expandContext': ctx, 'format': 'application/n-quads'})
-		
+	
 			bids = set(r.findall(triples))
 			for bid in bids:
 				if bid in bnode_map:
@@ -48,9 +47,19 @@ for filename in sys.argv[2:]:
 
 			nq_filename = p.with_suffix('.nq')
 			with open(nq_filename, 'w') as out:
-				count += 1
 				print(triples, file=out)
+				return 1
 	except JSONLDError as e:
 		print(f'*** {str(e)}', file=sys.stderr)
-		continue
+	return 0
+
+count = 0
+for filename in sys.argv[2:]:
+	p = Path(filename)
+	if p.is_dir():
+		for p in p.rglob('*.json'):
+			print(p)
+			count += convert(p)
+	else:
+		count += convert(p)
 # print(f'Done after writing {count} N-Quads files.')

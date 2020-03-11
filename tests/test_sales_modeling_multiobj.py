@@ -43,10 +43,10 @@ class PIRModelingTest_MultiObject(TestSalesPipelineOutput):
 		self.assertEqual(len(by_type['Auction of Lot']), 1)
 		lot = by_type['Auction of Lot'][0]
 
-		# procurement has 1 payment, 3 acquisitions, and 3 transfers of custody
+		# procurement has 1 payment, 3 acquisitions, and 6 transfers of custody
 		parts = procurement['part']
 		proc_types = sorted([a['type'] for a in parts])
-		self.assertEqual(proc_types, ['Acquisition', 'Acquisition', 'Acquisition', 'Payment', 'TransferOfCustody', 'TransferOfCustody', 'TransferOfCustody'])
+		self.assertEqual(proc_types, ['Acquisition', 'Acquisition', 'Acquisition', 'Payment', 'TransferOfCustody', 'TransferOfCustody', 'TransferOfCustody', 'TransferOfCustody', 'TransferOfCustody', 'TransferOfCustody'])
 		acqs = [a for a in parts if a['type'] == 'Acquisition']
 		paym = [a for a in parts if a['type'] == 'Payment'][0]
 

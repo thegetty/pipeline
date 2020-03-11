@@ -269,7 +269,7 @@ class CromObjectMerger:
 
 			setattr(obj, p, None) # clear out all the existing values
 			if allows_multiple:
-				for v in identified.values():
+				for _, v in sorted(identified.items()):
 					setattr(obj, p, self.merge(*v))
 				for v in unidentified:
 					setattr(obj, p, v)
@@ -295,7 +295,10 @@ class CromObjectMerger:
 					if len(unidentified) > 1:
 						warnings.warn(f'*** Dropping {len(unidentified)-1} extra unidentified values for property {p} of {obj}')
 					try:
-						values = set(unidentified + [getattr(obj, p)])
+						if hasattr(obj, p):
+							values = set(unidentified + [getattr(obj, p)])
+						else:
+							values = set(unidentified)
 						value = sorted(values)[0]
 					except TypeError:
 						# in case the values cannot be sorted
@@ -604,16 +607,15 @@ class CaseFoldingSet(set):
 	def __init__(self, iterable):
 		super().__init__(self)
 		for v in iterable:
-			if isinstance(v, str):
-				self.add(v.casefold())
-			else:
-				self.add(v)
+			self.add(v)
 
 	def __and__(self, value):
 		return CaseFoldingSet({s for s in value if s in self})
 
 	def __or__(self, value):
-		s = CaseFoldingSet(self)
+		s = CaseFoldingSet({})
+		for v in self:
+			super().add(v)
 		for v in value:
 			s.add(v)
 		return s
@@ -626,6 +628,17 @@ class CaseFoldingSet(set):
 
 	def __contains__(self, v):
 		return super().__contains__(v.casefold())
+
+	def intersects(self, values):
+		if isinstance(values, CaseFoldingSet):
+			l = set(self)
+			r = set(values)
+			return l & r
+		else:
+			for v in values:
+				if v in self:
+					return True
+			return False
 
 def truncate_with_ellipsis(s, length=100):
 	'''

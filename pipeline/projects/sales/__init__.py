@@ -80,6 +80,229 @@ import pipeline.projects.sales.catalogs
 class SalesPersonIdentity(PersonIdentity):
 	pass
 
+class PersonIdentity:
+	'''
+	Utility class to help assign records for people with properties such as `uri` and identifiers.
+	'''
+	def __init__(self, *, make_shared_uri, make_proj_uri):
+		self.make_shared_uri = make_shared_uri
+		self.make_proj_uri = make_proj_uri
+		self.ignore_authnames = CaseFoldingSet(('NEW', 'NON-UNIQUE'))
+		self.make_la_person = pipeline.linkedart.MakeLinkedArtPerson()
+		self.make_la_org = pipeline.linkedart.MakeLinkedArtOrganization()
+		self.anon_dated_re = re.compile(r'\[ANONYMOUS - (\d+)TH C[.]\]')
+		self.anon_period_re = re.compile(r'\[ANONYMOUS - (MODERN|ANTIQUE)\]')
+		self.anon_dated_nationality_re = re.compile(r'\[(\w+) - (\d+)TH C[.]\]')
+		self.anon_nationality_re = re.compile(r'\[(?!ANON)(\w+)\]', re.IGNORECASE)
+
+	def acceptable_person_auth_name(self, auth_name):
+		if not auth_name or auth_name in self.ignore_authnames:
+			return False
+		elif '[' in auth_name:
+			return False
+		return True
+
+	def is_anonymous_group(self, auth_name):
+		if self.anon_nationality_re.match(auth_name):
+			return True
+		if self.anon_dated_nationality_re.match(auth_name):
+			return True
+		elif self.anon_dated_re.match(auth_name):
+			return True
+		elif self.anon_period_re.match(auth_name):
+			return True
+		return False
+
+	def is_anonymous(self, data:dict):
+		auth_name = data.get('auth_name')
+		if auth_name:
+			if self.is_anonymous_group(auth_name):
+				return False
+			return '[ANONYMOUS' in auth_name
+		elif data.get('name'):
+			return False
+
+		with suppress(ValueError, TypeError):
+			if int(data.get('ulan')):
+				return False
+		return True
+
+	def _uri_keys(self, data:dict, record_id=None):
+		ulan = None
+		with suppress(ValueError, TypeError):
+			ulan = int(data.get('ulan'))
+
+		auth_name = data.get('auth_name')
+		auth_name_q = '?' in data.get('auth_nameq', '')
+
+		if ulan:
+			key = ('PERSON', 'ULAN', ulan)
+			return key, self.make_shared_uri
+		elif self.is_anonymous_group(auth_name):
+			key = ('GROUP', 'AUTH', auth_name)
+			return key, self.make_shared_uri
+		elif self.acceptable_person_auth_name(auth_name):
+			key = ('PERSON', 'AUTH', auth_name)
+			return key, self.make_shared_uri
+		else:
+			# not enough information to identify this person uniquely, so use the source location in the input file
+			try:
+				if 'pi_record_no' in data:
+					id_value = data['pi_record_no']
+					id_key = 'PI'
+				else:
+					id_value = data['star_record_no']
+					id_key = 'STAR'
+			except KeyError as e:
+				warnings.warn(f'*** No identifying property with which to construct a URI key: {e}')
+				print(pprint.pformat(data), file=sys.stderr)
+				raise
+			if record_id:
+				key = ('PERSON', id_key, id_value, record_id)
+				return key, self.make_proj_uri
+			else:
+				warnings.warn(f'*** No record identifier given for person identified only by {id_key} {id_value}')
+				key = ('PERSON', id_key, id_value)
+				return key, self.make_proj_uri
+
+	def add_person(self, a, sales_record, relative_id, **kwargs):
+		self.add_uri(a, record_id=relative_id)
+		self.add_names(a, referrer=sales_record, **kwargs)
+		self.add_props(a, **kwargs)
+		auth_name = a.get('auth_name')
+		if auth_name and self.is_anonymous_group(auth_name):
+			self.make_la_org(a)
+		else:
+			self.make_la_person(a)
+		return get_crom_object(a)
+
+	def add_uri(self, data:dict, **kwargs):
+		keys, make = self._uri_keys(data, **kwargs)
+		data['uri_keys'] = keys
+		data['uri'] = make(*keys)
+
+	def timespan_for_century(self, century):
+		ord = make_ordinal(century)
+		ts = model.TimeSpan(ident='', label=f'{ord} century')
+		from_year = 100 * (century-1)
+		to_year = from_year + 100
+		ts.end_of_the_begin = "%04d-%02d-%02dT%02d:%02d:%02dZ" % (from_year, 1, 1, 0, 0, 0)
+		ts.begin_of_the_end = "%04d-%02d-%02dT%02d:%02d:%02dZ" % (to_year, 1, 1, 0, 0, 0)
+		return ts
+
+	def anonymous_group_label(self, role, century=None, nationality=None):
+		if century and nationality:
+			ord = make_ordinal(century)
+			return f'{nationality.capitalize()} {role}s in the {ord} century'
+		elif century:
+			ord = make_ordinal(century)
+			return f'{role}s in the {ord} century'
+		elif nationality:
+			return f'{nationality.capitalize()} {role}s'
+		else:
+			return f'{role}s'
+		return a
+
+	def professional_activity(self, group_label, century=None):
+		a = vocab.Active(ident='', label=f'Professional activity of {group_label}')
+		if century:
+			ts = self.timespan_for_century(century)
+			a.timespan = ts
+		return a
+
+	def add_props(self, data:dict, role=None, **kwargs):
+		role = role if role else 'person'
+		auth_name = data.get('auth_name', '')
+		period_match = self.anon_period_re.match(auth_name)
+		nationalities = []
+		if 'nationality' in data:
+			if isinstance(data['nationality'], str):
+				nationalities.append(data['nationality'])
+			elif isinstance(data['nationality'], list):
+				nationalities += data['nationality']
+
+		data['nationality'] = []
+		data.setdefault('referred_to_by', [])
+
+		if data.get('name_cite'):
+			cite = vocab.BibliographyStatement(ident='', content=data['name_cite'])
+			data['referred_to_by'].append(cite)
+
+		if self.is_anonymous_group(auth_name):
+			nationality_match = self.anon_nationality_re.match(auth_name)
+			dated_nationality_match = self.anon_dated_nationality_re.match(auth_name)
+			dated_match = self.anon_dated_re.match(auth_name)
+			data.setdefault('events', [])
+			if nationality_match:
+				with suppress(ValueError):
+					nationality = nationality_match.group(1).lower()
+					nationalities.append(nationality)
+					group_label = self.anonymous_group_label(role, nationality=nationality)
+					data['label'] = group_label
+			elif dated_nationality_match:
+				with suppress(ValueError):
+					nationality = dated_nationality_match.group(1).lower()
+					nationalities.append(nationality)
+					century = int(dated_nationality_match.group(2))
+					group_label = self.anonymous_group_label(role, century=century, nationality=nationality)
+					data['label'] = group_label
+					a = self.professional_activity(group_label, century=century)
+					data['events'].append(a)
+			elif dated_match:
+				with suppress(ValueError):
+					century = int(dated_match.group(1))
+					group_label = self.anonymous_group_label(role, century=century)
+					data['label'] = group_label
+					a = self.professional_activity(group_label, century=century)
+					data['events'].append(a)
+			elif period_match:
+				period = period_match.group(1).lower()
+				data['label'] = f'anonymous {period} {role}s'
+		for nationality in nationalities:
+			key = f'{nationality.lower()} nationality'
+			n = vocab.instances.get(key)
+			if n:
+				data['nationality'].append(n)
+			else:
+				warnings.warn(f'No nationality instance found in crom for: {key!r}')
+
+	def add_names(self, data:dict, referrer=None, role=None, **kwargs):
+		'''
+		Based on the presence of `auth_name` and/or `name` fields in `data`, sets the
+		`label`, `names`, and `identifier` keys to appropriate strings/`model.Identifier`
+		values.
+
+		If the `role` string is given (e.g. 'artist'), also sets the `role_label` key
+		to a value (e.g. 'artist “RUBENS, PETER PAUL”').
+		'''
+		auth_name = data.get('auth_name', '')
+		role_label = None
+		if self.acceptable_person_auth_name(auth_name):
+			if role:
+				role_label = f'{role} “{auth_name}”'
+			data['label'] = auth_name
+			pname = vocab.PrimaryName(ident='', content=auth_name) # NOTE: most of these are also vocab.SortName, but not 100%, so witholding that assertion for now
+			if referrer:
+				pname.referred_to_by = referrer
+			data['identifiers'] = [pname]
+
+		name = data.get('name')
+		if name:
+			if role and not role_label:
+				role_label = f'{role} “{name}”'
+			if referrer:
+				data['names'] = [(name, {'referred_to_by': [referrer]})]
+			else:
+				data['names'] = [name]
+			data.setdefault('label', name)
+		data.setdefault('label', '(Anonymous)')
+
+		if role and not role_label:
+			role_label = f'anonymous {role}'
+
+		if role:
+			data['role_label'] = role_label
+
 class SalesUtilityHelper(UtilityHelper):
 	'''
 	Project-specific code for accessing and interpreting sales data.
@@ -377,8 +600,7 @@ class SalesUtilityHelper(UtilityHelper):
 			if event_record:
 				n.referred_to_by = event_record
 			a['identifiers'].append(n)
-			if 'label' not in a:
-				a['label'] = name
+			a.setdefault('label', name)
 		else:
 			a['label'] = '(Anonymous)'
 
@@ -481,6 +703,14 @@ class SalesPipeline(PipelineBase):
 	# Set up environment
 		'''Return a `dict` of named services available to the bonobo pipeline.'''
 		services = super().setup_services()
+		for name in ('transaction_types', 'attribution_modifiers'):
+			services[name] = {k: CaseFoldingSet(v) for k, v in services[name].items()}
+
+		attribution_modifiers = services['attribution_modifiers']
+		PROBABLY = attribution_modifiers['probably by']
+		POSSIBLY = attribution_modifiers['possibly by']
+		attribution_modifiers['uncertain'] = PROBABLY | POSSIBLY
+
 		services.update({
 			# to avoid constructing new MakeLinkedArtPerson objects millions of times, this
 			# is passed around as a service to the functions and classes that require it.

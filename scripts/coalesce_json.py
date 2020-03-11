@@ -47,6 +47,8 @@ for id in sorted(counter):
 		for filename in files:
 			with open(filename, 'r') as fh:
 				content = fh.read()
+				canon_file = None
+				canon_content = None
 				try:
 					m = read.read(content)
 					id = m.id

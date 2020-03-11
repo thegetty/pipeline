@@ -50,7 +50,7 @@ class UUIDRewriter:
 			return d
 		else:
 			print(f'failed to rewrite JSON value: {d!r}')
-			raise Exception(f'failed to rewrite JSON value: {d!r}')
+			raise Exception(f'failed to rewrite JSON value ({kwargs}): {d!r}')
 
 if len(sys.argv) < 2:
 	cmd = sys.argv[0]

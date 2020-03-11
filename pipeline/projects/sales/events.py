@@ -73,7 +73,7 @@ class PopulateAuctionEvent(Configurable):
 		if place:
 			data['_locations'] = [place_data]
 			auction.took_place_at = place
-			auction_locations[cno] = place.id
+			auction_locations[cno] = place.clone(minimal=True)
 
 		begin = implode_date(data, 'sale_begin_', clamp='begin')
 		end = implode_date(data, 'sale_end_', clamp='eoe')

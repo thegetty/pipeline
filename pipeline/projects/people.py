@@ -90,21 +90,19 @@ class PeopleUtilityHelper(UtilityHelper):
 class AddPerson(Configurable):
 	helper = Option(required=True)
 	
-	def __call__(self, data:dict):
-		if 'referred_to_by' not in data:
-			data['referred_to_by'] = []
+	def handle_awards(self, data):
+		awards = data.get('medal_received')
+		if awards:
+			pass
 
-		name = data['auth_name']
-		data['events'] = []
-		data['places'] = []
-		data['contact_point'] = []
-
+	def handle_dates(self, data):
 		if 'birth' in data:
 			data['birth_clean'] = date_cleaner(data['birth'])
 
 		if 'death' in data:
 			data['death_clean'] = date_cleaner(data['death'])
 
+	def handle_statements(self, data):
 		text_content = data.get('text')
 		if text_content:
 			cite = vocab.BiographyStatement(ident='', content=text_content)
@@ -115,6 +113,11 @@ class AddPerson(Configurable):
 			cite = vocab.BibliographyStatement(ident='', content=source_content)
 			data['referred_to_by'].append(cite)
 
+		project = data.get('project')
+		if project:
+			data['referred_to_by'].append(vocab.SourceStatement(ident='', content=project))
+
+	def handle_places(self, data):
 		locations = {l.strip() for l in data.get('location', '').split(';')} - {''}
 		base_uri = self.helper.make_proj_uri('PLACE', '')
 		for l in locations:
@@ -128,10 +131,8 @@ class AddPerson(Configurable):
 			contact_data = add_crom_data(data={}, what=contact)
 			data['contact_point'].append(contact_data)
 
-		project = data.get('project')
-		if project:
-			data['referred_to_by'].append(vocab.SourceStatement(ident='', content=project))
-		
+	def model_person_or_group(self, data):
+		name = data['auth_name']
 		type = {t.strip() for t in data.get('type', '').lower().split(';')} - {''}
 		if type & {'institution', 'museum'}:
 			# This is an Organization
@@ -169,6 +170,18 @@ class AddPerson(Configurable):
 			if self.helper.add_person(data):
 				yield data
 
+	def __call__(self, data:dict):
+		data.setdefault('referred_to_by', [])
+		data.setdefault('events', [])
+		data.setdefault('places', [])
+		data.setdefault('contact_point', [])
+
+
+		self.handle_awards(data)
+		self.handle_dates(data)
+		self.handle_statements(data)
+		self.handle_places(data)
+		yield from self.model_person_or_group(data)
 
 #mark - People Pipeline class
 
@@ -225,6 +238,7 @@ class PeoplePipeline(PipelineBase):
 									'ulan_id': 'ulan',
 									'birth_date': 'birth',
 									'death_date': 'death',
+									'notes': 'internal_notes'
 								},
 								'properties': (
 									'star_record_no',

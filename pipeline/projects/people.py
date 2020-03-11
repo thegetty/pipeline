@@ -90,11 +90,6 @@ class PeopleUtilityHelper(UtilityHelper):
 class AddPerson(Configurable):
 	helper = Option(required=True)
 	
-	def handle_awards(self, data):
-		awards = data.get('medal_received')
-		if awards:
-			pass
-
 	def handle_dates(self, data):
 		if 'birth' in data:
 			data['birth_clean'] = date_cleaner(data['birth'])
@@ -116,6 +111,11 @@ class AddPerson(Configurable):
 		project = data.get('project')
 		if project:
 			data['referred_to_by'].append(vocab.SourceStatement(ident='', content=project))
+
+		awards = {l.strip() for l in data.get('medal_received', '').split(';')} - {''}
+		for award in awards:
+			cite = vocab.Note(ident='', content=award) # TODO: add proper classification for an Awards Statement
+			data['referred_to_by'].append(cite)
 
 	def handle_places(self, data):
 		locations = {l.strip() for l in data.get('location', '').split(';')} - {''}
@@ -176,8 +176,6 @@ class AddPerson(Configurable):
 		data.setdefault('places', [])
 		data.setdefault('contact_point', [])
 
-
-		self.handle_awards(data)
 		self.handle_dates(data)
 		self.handle_statements(data)
 		self.handle_places(data)

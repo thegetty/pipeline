@@ -262,8 +262,7 @@ class PopulateObject(Configurable):
 		auction_data = parent.get('auction_of_lot')
 		if auction_data:
 			lno = str(auction_data['lot_number'])
-			if 'identifiers' not in data:
-				data['identifiers'] = []
+			data.setdefault('identifiers', [])
 			if not lno:
 				warnings.warn(f'Setting empty identifier on {hmo.id}')
 			data['identifiers'].append(vocab.LotNumber(ident='', content=lno))

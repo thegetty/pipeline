@@ -224,10 +224,9 @@ class PersonIdentity:
 				nationalities.append(data['nationality'])
 			elif isinstance(data['nationality'], list):
 				nationalities += data['nationality']
-		data['nationality'] = []
 
-		if 'referred_to_by' not in data:
-			data['referred_to_by'] = []
+		data.setdefault('nationality', [])
+		data.setdefault('referred_to_by', [])
 
 		if data.get('name_cite'):
 			cite = vocab.BibliographyStatement(ident='', content=data['name_cite'])
@@ -237,8 +236,7 @@ class PersonIdentity:
 			nationality_match = self.anon_nationality_re.match(auth_name)
 			dated_nationality_match = self.anon_dated_nationality_re.match(auth_name)
 			dated_match = self.anon_dated_re.match(auth_name)
-			if 'events' not in data:
-				data['events'] = []
+			data.setdefault('events', [])
 			if nationality_match:
 				with suppress(ValueError):
 					nationality = nationality_match.group(1).lower()
@@ -300,10 +298,8 @@ class PersonIdentity:
 				data['names'] = [(name, {'referred_to_by': [referrer]})]
 			else:
 				data['names'] = [name]
-			if 'label' not in data:
-				data['label'] = name
-		if 'label' not in data:
-			data['label'] = '(Anonymous)'
+			data.setdefault('label', name)
+		data.setdefault('label', '(Anonymous)')
 
 		if role and not role_label:
 			role_label = f'anonymous {role}'
@@ -608,8 +604,7 @@ class ProvenanceUtilityHelper(UtilityHelper):
 			if event_record:
 				n.referred_to_by = event_record
 			a['identifiers'].append(n)
-			if 'label' not in a:
-				a['label'] = name
+			a.setdefault('label', name)
 		else:
 			a['label'] = '(Anonymous)'
 

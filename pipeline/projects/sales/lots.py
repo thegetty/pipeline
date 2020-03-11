@@ -157,8 +157,7 @@ class AddAuctionOfLot(Configurable):
 			page = vocab.WebPage(ident=page_url, label=url)
 			page.digitally_carried_by = model.DigitalObject(ident=url)
 			lot.referred_to_by = page
-			if '_texts' not in data:
-				data['_texts'] = []
+			data.setdefault('_texts', [])
 			data['_texts'].append(add_crom_data(data={}, what=page))
 
 		for problem_key, problem in problematic_records.get('lots', []):
@@ -571,8 +570,7 @@ class AddAcquisitionOrBidding(Configurable):
 			owner.residence = place
 			data['_owner_locations'].append(place_data)
 
-		if '_other_owners' not in data:
-			data['_other_owners'] = []
+		data.setdefault('_other_owners', [])
 		data['_other_owners'].append(owner_record)
 
 		tx_uri = hmo.id + f'-{record_id}-Prov'
@@ -661,8 +659,7 @@ class AddAcquisitionOrBidding(Configurable):
 		if model_custody_return:
 			self.add_transfer_of_custody(data, tx, xfer_to=sellers, xfer_from=houses, sequence=2, purpose='returning')
 
-		if '_procurements' not in data:
-			data['_procurements'] = []
+		data.setdefault('_procurements', [])
 		data['_procurements'].append(tx_data)
 
 		if amnts:
@@ -771,8 +768,7 @@ class AddAcquisitionOrBidding(Configurable):
 		UNSOLD = transaction_types['unsold']
 		UNKNOWN = transaction_types['unknown']
 
-		if '_procurements' not in data:
-			data['_procurements'] = []
+		data.setdefault('_procurements', [])
 
 		sale_type = non_auctions.get(cno, 'Auction')
 		if transaction in SOLD:

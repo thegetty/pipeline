@@ -74,7 +74,7 @@ class PIRModelingTest_AttributionModifiers(TestSalesPipelineOutput):
 		attr_assignment = production['attributed_by'][0]
 		self.assertEqual(attr_assignment['assigned_property'], 'influenced_by')
 		self.assertEqual({c['_label'] for c in attr_assignment['property_classified_as']}, {'Style Of'})
-		self.assertEqual(attr_assignment['assigned']['id'], 'tag:getty.edu,2019:digital:pipeline:REPLACE-WITH-UUID:shared#PERSON,ULAN,500005259')
+		self.assertEqual(attr_assignment['assigned']['id'], 'tag:getty.edu,2019:digital:pipeline:REPLACE-WITH-UUID:shared#PERSON,AUTH,HOLBEIN%2C%20HANS%20%28THE%20YOUNGER%29')
 
 		# 'possibly by' modifiers use an AttributeAssignment that is classified as 'possibly' to assert the 'carried_out_by' property
 		possibly_by_obj = objects['tag:getty.edu,2019:digital:pipeline:REPLACE-WITH-UUID:sales#OBJ,B-A13,0086,1738-07-21']

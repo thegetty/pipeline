@@ -69,6 +69,8 @@ class MakeLinkedArtRecord:
 					else:
 						note = vocab.Note(content=content)
 						note.classified_as = itype
+			elif isinstance(notedata, model.BaseResource):
+				note = notedata
 			else:
 				note = vocab.Note(content=notedata)
 			thing.referred_to_by = note
@@ -104,7 +106,11 @@ class MakeLinkedArtRecord:
 			# namedata should take the form of:
 			# ["A. Name"]
 			# ["A. Name", {'referred_to_by': [{'uri': 'URI-OF-LINGUISTIC_OBJECT'}, model.LinguisticObject()]}]
-			name, *properties = namedata
+			if isinstance(namedata, tuple):
+				name, *properties = namedata
+			else:
+				name = namedata
+				properties = {}
 			n = set_la_name(thing, name)
 			self.set_lo_properties(n, *properties)
 
@@ -368,6 +374,8 @@ class MakeLinkedArtPerson(MakeLinkedArtRecord):
 				natl._label = str(data[ns+'_label'])
 			else:
 				break
+		for n in data.get('nationality', []):
+			who.classified_as = n
 
 		# nationality field can contain other information, but not useful.
 		# XXX Intentionally ignored but validate with GRI
@@ -414,11 +422,26 @@ class MakeLinkedArtPerson(MakeLinkedArtRecord):
 			d._label = "Death of %s" % who._label
 			who.died = d
 
+		if 'contact_point' in data:
+			for p in data['contact_point']:
+				if isinstance(p, model.Identifier):
+					pl = p
+				elif isinstance(p, dict):
+					pl = get_crom_object(p)
+				else:
+					pl = model.Name(ident='', content=p)
+				who.contact_point = pl
+
 		# Locations are names of residence places (P74 -> E53)
 		# XXX FIXME: Places are their own model
 		if 'places' in data:
 			for p in data['places']:
-				pl = model.Place()
+				if isinstance(p, model.Place):
+					pl = p
+				elif isinstance(p, dict):
+					pl = get_crom_object(p)
+				else:
+					pl = model.Place(ident='', label=p)
 				#pl._label = p['label']
 				#nm = model.Name()
 				#nm.content = p['label']

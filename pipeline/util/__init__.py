@@ -410,6 +410,46 @@ class MatchingFiles(Configurable):
 		if not count:
 			sys.stderr.write(f'*** No files matching {pattern} found in {fullpath}\n')
 
+def make_ordinal(n):
+	n = int(n)
+	suffix = ['th', 'st', 'nd', 'rd', 'th'][min(n % 10, 4)]
+	if 11 <= (n % 100) <= 13:
+		suffix = 'th'
+	return f'{n}{suffix}'
+
+def timespan_for_century(century, narrow=False):
+	'''
+	Given a integer representing a century (e.g. 17 for the 17th century), return a
+	TimeSpan object for the bounds of that century.
+	
+	If `narrow` is True, the bounding properties will be `end_of_the_begin` and
+	`begin_of_the_end`; otherwise they will be `begin_of_the_begin` and `end_of_the_end`.
+	'''
+	ord = make_ordinal(century)
+	ts = model.TimeSpan(ident='', label=f'{ord} century')
+	from_year = 100 * (century-1)
+	to_year = from_year + 100
+	if narrow:
+		ts.end_of_the_begin = "%04d-%02d-%02dT%02d:%02d:%02dZ" % (from_year, 1, 1, 0, 0, 0)
+		ts.begin_of_the_end = "%04d-%02d-%02dT%02d:%02d:%02dZ" % (to_year, 1, 1, 0, 0, 0)
+	else:
+		ts.begin_of_the_begin = "%04d-%02d-%02dT%02d:%02d:%02dZ" % (from_year, 1, 1, 0, 0, 0)
+		ts.end_of_the_end = "%04d-%02d-%02dT%02d:%02d:%02dZ" % (to_year, 1, 1, 0, 0, 0)
+	return ts
+
+def dates_for_century(century):
+	'''
+	Given a integer representing a century (e.g. 17 for the 17th century), return a
+	tuple of dates for the bounds of that century.
+	'''
+	ord = make_ordinal(century)
+	ts = model.TimeSpan(ident='', label=f'{ord} century')
+	from_year = 100 * (century-1)
+	to_year = from_year + 100
+	begin = datetime.datetime(from_year, 1, 1)
+	end = datetime.datetime(to_year, 1, 1)
+	return (begin, end)
+
 def timespan_before(after):
 	ts = model.TimeSpan(ident='')
 	try:

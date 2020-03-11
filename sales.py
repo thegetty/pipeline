@@ -45,9 +45,9 @@ if __name__ == '__main__':
 	parser = bonobo.get_argument_parser()
 	with bonobo.parse_args(parser) as options:
 		try:
-			pir_data_path = project_data_path('sales')
+			sales_data_path = project_data_path('sales')
 			pipeline = SalesFilePipeline( # SalesPipeline
-				pir_data_path,
+				sales_data_path,
 				catalogs=catalogs,
 				auction_events=auction_events,
 				contents=contents,

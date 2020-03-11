@@ -1,6 +1,6 @@
 '''
 Classes and utility functions for instantiating, configuring, and
-running a bonobo pipeline for converting Provenance Index CSV data into JSON-LD.
+running a bonobo pipeline for converting Sales Index CSV data into JSON-LD.
 '''
 
 # PIR Extracters
@@ -40,7 +40,7 @@ from cromulent.model import factory
 from cromulent.extract import extract_physical_dimensions, extract_monetary_amount
 
 import pipeline.execution
-from pipeline.projects import PipelineBase, UtilityHelper
+from pipeline.projects import PipelineBase, UtilityHelper, PersonIdentity
 from pipeline.projects.sales.util import *
 from pipeline.util import \
 			GraphListSource, \
@@ -77,12 +77,8 @@ import pipeline.projects.sales.catalogs
 
 #mark - utility functions and classes
 
-def make_ordinal(n):
-	n = int(n)
-	suffix = ['th', 'st', 'nd', 'rd', 'th'][min(n % 10, 4)]
-	if 11 <= (n % 100) <= 13:
-		suffix = 'th'
-	return f'{n}{suffix}'
+class SalesPersonIdentity(PersonIdentity):
+	pass
 
 class PersonIdentity:
 	'''
@@ -307,7 +303,7 @@ class PersonIdentity:
 		if role:
 			data['role_label'] = role_label
 
-class ProvenanceUtilityHelper(UtilityHelper):
+class SalesUtilityHelper(UtilityHelper):
 	'''
 	Project-specific code for accessing and interpreting sales data.
 	'''
@@ -318,7 +314,7 @@ class ProvenanceUtilityHelper(UtilityHelper):
 		self.ignore_house_authnames = CaseFoldingSet(('Anonymous', '[Anonymous]'))
 		self.csv_source_columns = ['pi_record_no', 'star_record_no', 'catalog_number']
 		self.problematic_record_uri = f'tag:getty.edu,2019:digital:pipeline:{project_name}:ProblematicRecord'
-		self.person_identity = PersonIdentity(make_shared_uri=self.make_shared_uri, make_proj_uri=self.make_proj_uri)
+		self.person_identity = SalesPersonIdentity(make_shared_uri=self.make_shared_uri, make_proj_uri=self.make_proj_uri)
 		self.uid_tag_prefix = UID_TAG_PREFIX
 
 	def copy_source_information(self, dst: dict, src: dict):
@@ -327,9 +323,9 @@ class ProvenanceUtilityHelper(UtilityHelper):
 				dst[k] = src[k]
 		return dst
 
-	def add_person(self, data, record, relative_id, **kwargs):
+	def add_person(self, data, **kwargs):
 		if data.get('name_so'):
-			# handling of the name_so field happens here and not in the PersonIdentity methods,
+			# handling of the name_so field happens here and not in the SalesPersonIdentity methods,
 			# because it requires access to the services data on catalogs
 			source = data.get('name_so', '').strip()
 			components = source.split(' ')
@@ -350,7 +346,7 @@ class ProvenanceUtilityHelper(UtilityHelper):
 					warnings.warn(f'*** SPECIFIC PHYSICAL CATALOG COPY NOT FOUND FOR NAME SOURCE {source} in catalog {cno}')
 			else:
 				warnings.warn(f'*** NO CATALOG OWNER FOUND FOR NAME SOURCE {source} on catalog {cno}')
-		return self.person_identity.add_person(data, record, relative_id, **kwargs)
+		return super().add_person(data, **kwargs)
 
 	def event_type_for_sale_type(self, sale_type):
 		if sale_type in ('Private Contract Sale', 'Stock List'):
@@ -650,16 +646,16 @@ def add_crom_price(data, parent, services, add_citations=False):
 	return data
 
 
-#mark - Provenance Pipeline class
+#mark - Sales Pipeline class
 
 class SalesPipeline(PipelineBase):
-	'''Bonobo-based pipeline for transforming Provenance data from CSV into JSON-LD.'''
+	'''Bonobo-based pipeline for transforming Sales data from CSV into JSON-LD.'''
 	def __init__(self, input_path, catalogs, auction_events, contents, **kwargs):
 		project_name = 'sales'
 		self.input_path = input_path
 		self.services = None
 
-		helper = ProvenanceUtilityHelper(project_name)
+		helper = SalesUtilityHelper(project_name)
 		self.uid_tag_prefix = UID_TAG_PREFIX
 
 		vocab.register_instance('act of selling', {'parent': model.Activity, 'id': 'XXXXXX001', 'label': 'Act of Selling'})
@@ -1279,42 +1275,6 @@ class SalesPipeline(PipelineBase):
 			self.add_serialization_chain(graph, sets.output, model=self.models['Set'], limit=1000)
 		return sets
 
-	def add_places_chain(self, graph, auction_events, key='_locations', serialize=True):
-		'''Add extraction and serialization of locations.'''
-		places = graph.add_chain(
-			ExtractKeyedValues(key=key),
-			RecursiveExtractKeyedValue(key='part_of'),
-			_input=auction_events.output
-		)
-		if serialize:
-			# write OBJECTS data
-			self.add_serialization_chain(graph, places.output, model=self.models['Place'])
-		return places
-
-	def add_person_or_group_chain(self, graph, input, key=None, serialize=True):
-		'''Add extraction and serialization of people and groups.'''
-		if key:
-			extracted = graph.add_chain(
-				ExtractKeyedValues(key=key),
-				_input=input.output
-			)
-		else:
-			extracted = input
-
-		people = graph.add_chain(
-			OnlyRecordsOfType(type=model.Person),
-			_input=extracted.output
-		)
-		groups = graph.add_chain(
-			OnlyRecordsOfType(type=model.Group),
-			_input=extracted.output
-		)
-		if serialize:
-			# write OBJECTS data
-			self.add_serialization_chain(graph, people.output, model=self.models['Person'])
-			self.add_serialization_chain(graph, groups.output, model=self.models['Group'])
-		return people
-
 	def add_visual_item_chain(self, graph, objects, serialize=True):
 		'''Add transformation of visual items to the bonobo pipeline.'''
 		items = graph.add_chain(
@@ -1435,19 +1395,19 @@ class SalesPipeline(PipelineBase):
 		return self.graph_0
 
 	def get_graph_1(self, **kwargs):
-		'''Construct the bonobo pipeline to fully transform Provenance data from CSV to JSON-LD.'''
+		'''Construct the bonobo pipeline to fully transform Sales data from CSV to JSON-LD.'''
 		if not self.graph_1:
 			self._construct_graph(**kwargs)
 		return self.graph_1
 
 	def get_graph_2(self, **kwargs):
-		'''Construct the bonobo pipeline to fully transform Provenance data from CSV to JSON-LD.'''
+		'''Construct the bonobo pipeline to fully transform Sales data from CSV to JSON-LD.'''
 		if not self.graph_2:
 			self._construct_graph(**kwargs)
 		return self.graph_2
 
 	def get_graph_3(self, **kwargs):
-		'''Construct the bonobo pipeline to fully transform Provenance data from CSV to JSON-LD.'''
+		'''Construct the bonobo pipeline to fully transform Sales data from CSV to JSON-LD.'''
 		if not self.graph_3:
 			self._construct_graph(**kwargs)
 		return self.graph_3
@@ -1456,7 +1416,7 @@ class SalesPipeline(PipelineBase):
 		pass
 
 	def run(self, services=None, **options):
-		'''Run the Provenance bonobo pipeline.'''
+		'''Run the Sales bonobo pipeline.'''
 		print(f'- Limiting to {self.limit} records per file', file=sys.stderr)
 		if not services:
 			services = self.get_services(**options)
@@ -1529,7 +1489,7 @@ class SalesPipeline(PipelineBase):
 
 class SalesFilePipeline(SalesPipeline):
 	'''
-	Provenance pipeline with serialization to files based on Arches model and resource UUID.
+	Sales pipeline with serialization to files based on Arches model and resource UUID.
 
 	If in `debug` mode, JSON serialization will use pretty-printing. Otherwise,
 	serialization will be compact.
@@ -1598,7 +1558,7 @@ class SalesFilePipeline(SalesPipeline):
 				w.flush(**kwargs)
 
 	def run(self, **options):
-		'''Run the Provenance bonobo pipeline.'''
+		'''Run the Sales bonobo pipeline.'''
 		start = timeit.default_timer()
 		services = self.get_services(**options)
 		super().run(services=services, **options)

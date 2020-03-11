@@ -86,10 +86,9 @@ class PopulateAuctionEvent(Configurable):
 		event_properties['auction_dates'][cno] = (begin, end)
 
 		event_record = get_crom_object(data['_record'])
-		pi = self.helper.person_identity
 		for seq_no, expert in enumerate(data.get('expert', [])):
 			self.helper.copy_source_information(expert, data),
-			person = pi.add_person(
+			person = self.helper.add_person(
 				expert,
 				event_record,
 				relative_id=f'expert-{seq_no+1}',
@@ -103,7 +102,7 @@ class PopulateAuctionEvent(Configurable):
 			auction.part = role
 		for seq_no, commissaire in enumerate(data.get('commissaire', [])):
 			self.helper.copy_source_information(commissaire, data),
-			person = pi.add_person(
+			person = self.helper.add_person(
 				commissaire,
 				event_record,
 				relative_id=f'commissaire-{seq_no+1}',

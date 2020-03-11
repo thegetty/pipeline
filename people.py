@@ -25,6 +25,7 @@ if __name__ == '__main__':
 	}
 
 #	factory.production_mode()
+	factory.json_serializer = "fast"
 	vocab.add_linked_art_boundary_check()
 	vocab.add_attribute_assignment_check()
 

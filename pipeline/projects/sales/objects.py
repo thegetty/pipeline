@@ -368,12 +368,18 @@ class AddArtists(Configurable):
 		pi = self.helper.person_identity
 
 		for a in artists:
+			a.setdefault('referred_to_by', [])
 			a.update({
 				'pi_record_no': data['pi_record_no'],
 				'ulan': a['artist_ulan'],
 				'auth_name': a['art_authority'],
 				'name': a['artist_name']
 			})
+			if a.get('biography'):
+				bio = a['biography']
+				del a['biography']
+				cite = vocab.BiographyStatement(ident='', content=bio)
+				a['referred_to_by'].append(cite)
 
 		def is_or_anon(data:dict):
 			if pi.is_anonymous(data):

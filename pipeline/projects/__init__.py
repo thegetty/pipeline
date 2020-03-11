@@ -351,7 +351,7 @@ class PersonIdentity:
 			names.append(name)
 		variant_names = data.get('variant_names')
 		if variant_names:
-			names += variant_names.split(';')
+			names += [n.strip() for n in variant_names.split(';')]
 
 		for name in names:
 			if role and not role_label:

@@ -925,6 +925,9 @@ class SalesPipeline(PipelineBase):
 								'prefixes': ('auction_house', 'house_ulan')
 							},
 							'_artists': {
+								'rename_keys': {
+									'artist_info': 'biography'
+								},
 								'postprocess': [
 									filter_empty_person,
 									add_pir_record_ids

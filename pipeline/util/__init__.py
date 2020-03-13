@@ -178,7 +178,7 @@ class CromObjectMerger:
 			# This is similar to `self.attribute_based_identity`, but instead of being
 			# based on the `type` of the object, it is based on the `classified_as` value
 			# of the object
-			'content': (vocab.MaterialStatement, vocab.DimensionStatement, vocab._BriefText),
+			'content': (vocab.MaterialStatement, vocab.DimensionStatement, vocab.BiographyStatement, vocab._BriefText),
 		}
 		
 		# instead of mapping to a tuple of classes, `self._classified_attribute_based_identity`

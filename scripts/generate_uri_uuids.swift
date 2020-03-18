@@ -33,13 +33,27 @@ if filemgr.fileExists(atPath: map_file) {
 	existing_map = [:]
 }
 
+extension Data {
+	struct HexEncodingOptions: OptionSet {
+		let rawValue: Int
+		static let upperCase = HexEncodingOptions(rawValue: 1 << 0)
+	}
+
+	func hexEncodedString(options: HexEncodingOptions = []) -> String {
+		let format = options.contains(.upperCase) ? "%02hhX" : "%02hhx"
+		return map { String(format: format, $0) }.joined()
+	}
+}
+
 func assign_uuids(for uris: Set<String>, prefix: String) -> [String:String] {
 	print("Assigning \(uris.count) UUIDs")
 	var m = [String:String]()
 	for s in uris {
-		let u = UUID()
-        let d = withUnsafePointer(to: u.uuid) { Data(bytes: $0, count: MemoryLayout.size(ofValue: u.uuid)) }
-        let b64 = d.base64EncodedString().lowercased()
+		let u = NSUUID()
+		var uuid : [UInt8] = Array(repeating: 0, count: 16)
+		u.getBytes(&uuid)
+		let d = Data(bytes: &uuid, count: 16)
+		let b64 = d.base64EncodedString()
 		m[s] = b64
 	}
 	return m
@@ -62,56 +76,56 @@ func walk(path pathu: URL, queue: DispatchQueue, _ callback : @escaping (URL) ->
 		options: [.skipsHiddenFiles],
 		errorHandler: nil
 	)
-    if let directoryEnumerator = directoryEnumerator {
-        for case let fileURL as NSURL in directoryEnumerator {
-            guard let resourceValues = try? fileURL.resourceValues(forKeys: resourceKeys),
-                let isDirectory = resourceValues[.isDirectoryKey] as? Bool,
-                let name = resourceValues[.nameKey] as? String
-                else {
-                    continue
-            }
-            
-            if isDirectory {
-            	if name == "tmp" {
-	            	directoryEnumerator.skipDescendants()
-	            }
-            } else {
-            	if PARALLEL {
+	if let directoryEnumerator = directoryEnumerator {
+		for case let fileURL as NSURL in directoryEnumerator {
+			guard let resourceValues = try? fileURL.resourceValues(forKeys: resourceKeys),
+				let isDirectory = resourceValues[.isDirectoryKey] as? Bool,
+				let name = resourceValues[.nameKey] as? String
+				else {
+					continue
+			}
+			
+			if isDirectory {
+				if name == "tmp" {
+					directoryEnumerator.skipDescendants()
+				}
+			} else {
+				if PARALLEL {
 					queue.async {
 						callback(fileURL as URL)
 					}
-            	} else {
+				} else {
 					callback(fileURL as URL)
-            	}
-            }
-        }
-    }
+				}
+			}
+		}
+	}
 }
 
 func find_uris(_ value: Any, _ prefix: String, exclude: Set<String>) -> Set<String> {
 	var set = Set<String>()
-    if let d = value as? [String: Any] {
-        for v in d.values {
-        	let m = find_uris(v, prefix, exclude: exclude)
-        	set.formUnion(m)
-        }
-    } else if let a = value as? [Any] {
-        for v in a {
-        	let m = find_uris(v, prefix, exclude: exclude)
-        	set.formUnion(m)
-        }
-    } else if let s = value as? String {
-    	if s.hasPrefix(prefix) {
-    		var k = s
+	if let d = value as? [String: Any] {
+		for v in d.values {
+			let m = find_uris(v, prefix, exclude: exclude)
+			set.formUnion(m)
+		}
+	} else if let a = value as? [Any] {
+		for v in a {
+			let m = find_uris(v, prefix, exclude: exclude)
+			set.formUnion(m)
+		}
+	} else if let s = value as? String {
+		if s.hasPrefix(prefix) {
+			var k = s
 			let start = k.startIndex
 			let end = k.index(start, offsetBy: prefix.count)
 			k.removeSubrange(start..<end)
 			if !exclude.contains(k) {
-	    		set.insert(k)
-	    	}
-        }
-    }
-    return set
+				set.insert(k)
+			}
+		}
+	}
+	return set
 }
 
 func process(map: [String:String], path pathu: URL, prefix: String) -> [String:String] {
@@ -124,9 +138,9 @@ func process(map: [String:String], path pathu: URL, prefix: String) -> [String:S
 	walk(path: pathu, queue: process_queue) { (file) in
 		count += 1
 		if count % 1000 == 0 {
-			print("\r\(count) files processed    ", terminator: "")
+			print("\r\(count) files processed     ", terminator: "")
 		}
-	//	print("\r\(count)             ", separator: "", terminator: "")
+	//	print("\r\(count)			  ", separator: "", terminator: "")
 		do {
 			let d = try Data(contentsOf: file)
 			let j = try JSONSerialization.jsonObject(with: d)
@@ -160,7 +174,7 @@ func process(map: [String:String], path pathu: URL, prefix: String) -> [String:S
 
 //try! printDict("existing_map", existing_map)
 let new_map = process(map: existing_map, path: pathu, prefix: prefix)
-let updated_map	= try existing_map.merging(new_map) { (a: String, b: String) throws -> String in
+let updated_map = try existing_map.merging(new_map) { (a: String, b: String) throws -> String in
 	fatalError("*** Collission: \(a), \(b)")
 }
 print("updated map has \(updated_map.count) elements")

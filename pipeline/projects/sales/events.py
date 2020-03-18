@@ -90,7 +90,7 @@ class PopulateAuctionEvent(Configurable):
 			self.helper.copy_source_information(expert, data),
 			person = self.helper.add_person(
 				expert,
-				event_record,
+				record=event_record,
 				relative_id=f'expert-{seq_no+1}',
 				role='expert'
 			)
@@ -104,7 +104,7 @@ class PopulateAuctionEvent(Configurable):
 			self.helper.copy_source_information(commissaire, data),
 			person = self.helper.add_person(
 				commissaire,
-				event_record,
+				record=event_record,
 				relative_id=f'commissaire-{seq_no+1}',
 				role='commissaire'
 			)

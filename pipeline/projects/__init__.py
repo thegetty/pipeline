@@ -100,14 +100,15 @@ class PersonIdentity:
 			# not enough information to identify this person uniquely, so use the source location in the input file
 			if 'pi_record_no' in data:
 				pi_rec_no = data['pi_record_no']
-				warnings.warn(f'*** No record identifier given for person identified only by pi_record_number {pi_rec_no}')
 				key = ['PERSON', 'PI', pi_rec_no]
 			else:
 				star_record_no = data['star_record_no']
-				warnings.warn(f'*** No record identifier given for person identified only by star_record_no {star_record_no}')
 				key = ['PERSON', 'STAR', star_record_no]
+
 			if record_id:
 				key += [record_id]
+			else:
+				warnings.warn(f'*** No record identifier given for person identified by: {key}')
 			return tuple(key), self.make_proj_uri
 
 	def add_person(self, a, record=None, relative_id=None, **kwargs):

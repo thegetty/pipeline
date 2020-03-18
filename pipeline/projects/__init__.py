@@ -98,21 +98,17 @@ class PersonIdentity:
 			return key, self.make_shared_uri
 		else:
 			# not enough information to identify this person uniquely, so use the source location in the input file
-			if record_id:
-				pi_rec_no = data['pi_record_no']
-				key = ('PERSON', 'PI', pi_rec_no, record_id)
-				return key, self.make_proj_uri
-			elif 'pi_record_no' in data:
+			if 'pi_record_no' in data:
 				pi_rec_no = data['pi_record_no']
 				warnings.warn(f'*** No record identifier given for person identified only by pi_record_number {pi_rec_no}')
-				key = ('PERSON', 'PI', pi_rec_no)
-				return key, self.make_proj_uri
+				key = ['PERSON', 'PI', pi_rec_no]
 			else:
 				star_record_no = data['star_record_no']
 				warnings.warn(f'*** No record identifier given for person identified only by star_record_no {star_record_no}')
-				key = ('PERSON', 'STAR', star_record_no)
-				return key, self.make_proj_uri
-				
+				key = ['PERSON', 'STAR', star_record_no]
+			if record_id:
+				key += [record_id]
+			return tuple(key), self.make_proj_uri
 
 	def add_person(self, a, record=None, relative_id=None, **kwargs):
 		self.add_uri(a, record_id=relative_id)

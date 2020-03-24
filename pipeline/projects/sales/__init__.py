@@ -60,6 +60,7 @@ import pipeline.linkedart
 from pipeline.linkedart import add_crom_data, get_crom_object
 from pipeline.io.csv import CurriedCSVReader
 from pipeline.nodes.basic import \
+			RecordCounter, \
 			KeyManagement, \
 			RemoveKeys, \
 			GroupRepeatingKeys, \
@@ -609,22 +610,6 @@ class SalesUtilityHelper(UtilityHelper):
 		house = get_crom_object(a)
 
 		return add_crom_data(data=a, what=house)
-
-class RecordCounter(Configurable):
-	counts = Service('counts')
-	verbose = Option(bool, default=False)
-	name = Option()
-
-	def __init__(self, *args, **kwargs):
-		super().__init__(self, *args, **kwargs)
-		self.mod = 100
-
-	def __call__(self, data, counts):
-		counts[self.name] += 1
-		count = counts[self.name]
-		if count % self.mod == 0:
-			print(f'\r{count} {self.name}', end='', file=sys.stderr)
-		return data
 
 def add_crom_price(data, parent, services, add_citations=False):
 	'''

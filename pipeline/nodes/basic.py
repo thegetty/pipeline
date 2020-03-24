@@ -348,6 +348,21 @@ class Trace(Configurable):
 			thing['__trace_%d_%d' % (id, seq)] = formatted
 		return thing
 
+class RecordCounter(Configurable):
+	counts = Service('counts')
+	verbose = Option(bool, default=False)
+	name = Option()
+
+	def __init__(self, *args, **kwargs):
+		super().__init__(self, *args, **kwargs)
+		self.mod = 100
+
+	def __call__(self, data, counts):
+		counts[self.name] += 1
+		count = counts[self.name]
+		if count % self.mod == 0:
+			print(f'\r{count} {self.name}', end='', file=sys.stderr)
+		return data
 
 ### Linked Art related functions
 

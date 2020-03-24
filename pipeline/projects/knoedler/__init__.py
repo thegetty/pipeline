@@ -59,6 +59,7 @@ from pipeline.linkedart import \
 			make_la_place
 from pipeline.io.csv import CurriedCSVReader
 from pipeline.nodes.basic import \
+			RecordCounter, \
 			AddFieldNames, \
 			GroupRepeatingKeys, \
 			GroupKeys, \
@@ -1162,6 +1163,7 @@ class KnoedlerPipeline(PipelineBase):
 					)
 				}
 			}),
+			RecordCounter(name='records', verbose=self.debug),
 			_input=records.output
 		)
 

@@ -23,22 +23,8 @@ class PopulateSalesObject(Configurable, pipeline.linkedart.PopulateObject):
 	helper = Option(required=True)
 	post_sale_map = Service('post_sale_map')
 	unique_catalogs = Service('unique_catalogs')
-	vocab_instance_map = Service('vocab_instance_map')
+	subject_genre = Service('subject_genre')
 	destruction_types_map = Service('destruction_types_map')
-
-	def genre_instance(self, value, vocab_instance_map):
-		'''Return the appropriate type instance for the supplied genre name'''
-		if value is None:
-			return None
-		value = value.lower()
-
-		instance_name = vocab_instance_map.get(value)
-		if instance_name:
-			instance = vocab.instances.get(instance_name)
-			if not instance:
-				warnings.warn(f'*** No genre instance available for {instance_name!r} in vocab_instance_map')
-			return instance
-		return None
 
 	def populate_destruction_events(self, data:dict, note, *, type_map, location=None):
 		destruction_types_map = type_map
@@ -51,7 +37,7 @@ class PopulateSalesObject(Configurable, pipeline.linkedart.PopulateObject):
 		if m:
 			method = m.group(1)
 			year = m.group(2)
-			dest_id = hmo.id + '-Destruction'
+			dest_id = hmo.id + '-Destr'
 			d = model.Destruction(ident=dest_id, label=f'Destruction of “{short_title}”')
 			d.referred_to_by = vocab.Note(ident='', content=note)
 			if year is not None:
@@ -80,12 +66,12 @@ class PopulateSalesObject(Configurable, pipeline.linkedart.PopulateObject):
 
 			hmo.destroyed_by = d
 
-	def _populate_object_visual_item(self, data:dict, vocab_instance_map):
+	def _populate_object_visual_item(self, data:dict, subject_genre):
 		hmo = get_crom_object(data)
 		title = data.get('title')
 		title = truncate_with_ellipsis(title, 100) or title
 
-		vi_id = hmo.id + '-VisualItem'
+		vi_id = hmo.id + '-VisItem'
 		vi = model.VisualItem(ident=vi_id)
 		vidata = {'uri': vi_id}
 		if title:
@@ -93,9 +79,15 @@ class PopulateSalesObject(Configurable, pipeline.linkedart.PopulateObject):
 			sales_record = get_crom_object(data['_record'])
 			vidata['names'] = [(title,{'referred_to_by': [sales_record]})]
 
-		genre = self.genre_instance(data.get('genre'), vocab_instance_map)
-		if genre:
-			vi.classified_as = genre
+		for key in ('genre', 'subject'):
+			if key in data:
+				values = [v.strip() for v in data[key].split(';')]
+				for value in values:
+					for prop, mapping in subject_genre.items():
+						if value in mapping:
+							aat_url = mapping[value]
+							type = model.Type(ident=aat_url, label=value)
+							setattr(vi, prop, type)
 		data['_visual_item'] = add_crom_data(data=vidata, what=vi)
 		hmo.shows = vi
 
@@ -127,6 +119,35 @@ class PopulateSalesObject(Configurable, pipeline.linkedart.PopulateObject):
 		notes = parent.get('auction_of_lot', {}).get('lot_notes')
 		if notes and notes.lower().startswith('destroyed'):
 			self.populate_destruction_events(data, notes, type_map=destruction_types_map)
+
+	@staticmethod
+	def _populate_object_statements(data:dict):
+		hmo = get_crom_object(data)
+		sales_record = get_crom_object(data['_record'])
+		
+		format = data.get('format')
+		if format:
+			formatstmt = vocab.PhysicalStatement(ident='', content=format)
+			formatstmt.referred_to_by = sales_record
+			hmo.referred_to_by = formatstmt
+
+		materials = data.get('materials')
+		if materials:
+			matstmt = vocab.MaterialStatement(ident='', content=materials)
+			matstmt.referred_to_by = sales_record
+			hmo.referred_to_by = matstmt
+
+		dimstr = data.get('dimensions')
+		if dimstr:
+			dimstmt = vocab.DimensionStatement(ident='', content=dimstr)
+			dimstmt.referred_to_by = sales_record
+			hmo.referred_to_by = dimstmt
+			for dim in extract_physical_dimensions(dimstr):
+				dim.referred_to_by = sales_record
+				hmo.dimension = dim
+		else:
+			pass
+	# 		print(f'No dimension data was parsed from the dimension statement: {dimstr}')
 
 	def _populate_object_present_location(self, data:dict, now_key, destruction_types_map):
 		hmo = get_crom_object(data)
@@ -166,6 +187,9 @@ class PopulateSalesObject(Configurable, pipeline.linkedart.PopulateObject):
 							'uri': self.helper.make_proj_uri('ORG', 'CURR-OWN', *now_key),
 						}
 
+					if note:
+						owner_data['note'] = note
+
 					base_uri = hmo.id + '-Place,'
 					place_data = self.helper.make_place(current, base_uri=base_uri)
 					place = get_crom_object(place_data)
@@ -173,14 +197,20 @@ class PopulateSalesObject(Configurable, pipeline.linkedart.PopulateObject):
 					make_la_org = pipeline.linkedart.MakeLinkedArtOrganization()
 					owner_data = make_la_org(owner_data)
 					owner = get_crom_object(owner_data)
+
+					acc = location.get('acc')
+					if acc:
+						acc_number = vocab.AccessionNumber(ident='', content=acc)
+						hmo.identified_by = acc_number
+						assignment = model.AttributeAssignment(ident='')
+						assignment.carried_out_by = owner
+						acc_number.assigned_by = assignment
+
 					owner.residence = place
 					data['_locations'].append(place_data)
 					data['_final_org'] = owner_data
 			else:
 				pass # there is no present location place string
-			if note:
-				pass
-				# TODO: the acquisition_note needs to be attached as a Note to the final post owner acquisition
 
 	def _populate_object_notes(self, data:dict, parent, unique_catalogs):
 		hmo = get_crom_object(data)
@@ -213,7 +243,7 @@ class PopulateSalesObject(Configurable, pipeline.linkedart.PopulateObject):
 				pdate = implode_date(sale_record, '')
 				if pcno and plno and pdate:
 					if pcno == 'NA':
-						desc = f'Also sold in an unidentified sale: {plot} ({pdate})'
+						desc = f'Also sold in an unidentified sale: {plno} ({pdate})'
 						note = vocab.Note(ident='', content=desc)
 						hmo.referred_to_by = note
 					else:
@@ -225,15 +255,14 @@ class PopulateSalesObject(Configurable, pipeline.linkedart.PopulateObject):
 							# `that_key` is for a later sale for this object
 							post_sale_map[that_key] = this_key
 
-	def __call__(self, data:dict, post_sale_map, unique_catalogs, vocab_instance_map, destruction_types_map):
+	def __call__(self, data:dict, post_sale_map, unique_catalogs, subject_genre, destruction_types_map):
 		'''Add modeling for an object described by a sales record'''
 		hmo = get_crom_object(data)
 		parent = data['parent_data']
 		auction_data = parent.get('auction_of_lot')
 		if auction_data:
 			lno = str(auction_data['lot_number'])
-			if 'identifiers' not in data:
-				data['identifiers'] = []
+			data.setdefault('identifiers', [])
 			if not lno:
 				warnings.warn(f'Setting empty identifier on {hmo.id}')
 			data['identifiers'].append(vocab.LotNumber(ident='', content=lno))
@@ -250,9 +279,9 @@ class PopulateSalesObject(Configurable, pipeline.linkedart.PopulateObject):
 		data['_locations'] = []
 		data['_events'] = []
 		record = self._populate_object_catalog_record(data, parent, lot, cno, parent['pi_record_no'])
-		self._populate_object_visual_item(data, vocab_instance_map)
+		self._populate_object_visual_item(data, subject_genre)
 		self._populate_object_destruction(data, parent, destruction_types_map)
-		self.populate_object_statements(data)
+		self._populate_object_statements(data)
 		self._populate_object_present_location(data, now_key, destruction_types_map)
 		self._populate_object_notes(data, parent, unique_catalogs)
 		self._populate_object_prev_post_sales(data, now_key, post_sale_map)
@@ -275,6 +304,11 @@ class PopulateSalesObject(Configurable, pipeline.linkedart.PopulateObject):
 			t = vocab.PrimaryName(ident='', content=title)
 			t.classified_as = model.Type(ident='http://vocab.getty.edu/aat/300417193', label='Title')
 			t.referred_to_by = record
+			data['identifiers'].append(t)
+
+		for d in data.get('other_titles', []):
+			title = d['title']
+			t = vocab.Name(ident='', content=title)
 			data['identifiers'].append(t)
 
 		return data
@@ -324,7 +358,7 @@ class AddArtists(Configurable):
 			hmo_label = f'{hmo._label}'
 		except AttributeError:
 			hmo_label = 'object'
-		event_id = hmo.id + '-Production'
+		event_id = hmo.id + '-Prod'
 		event = model.Production(ident=event_id, label=f'Production event for {hmo_label}')
 		hmo.produced_by = event
 
@@ -334,12 +368,18 @@ class AddArtists(Configurable):
 		pi = self.helper.person_identity
 
 		for a in artists:
+			a.setdefault('referred_to_by', [])
 			a.update({
 				'pi_record_no': data['pi_record_no'],
 				'ulan': a['artist_ulan'],
 				'auth_name': a['art_authority'],
 				'name': a['artist_name']
 			})
+			if a.get('biography'):
+				bio = a['biography']
+				del a['biography']
+				cite = vocab.BiographyStatement(ident='', content=bio)
+				a['referred_to_by'].append(cite)
 
 		def is_or_anon(data:dict):
 			if pi.is_anonymous(data):
@@ -349,48 +389,46 @@ class AddArtists(Configurable):
 		or_anon_records = [is_or_anon(a) for a in artists]
 		uncertain_attribution = any(or_anon_records)
 		for seq_no, a in enumerate(artists):
-			attrib_assignment_classes = [model.AttributeAssignment]
-			if uncertain_attribution:
-				attrib_assignment_classes.append(vocab.PossibleAssignment)
 			if is_or_anon(a):
 				# do not model the "or anonymous" records; they turn into uncertainty on the other records
 				continue
-			person = pi.add_person(a, sales_record, relative_id=f'artist-{seq_no+1}', role='artist')
+			person = self.helper.add_person(a, record=sales_record, relative_id=f'artist-{seq_no+1}', role='artist')
 			artist_label = a.get('role_label')
 
-			mod = a.get('attrib_mod_auth')
-			if mod:
-				mods = CaseFoldingSet({m.lower().strip() for m in mod.split(';')})
-
+			mod = a.get('attrib_mod_auth', '')
+			mods = CaseFoldingSet({m.strip() for m in mod.split(';')} - {''})
+			attrib_assignment_classes = [model.AttributeAssignment]
+			
+			if uncertain_attribution or 'or' in mods:
+				attrib_assignment_classes.append(vocab.PossibleAssignment)
+				
+			if mods:
 				# TODO: this should probably be in its own JSON service file:
-				STYLE_OF = CaseFoldingSet(attribution_modifiers['style of'])
-				FORMERLY_ATTRIBUTED_TO = CaseFoldingSet(attribution_modifiers['formerly attributed to'])
-				ATTRIBUTED_TO = CaseFoldingSet(attribution_modifiers['attributed to'])
-				COPY_AFTER = CaseFoldingSet(attribution_modifiers['copy after'])
-				PROBABLY = CaseFoldingSet(attribution_modifiers['probably by'])
-				POSSIBLY = CaseFoldingSet(attribution_modifiers['possibly by'])
-				UNCERTAIN = PROBABLY | POSSIBLY
+				STYLE_OF = attribution_modifiers['style of']
+				FORMERLY_ATTRIBUTED_TO = attribution_modifiers['formerly attributed to']
+				ATTRIBUTED_TO = attribution_modifiers['attributed to']
+				COPY_AFTER = attribution_modifiers['copy after']
+				PROBABLY = attribution_modifiers['probably by']
+				POSSIBLY = attribution_modifiers['possibly by']
+				UNCERTAIN = attribution_modifiers['uncertain']
 
 				GROUP_TYPES = set(attribution_group_types.values())
 				GROUP_MODS = {k for k, v in attribution_group_types.items() if v in GROUP_TYPES}
 
-				if 'or' in mods:
-					warnings.warn('Handle OR attribution modifier') # TODO: some way to model this uncertainty?
-
 				if 'copy by' in mods:
 					# equivalent to no modifier
 					pass
-				elif ATTRIBUTED_TO & mods:
+				elif ATTRIBUTED_TO.intersects(mods):
 					# equivalent to no modifier
 					pass
-				elif STYLE_OF & mods:
+				elif STYLE_OF.intersects(mods):
 					assignment = vocab.make_multitype_obj(*attrib_assignment_classes, ident='', label=f'In the style of {artist_label}')
 					event.attributed_by = assignment
 					assignment.assigned_property = 'influenced_by'
 					assignment.property_classified_as = vocab.instances['style of']
 					assignment.assigned = person
 					continue
-				elif GROUP_MODS & mods:
+				elif mods.intersects(GROUP_MODS):
 					mod_name = list(GROUP_MODS & mods)[0] # TODO: use all matching types?
 					clsname = attribution_group_types[mod_name]
 					cls = getattr(vocab, clsname)
@@ -415,7 +453,7 @@ class AddArtists(Configurable):
 					else:
 						event.part = subevent
 					continue
-				elif FORMERLY_ATTRIBUTED_TO & mods:
+				elif FORMERLY_ATTRIBUTED_TO.intersects(mods):
 					# the {uncertain_attribution} flag does not apply to this branch, because this branch is not making a statement
 					# about a previous attribution. the uncertainty applies only to the current attribution.
 					assignment = vocab.ObsoleteAssignment(ident='', label=f'Formerly attributed to {artist_label}')
@@ -423,8 +461,8 @@ class AddArtists(Configurable):
 					assignment.assigned_property = 'carried_out_by'
 					assignment.assigned = person
 					continue
-				elif UNCERTAIN & mods:
-					if POSSIBLY & mods:
+				elif UNCERTAIN.intersects(mods):
+					if POSSIBLY.intersects(mods):
 						attrib_assignment_classes.append(vocab.PossibleAssignment)
 						assignment = vocab.make_multitype_obj(*attrib_assignment_classes, ident='', label=f'Possibly attributed to {artist_label}')
 						assignment._label = f'Possibly by {artist_label}'
@@ -436,14 +474,14 @@ class AddArtists(Configurable):
 					assignment.assigned_property = 'carried_out_by'
 					assignment.assigned = person
 					continue
-				elif COPY_AFTER & mods:
+				elif COPY_AFTER.intersects(mods):
 					# the {uncertain_attribution} flag does not apply to this branch, because this branch is not making a statement
 					# about the artist of the work, but about the artist of the original work that this work is a copy of.
 					cls = type(hmo)
-					original_id = hmo.id + '-Original'
+					original_id = hmo.id + '-Orig'
 					original_label = f'Original of {hmo_label}'
 					original_hmo = cls(ident=original_id, label=original_label)
-					original_event_id = original_hmo.id + '-Production'
+					original_event_id = original_hmo.id + '-Prod'
 					original_event = model.Production(ident=original_event_id, label=f'Production event for {original_label}')
 					original_hmo.produced_by = original_event
 
@@ -466,7 +504,7 @@ class AddArtists(Configurable):
 			subevent_id = event_id + f'-{subprod_path}'
 			subevent = model.Production(ident=subevent_id, label=f'Production sub-event for {artist_label}')
 			subevent.carried_out_by = person
-			if uncertain_attribution:
+			if uncertain_attribution or 'or' in mods:
 				assignment = vocab.make_multitype_obj(*attrib_assignment_classes, ident='', label=f'Possibly attributed to {artist_label}')
 				event.attributed_by = assignment
 				assignment.assigned_property = 'part'

@@ -1,0 +1,63 @@
+{
+	"about": {
+		"Mythology (figures)": "http://vocab.getty.edu/aat/300417629",
+		"Mythology (narrative)": "http://vocab.getty.edu/aat/300417629",
+		"Religious (figures)": "http://vocab.getty.edu/aat/300073708",
+		"Religious (narrative)": "http://vocab.getty.edu/aat/300073708",
+
+		"Mythologie (Figuren)": "http://vocab.getty.edu/aat/300417629",
+		"Mythologie (erzählend)": "http://vocab.getty.edu/aat/300417629",
+		"Religiös (Figuren)": "http://vocab.getty.edu/aat/300073708",
+		"Religiös (erzählend)": "http://vocab.getty.edu/aat/300073708"
+	},
+	"classified_as": {
+		"Abstract": "http://vocab.getty.edu/aat/300417511",
+		"Allegory": "http://vocab.getty.edu/aat/300055866",
+		"Animals": "http://vocab.getty.edu/aat/300386044",
+		"Genre": "http://vocab.getty.edu/aat/300139140",
+		"History": "http://vocab.getty.edu/aat/300033898",
+		"Landscape": "http://vocab.getty.edu/aat/300015636",
+		"Landscapes with Figures": "http://vocab.getty.edu/aat/300015636",
+		"Marines": "http://vocab.getty.edu/aat/300117546",
+		"Mythology (narrative)": "http://vocab.getty.edu/aat/300410510",
+		"Portraits": "http://vocab.getty.edu/aat/300015637",
+		"Religious (narrative)": "http://vocab.getty.edu/aat/300410510",
+		"Still life": "http://vocab.getty.edu/aat/300015638",
+		"Topographical Views": "http://vocab.getty.edu/aat/300015566",
+
+		"Abstrakt": "http://vocab.getty.edu/aat/300417511",
+		"Allegorie": "http://vocab.getty.edu/aat/300055866",
+		"Tiere": "http://vocab.getty.edu/aat/300386044",
+		"Genre": "http://vocab.getty.edu/aat/300139140",
+		"Historie": "http://vocab.getty.edu/aat/300033898",
+		"Landschaft": "http://vocab.getty.edu/aat/300015636",
+		"Landschaft mit Staffage": "http://vocab.getty.edu/aat/300015636",
+		"Seestück": "http://vocab.getty.edu/aat/300117546",
+		"Mythologie (erzählend)": "http://vocab.getty.edu/aat/300410510",
+		"Porträt": "http://vocab.getty.edu/aat/300015637",
+		"Religiös (erzählend)": "http://vocab.getty.edu/aat/300410510",
+		"Stilleben": "http://vocab.getty.edu/aat/300015638",
+		"Topographische Ansichten": "http://vocab.getty.edu/aat/300015566"
+	},
+	"represents_instance_of_type": {
+		"Architecture": "http://vocab.getty.edu/aat/300263552",
+		"Battles": "http://vocab.getty.edu/aat/300185692",
+		"Interiors": "http://vocab.getty.edu/aat/300391239",
+		"Landscapes with Figures": "http://vocab.getty.edu/aat/300189808",
+		"Military": "http://vocab.getty.edu/aat/300237630",
+		"Mythology (figures)": "http://vocab.getty.edu/aat/300189808",
+		"Religious (figures)": "http://vocab.getty.edu/aat/300189808",
+		"Ruins": "http://vocab.getty.edu/aat/300008057",
+		"Sporting": "http://vocab.getty.edu/aat/300222725",
+
+		"Architektur": "http://vocab.getty.edu/aat/300263552",
+		"Schlachten": "http://vocab.getty.edu/aat/300185692",
+		"Interieur": "http://vocab.getty.edu/aat/300391239",
+		"Landschaft mit Staffage": "http://vocab.getty.edu/aat/300189808",
+		"Militär": "http://vocab.getty.edu/aat/300237630",
+		"Mythologie (Figuren)": "http://vocab.getty.edu/aat/300189808",
+		"Religiös (Figuren)": "http://vocab.getty.edu/aat/300189808",
+		"Ruinen": "http://vocab.getty.edu/aat/300008057",
+		"Sport": "http://vocab.getty.edu/aat/300222725"
+	}
+}

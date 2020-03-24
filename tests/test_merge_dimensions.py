@@ -18,7 +18,7 @@ class TestMergedDimensions(unittest.TestCase):
 	def tearDown(self):
 		pass
 
-	def test_pipeline_pir(self):
+	def test_pipeline_sales(self):
 		'''
 		When dimensions get merged, the Unknown physical dimension classification (300055642)
 		gets dropped if there are any other classifications.

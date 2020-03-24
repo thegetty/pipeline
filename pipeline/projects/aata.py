@@ -891,8 +891,9 @@ class AATAPipeline(PipelineBase):
 		helper = AATAUtilityHelper(project_name)
 		self.uid_tag_prefix = UID_TAG_PREFIX
 
-		super().__init__(project_name, helper=helper)
+		self.input_path = input_path
 		self.project_name = project_name
+		super().__init__(project_name, helper=helper)
 
 		vocab.register_vocab_class('VolumeNumber', {'parent': model.Identifier, 'id': '300265632', 'label': 'Volume'})
 		vocab.register_vocab_class('IssueNumber', {'parent': model.Identifier, 'id': '300312349', 'label': 'Issue'})
@@ -905,15 +906,8 @@ class AATAPipeline(PipelineBase):
 		self.series_pattern = series_pattern
 		self.limit = kwargs.get('limit')
 		self.debug = kwargs.get('debug', False)
-		self.input_path = input_path
 		self.pipeline_project_service_files_path = kwargs.get('pipeline_project_service_files_path', settings.pipeline_project_service_files_path)
 		self.pipeline_common_service_files_path = kwargs.get('pipeline_common_service_files_path', settings.pipeline_common_service_files_path)
-
-	# Set up environment
-	def get_services(self):
-		'''Return a `dict` of named services available to the bonobo pipeline.'''
-		services = super().get_services()
-		return services
 
 	def add_articles_chain(self, graph, records, serialize=True):
 		'''Add transformation of article records to the bonobo pipeline.'''

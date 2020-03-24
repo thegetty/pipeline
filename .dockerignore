@@ -1,6 +1,7 @@
 output*
 data/*.sqlite
 data/sales
+data/people
 data/aata/*.xml
 data/knoedler/*.csv
 endpoint

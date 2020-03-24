@@ -21,6 +21,12 @@ def get_crom_object(data: dict):
 		return None
 	return data.get('_LOD_OBJECT')
 
+def remove_crom_object(data: dict):
+	with suppress(KeyError):
+		del data['_LOD_OBJECT']
+		del data['_CROM_FACTORY']
+	return data
+
 class MakeLinkedArtRecord:
 	def set_properties(self, data, thing):
 		'''
@@ -64,6 +70,8 @@ class MakeLinkedArtRecord:
 					else:
 						note = vocab.Note(content=content)
 						note.classified_as = itype
+			elif isinstance(notedata, model.BaseResource):
+				note = notedata
 			elif isinstance(notedata, str):
 				note = vocab.Note(content=notedata)
 			else:
@@ -101,7 +109,11 @@ class MakeLinkedArtRecord:
 			# namedata should take the form of:
 			# ["A. Name"]
 			# ["A. Name", {'referred_to_by': [{'uri': 'URI-OF-LINGUISTIC_OBJECT'}, model.LinguisticObject()]}]
-			name, *properties = namedata
+			if isinstance(namedata, tuple):
+				name, *properties = namedata
+			else:
+				name = namedata
+				properties = {}
 			n = set_la_name(thing, name)
 			self.set_lo_properties(n, *properties)
 
@@ -312,6 +324,9 @@ class MakeLinkedArtOrganization(MakeLinkedArtAgent):
 		for event in data.get('events', []):
 			thing.carried_out = event
 
+		for n in data.get('nationality', []):
+			thing.classified_as = n
+
 	def __call__(self, data: dict):
 		if 'object_type' not in data:
 			data['object_type'] = model.Group
@@ -386,6 +401,8 @@ class MakeLinkedArtPerson(MakeLinkedArtAgent):
 				natl._label = str(data[ns+'_label'])
 			else:
 				break
+		for n in data.get('nationality', []):
+			who.classified_as = n
 
 		# nationality field can contain other information, but not useful.
 		# XXX Intentionally ignored but validate with GRI
@@ -432,11 +449,26 @@ class MakeLinkedArtPerson(MakeLinkedArtAgent):
 			d._label = "Death of %s" % who._label
 			who.died = d
 
+		if 'contact_point' in data:
+			for p in data['contact_point']:
+				if isinstance(p, model.Identifier):
+					pl = p
+				elif isinstance(p, dict):
+					pl = get_crom_object(p)
+				else:
+					pl = model.Name(ident='', content=p)
+				who.contact_point = pl
+
 		# Locations are names of residence places (P74 -> E53)
 		# XXX FIXME: Places are their own model
 		if 'places' in data:
 			for p in data['places']:
-				pl = model.Place()
+				if isinstance(p, model.Place):
+					pl = p
+				elif isinstance(p, dict):
+					pl = get_crom_object(p)
+				else:
+					pl = model.Place(ident='', label=p)
 				#pl._label = p['label']
 				#nm = model.Name()
 				#nm.content = p['label']

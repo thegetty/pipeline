@@ -13,8 +13,7 @@ from pipeline.util import \
 		implode_date, \
 		timespan_from_outer_bounds, \
 		timespan_before, \
-		timespan_after, \
-		CaseFoldingSet
+		timespan_after
 from pipeline.util.cleaners import parse_location_name
 import pipeline.linkedart
 from pipeline.linkedart import add_crom_data, get_crom_object
@@ -26,8 +25,7 @@ class AddAuctionOfLot(Configurable):
 
 	helper = Option(required=True)
 	problematic_records = Service('problematic_records')
-	auction_locations = Service('auction_locations')
-	auction_houses = Service('auction_houses')
+	event_properties = Service('event_properties')
 	non_auctions = Service('non_auctions')
 	transaction_types = Service('transaction_types')
 	def __init__(self, *args, **kwargs):
@@ -37,31 +35,38 @@ class AddAuctionOfLot(Configurable):
 	@staticmethod
 	def set_lot_auction_houses(lot, cno, auction_houses):
 		'''Associate the auction house with the auction lot.'''
-		houses = auction_houses.get(cno)
-		if houses:
-			for house in houses:
+		if auction_houses:
+			for house in auction_houses:
 				lot.carried_out_by = house
 
-	@staticmethod
-	def set_lot_location(lot, cno, auction_locations):
+	def set_lot_location(self, lot, cno, auction_locations):
 		'''Associate the location with the auction lot.'''
 		place = auction_locations.get(cno)
 		if place:
-			lot.took_place_at = place
+			lot.took_place_at = place.clone()
+		else:
+			print(f'*** No place URI found for lot in catalog {cno}')
 
 	@staticmethod
-	def set_lot_date(lot, auction_data):
+	def set_lot_date(lot, auction_data, event_dates):
 		'''Associate a timespan with the auction lot.'''
 		date = implode_date(auction_data, 'lot_sale_')
-# 		dates = date_parse(date, delim='-')
-# 		if dates:
 		if date:
 			begin = implode_date(auction_data, 'lot_sale_', clamp='begin')
 			end = implode_date(auction_data, 'lot_sale_', clamp='eoe')
 			bounds = [begin, end]
 		else:
 			bounds = []
+
 		if bounds:
+			if auction_data.get('lot_sale_mod'):
+				# if the lot sale date is marked as uncertain:
+				#   - use the event end date as the lot sale's end_of_the_end
+				#   - if the event doesn't have a known end date, assert no end_of_the_end for the lot sale
+				if event_dates and event_dates[1]:
+					bounds[1] = event_dates[1]
+				else:
+					bounds[1] = None
 			ts = timespan_from_outer_bounds(*bounds)
 			ts.identified_by = model.Name(ident='', content=date)
 			lot.timespan = ts
@@ -71,7 +76,7 @@ class AddAuctionOfLot(Configurable):
 		cno, lno, _ = object_key(auction_data)
 		notes = auction_data.get('lot_notes')
 		if notes:
-			note_id = lot.id + '-LotNotes'
+			note_id = lot.id + '-Notes'
 			lot.referred_to_by = vocab.Note(ident=note_id, content=notes)
 		if not lno:
 			warnings.warn(f'Setting empty identifier on {lot.id}')
@@ -98,10 +103,13 @@ class AddAuctionOfLot(Configurable):
 		lot.used_specific_object = coll
 		data['_lot_object_set'] = add_crom_data(data={}, what=coll)
 
-	def __call__(self, data, non_auctions, auction_houses, auction_locations, problematic_records, transaction_types):
+	def __call__(self, data, non_auctions, event_properties, problematic_records, transaction_types):
 		'''Add modeling data for the auction of a lot of objects.'''
 		self.helper.copy_source_information(data['_object'], data)
 
+		auction_houses_data = event_properties['auction_houses']
+
+		auction_locations = event_properties['auction_locations']
 		auction_data = data['auction_of_lot']
 		try:
 			lot_object_key = object_key(auction_data)
@@ -143,6 +151,15 @@ class AddAuctionOfLot(Configurable):
 		lot = self.helper.sale_for_sale_type(sale_type, lot_object_key)
 		data['lot_object_id'] = f'{cno} {lno} ({date})'
 
+		if 'link_to_pdf' in auction_data:
+			url = auction_data['link_to_pdf']
+			page_url = self.helper.make_shared_uri('WEB', url)
+			page = vocab.WebPage(ident=page_url, label=url)
+			page.digitally_carried_by = model.DigitalObject(ident=url)
+			lot.referred_to_by = page
+			data.setdefault('_texts', [])
+			data['_texts'].append(add_crom_data(data={}, what=page))
+
 		for problem_key, problem in problematic_records.get('lots', []):
 			# TODO: this is inefficient, but will probably be OK so long as the number
 			#       of problematic records is small. We do it this way because we can't
@@ -169,15 +186,22 @@ class AddAuctionOfLot(Configurable):
 			lot.referred_to_by = cite
 
 		transaction = data.get('transaction')
-		SOLD = CaseFoldingSet(transaction_types['sold'])
+		SOLD = transaction_types['sold']
 		WITHDRAWN = transaction_types['withdrawn']
 		self.set_lot_objects(lot, cno, lno, sale_data['uri'], data, sale_type)
 		auction, _, _ = self.helper.sale_event_for_catalog_number(cno, sale_type)
 		if transaction not in WITHDRAWN:
 			lot.part_of = auction
+			event_dates = event_properties['auction_dates'].get(cno)
+
+			auction_houses = [
+				get_crom_object(self.helper.add_auction_house_data(h.copy()))
+				for h in auction_houses_data.get(cno, [])
+			]
+
 			self.set_lot_auction_houses(lot, cno, auction_houses)
 			self.set_lot_location(lot, cno, auction_locations)
-			self.set_lot_date(lot, auction_data)
+			self.set_lot_date(lot, auction_data, event_dates)
 			self.set_lot_notes(lot, auction_data, sale_type)
 
 			tx_uri = self.helper.transaction_uri_for_lot(auction_data, data)
@@ -198,9 +222,9 @@ class AddAuctionOfLot(Configurable):
 
 			data['_event_causing_prov_entry'] = add_crom_data(data=sale_data, what=lot)
 		yield data
-	
+
 def prov_entry_label(sale_type, transaction, transaction_types, cno, lots, date, rel):
-	SOLD = CaseFoldingSet(transaction_types['sold'])
+	SOLD = transaction_types['sold']
 	id = f'{cno} {lots} ({date})'
 	if sale_type == 'Auction':
 		if transaction in SOLD:
@@ -213,20 +237,19 @@ def prov_entry_label(sale_type, transaction, transaction_types, cno, lots, date,
 class AddAcquisitionOrBidding(Configurable):
 	helper = Option(required=True)
 	non_auctions = Service('non_auctions')
-	auction_houses = Service('auction_houses')
+	event_properties = Service('event_properties')
 	buy_sell_modifiers = Service('buy_sell_modifiers')
 	transaction_types = Service('transaction_types')
 
 	def __init__(self, *args, **kwargs):
 		self.custody_xfer_purposes = {
-			'to sell': vocab.instances['act of selling'],
+			'selling': vocab.instances['act of selling'],
 			'returning': vocab.instances['act of returning'],
 			'completing sale': vocab.instances['act of completing sale'],
 		}
 		super().__init__(*args, **kwargs)
 
-	@staticmethod
-	def related_procurement(hmo, tx_label_args, current_tx=None, current_ts=None, buyer=None, seller=None, previous=False, ident=None):
+	def related_procurement(self, hmo, tx_label_args, current_tx=None, current_ts=None, buyer=None, seller=None, previous=False, ident=None):
 		'''
 		Returns a new `vocab.ProvenanceEntry` object (and related acquisition) that is temporally
 		related to the supplied procurement and associated data. The new procurement is for
@@ -236,7 +259,7 @@ class AddAcquisitionOrBidding(Configurable):
 		and if the timespan `current_ts` is given, has temporal data to that effect. If
 		`previous` is `False`, this relationship is reversed.
 		'''
-		
+
 		tx = vocab.ProvenanceEntry(ident=ident)
 		tx._label = prov_entry_label(*tx_label_args)
 		if current_tx:
@@ -259,6 +282,7 @@ class AddAcquisitionOrBidding(Configurable):
 		if seller:
 			pacq.transferred_title_from = seller
 			pxfer.transferred_custody_from = seller
+
 		tx.part = pacq
 		tx.part = pxfer
 		if current_ts:
@@ -266,7 +290,7 @@ class AddAcquisitionOrBidding(Configurable):
 				pacq.timespan = timespan_before(current_ts)
 			else:
 				pacq.timespan = timespan_after(current_ts)
-		return tx
+		return tx, pacq
 
 	def _price_note(self, price):
 		'''
@@ -308,9 +332,9 @@ class AddAcquisitionOrBidding(Configurable):
 		return label
 
 	def final_owner_procurement(self, tx_label_args, final_owner, current_tx, hmo, current_ts):
-		tx_uri = hmo.id + '-FinalOwnerProvenanceEntry'
-		tx = self.related_procurement(hmo, tx_label_args, current_tx, current_ts, buyer=final_owner, ident=tx_uri)
-		return tx
+		tx_uri = hmo.id + '-FinalOwnerProv'
+		tx, acq = self.related_procurement(hmo, tx_label_args, current_tx, current_ts, buyer=final_owner, ident=tx_uri)
+		return tx, acq
 
 	def add_transfer_of_custody(self, data, current_tx, xfer_to, xfer_from, sequence=1, purpose=None):
 		buyers = xfer_to
@@ -319,14 +343,15 @@ class AddAcquisitionOrBidding(Configurable):
 		parent = data['parent_data']
 		auction_data = parent['auction_of_lot']
 		cno, lno, date = object_key(auction_data)
-		
+
 		xfer_label = None
+		purpose_label = f'(for {purpose}) ' if purpose else ''
 		try:
 			object_label = f'“{hmo._label}”'
-			xfer_label = f'Transfer of Custody for {cno} {lno} ({date}): {object_label}'
+			xfer_label = f'Transfer of Custody {purpose_label}of {cno} {lno} ({date}): {object_label}'
 		except AttributeError:
 			object_label = '(object)'
-			xfer_label = f'Transfer of Custody for {cno} {lno} ({date})'
+			xfer_label = f'Transfer of Custody {purpose_label}of {cno} {lno} ({date})'
 
 		# TODO: pass in the tx to use instead of getting it from `parent`
 		tx_data = parent['_prov_entry_data']
@@ -340,15 +365,34 @@ class AddAcquisitionOrBidding(Configurable):
 
 		for seller_data in sellers:
 			seller = get_crom_object(seller_data)
-			mod = seller_data.get('auth_mod_a', '')
 			xfer.transferred_custody_from = seller
 
 		for buyer_data in buyers:
 			buyer = get_crom_object(buyer_data)
-			mod = buyer_data.get('auth_mod_a', '')
 			xfer.transferred_custody_to = buyer
 
 		current_tx.part = xfer
+
+	def attach_source_catalog(self, data, acq, people):
+		phys_catalog_notes = {}
+		phys_catalogs = {}
+		for p in people:
+			if '_name_source_catalog_key' in p:
+				source_catalog_key = p['_name_source_catalog_key']
+				so_cno, so_owner, so_copy = source_catalog_key
+				if source_catalog_key in phys_catalog_notes:
+					hand_notes = phys_catalog_notes[source_catalog_key]
+					catalog = phys_catalogs[source_catalog_key]
+				else:
+					hand_notes = self.helper.physical_catalog_notes(so_cno, so_owner, so_copy)
+					catalog_uri = self.helper.physical_catalog_uri(so_cno, so_owner, so_copy)
+					catalog = model.HumanMadeObject(ident=catalog_uri)
+					phys_catalog_notes[source_catalog_key] = hand_notes
+					phys_catalogs[source_catalog_key] = catalog
+					catalog.carries = hand_notes
+				acq.referred_to_by = hand_notes
+		data['_phys_catalog_notes'] = [add_crom_data(data={}, what=n) for n in phys_catalog_notes.values()]
+		data['_phys_catalogs'] = [add_crom_data(data={}, what=c) for c in phys_catalogs.values()]
 
 	def add_acquisition(self, data, buyers, sellers, non_auctions, buy_sell_modifiers, transaction, transaction_types):
 		'''Add modeling of an acquisition as a transfer of title from the seller to the buyer'''
@@ -376,11 +420,13 @@ class AddAcquisitionOrBidding(Configurable):
 
 		tx_data = parent['_prov_entry_data']
 		current_tx = get_crom_object(tx_data)
-		payment_id = current_tx.id + '-Payment'
+		payment_id = current_tx.id + '-Pay'
 
-		acq_id = hmo.id + '-Acquisition'
+		acq_id = hmo.id + '-Acq'
 		acq = model.Acquisition(ident=acq_id, label=acq_label)
 		acq.transferred_title_of = hmo
+
+		self.attach_source_catalog(data, acq, buyers + sellers)
 
 		multi = tx_data.get('multi_lot_tx')
 		paym_label = f'multiple lots {multi}' if multi else object_label
@@ -456,7 +502,7 @@ class AddAcquisitionOrBidding(Configurable):
 		ts = tx_data.get('_date')
 		if ts:
 			acq.timespan = ts
-		
+
 		current_tx.part = acq
 		current_tx.part = paym
 		data['_procurements'] += [add_crom_data(data={}, what=current_tx)]
@@ -471,7 +517,10 @@ class AddAcquisitionOrBidding(Configurable):
 			data['_organizations'].append(final_owner_data)
 			final_owner = get_crom_object(final_owner_data)
 			tx_label_args = tuple([sale_type, 'Sold', transaction_types] + list(lot_object_key) + ['leading to the currently known location of'])
-			tx = self.final_owner_procurement(tx_label_args, final_owner, current_tx, hmo, ts)
+			tx, acq = self.final_owner_procurement(tx_label_args, final_owner, current_tx, hmo, ts)
+			note = final_owner_data.get('note')
+			if note:
+				acq.referred_to_by = vocab.Note(ident='', content=note)
 			data['_procurements'].append(add_crom_data(data={}, what=tx))
 
 		post_own = data.get('post_owner', [])
@@ -508,8 +557,7 @@ class AddAcquisitionOrBidding(Configurable):
 			'auth_name': owner_record['own_auth'],
 			'name': owner_record['own']
 		})
-		pi = self.helper.person_identity
-		pi.add_person(owner_record, sales_record, relative_id=record_id, role='artist')
+		self.add_person(owner_record, record=sales_record, relative_id=record_id, role='artist')
 		owner = get_crom_object(owner_record)
 
 		# TODO: handle other fields of owner_record: own_auth_d, own_auth_q, own_ques, own_so
@@ -522,13 +570,12 @@ class AddAcquisitionOrBidding(Configurable):
 			owner.residence = place
 			data['_owner_locations'].append(place_data)
 
-		if '_other_owners' not in data:
-			data['_other_owners'] = []
+		data.setdefault('_other_owners', [])
 		data['_other_owners'].append(owner_record)
 
-		tx_uri = hmo.id + f'-{record_id}-ProvenanceEntry'
+		tx_uri = hmo.id + f'-{record_id}-Prov'
 		tx_label_args = tuple([sale_type, 'Sold', transaction_types] + list(lot_object_key) + [rel])
-		tx = self.related_procurement(hmo, tx_label_args, current_tx, ts, buyer=owner, previous=rev, ident=tx_uri)
+		tx, _ = self.related_procurement(hmo, tx_label_args, current_tx, ts, buyer=owner, previous=rev, ident=tx_uri)
 
 		own_info_source = owner_record.get('own_so')
 		if own_info_source:
@@ -551,8 +598,9 @@ class AddAcquisitionOrBidding(Configurable):
 		tx_label_args = tuple([sale_type, 'Sold', transaction_types] + list(lot_object_key) + [rel])
 		for i, seller_data in enumerate(sellers):
 			seller = get_crom_object(seller_data)
-			tx_uri = hmo.id + f'-seller-{i}-ProvenanceEntry'
-			tx = self.related_procurement(hmo, tx_label_args, current_ts=ts, buyer=seller, previous=True, ident=tx_uri)
+			tx_uri = hmo.id + f'-seller-{i}-Prov'
+			tx, acq = self.related_procurement(hmo, tx_label_args, current_ts=ts, buyer=seller, previous=True, ident=tx_uri)
+			self.attach_source_catalog(data, acq, [seller_data])
 			if source:
 				tx.referred_to_by = source
 			prev_procurements.append(add_crom_data(data={}, what=tx))
@@ -579,7 +627,7 @@ class AddAcquisitionOrBidding(Configurable):
 		rel = 'leading to the previous ownership of'
 		return self.add_sellers(data, sale_type, transaction, transaction_types, sellers, rel, source=note)
 
-	def add_bidding(self, data:dict, buyers, sellers, buy_sell_modifiers, sale_type, transaction, transaction_types, auction_houses):
+	def add_bidding(self, data:dict, buyers, sellers, buy_sell_modifiers, sale_type, transaction, transaction_types, auction_houses_data):
 		'''Add modeling of bids that did not lead to an acquisition'''
 		hmo = get_crom_object(data)
 		parent = data['parent_data']
@@ -595,7 +643,7 @@ class AddAcquisitionOrBidding(Configurable):
 			return
 		ts = lot.timespan
 
-		UNSOLD = CaseFoldingSet(transaction_types['unsold'])
+		UNSOLD = transaction_types['unsold']
 		model_custody_return = transaction in UNSOLD
 		prev_procurements = self.add_non_sale_sellers(data, sellers, sale_type, transaction, transaction_types)
 
@@ -606,14 +654,12 @@ class AddAcquisitionOrBidding(Configurable):
 
 		tx_data = parent.get('_prov_entry_data')
 		tx = get_crom_object(tx_data)
-		houses = [add_crom_data(data={}, what=h) for h in auction_houses.get(cno, [])]
-		self.add_transfer_of_custody(data, tx, xfer_to=houses, xfer_from=sellers, sequence=1, purpose='to sell')
+		houses = auction_houses_data
+		self.add_transfer_of_custody(data, tx, xfer_to=houses, xfer_from=sellers, sequence=1, purpose='selling')
 		if model_custody_return:
-			print(f'*** transfer of custody back to seller: {tx.id} ; {tx._label}')
 			self.add_transfer_of_custody(data, tx, xfer_to=sellers, xfer_from=houses, sequence=2, purpose='returning')
 
-		if '_procurements' not in data:
-			data['_procurements'] = []
+		data.setdefault('_procurements', [])
 		data['_procurements'].append(tx_data)
 
 		if amnts:
@@ -663,7 +709,10 @@ class AddAcquisitionOrBidding(Configurable):
 				final_owner = get_crom_object(final_owner_data)
 				hmo = get_crom_object(data)
 				tx_label_args = tuple([sale_type, 'Sold', transaction_types] + list(lot_object_key) + ['leading to the currently known location of'])
-				tx = self.final_owner_procurement(tx_label_args, final_owner, None, hmo, ts)
+				tx, acq = self.final_owner_procurement(tx_label_args, final_owner, None, hmo, ts)
+				note = final_owner_data.get('note')
+				if note:
+					acq.referred_to_by = vocab.Note(ident='', content=note)
 				data['_procurements'].append(add_crom_data(data={}, what=tx))
 
 			data['_bidding'] = {'uri': bidding_id}
@@ -673,20 +722,24 @@ class AddAcquisitionOrBidding(Configurable):
 			warnings.warn(f'*** No price data found for {parent["transaction"]!r} transaction')
 			yield data
 
-	def add_person(self, data:dict, sales_record, rec_id):
+	def add_person(self, data:dict, record, relative_id, **kwargs):
 		'''
 		Add modeling data for people, based on properties of the supplied `data` dict.
 
 		This function adds properties to `data` before calling
 		`pipeline.linkedart.MakeLinkedArtPerson` to construct the model objects.
 		'''
-		pi = self.helper.person_identity
-		pi.add_person(data, sales_record, relative_id=rec_id)
+		self.helper.add_person(data, record=record, relative_id=relative_id, **kwargs)
 		return data
 
-	def __call__(self, data:dict, non_auctions, auction_houses, buy_sell_modifiers, transaction_types):
+	def __call__(self, data:dict, non_auctions, event_properties, buy_sell_modifiers, transaction_types):
 		'''Determine if this record has an acquisition or bidding, and add appropriate modeling'''
 		parent = data['parent_data']
+
+		auction_houses_data = event_properties['auction_houses']
+		event_experts = event_properties['experts']
+		event_commissaires = event_properties['commissaire']
+
 		sales_record = get_crom_object(data['_record'])
 		transaction = parent['transaction']
 		transaction = transaction.replace('[?]', '').rstrip()
@@ -696,59 +749,74 @@ class AddAcquisitionOrBidding(Configurable):
 		buyers = [
 			self.add_person(
 				self.helper.copy_source_information(p, parent),
-				sales_record,
-				f'buyer_{i+1}'
+				record=sales_record,
+				relative_id=f'buyer_{i+1}',
+				catalog_number=cno
 			) for i, p in enumerate(parent['buyer'])
 		]
 
 		sellers = [
 			self.add_person(
 				self.helper.copy_source_information(p, parent),
-				sales_record,
-				f'seller_{i+1}'
+				record=sales_record,
+				relative_id=f'seller_{i+1}',
+				catalog_number=cno
 			) for i, p in enumerate(parent['seller'])
 		]
 
-		SOLD = CaseFoldingSet(transaction_types['sold'])
-		UNSOLD = CaseFoldingSet(transaction_types['unsold'])
-		UNKNOWN = CaseFoldingSet(transaction_types['unknown'])
-		
-		if '_procurements' not in data:
-			data['_procurements'] = []
+		SOLD = transaction_types['sold']
+		UNSOLD = transaction_types['unsold']
+		UNKNOWN = transaction_types['unknown']
+
+		data.setdefault('_procurements', [])
 
 		sale_type = non_auctions.get(cno, 'Auction')
 		if transaction in SOLD:
 			data['_owner_locations'] = []
-			
 			for data, current_tx in self.add_acquisition(data, buyers, sellers, non_auctions, buy_sell_modifiers, transaction, transaction_types):
-				if sale_type == 'Auction':
-					self.add_transfer_of_custody(data, current_tx, xfer_to=buyers, xfer_from=sellers, purpose='to sell')
+				houses = [self.helper.add_auction_house_data(h) for h in auction_houses_data.get(cno, [])]
+				experts = event_experts.get(cno, [])
+				commissaires = event_commissaires.get(cno, [])
+				custody_recievers = houses + [add_crom_data(data={}, what=r) for r in experts + commissaires]
+
+				if sale_type in ('Auction', 'Collection Catalog'):
+					# 'Collection Catalog' is treated just like an Auction
+					self.add_transfer_of_custody(data, current_tx, xfer_to=custody_recievers, xfer_from=sellers, sequence=1, purpose='selling')
+					self.add_transfer_of_custody(data, current_tx, xfer_to=buyers, xfer_from=custody_recievers, sequence=2, purpose='completing sale')
 				elif sale_type in ('Private Contract Sale', 'Stock List'):
 					# 'Stock List' is treated just like a Private Contract Sale, except for the catalogs
 					metadata = {
 						'pi_record_no': parent['pi_record_no'],
 						'catalog_number': cno
 					}
-					houses = [add_crom_data(data={}, what=h) for h in auction_houses.get(cno, [])]
-					for i, h in enumerate(houses):
+					for i, h in enumerate(custody_recievers):
 						house = get_crom_object(h)
 						if hasattr(house, 'label'):
 							house._label = f'{house._label}, private sale organizer for {cno} {shared_lot_number} ({date})'
 						else:
 							house._label = f'Private sale organizer for {cno} {shared_lot_number} ({date})'
-
-						self.add_transfer_of_custody(data, current_tx, xfer_to=[h], xfer_from=sellers, sequence=1, purpose='to sell')
-						self.add_transfer_of_custody(data, current_tx, xfer_to=buyers, xfer_from=[h], sequence=2, purpose='completing sale')
 						data['_organizations'].append(h)
+
+					self.add_transfer_of_custody(data, current_tx, xfer_to=custody_recievers, xfer_from=sellers, sequence=1, purpose='selling')
+					self.add_transfer_of_custody(data, current_tx, xfer_to=buyers, xfer_from=custody_recievers, sequence=2, purpose='completing sale')
+
 					prev_procurements = self.add_private_sellers(data, sellers, sale_type, transaction, transaction_types)
 				yield data
 		elif transaction in UNSOLD:
-			yield from self.add_bidding(data, buyers, sellers, buy_sell_modifiers, sale_type, transaction, transaction_types, auction_houses)
+			houses = [self.helper.add_auction_house_data(h) for h in auction_houses_data.get(cno, [])]
+			experts = event_experts.get(cno, [])
+			commissaires = event_commissaires.get(cno, [])
+			custody_recievers = houses + [add_crom_data(data={}, what=r) for r in experts + commissaires]
+			yield from self.add_bidding(data, buyers, sellers, buy_sell_modifiers, sale_type, transaction, transaction_types, custody_recievers)
 		elif transaction in UNKNOWN:
 			if sale_type == 'Lottery':
 				yield data
 			else:
-				yield from self.add_bidding(data, buyers, sellers, buy_sell_modifiers, sale_type, transaction, transaction_types, auction_houses)
+				houses = [
+					self.helper.add_auction_house_data(h)
+					for h in auction_houses_data.get(cno, [])
+				]
+				yield from self.add_bidding(data, buyers, sellers, buy_sell_modifiers, sale_type, transaction, transaction_types, houses)
 		else:
 			prev_procurements = self.add_non_sale_sellers(data, sellers, sale_type, transaction, transaction_types)
 			lot = get_crom_object(parent['_event_causing_prov_entry'])

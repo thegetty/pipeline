@@ -63,6 +63,93 @@ class CleanDateToSpan(Configurable):
 				pprint.pprint(data)
 		return NOT_MODIFIED
 
+class KeyManagement(Configurable):
+	operations = Option(list)
+	drop_empty = Option(bool, default=True)
+
+	def __call__(self, data:dict):
+		pass
+# 		print('KeyManagement')
+		for step, op_record in enumerate(self.operations):
+			pass
+# 			print(f'- step {step}')
+			for op, op_data in op_record.items():
+				pass
+# 				print(f'  - {op}')
+				if op == 'remove':
+					for key in op_data:
+						with suppress(KeyError):
+							del data[key]
+				elif op == 'rename':
+					for k, v in op_data.items():
+						with suppress(KeyError):
+							value = data[k]
+							data[v] = value
+							del data[k]
+				elif op == 'group':
+					to_delete = set()
+					for key, mapping in op_data.items():
+						subd = {}
+						properties = mapping['properties']
+						postprocess = mapping.get('postprocess')
+						rename = mapping.get('rename_keys', {})
+						for k in properties:
+							v = data.get(k)
+							to_delete.add(k)
+							if self.drop_empty and not v:
+								continue
+							sub_key = rename.get(k, k)
+							subd[sub_key] = v
+						if postprocess:
+							if callable(postprocess):
+								postprocess = [postprocess]
+							for p in postprocess:
+								subd = p(subd, data)
+						data[key] = subd
+					for k in to_delete:
+						del data[k]
+				elif op == 'group_repeating':
+					for key, mapping in op_data.items():
+						property_prefixes = mapping['prefixes']
+						postprocess = mapping.get('postprocess')
+						rename = mapping.get('rename_keys', {})
+						data[key] = []
+						to_delete = set()
+						with suppress(KeyError):
+							for i in itertools.count(1):
+								ks = ((prefix, f'{prefix}_{i}') for prefix in property_prefixes)
+								subd = {}
+								for p, k in ks:
+									sub_key = rename.get(p, p)
+									subd[sub_key] = data[k]
+									to_delete.add(k)
+								if self.drop_empty:
+									values_unset = list(map(lambda v: not bool(v), subd.values()))
+									if all(values_unset):
+										continue
+								if postprocess and subd:
+									if callable(postprocess):
+										postprocess = [postprocess]
+									for p in postprocess:
+										subd = p(subd, data)
+										if not subd:
+											break
+								if subd:
+									data[key].append(subd)
+						for k in to_delete:
+							del data[k]
+				else:
+					warnings.warn(f'Unrecognized operator {op!r} in KeyManagement')
+		return data
+
+class RemoveKeys(Configurable):
+	keys = Option(set)
+	def __call__(self, data:dict):
+		for key in self.keys:
+			with suppress(KeyError):
+				del data[key]
+		return data
+
 class GroupRepeatingKeys(Configurable):
 	mapping = Option(dict)
 	drop_empty = Option(bool, default=True)
@@ -212,6 +299,14 @@ class OnlyCromModeledRecords:
 
 class OnlyRecordsOfType(Configurable):
 	type = Option()
+	def __init__(self, *v, **kw):
+		'''
+		Sets the __name__ property to include the relevant options so that when the
+		bonobo graph is serialized as a GraphViz document, different objects can be
+		visually differentiated.
+		'''
+		super().__init__(*v, **kw)
+		self.__name__ = f'{type(self).__name__} ({self.type})'
 
 	def __call__(self, data):
 		o = get_crom_object(data)

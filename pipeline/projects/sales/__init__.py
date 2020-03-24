@@ -1,10 +1,12 @@
 '''
 Classes and utility functions for instantiating, configuring, and
-running a bonobo pipeline for converting Provenance Index CSV data into JSON-LD.
+running a bonobo pipeline for converting Sales Index CSV data into JSON-LD.
 '''
 
 # PIR Extracters
 
+import random
+import objgraph
 import re
 import os
 import json
@@ -38,7 +40,7 @@ from cromulent.model import factory
 from cromulent.extract import extract_physical_dimensions, extract_monetary_amount
 
 import pipeline.execution
-from pipeline.projects import PipelineBase, UtilityHelper
+from pipeline.projects import PipelineBase, UtilityHelper, PersonIdentity
 from pipeline.projects.sales.util import *
 from pipeline.util import \
 			GraphListSource, \
@@ -58,6 +60,8 @@ import pipeline.linkedart
 from pipeline.linkedart import add_crom_data, get_crom_object
 from pipeline.io.csv import CurriedCSVReader
 from pipeline.nodes.basic import \
+			KeyManagement, \
+			RemoveKeys, \
 			GroupRepeatingKeys, \
 			GroupKeys, \
 			AddArchesModel, \
@@ -73,12 +77,8 @@ import pipeline.projects.sales.catalogs
 
 #mark - utility functions and classes
 
-def make_ordinal(n):
-	n = int(n)
-	suffix = ['th', 'st', 'nd', 'rd', 'th'][min(n % 10, 4)]
-	if 11 <= (n % 100) <= 13:
-		suffix = 'th'
-	return f'{n}{suffix}'
+class SalesPersonIdentity(PersonIdentity):
+	pass
 
 class PersonIdentity:
 	'''
@@ -92,6 +92,8 @@ class PersonIdentity:
 		self.make_la_org = pipeline.linkedart.MakeLinkedArtOrganization()
 		self.anon_dated_re = re.compile(r'\[ANONYMOUS - (\d+)TH C[.]\]')
 		self.anon_period_re = re.compile(r'\[ANONYMOUS - (MODERN|ANTIQUE)\]')
+		self.anon_dated_nationality_re = re.compile(r'\[(\w+) - (\d+)TH C[.]\]')
+		self.anon_nationality_re = re.compile(r'\[(?!ANON)(\w+)\]', re.IGNORECASE)
 
 	def acceptable_person_auth_name(self, auth_name):
 		if not auth_name or auth_name in self.ignore_authnames:
@@ -101,16 +103,21 @@ class PersonIdentity:
 		return True
 
 	def is_anonymous_group(self, auth_name):
-		if self.anon_dated_re.match(auth_name):
+		if self.anon_nationality_re.match(auth_name):
+			return True
+		if self.anon_dated_nationality_re.match(auth_name):
+			return True
+		elif self.anon_dated_re.match(auth_name):
 			return True
 		elif self.anon_period_re.match(auth_name):
 			return True
 		return False
 
-	@staticmethod
-	def is_anonymous(data:dict):
+	def is_anonymous(self, data:dict):
 		auth_name = data.get('auth_name')
 		if auth_name:
+			if self.is_anonymous_group(auth_name):
+				return False
 			return '[ANONYMOUS' in auth_name
 		elif data.get('name'):
 			return False
@@ -139,13 +146,23 @@ class PersonIdentity:
 			return key, self.make_shared_uri
 		else:
 			# not enough information to identify this person uniquely, so use the source location in the input file
-			pi_rec_no = data['pi_record_no']
+			try:
+				if 'pi_record_no' in data:
+					id_value = data['pi_record_no']
+					id_key = 'PI'
+				else:
+					id_value = data['star_record_no']
+					id_key = 'STAR'
+			except KeyError as e:
+				warnings.warn(f'*** No identifying property with which to construct a URI key: {e}')
+				print(pprint.pformat(data), file=sys.stderr)
+				raise
 			if record_id:
-				key = ('PERSON', 'PI', pi_rec_no, record_id)
+				key = ('PERSON', id_key, id_value, record_id)
 				return key, self.make_proj_uri
 			else:
-				warnings.warn(f'*** No record identifier given for person identified only by pi_record_number {pi_rec_no}')
-				key = ('PERSON', 'PI', pi_rec_no)
+				warnings.warn(f'*** No record identifier given for person identified only by {id_key} {id_value}')
+				key = ('PERSON', id_key, id_value)
 				return key, self.make_proj_uri
 
 	def add_person(self, a, sales_record, relative_id, **kwargs):
@@ -153,7 +170,7 @@ class PersonIdentity:
 		self.add_names(a, referrer=sales_record, **kwargs)
 		self.add_props(a, **kwargs)
 		auth_name = a.get('auth_name')
-		if self.is_anonymous_group(auth_name):
+		if auth_name and self.is_anonymous_group(auth_name):
 			self.make_la_org(a)
 		else:
 			self.make_la_person(a)
@@ -173,28 +190,83 @@ class PersonIdentity:
 		ts.begin_of_the_end = "%04d-%02d-%02dT%02d:%02d:%02dZ" % (to_year, 1, 1, 0, 0, 0)
 		return ts
 
+	def anonymous_group_label(self, role, century=None, nationality=None):
+		if century and nationality:
+			ord = make_ordinal(century)
+			return f'{nationality.capitalize()} {role}s in the {ord} century'
+		elif century:
+			ord = make_ordinal(century)
+			return f'{role}s in the {ord} century'
+		elif nationality:
+			return f'{nationality.capitalize()} {role}s'
+		else:
+			return f'{role}s'
+		return a
+
+	def professional_activity(self, group_label, century=None):
+		a = vocab.Active(ident='', label=f'Professional activity of {group_label}')
+		if century:
+			ts = self.timespan_for_century(century)
+			a.timespan = ts
+		return a
+
 	def add_props(self, data:dict, role=None, **kwargs):
 		role = role if role else 'person'
-		auth_name = data.get('auth_name')
+		auth_name = data.get('auth_name', '')
+		period_match = self.anon_period_re.match(auth_name)
+		nationalities = []
+		if 'nationality' in data:
+			if isinstance(data['nationality'], str):
+				nationalities.append(data['nationality'])
+			elif isinstance(data['nationality'], list):
+				nationalities += data['nationality']
+
+		data['nationality'] = []
+		data.setdefault('referred_to_by', [])
+
+		if data.get('name_cite'):
+			cite = vocab.BibliographyStatement(ident='', content=data['name_cite'])
+			data['referred_to_by'].append(cite)
+
 		if self.is_anonymous_group(auth_name):
+			nationality_match = self.anon_nationality_re.match(auth_name)
+			dated_nationality_match = self.anon_dated_nationality_re.match(auth_name)
 			dated_match = self.anon_dated_re.match(auth_name)
-			if dated_match:
+			data.setdefault('events', [])
+			if nationality_match:
+				with suppress(ValueError):
+					nationality = nationality_match.group(1).lower()
+					nationalities.append(nationality)
+					group_label = self.anonymous_group_label(role, nationality=nationality)
+					data['label'] = group_label
+			elif dated_nationality_match:
+				with suppress(ValueError):
+					nationality = dated_nationality_match.group(1).lower()
+					nationalities.append(nationality)
+					century = int(dated_nationality_match.group(2))
+					group_label = self.anonymous_group_label(role, century=century, nationality=nationality)
+					data['label'] = group_label
+					a = self.professional_activity(group_label, century=century)
+					data['events'].append(a)
+			elif dated_match:
 				with suppress(ValueError):
 					century = int(dated_match.group(1))
-					ord = make_ordinal(century)
-					data['label'] = f'anonymous {role}s of the {ord} century'
-					a = vocab.Active(ident='', label=f'Professional activity of {role}s in the {ord} century')
-					ts = self.timespan_for_century(century)
-					a.timespan = ts
-					if 'events' not in data:
-						data['events'] = []
+					group_label = self.anonymous_group_label(role, century=century)
+					data['label'] = group_label
+					a = self.professional_activity(group_label, century=century)
 					data['events'].append(a)
-			period_match = self.anon_period_re.match(auth_name)
-			if period_match:
+			elif period_match:
 				period = period_match.group(1).lower()
 				data['label'] = f'anonymous {period} {role}s'
+		for nationality in nationalities:
+			key = f'{nationality.lower()} nationality'
+			n = vocab.instances.get(key)
+			if n:
+				data['nationality'].append(n)
+			else:
+				warnings.warn(f'No nationality instance found in crom for: {key!r}')
 
-	def add_names(self, data:dict, referrer=None, role=None):
+	def add_names(self, data:dict, referrer=None, role=None, **kwargs):
 		'''
 		Based on the presence of `auth_name` and/or `name` fields in `data`, sets the
 		`label`, `names`, and `identifier` keys to appropriate strings/`model.Identifier`
@@ -203,7 +275,7 @@ class PersonIdentity:
 		If the `role` string is given (e.g. 'artist'), also sets the `role_label` key
 		to a value (e.g. 'artist “RUBENS, PETER PAUL”').
 		'''
-		auth_name = data.get('auth_name')
+		auth_name = data.get('auth_name', '')
 		role_label = None
 		if self.acceptable_person_auth_name(auth_name):
 			if role:
@@ -222,10 +294,8 @@ class PersonIdentity:
 				data['names'] = [(name, {'referred_to_by': [referrer]})]
 			else:
 				data['names'] = [name]
-			if 'label' not in data:
-				data['label'] = name
-		if 'label' not in data:
-			data['label'] = '(Anonymous)'
+			data.setdefault('label', name)
+		data.setdefault('label', '(Anonymous)')
 
 		if role and not role_label:
 			role_label = f'anonymous {role}'
@@ -233,7 +303,7 @@ class PersonIdentity:
 		if role:
 			data['role_label'] = role_label
 
-class ProvenanceUtilityHelper(UtilityHelper):
+class SalesUtilityHelper(UtilityHelper):
 	'''
 	Project-specific code for accessing and interpreting sales data.
 	'''
@@ -241,10 +311,10 @@ class ProvenanceUtilityHelper(UtilityHelper):
 		super().__init__(project_name)
 		# TODO: does this handle all the cases of data packed into the lot_number string that need to be stripped?
 		self.shared_lot_number_re = re.compile(r'(\[[a-z]\])')
-		self.ignore_house_authnames = CaseFoldingSet(('Anonymous',))
+		self.ignore_house_authnames = CaseFoldingSet(('Anonymous', '[Anonymous]'))
 		self.csv_source_columns = ['pi_record_no', 'star_record_no', 'catalog_number']
 		self.problematic_record_uri = f'tag:getty.edu,2019:digital:pipeline:{project_name}:ProblematicRecord'
-		self.person_identity = PersonIdentity(make_shared_uri=self.make_shared_uri, make_proj_uri=self.make_proj_uri)
+		self.person_identity = SalesPersonIdentity(make_shared_uri=self.make_shared_uri, make_proj_uri=self.make_proj_uri)
 		self.uid_tag_prefix = UID_TAG_PREFIX
 
 	def copy_source_information(self, dst: dict, src: dict):
@@ -253,16 +323,41 @@ class ProvenanceUtilityHelper(UtilityHelper):
 				dst[k] = src[k]
 		return dst
 
+	def add_person(self, data, **kwargs):
+		if data.get('name_so'):
+			# handling of the name_so field happens here and not in the SalesPersonIdentity methods,
+			# because it requires access to the services data on catalogs
+			source = data.get('name_so', '').strip()
+			components = source.split(' ')
+			if len(components) == 2:
+				owner_code, copy_number = components
+			else:
+				owner_code = source
+				copy_number = ''
+			cno = kwargs['catalog_number']
+			owner_uri = self.physical_catalog_uri(cno, owner_code, None)
+			copy_uri = self.physical_catalog_uri(cno, owner_code, copy_number)
+			unique_catalogs = self.services['unique_catalogs']
+			owned_copies = unique_catalogs.get(owner_uri)
+			if owned_copies:
+				if copy_uri in owned_copies:
+					data['_name_source_catalog_key'] = (cno, owner_code, copy_number)
+				else:
+					warnings.warn(f'*** SPECIFIC PHYSICAL CATALOG COPY NOT FOUND FOR NAME SOURCE {source} in catalog {cno}')
+			else:
+				warnings.warn(f'*** NO CATALOG OWNER FOUND FOR NAME SOURCE {source} on catalog {cno}')
+		return super().add_person(data, **kwargs)
+
 	def event_type_for_sale_type(self, sale_type):
 		if sale_type in ('Private Contract Sale', 'Stock List'):
 			# 'Stock List' is treated just like a Private Contract Sale, except for the catalogs
 			return vocab.Exhibition
 		elif sale_type == 'Lottery':
 			return vocab.Lottery
-		elif sale_type in ('Auction'):
+		elif sale_type in ('Auction', 'Collection Catalog'):
 			return vocab.AuctionEvent
 		else:
-			warnings.warn(f'Unexpected sale type: {sale_type!r}')
+			warnings.warn(f'*** Unexpected sale type: {sale_type!r}')
 
 	def sale_type_for_sale_type(self, sale_type):
 		if sale_type in ('Private Contract Sale', 'Stock List'):
@@ -270,10 +365,10 @@ class ProvenanceUtilityHelper(UtilityHelper):
 			return vocab.Negotiating
 		elif sale_type == 'Lottery':
 			return vocab.LotteryDrawing
-		elif sale_type in ('Auction'):
+		elif sale_type in ('Auction', 'Collection Catalog'):
 			return vocab.Auction
 		else:
-			warnings.warn(f'Unexpected sale type: {sale_type!r}')
+			warnings.warn(f'*** Unexpected sale type: {sale_type!r}')
 
 	def catalog_type_for_sale_type(self, sale_type):
 		if sale_type == 'Private Contract Sale':
@@ -282,14 +377,14 @@ class ProvenanceUtilityHelper(UtilityHelper):
 			return vocab.AccessionCatalog
 		elif sale_type == 'Lottery':
 			return vocab.LotteryCatalog
-		elif sale_type == 'Auction':
+		elif sale_type in ('Auction', 'Collection Catalog'):
 			return vocab.AuctionCatalog
 		else:
-			warnings.warn(f'Unexpected sale type: {sale_type!r}')
+			warnings.warn(f'*** Unexpected sale type: {sale_type!r}')
 
 	def catalog_text(self, cno, sale_type='Auction'):
 		uri = self.make_proj_uri('CATALOG', cno)
-		if sale_type == 'Auction':
+		if sale_type in ('Auction', 'Collection Catalog'):
 			catalog = vocab.AuctionCatalogText(ident=uri, label=f'Sale Catalog {cno}')
 		elif sale_type == 'Private Contract Sale':
 			catalog = vocab.ExhibitionCatalogText(ident=uri, label=f'Private Sale Exhibition Catalog {cno}')
@@ -301,9 +396,26 @@ class ProvenanceUtilityHelper(UtilityHelper):
 			catalog = vocab.SalesCatalogText(ident=uri, label=f'Sale Catalog {cno}')
 		return catalog
 
-	def physical_catalog(self, cno, sale_type, owner=None, copy=None):
+	def physical_catalog_notes(self, cno, owner, copy):
+		cat_uri = self.physical_catalog_uri(cno, owner, copy)
+		uri = cat_uri + '-HandNotes'
+		labels = []
+		if owner:
+			labels.append(f'owned by “{owner}”')
+		if copy:
+			labels.append(f'copy {copy}')
+		phys_label = ', '.join(labels)
+		label = f'Handwritten notes in Catalog {cno}'
+		catalog = model.LinguisticObject(ident=uri, label=label)
+		return catalog
+
+	def physical_catalog_uri(self, cno, owner=None, copy=None):
 		keys = [v for v in [cno, owner, copy] if v]
 		uri = self.make_proj_uri('PHYS-CAT', *keys)
+		return uri
+
+	def physical_catalog(self, cno, sale_type, owner=None, copy=None):
+		uri = self.physical_catalog_uri(cno, owner, copy)
 		labels = []
 		if owner:
 			labels.append(f'owned by “{owner}”')
@@ -311,7 +423,7 @@ class ProvenanceUtilityHelper(UtilityHelper):
 			labels.append(f'copy {copy}')
 		label = ', '.join(labels)
 		catalog_type = self.catalog_type_for_sale_type(sale_type)
-		if sale_type == 'Auction':
+		if sale_type in ('Auction', 'Collection Catalog'):
 			labels = [f'Sale Catalog {cno}'] + labels
 			catalog = catalog_type(ident=uri, label=', '.join(labels))
 		elif sale_type == 'Private Contract Sale':
@@ -324,7 +436,7 @@ class ProvenanceUtilityHelper(UtilityHelper):
 			labels = [f'Lottery Catalog {cno}'] + labels
 			catalog = catalog_type(ident=uri, label=', '.join(labels))
 		else:
-			warnings.warn(f'Unexpected sale type: {sale_type!r}')
+			warnings.warn(f'*** Unexpected sale type: {sale_type!r}')
 		return catalog
 
 	def sale_for_sale_type(self, sale_type, lot_object_key):
@@ -335,7 +447,7 @@ class ProvenanceUtilityHelper(UtilityHelper):
 		lot_type = self.sale_type_for_sale_type(sale_type)
 		lot = lot_type(ident=uri)
 
-		if sale_type == 'Auction':
+		if sale_type in ('Auction', 'Collection Catalog'):
 			lot_id = f'{cno} {shared_lot_number} ({date})'
 			lot_label = f'Auction of Lot {lot_id}'
 			lot._label = lot_label
@@ -348,7 +460,7 @@ class ProvenanceUtilityHelper(UtilityHelper):
 			lot_label = f'Lottery Drawing for {lot_id}'
 			lot._label = lot_label
 		else:
-			warnings.warn(f'Unexpected sale type: {sale_type!r}')
+			warnings.warn(f'*** Unexpected sale type: {sale_type!r}')
 		return lot
 
 	def sale_event_for_catalog_number(self, catalog_number, sale_type='Auction'):
@@ -394,7 +506,8 @@ class ProvenanceUtilityHelper(UtilityHelper):
 		for p in prices:
 			n = p.get('price_note')
 			if n and n.startswith('for lots '):
-				return self.make_proj_uri('PROV-MULTI', cno, date, n[9:])
+				lot_list = n[9:].split(' & ')
+				return self.make_proj_uri('PROV-MULTI', cno, date, *lot_list)
 		return self.make_proj_uri('PROV', cno, date, shared_lot_number)
 
 	def lots_in_transaction(self, data, metadata):
@@ -462,10 +575,11 @@ class ProvenanceUtilityHelper(UtilityHelper):
 		'''Add modeling data for an auction house organization.'''
 		catalog = a.get('_catalog')
 
-		auction_house_uri_keys = self.auction_house_uri_keys(a, sequence=sequence)
-		a['uri'] = self.auction_house_uri(a, sequence=sequence)
-		a['uid'] = '-'.join([str(k) for k in auction_house_uri_keys])
-		house = vocab.AuctionHouseOrg(ident=a['uri'])
+		if 'uri' not in a:
+			auction_house_uri_keys = self.auction_house_uri_keys(a, sequence=sequence)
+			a['uri'] = self.auction_house_uri(a, sequence=sequence)
+			a['uid'] = '-'.join([str(k) for k in auction_house_uri_keys])
+
 		ulan = None
 		with suppress(ValueError, TypeError):
 			ulan = int(a.get('ulan'))
@@ -479,7 +593,6 @@ class ProvenanceUtilityHelper(UtilityHelper):
 				pname.referred_to_by = event_record
 			a['identifiers'].append(pname)
 			a['label'] = auth_name
-			house._label = auth_name
 
 		name = a.get('name')
 		if name:
@@ -487,15 +600,31 @@ class ProvenanceUtilityHelper(UtilityHelper):
 			if event_record:
 				n.referred_to_by = event_record
 			a['identifiers'].append(n)
-			if not hasattr(house, 'label'):
-				a['label'] = name
-				house._label = a['label']
+			a.setdefault('label', name)
 		else:
 			a['label'] = '(Anonymous)'
 
+		make_house = pipeline.linkedart.MakeLinkedArtAuctionHouseOrganization()
+		make_house(a)
+		house = get_crom_object(a)
 
-		add_crom_data(data=a, what=house)
-		return a
+		return add_crom_data(data=a, what=house)
+
+class RecordCounter(Configurable):
+	counts = Service('counts')
+	verbose = Option(bool, default=False)
+	name = Option()
+
+	def __init__(self, *args, **kwargs):
+		super().__init__(self, *args, **kwargs)
+		self.mod = 100
+
+	def __call__(self, data, counts):
+		counts[self.name] += 1
+		count = counts[self.name]
+		if count % self.mod == 0:
+			print(f'\r{count} {self.name}', end='', file=sys.stderr)
+		return data
 
 def add_crom_price(data, parent, services, add_citations=False):
 	'''
@@ -517,24 +646,27 @@ def add_crom_price(data, parent, services, add_citations=False):
 	return data
 
 
-#mark - Provenance Pipeline class
+#mark - Sales Pipeline class
 
 class SalesPipeline(PipelineBase):
-	'''Bonobo-based pipeline for transforming Provenance data from CSV into JSON-LD.'''
+	'''Bonobo-based pipeline for transforming Sales data from CSV into JSON-LD.'''
 	def __init__(self, input_path, catalogs, auction_events, contents, **kwargs):
 		project_name = 'sales'
-		helper = ProvenanceUtilityHelper(project_name)
+		self.input_path = input_path
+		self.services = None
+
+		helper = SalesUtilityHelper(project_name)
 		self.uid_tag_prefix = UID_TAG_PREFIX
 
 		vocab.register_instance('act of selling', {'parent': model.Activity, 'id': 'XXXXXX001', 'label': 'Act of Selling'})
-		vocab.register_instance('act of returning', {'parent': model.Activity, 'id': 'XXXXXX002', 'label': 'Act of Returning'})
+		vocab.register_instance('act of returning', {'parent': model.Activity, 'id': '300438467', 'label': 'Returning'})
 		vocab.register_instance('act of completing sale', {'parent': model.Activity, 'id': 'XXXXXX003', 'label': 'Act of Completing Sale'})
 
 		vocab.register_instance('fire', {'parent': model.Type, 'id': '300068986', 'label': 'Fire'})
 		vocab.register_instance('animal', {'parent': model.Type, 'id': '300249395', 'label': 'Animal'})
 		vocab.register_instance('history', {'parent': model.Type, 'id': '300033898', 'label': 'History'})
 
-		warnings.warn(f'TODO: NEED TO USE CORRECT CLASSIFICATION FOR NON-AUCTION SALES ACTIVITIES, LOTTERY CATALOG')
+		warnings.warn(f'*** TODO: NEED TO USE CORRECT CLASSIFICATION FOR NON-AUCTION SALES ACTIVITIES, LOTTERY CATALOG')
 		vocab.register_vocab_class('LotteryDrawing', {"parent": model.Activity, "id":"000000000", "label": "Lottery Drawing"})
 		vocab.register_vocab_class('Lottery', {"parent": model.Activity, "id":"000000000", "label": "Lottery"})
 		vocab.register_vocab_class('LotteryCatalog', {"parent": model.HumanMadeObject, "id":"000000000", "label": "Lottery Catalog", "metatype": "work type"})
@@ -555,7 +687,6 @@ class SalesPipeline(PipelineBase):
 		self.contents_files_pattern = contents['files_pattern']
 		self.limit = kwargs.get('limit')
 		self.debug = kwargs.get('debug', False)
-		self.input_path = input_path
 
 		fs = bonobo.open_fs(input_path)
 		with fs.open(self.catalogs_header_file, newline='') as csvfile:
@@ -568,19 +699,33 @@ class SalesPipeline(PipelineBase):
 			r = csv.reader(csvfile)
 			self.contents_headers = [v.lower() for v in next(r)]
 
+	def setup_services(self):
 	# Set up environment
-	def get_services(self):
 		'''Return a `dict` of named services available to the bonobo pipeline.'''
-		services = super().get_services()
+		services = super().setup_services()
+		for name in ('transaction_types', 'attribution_modifiers'):
+			services[name] = {k: CaseFoldingSet(v) for k, v in services[name].items()}
+
+		attribution_modifiers = services['attribution_modifiers']
+		PROBABLY = attribution_modifiers['probably by']
+		POSSIBLY = attribution_modifiers['possibly by']
+		attribution_modifiers['uncertain'] = PROBABLY | POSSIBLY
+
 		services.update({
 			# to avoid constructing new MakeLinkedArtPerson objects millions of times, this
 			# is passed around as a service to the functions and classes that require it.
 			'make_la_person': pipeline.linkedart.MakeLinkedArtPerson(),
-			'unique_catalogs': {},
+			'unique_catalogs': defaultdict(set),
 			'post_sale_map': {},
-			'auction_houses': {},
+			'event_properties': {
+				'auction_houses': defaultdict(list),
+				'auction_dates': {},
+				'auction_locations': {},
+				'experts': defaultdict(list),
+				'commissaire': defaultdict(list),
+			},
 			'non_auctions': {},
-			'auction_locations': {},
+			'counts': defaultdict(int)
 		})
 		return services
 
@@ -590,11 +735,12 @@ class SalesPipeline(PipelineBase):
 			pipeline.projects.sales.catalogs.AddAuctionCatalog(helper=self.helper),
 			pipeline.projects.sales.catalogs.AddPhysicalCatalogObjects(helper=self.helper),
 			pipeline.projects.sales.catalogs.AddPhysicalCatalogOwners(helper=self.helper),
+			RecordCounter(name='physical_catalogs', verbose=self.debug),
 			_input=records.output
 		)
 		if serialize:
 			# write SALES data
-			self.add_serialization_chain(graph, catalogs.output, model=self.models['HumanMadeObject'])
+			self.add_serialization_chain(graph, catalogs.output, model=self.models['HumanMadeObject'], use_memory_writer=False)
 		return catalogs
 
 	def add_catalog_linguistic_objects_chain(self, graph, events, serialize=True):
@@ -606,55 +752,86 @@ class SalesPipeline(PipelineBase):
 		)
 		if serialize:
 			# write SALES data
-			self.add_serialization_chain(graph, los.output, model=self.models['LinguisticObject'])
+			self.add_serialization_chain(graph, los.output, model=self.models['LinguisticObject'], use_memory_writer=False)
 		return los
 
 	def add_auction_events_chain(self, graph, records, serialize=True):
 		'''Add modeling of auction events.'''
 		auction_events = graph.add_chain(
-			GroupRepeatingKeys(
+			KeyManagement(
 				drop_empty=True,
-				mapping={
-					'seller': {'prefixes': ('sell_auth_name', 'sell_auth_q')},
-					'expert': {'prefixes': ('expert', 'expert_auth', 'expert_ulan')},
-					'commissaire': {'prefixes': ('comm_pr', 'comm_pr_auth', 'comm_pr_ulan')},
-					'auction_house': {
-						'postprocess': [
-							lambda x, _: strip_key_prefix('auc_house_', x),
-						],
-						'prefixes': ('auc_house_name', 'auc_house_auth', 'auc_house_ulan')
-					},
-					'portal': {'prefixes': ('portal_url',)},
-				}
-			),
-			GroupKeys(
-				drop_empty=True,
-				mapping={
-					'lugt': {'properties': ('lugt_number_1', 'lugt_number_2', 'lugt_number_3')},
-					'auc_copy': {
-						'properties': (
-							'auc_copy_seller_1',
-							'auc_copy_seller_2',
-							'auc_copy_seller_3',
-							'auc_copy_seller_4')},
-					'other_seller': {
-						'properties': (
-							'other_seller_1',
-							'other_seller_2',
-							'other_seller_3')},
-					'title_pg_sell': {'properties': ('title_pg_sell_1', 'title_pg_sell_2')},
-					'location': {
-						'properties': (
-							'city_of_sale',
-							'sale_location',
-							'country_auth',
-							'specific_loc')},
-				}
+				operations=[
+					{
+						'group_repeating': {
+							'seller': {'prefixes': ('sell_auth_name', 'sell_auth_q')},
+							'expert': {
+								'rename_keys': {
+									'expert': 'name',
+									'expert_auth': 'auth_name',
+									'expert_ulan': 'ulan'
+								},
+# 								'postprocess': [
+# 									lambda x, _: replace_key_pattern(r'^(expert)$', 'expert_name', x),
+# 									lambda x, _: strip_key_prefix('expert_', x),
+# 									lambda x, _: replace_key_pattern(r'^(auth)$', 'auth_name', x),
+# 								],
+								'prefixes': ('expert', 'expert_auth', 'expert_ulan')
+							},
+							'commissaire': {
+								'rename_keys': {
+									'comm_pr': 'name',
+									'comm_pr_auth': 'auth_name',
+									'comm_pr_ulan': 'ulan'
+								},
+# 								'postprocess': [
+# 									lambda x, _: replace_key_pattern(r'^(comm_pr)$', 'comm_pr_name', x),
+# 									lambda x, _: strip_key_prefix('comm_pr_', x),
+# 									lambda x, _: replace_key_pattern(r'^(auth)$', 'auth_name', x),
+# 								],
+								'prefixes': ('comm_pr', 'comm_pr_auth', 'comm_pr_ulan')
+							},
+							'auction_house': {
+								'rename_keys': {
+									'auc_house_name': 'name',
+									'auc_house_auth': 'auth_name',
+									'auc_house_ulan': 'ulan'
+								},
+# 								'postprocess': [
+# 									lambda x, _: strip_key_prefix('auc_house_', x),
+# 								],
+								'prefixes': ('auc_house_name', 'auc_house_auth', 'auc_house_ulan')
+							},
+							'portal': {'prefixes': ('portal_url',)},
+						},
+						'group': {
+							'lugt': {'properties': ('lugt_number_1', 'lugt_number_2', 'lugt_number_3')},
+							'auc_copy': {
+								'properties': (
+									'auc_copy_seller_1',
+									'auc_copy_seller_2',
+									'auc_copy_seller_3',
+									'auc_copy_seller_4')},
+							'other_seller': {
+								'properties': (
+									'other_seller_1',
+									'other_seller_2',
+									'other_seller_3')},
+							'title_pg_sell': {'properties': ('title_pg_sell_1', 'title_pg_sell_2')},
+							'location': {
+								'properties': (
+									'city_of_sale',
+									'sale_location',
+									'country_auth',
+									'specific_loc')},
+						}
+					}
+				]
 			),
 			pipeline.projects.sales.catalogs.AddAuctionCatalog(helper=self.helper),
 			pipeline.projects.sales.events.AddAuctionEvent(helper=self.helper),
 			pipeline.projects.sales.events.AddAuctionHouses(helper=self.helper),
 			pipeline.projects.sales.events.PopulateAuctionEvent(helper=self.helper),
+			RecordCounter(name='auction_events', verbose=self.debug),
 			_input=records.output
 		)
 		if serialize:
@@ -684,7 +861,7 @@ class SalesPipeline(PipelineBase):
 			pipeline.projects.sales.lots.AddAcquisitionOrBidding(helper=self.helper),
 			_input=sales.output
 		)
-		
+
 		orgs = self.add_person_or_group_chain(graph, bid_acqs, key='_organizations', serialize=serialize)
 		refs = graph.add_chain(
 			ExtractKeyedValues(key='_citation_references'),
@@ -702,233 +879,362 @@ class SalesPipeline(PipelineBase):
 			ExtractKeyedValue(key='_drawing'),
 			_input=bid_acqs.output
 		)
+		notes = graph.add_chain(
+			ExtractKeyedValues(key='_phys_catalog_notes'),
+			_input=bid_acqs.output
+		)
+		catalogs = graph.add_chain(
+			ExtractKeyedValues(key='_phys_catalogs'),
+			_input=bid_acqs.output
+		)
 		_ = self.add_places_chain(graph, bid_acqs, key='_owner_locations', serialize=True)
 
 		if serialize:
 			# write SALES data
-			self.add_serialization_chain(graph, refs.output, model=self.models['LinguisticObject'])
-			self.add_serialization_chain(graph, bids.output, model=self.models['Bidding'])
-			self.add_serialization_chain(graph, drawing.output, model=self.models['Drawing'])
+			self.add_serialization_chain(graph, catalogs.output, model=self.models['HumanMadeObject'])
+			self.add_serialization_chain(graph, notes.output, model=self.models['LinguisticObject'], use_memory_writer=False)
+			self.add_serialization_chain(graph, refs.output, model=self.models['LinguisticObject'], use_memory_writer=False)
+			self.add_serialization_chain(graph, bids.output, model=self.models['Bidding'], use_memory_writer=False)
+			self.add_serialization_chain(graph, drawing.output, model=self.models['Drawing'], use_memory_writer=False)
 		return bid_acqs
 
 	def add_sales_chain(self, graph, records, services, serialize=True):
 		'''Add transformation of sales records to the bonobo pipeline.'''
 		sales = graph.add_chain(
-			GroupRepeatingKeys(
+			KeyManagement(
 				drop_empty=True,
-				mapping={
-					'expert': {'prefixes': ('expert_auth', 'expert_ulan')},
-					'commissaire': {'prefixes': ('commissaire_pr', 'comm_ulan')},
-					'auction_house': {
-						'postprocess': [
-							lambda x, _: replace_key_pattern(r'(auction_house)', 'house_name', x),
-							lambda x, _: strip_key_prefix('house_', x),
-						],
-						'prefixes': ('auction_house', 'house_ulan')
+				operations=[
+					{
+						'remove': {
+							'expert_auth_1', 'expert_ulan_1', 'expert_auth_2', 'expert_ulan_2', 'expert_auth_3', 'expert_ulan_3', 'expert_auth_4', 'expert_ulan_4',
+							'commissaire_pr_1', 'comm_ulan_1', 'commissaire_pr_2', 'comm_ulan_2', 'commissaire_pr_3', 'comm_ulan_3', 'commissaire_pr_4', 'comm_ulan_4',
+							'auction_house_1', 'house_ulan_1', 'auction_house_2', 'house_ulan_2', 'auction_house_3', 'house_ulan_3', 'auction_house_4', 'house_ulan_4',
+						},
+						'group_repeating': {
+							'expert': {'prefixes': ('expert_auth', 'expert_ulan')},
+							'commissaire': {'prefixes': ('commissaire_pr', 'comm_ulan')},
+							'auction_house': {
+								'rename_keys': {
+									'auction_house': 'name',
+									'house_ulan': 'ulan'
+								},
+# 								'postprocess': [
+# 									lambda x, _: replace_key_pattern(r'(auction_house)', 'house_name', x),
+# 									lambda x, _: strip_key_prefix('house_', x),
+# 								],
+								'prefixes': ('auction_house', 'house_ulan')
+							},
+							'_artists': {
+								'rename_keys': {
+									'artist_info': 'biography'
+								},
+								'postprocess': [
+									filter_empty_person,
+									add_pir_record_ids
+								],
+								'prefixes': (
+									'artist_name', 'art_authority',
+									'artist_info', 'nationality', 'artist_ulan',
+									'attrib_mod', 'attrib_mod_auth', 'star_rec_no',
+								)
+							},
+							'hand_note': {'prefixes': ('hand_note', 'hand_note_so')},
+							'seller': {
+								'rename_keys': {
+									'sell_name': 'name',
+									'sell_name_so': 'so',
+									'sell_name_ques': 'ques',
+									'sell_mod': 'mod',
+									'sell_auth_mod': 'auth_mod',
+									'sell_auth_mod_a': 'auth_mod_a',
+									'sell_auth_name': 'auth_name',
+									'sell_auth_nameq': 'auth_nameq',
+									'sell_ulan': 'ulan'
+								},
+								'postprocess': [
+# 									lambda x, _: strip_key_prefix('sell_', x),
+									filter_empty_person
+								],
+								'prefixes': (
+									'sell_name',
+									'sell_name_so',
+									'sell_name_ques',
+									'sell_mod',
+									'sell_auth_mod',
+									'sell_auth_mod_a',
+									'sell_auth_name',
+									'sell_auth_nameq',
+									'sell_ulan'
+								)
+							},
+							'price': {
+								'postprocess': lambda d, p: add_crom_price(d, p, services, add_citations=True),
+								'prefixes': (
+									'price_amount',
+									'price_currency',
+									'price_note',
+									'price_source',
+									'price_citation')},
+							'buyer': {
+								'rename_keys': {
+									'buy_name': 'name',
+									'buy_name_so': 'name_so',
+									'buy_name_ques': 'name_ques',
+									'buy_name_cite': 'name_cite',
+									'buy_auth_name': 'auth_name',
+									'buy_auth_nameq': 'auth_nameq',
+									'buy_mod': 'mod',
+									'buy_auth_mod': 'auth_mod',
+									'buy_auth_mod_a': 'auth_mod_a',
+									'buy_ulan': 'ulan'
+								},
+								'postprocess': [
+# 									lambda x, _: strip_key_prefix('buy_', x),
+									filter_empty_person
+								],
+								'prefixes': (
+									'buy_name',
+									'buy_name_so',
+									'buy_name_ques',
+									'buy_name_cite',
+									'buy_auth_name',
+									'buy_auth_nameq',
+									'buy_mod',
+									'buy_auth_mod',
+									'buy_auth_mod_a',
+									'buy_ulan'
+								)
+							},
+							'prev_owner': {
+								'rename_keys': {
+									'prev_owner': 'own',
+									'prev_own_ques': 'own_ques',
+									'prev_own_so': 'own_so',
+									'prev_own_auth': 'own_auth',
+									'prev_own_auth_d': 'own_auth_d',
+									'prev_own_auth_l': 'own_auth_l',
+									'prev_own_auth_q': 'own_auth_q',
+									'prev_own_ulan': 'own_ulan'
+								},
+# 								'postprocess': [
+# 									lambda x, _: replace_key_pattern(r'(prev_owner)', 'prev_own', x),
+# 									lambda x, _: strip_key_prefix('prev_', x),
+# 								],
+								'prefixes': (
+									'prev_owner',
+									'prev_own_ques',
+									'prev_own_so',
+									'prev_own_auth',
+									'prev_own_auth_d',
+									'prev_own_auth_l',
+									'prev_own_auth_q',
+									'prev_own_ulan'
+								)
+							},
+							'other_titles': {
+								'rename_keys': {
+									'prev_sale_ttlx': 'title',
+									'post_sale_ttl': 'title' # TODO: does this ever cause a collision?
+								},
+# 								'postprocess': [
+# 									lambda x, _: strip_key_prefix('prev_sale_', x),
+# 									lambda x, _: strip_key_prefix('post_sale_', x),
+# 									lambda x, _: replace_key_pattern(r'(ttlx)', 'title', x),
+# 									lambda x, _: replace_key_pattern(r'(ttl)', 'title', x)
+# 								],
+								'prefixes': (
+									'prev_sale_ttlx',
+									'post_sale_ttl')},
+							'prev_sale': {
+								'rename_keys': {
+									'prev_sale_year': 'year',
+									'prev_sale_mo': 'mo',
+									'prev_sale_day': 'day',
+									'prev_sale_lot': 'lot',
+									'prev_sale_loc': 'loc',
+									'prev_sale_ques': 'ques',
+									'prev_sale_artx': 'artx',
+									'prev_sale_ttlx': 'ttlx',
+									'prev_sale_note': 'note',
+									'prev_sale_coll': 'coll',
+									'prev_sale_cat': 'cat'
+								},
+# 								'postprocess': lambda x, _: strip_key_prefix('prev_sale_', x),
+								'prefixes': (
+									'prev_sale_year',
+									'prev_sale_mo',
+									'prev_sale_day',
+									'prev_sale_lot',
+									'prev_sale_loc',
+									'prev_sale_ques',
+									'prev_sale_artx',
+									'prev_sale_ttlx',
+									'prev_sale_note',
+									'prev_sale_coll',
+									'prev_sale_cat'
+								)
+							},
+							'post_sale': {
+								'rename_keys': {
+									'post_sale_year': 'year',
+									'post_sale_mo': 'mo',
+									'post_sale_day': 'day',
+									'post_sale_lot': 'lot',
+									'post_sale_loc': 'loc',
+									'post_sale_q': 'q',
+									'post_sale_art': 'art',
+									'post_sale_nte': 'nte',
+									'post_sale_col': 'col',
+									'post_sale_cat': 'cat'
+								},
+# 								'postprocess': lambda x, _: strip_key_prefix('post_sale_', x),
+								'prefixes': (
+									'post_sale_year',
+									'post_sale_mo',
+									'post_sale_day',
+									'post_sale_lot',
+									'post_sale_loc',
+									'post_sale_q',
+									'post_sale_art',
+									'post_sale_nte',
+									'post_sale_col',
+									'post_sale_cat'
+								)
+							},
+							'post_owner': {
+								'rename_keys': {
+									'post_own': 'own',
+									'post_own_q': 'own_q',
+									'post_own_so': 'own_so',
+									'post_own_auth': 'own_auth',
+									'post_own_auth_d': 'own_auth_d',
+									'post_own_auth_l': 'own_auth_l',
+									'post_own_auth_q': 'own_auth_q',
+									'post_own_ulan': 'own_ulan'
+								},
+# 								'postprocess': lambda x, _: strip_key_prefix('post_', x),
+								'prefixes': (
+									'post_own',
+									'post_own_q',
+									'post_own_so',
+									'post_own_auth',
+									'post_own_auth_d',
+									'post_own_auth_l',
+									'post_own_auth_q',
+									'post_own_ulan'
+								)
+							},
+							'portal': {'prefixes': ('portal_url',)},
+						},
+						'group': {
+							'present_location': {
+								'rename_keys': {
+									'present_loc_geog': 'geog',
+									'present_loc_inst': 'inst',
+									'present_loc_insq': 'insq',
+									'present_loc_insi': 'insi',
+									'present_loc_acc': 'acc',
+									'present_loc_accq': 'accq',
+									'present_loc_note': 'note',
+								},
+# 								'postprocess': lambda x, _: strip_key_prefix('present_loc_', x),
+								'properties': (
+									'present_loc_geog',
+									'present_loc_inst',
+									'present_loc_insq',
+									'present_loc_insi',
+									'present_loc_acc',
+									'present_loc_accq',
+									'present_loc_note',
+								)
+							}
+						}
 					},
-					'_artists': {
-						'postprocess': [
-							filter_empty_person,
-							add_pir_record_ids
-						],
-						'prefixes': (
-							'artist_name',
-							'artist_info',
-							'art_authority',
-							'nationality',
-							'attrib_mod',
-							'attrib_mod_auth',
-							'star_rec_no',
-							'artist_ulan')},
-					'hand_note': {'prefixes': ('hand_note', 'hand_note_so')},
-					'seller': {
-						'postprocess': [
-							lambda x, _: strip_key_prefix('sell_', x),
-							filter_empty_person
-						],
-						'prefixes': (
-							'sell_name',
-							'sell_name_so',
-							'sell_name_ques',
-							'sell_mod',
-							'sell_auth_name',
-							'sell_auth_nameq',
-							'sell_auth_mod',
-							'sell_auth_mod_a',
-							'sell_ulan')},
-					'price': {
-						'postprocess': lambda d, p: add_crom_price(d, p, services, add_citations=True),
-						'prefixes': (
-							'price_amount',
-							'price_currency',
-							'price_note',
-							'price_source',
-							'price_citation')},
-					'buyer': {
-						'postprocess': [
-							lambda x, _: strip_key_prefix('buy_', x),
-							filter_empty_person
-						],
-						'prefixes': (
-							'buy_name',
-							'buy_name_so',
-							'buy_name_ques',
-							'buy_name_cite',
-							'buy_mod',
-							'buy_auth_name',
-							'buy_auth_nameq',
-							'buy_auth_mod',
-							'buy_auth_mod_a',
-							'buy_ulan')},
-					'prev_owner': {
-						'postprocess': [
-							lambda x, _: replace_key_pattern(r'(prev_owner)', 'prev_own', x),
-							lambda x, _: strip_key_prefix('prev_', x),
-						],
-						'prefixes': (
-							'prev_owner',
-							'prev_own_ques',
-							'prev_own_so',
-							'prev_own_auth',
-							'prev_own_auth_d',
-							'prev_own_auth_l',
-							'prev_own_auth_q',
-							'prev_own_ulan')},
-					'prev_sale': {
-						'postprocess': lambda x, _: strip_key_prefix('prev_sale_', x),
-						'prefixes': (
-							'prev_sale_year',
-							'prev_sale_mo',
-							'prev_sale_day',
-							'prev_sale_loc',
-							'prev_sale_lot',
-							'prev_sale_ques',
-							'prev_sale_artx',
-							'prev_sale_ttlx',
-							'prev_sale_note',
-							'prev_sale_coll',
-							'prev_sale_cat')},
-					'post_sale': {
-						'postprocess': lambda x, _: strip_key_prefix('post_sale_', x),
-						'prefixes': (
-							'post_sale_year',
-							'post_sale_mo',
-							'post_sale_day',
-							'post_sale_loc',
-							'post_sale_lot',
-							'post_sale_q',
-							'post_sale_art',
-							'post_sale_ttl',
-							'post_sale_nte',
-							'post_sale_col',
-							'post_sale_cat')},
-					'post_owner': {
-						'postprocess': lambda x, _: strip_key_prefix('post_', x),
-						'prefixes': (
-							'post_own',
-							'post_own_q',
-							'post_own_so',
-							'post_own_auth',
-							'post_own_auth_d',
-							'post_own_auth_l',
-							'post_own_auth_q',
-							'post_own_ulan')},
-					'portal': {'prefixes': ('portal_url',)},
-				}
+					{
+						'group': {
+							'auction_of_lot': {
+								'properties': (
+									'link_to_pdf',
+									'catalog_number',
+									'lot_number',
+									'lot_sale_year',
+									'lot_sale_month',
+									'lot_sale_day',
+									'lot_sale_mod',
+									'lot_notes')},
+							'_object': {
+								'postprocess': add_pir_object_uri_factory(self.helper),
+								'properties': (
+									'title',
+									'other_titles',
+									'title_modifier',
+									'object_type',
+									'materials',
+									'dimensions',
+									'formatted_dimens',
+									'format',
+									'genre',
+									'subject',
+									'inscription',
+									'present_location',
+									'_artists',
+									'hand_note',
+									'post_sale',
+									'prev_sale',
+									'prev_owner',
+									'post_owner',
+									'portal')},
+							'estimated_price': {
+								'postprocess': lambda d, p: add_crom_price(d, p, services, add_citations=True),
+								'properties': (
+									'est_price',
+									'est_price_curr',
+									'est_price_desc',
+									'est_price_so')},
+							'start_price': {
+								'postprocess': lambda d, p: add_crom_price(d, p, services, add_citations=True),
+								'properties': (
+									'start_price',
+									'start_price_curr',
+									'start_price_desc',
+									'start_price_so')},
+							'ask_price': {
+								'postprocess': lambda d, p: add_crom_price(d, p, services, add_citations=True),
+								'properties': (
+									'ask_price',
+									'ask_price_curr',
+									'ask_price_so')},
+						}
+					}
+				]
 			),
-			GroupKeys(mapping={
-				'present_location': {
-					'postprocess': lambda x, _: strip_key_prefix('present_loc_', x),
-					'properties': (
-						'present_loc_geog',
-						'present_loc_inst',
-						'present_loc_insq',
-						'present_loc_insi',
-						'present_loc_acc',
-						'present_loc_accq',
-						'present_loc_note',
-					)
-				}
-			}),
-			GroupKeys(mapping={
-				'auction_of_lot': {
-					'properties': (
-						'catalog_number',
-						'lot_number',
-						'lot_sale_year',
-						'lot_sale_month',
-						'lot_sale_day',
-						'lot_sale_mod',
-						'lot_notes')},
-				'_object': {
-					'postprocess': add_pir_object_uri_factory(self.helper),
-					'properties': (
-						'title',
-						'title_modifier',
-						'object_type',
-						'materials',
-						'dimensions',
-						'formatted_dimens',
-						'format',
-						'genre',
-						'subject',
-						'inscription',
-						'present_location',
-						'_artists',
-						'hand_note',
-						'post_sale',
-						'prev_sale',
-						'prev_owner',
-						'post_owner',
-						'portal')},
-				'estimated_price': {
-					'postprocess': lambda d, p: add_crom_price(d, p, services, add_citations=True),
-					'properties': (
-						'est_price',
-						'est_price_curr',
-						'est_price_desc',
-						'est_price_so')},
-				'start_price': {
-					'postprocess': lambda d, p: add_crom_price(d, p, services, add_citations=True),
-					'properties': (
-						'start_price',
-						'start_price_curr',
-						'start_price_desc',
-						'start_price_so')},
-				'ask_price': {
-					'postprocess': lambda d, p: add_crom_price(d, p, services, add_citations=True),
-					'properties': (
-						'ask_price',
-						'ask_price_curr',
-						'ask_price_so')},
-			}),
 			pipeline.projects.sales.lots.AddAuctionOfLot(helper=self.helper),
 			_input=records.output
 		)
-		
+
 		auctions_of_lot = graph.add_chain(
 			ExtractKeyedValue(key='_event_causing_prov_entry'),
 			OnlyRecordsOfType(type=vocab.Auction),
 			_input=sales.output
 		)
-		
+
 		private_sale_activities = graph.add_chain(
 			ExtractKeyedValue(key='_event_causing_prov_entry'),
 			OnlyRecordsOfType(type=vocab.Negotiating),
 			_input=sales.output
 		)
-		
+
 		lottery_drawings = graph.add_chain(
 			ExtractKeyedValue(key='_event_causing_prov_entry'),
 			OnlyRecordsOfType(type=vocab.LotteryDrawing),
 			_input=sales.output
 		)
-		
+
 		if serialize:
 			# write SALES data
-			self.add_serialization_chain(graph, auctions_of_lot.output, model=self.models['AuctionOfLot'])
-			self.add_serialization_chain(graph, private_sale_activities.output, model=self.models['Activity'])
-			self.add_serialization_chain(graph, lottery_drawings.output, model=self.models['Drawing'])
+			self.add_serialization_chain(graph, auctions_of_lot.output, model=self.models['AuctionOfLot'], limit=1000)
+			self.add_serialization_chain(graph, private_sale_activities.output, model=self.models['Activity'], limit=1000)
+			self.add_serialization_chain(graph, lottery_drawings.output, model=self.models['Drawing'], limit=1000)
 		return sales
 
 	def add_object_chain(self, graph, sales, serialize=True):
@@ -939,6 +1245,7 @@ class SalesPipeline(PipelineBase):
 			pipeline.projects.sales.objects.PopulateSalesObject(helper=self.helper),
 			pipeline.linkedart.MakeLinkedArtHumanMadeObject(),
 			pipeline.projects.sales.objects.AddArtists(helper=self.helper),
+			RecordCounter(name='sales_records', verbose=self.debug),
 			_input=sales.output
 		)
 
@@ -955,8 +1262,8 @@ class SalesPipeline(PipelineBase):
 		if serialize:
 			# write OBJECTS data
 			self.add_serialization_chain(graph, events.output, model=self.models['Event'])
-			self.add_serialization_chain(graph, objects.output, model=self.models['HumanMadeObject'])
-			self.add_serialization_chain(graph, original_objects.output, model=self.models['HumanMadeObject'])
+			self.add_serialization_chain(graph, objects.output, model=self.models['HumanMadeObject'], use_memory_writer=False)
+			self.add_serialization_chain(graph, original_objects.output, model=self.models['HumanMadeObject'], use_memory_writer=False)
 
 		return objects
 
@@ -968,44 +1275,8 @@ class SalesPipeline(PipelineBase):
 		)
 		if serialize:
 			# write SETS data
-			self.add_serialization_chain(graph, sets.output, model=self.models['Set'])
+			self.add_serialization_chain(graph, sets.output, model=self.models['Set'], limit=1000)
 		return sets
-
-	def add_places_chain(self, graph, auction_events, key='_locations', serialize=True):
-		'''Add extraction and serialization of locations.'''
-		places = graph.add_chain(
-			ExtractKeyedValues(key=key),
-			RecursiveExtractKeyedValue(key='part_of'),
-			_input=auction_events.output
-		)
-		if serialize:
-			# write OBJECTS data
-			self.add_serialization_chain(graph, places.output, model=self.models['Place'])
-		return places
-
-	def add_person_or_group_chain(self, graph, input, key=None, serialize=True):
-		'''Add extraction and serialization of people and groups.'''
-		if key:
-			extracted = graph.add_chain(
-				ExtractKeyedValues(key=key),
-				_input=input.output
-			)
-		else:
-			extracted = input
-
-		people = graph.add_chain(
-			OnlyRecordsOfType(type=model.Person),
-			_input=extracted.output
-		)
-		groups = graph.add_chain(
-			OnlyRecordsOfType(type=model.Group),
-			_input=extracted.output
-		)
-		if serialize:
-			# write OBJECTS data
-			self.add_serialization_chain(graph, people.output, model=self.models['Person'])
-			self.add_serialization_chain(graph, groups.output, model=self.models['Group'])
-		return people
 
 	def add_visual_item_chain(self, graph, objects, serialize=True):
 		'''Add transformation of visual items to the bonobo pipeline.'''
@@ -1024,6 +1295,16 @@ class SalesPipeline(PipelineBase):
 		texts = graph.add_chain(
 			ExtractKeyedValue(key='_record'),
 			pipeline.linkedart.MakeLinkedArtLinguisticObject(),
+			_input=objects.output
+		)
+		if serialize:
+			# write RECORD data
+			self.add_serialization_chain(graph, texts.output, model=self.models['LinguisticObject'], limit=1000)
+		return texts
+
+	def add_texts_chain(self, graph, objects, serialize=True):
+		texts = graph.add_chain(
+			ExtractKeyedValues(key='_texts'),
 			_input=objects.output
 		)
 		if serialize:
@@ -1054,26 +1335,25 @@ class SalesPipeline(PipelineBase):
 		for g in component1:
 			auction_events_records = g.add_chain(
 				MatchingFiles(path='/', pattern=self.auction_events_files_pattern, fs='fs.data.sales'),
-				CurriedCSVReader(fs='fs.data.sales', limit=self.limit),
-				AddFieldNames(field_names=self.auction_events_headers)
+				CurriedCSVReader(fs='fs.data.sales', limit=self.limit, field_names=self.auction_events_headers),
+# 				AddFieldNames(field_names=self.auction_events_headers)
 			)
 
 			auction_events = self.add_auction_events_chain(g, auction_events_records, serialize=True)
 			_ = self.add_catalog_linguistic_objects_chain(g, auction_events, serialize=True)
 			_ = self.add_places_chain(g, auction_events, serialize=True)
 
-			houses = g.add_chain(
-				ExtractKeyedValues(key='auction_house'),
-				pipeline.linkedart.MakeLinkedArtAuctionHouseOrganization(),
+			organizers = g.add_chain(
+				ExtractKeyedValues(key='_organizers'),
 				_input=auction_events.output
 			)
-			_ = self.add_person_or_group_chain(g, houses, serialize=True)
+			_ = self.add_person_or_group_chain(g, organizers, serialize=True)
 
 		for g in component2:
 			physical_catalog_records = g.add_chain(
 				MatchingFiles(path='/', pattern=self.catalogs_files_pattern, fs='fs.data.sales'),
-				CurriedCSVReader(fs='fs.data.sales', limit=self.limit),
-				AddFieldNames(field_names=self.catalogs_headers),
+				CurriedCSVReader(fs='fs.data.sales', limit=self.limit, field_names=self.catalogs_headers),
+# 				AddFieldNames(field_names=self.catalogs_headers),
 			)
 
 			catalogs = self.add_physical_catalogs_chain(g, physical_catalog_records, serialize=True)
@@ -1088,11 +1368,12 @@ class SalesPipeline(PipelineBase):
 		for g in component3:
 			contents_records = g.add_chain(
 				MatchingFiles(path='/', pattern=self.contents_files_pattern, fs='fs.data.sales'),
-				CurriedCSVReader(fs='fs.data.sales', limit=self.limit),
-				AddFieldNames(field_names=self.contents_headers),
+				CurriedCSVReader(fs='fs.data.sales', limit=self.limit, field_names=self.contents_headers),
+# 				AddFieldNames(field_names=self.contents_headers),
 			)
 			sales = self.add_sales_chain(g, contents_records, services, serialize=True)
 			_ = self.add_lot_set_chain(g, sales, serialize=True)
+			_ = self.add_texts_chain(g, sales, serialize=True)
 			objects = self.add_object_chain(g, sales, serialize=True)
 			_ = self.add_places_chain(g, objects, serialize=True)
 			acquisitions = self.add_acquisitions_chain(g, objects, serialize=True)
@@ -1117,25 +1398,28 @@ class SalesPipeline(PipelineBase):
 		return self.graph_0
 
 	def get_graph_1(self, **kwargs):
-		'''Construct the bonobo pipeline to fully transform Provenance data from CSV to JSON-LD.'''
+		'''Construct the bonobo pipeline to fully transform Sales data from CSV to JSON-LD.'''
 		if not self.graph_1:
 			self._construct_graph(**kwargs)
 		return self.graph_1
 
 	def get_graph_2(self, **kwargs):
-		'''Construct the bonobo pipeline to fully transform Provenance data from CSV to JSON-LD.'''
+		'''Construct the bonobo pipeline to fully transform Sales data from CSV to JSON-LD.'''
 		if not self.graph_2:
 			self._construct_graph(**kwargs)
 		return self.graph_2
 
 	def get_graph_3(self, **kwargs):
-		'''Construct the bonobo pipeline to fully transform Provenance data from CSV to JSON-LD.'''
+		'''Construct the bonobo pipeline to fully transform Sales data from CSV to JSON-LD.'''
 		if not self.graph_3:
 			self._construct_graph(**kwargs)
 		return self.graph_3
 
+	def checkpoint(self):
+		pass
+
 	def run(self, services=None, **options):
-		'''Run the Provenance bonobo pipeline.'''
+		'''Run the Sales bonobo pipeline.'''
 		print(f'- Limiting to {self.limit} records per file', file=sys.stderr)
 		if not services:
 			services = self.get_services(**options)
@@ -1144,13 +1428,19 @@ class SalesPipeline(PipelineBase):
 		graph1 = self.get_graph_1(**options, services=services)
 		self.run_graph(graph1, services=services)
 
+		self.checkpoint()
+
 		print('Running graph component 2...', file=sys.stderr)
 		graph2 = self.get_graph_2(**options, services=services)
 		self.run_graph(graph2, services=services)
 
+		self.checkpoint()
+
 		print('Running graph component 3...', file=sys.stderr)
 		graph3 = self.get_graph_3(**options, services=services)
 		self.run_graph(graph3, services=services)
+
+		self.checkpoint()
 
 		print('Serializing static instances...', file=sys.stderr)
 		for model, instances in self.static_instances.used_instances().items():
@@ -1202,7 +1492,7 @@ class SalesPipeline(PipelineBase):
 
 class SalesFilePipeline(SalesPipeline):
 	'''
-	Provenance pipeline with serialization to files based on Arches model and resource UUID.
+	Sales pipeline with serialization to files based on Arches model and resource UUID.
 
 	If in `debug` mode, JSON serialization will use pretty-printing. Otherwise,
 	serialization will be compact.
@@ -1257,22 +1547,53 @@ class SalesFilePipeline(SalesPipeline):
 			json.dump(post_sale_rewrite_map, f)
 			print(f'Saved post-sales rewrite map to {rewrite_map_filename}')
 
+	def checkpoint(self):
+		self.flush_writers(verbose=False)
+		super().checkpoint()
+
+	def flush_writers(self, **kwargs):
+		verbose = kwargs.get('verbose', True)
+		count = len(self.writers)
+		for seq_no, w in enumerate(self.writers):
+			if verbose:
+				print('[%d/%d] writers being flushed' % (seq_no+1, count))
+			if isinstance(w, MergingMemoryWriter):
+				w.flush(**kwargs)
+
 	def run(self, **options):
-		'''Run the Provenance bonobo pipeline.'''
+		'''Run the Sales bonobo pipeline.'''
 		start = timeit.default_timer()
 		services = self.get_services(**options)
 		super().run(services=services, **options)
 		print(f'Pipeline runtime: {timeit.default_timer() - start}', file=sys.stderr)
 
-		count = len(self.writers)
-		for seq_no, w in enumerate(self.writers):
-			print('[%d/%d] writers being flushed' % (seq_no+1, count))
-			if isinstance(w, MergingMemoryWriter):
-				w.flush()
+		self.flush_writers()
 
 		print('====================================================')
 		print('Compiling post-sale data...')
 		post_map = services['post_sale_map']
 		self.generate_prev_post_sales_data(post_map)
 		print(f'>>> {len(post_map)} post sales records')
+
+		sizes = {k: sys.getsizeof(v) for k, v in services.items()}
+		for k in sorted(services.keys(), key=lambda k: sizes[k]):
+			print(f'{k:<20}  {sizes[k]}')
+		objgraph.show_most_common_types(limit=50)
+		
+		print('Record counts:')
+		for k, v in services['counts'].items():
+			print(f'{v:<10} {k}')
+		print('\n\n')
 		print('Total runtime: ', timeit.default_timer() - start)
+
+# 		for type in ('AttributeAssignment', 'Person', 'Production', 'Painting'):
+# 			objects = objgraph.by_type(type)
+# 			for i in range(min(5, len(objects))):
+# 				objgraph.show_chain(
+# 					objgraph.find_backref_chain(
+# 						random.choice(objects),
+# 						objgraph.is_proper_module
+# 					),
+# 					filename=f'chain.{type}.{i}.png'
+# 				)
+

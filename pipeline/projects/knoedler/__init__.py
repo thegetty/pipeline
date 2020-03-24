@@ -877,8 +877,10 @@ class ModelInventorying(TransactionHandler):
 class KnoedlerPipeline(PipelineBase):
 	'''Bonobo-based pipeline for transforming Knoedler data from CSV into JSON-LD.'''
 	def __init__(self, input_path, data, **kwargs):
-		self.uid_tag_prefix = f'tag:getty.edu,2019:digital:pipeline:knoedler:REPLACE-WITH-UUID#'
+		self.uid_tag_prefix = f'tag:getty.edu,2019:digital:pipeline:REPLACE-WITH-UUID:knoedler#'
 		project_name = 'knoedler'
+		self.input_path = input_path
+		self.services = None
 
 		helper = KnoedlerUtilityHelper(project_name, self.uid_tag_prefix)
 		super().__init__(project_name, helper=helper)
@@ -890,7 +892,6 @@ class KnoedlerPipeline(PipelineBase):
 		self.files_pattern = data['files_pattern']
 		self.limit = kwargs.get('limit')
 		self.debug = kwargs.get('debug', False)
-		self.input_path = input_path
 
 		fs = bonobo.open_fs(input_path)
 		with fs.open(self.header_file, newline='') as csvfile:
@@ -1304,8 +1305,7 @@ class KnoedlerPipeline(PipelineBase):
 
 		contents_records = g.add_chain(
 			MatchingFiles(path='/', pattern=self.files_pattern, fs='fs.data.knoedler'),
-			CurriedCSVReader(fs='fs.data.knoedler', limit=self.limit),
-			AddFieldNames(field_names=self.headers),
+			CurriedCSVReader(fs='fs.data.knoedler', limit=self.limit, field_names=self.headers),
 		)
 		sales = self.add_sales_chain(g, contents_records, services, serialize=True)
 		self.add_transaction_chains(g, sales, services, serialize=True)

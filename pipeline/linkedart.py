@@ -402,7 +402,8 @@ class MakeLinkedArtPerson(MakeLinkedArtAgent):
 			else:
 				break
 		for n in data.get('nationality', []):
-			who.classified_as = n
+			if isinstance(n, model.BaseResource):
+				who.classified_as = n
 
 		# nationality field can contain other information, but not useful.
 		# XXX Intentionally ignored but validate with GRI

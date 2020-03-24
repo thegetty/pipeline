@@ -60,9 +60,7 @@ from pipeline.linkedart import \
 from pipeline.io.csv import CurriedCSVReader
 from pipeline.nodes.basic import \
 			RecordCounter, \
-			AddFieldNames, \
-			GroupRepeatingKeys, \
-			GroupKeys, \
+			KeyManagement, \
 			AddArchesModel, \
 			Serializer, \
 			Trace
@@ -968,6 +966,7 @@ class KnoedlerPipeline(PipelineBase):
 			'make_la_lo': MakeLinkedArtLinguisticObject(),
 			'make_la_hmo': MakeLinkedArtHumanMadeObject(),
 			'make_la_org': MakeLinkedArtOrganization(),
+			'counts': defaultdict(int)
 		})
 		return services
 
@@ -976,194 +975,198 @@ class KnoedlerPipeline(PipelineBase):
 		sales_records = graph.add_chain(
 # 			"star_record_no",
 # 			"pi_record_no",
-			GroupRepeatingKeys(
+			KeyManagement(
 				drop_empty=True,
-				mapping={
-					'_artists': {
-						'postprocess': [
-							filter_empty_person,
-							lambda x, _: strip_key_prefix('artist_', x),
-						],
-						'prefixes': (
-							"artist_name",
-							"artist_authority",
-							"artist_nationality",
-							"artist_attribution_mod",
-							"artist_attribution_mod_auth",
-							"star_rec_no",
-							"artist_ulan")},
-					'purchase_seller': {
-						'postprocess': [
-							filter_empty_person,
-							lambda x, _: strip_key_prefix('purchase_seller_', x),
-						],
-						'prefixes': (
-							"purchase_seller_name",
-							"purchase_seller_loc",
-							"purchase_seller_auth_name",
-							"purchase_seller_auth_loc",
-							"purchase_seller_auth_mod",
-							"purchase_seller_ulan",
-						)
-					},
-					'purchase_buyer': {
-						'postprocess': [
-							filter_empty_person,
-							lambda x, _: strip_key_prefix('purchase_buyer_', x),
-							rename_keys({'own': 'name'}),
-						],
-						'prefixes': (
-							"purchase_buyer_own",
-							"purchase_buyer_share",
-							"purchase_buyer_ulan",
-						)
-					},
-					'prev_own': {
-						'postprocess': [
-							lambda x, _: strip_key_prefix('prev_', x),
-							rename_keys({'own': 'name'}),
-						],
-						'prefixes': (
-							"prev_own",
-							"prev_own_loc",
-							"prev_own_ulan",
-						)
-					},
-					'sale_buyer': {
-						'postprocess': [
-							lambda x, _: strip_key_prefix('sale_buyer_', x),
-						],
-						'prefixes': (
-							"sale_buyer_name",
-							"sale_buyer_loc",
-							"sale_buyer_mod",
-							"sale_buyer_auth_name",
-							"sale_buyer_auth_addr",
-							"sale_buyer_auth_mod",
-							"sale_buyer_ulan",
-						)
+				operations=[
+					{
+						'group_repeating': {
+							'_artists': {
+								'postprocess': [
+									filter_empty_person,
+									lambda x, _: strip_key_prefix('artist_', x),
+								],
+								'prefixes': (
+									"artist_name",
+									"artist_authority",
+									"artist_nationality",
+									"artist_attribution_mod",
+									"artist_attribution_mod_auth",
+									"star_rec_no",
+									"artist_ulan")},
+							'purchase_seller': {
+								'postprocess': [
+									filter_empty_person,
+									lambda x, _: strip_key_prefix('purchase_seller_', x),
+								],
+								'prefixes': (
+									"purchase_seller_name",
+									"purchase_seller_loc",
+									"purchase_seller_auth_name",
+									"purchase_seller_auth_loc",
+									"purchase_seller_auth_mod",
+									"purchase_seller_ulan",
+								)
+							},
+							'purchase_buyer': {
+								'postprocess': [
+									filter_empty_person,
+									lambda x, _: strip_key_prefix('purchase_buyer_', x),
+									rename_keys({'own': 'name'}),
+								],
+								'prefixes': (
+									"purchase_buyer_own",
+									"purchase_buyer_share",
+									"purchase_buyer_ulan",
+								)
+							},
+							'prev_own': {
+								'postprocess': [
+									lambda x, _: strip_key_prefix('prev_', x),
+									rename_keys({'own': 'name'}),
+								],
+								'prefixes': (
+									"prev_own",
+									"prev_own_loc",
+									"prev_own_ulan",
+								)
+							},
+							'sale_buyer': {
+								'postprocess': [
+									lambda x, _: strip_key_prefix('sale_buyer_', x),
+								],
+								'prefixes': (
+									"sale_buyer_name",
+									"sale_buyer_loc",
+									"sale_buyer_mod",
+									"sale_buyer_auth_name",
+									"sale_buyer_auth_addr",
+									"sale_buyer_auth_mod",
+									"sale_buyer_ulan",
+								)
+							}
+						},
+						'group': {
+							'present_location': {
+								'postprocess': lambda x, _: strip_key_prefix('present_loc_', x),
+								'properties': (
+									"present_loc_geog",
+									"present_loc_inst",
+									"present_loc_acc",
+									"present_loc_note",
+									"present_loc_ulan",
+								)
+							},
+							'consigner': {
+								'postprocess': lambda x, _: strip_key_prefix('consign_', x),
+								'properties': (
+									"consign_no",
+									"consign_name",
+									"consign_loc",
+									"consign_ulan",
+								)
+							},
+							'object': {
+								'properties': (
+									"knoedler_number",
+									"title",
+									"subject",
+									"genre",
+									"object_type",
+									"materials",
+									"dimensions",
+								)
+							},
+							'sale_date': {
+								'postprocess': lambda x, _: strip_key_prefix('sale_date_', x),
+								'properties': (
+									"sale_date_year",
+									"sale_date_month",
+									"sale_date_day",
+								)
+							},
+							'entry_date': {
+								'postprocess': lambda x, _: strip_key_prefix('entry_date_', x),
+								'properties': (
+									"entry_date_year",
+									"entry_date_month",
+									"entry_date_day",
+								)
+							},
+							'purchase': {
+								'postprocess': [
+									lambda x, _: strip_key_prefix('purch_', x),
+									lambda d, p: add_crom_price(d, p, services),
+								],
+								'properties': (
+									"purch_amount",
+									"purch_currency",
+									"purch_note",
+								)
+							},
+							'sale': {
+								'postprocess': [
+									lambda x, _: strip_key_prefix('price_', x),
+									lambda d, p: add_crom_price(d, p, services),
+								],
+								'properties': (
+									"price_amount",
+									"price_currency",
+									"price_note",
+								)
+							},
+							'purchase_knoedler_share': {
+								'postprocess': [
+									lambda x, _: strip_key_prefix('knoedpurch_', x),
+									rename_keys({'amt': 'amount', 'curr': 'currency'}),
+									lambda d, p: add_crom_price(d, p, services),
+								],
+								'properties': (
+									"knoedpurch_amt",
+									"knoedpurch_curr",
+									"knoedpurch_note",
+								)
+							},
+							'sale_knoedler_share': {
+								'postprocess': [
+									lambda x, _: strip_key_prefix('knoedshare_', x),
+									rename_keys({'amt': 'amount', 'curr': 'currency'}),
+									lambda d, p: add_crom_price(d, p, services),
+								],
+								'properties': (
+									"knoedshare_amt",
+									"knoedshare_curr",
+									"knoedshare_note",
+								)
+							},
+							'book_record': {
+								'properties': (
+									"stock_book_no",
+									"page_number",
+									"row_number",
+									"description",
+									"folio",
+									"link",
+									"heading",
+									"subheading",
+									"verbatim_notes",
+									"working_note",
+									"transaction",
+								)
+							},
+							'post_owner': {
+								'postprocess': [
+									rename_keys({'post_owner': 'post_owner_name'}),
+									lambda x, _: strip_key_prefix('post_owner_', x),
+								],
+								'properties': (
+									"post_owner",
+									"post_owner_ulan",
+								)
+							}
+						}
 					}
-				}
+				]
 			),
-			GroupKeys(mapping={
-				'present_location': {
-					'postprocess': lambda x, _: strip_key_prefix('present_loc_', x),
-					'properties': (
-						"present_loc_geog",
-						"present_loc_inst",
-						"present_loc_acc",
-						"present_loc_note",
-						"present_loc_ulan",
-					)
-				},
-				'consigner': {
-					'postprocess': lambda x, _: strip_key_prefix('consign_', x),
-					'properties': (
-						"consign_no",
-						"consign_name",
-						"consign_loc",
-						"consign_ulan",
-					)
-				},
-				'object': {
-					'properties': (
-						"knoedler_number",
-						"title",
-						"subject",
-						"genre",
-						"object_type",
-						"materials",
-						"dimensions",
-					)
-				},
-				'sale_date': {
-					'postprocess': lambda x, _: strip_key_prefix('sale_date_', x),
-					'properties': (
-						"sale_date_year",
-						"sale_date_month",
-						"sale_date_day",
-					)
-				},
-				'entry_date': {
-					'postprocess': lambda x, _: strip_key_prefix('entry_date_', x),
-					'properties': (
-						"entry_date_year",
-						"entry_date_month",
-						"entry_date_day",
-					)
-				},
-				'purchase': {
-					'postprocess': [
-						lambda x, _: strip_key_prefix('purch_', x),
-						lambda d, p: add_crom_price(d, p, services),
-					],
-					'properties': (
-						"purch_amount",
-						"purch_currency",
-						"purch_note",
-					)
-				},
-				'sale': {
-					'postprocess': [
-						lambda x, _: strip_key_prefix('price_', x),
-						lambda d, p: add_crom_price(d, p, services),
-					],
-					'properties': (
-						"price_amount",
-						"price_currency",
-						"price_note",
-					)
-				},
-				'purchase_knoedler_share': {
-					'postprocess': [
-						lambda x, _: strip_key_prefix('knoedpurch_', x),
-						rename_keys({'amt': 'amount', 'curr': 'currency'}),
-						lambda d, p: add_crom_price(d, p, services),
-					],
-					'properties': (
-						"knoedpurch_amt",
-						"knoedpurch_curr",
-						"knoedpurch_note",
-					)
-				},
-				'sale_knoedler_share': {
-					'postprocess': [
-						lambda x, _: strip_key_prefix('knoedshare_', x),
-						rename_keys({'amt': 'amount', 'curr': 'currency'}),
-						lambda d, p: add_crom_price(d, p, services),
-					],
-					'properties': (
-						"knoedshare_amt",
-						"knoedshare_curr",
-						"knoedshare_note",
-					)
-				},
-				'book_record': {
-					'properties': (
-						"stock_book_no",
-						"page_number",
-						"row_number",
-						"description",
-						"folio",
-						"link",
-						"heading",
-						"subheading",
-						"verbatim_notes",
-						"working_note",
-						"transaction",
-					)
-				},
-				'post_owner': {
-					'postprocess': [
-						rename_keys({'post_owner': 'post_owner_name'}),
-						lambda x, _: strip_key_prefix('post_owner_', x),
-					],
-					'properties': (
-						"post_owner",
-						"post_owner_ulan",
-					)
-				}
-			}),
 			RecordCounter(name='records', verbose=self.debug),
 			_input=records.output
 		)

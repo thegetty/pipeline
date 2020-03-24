@@ -836,7 +836,6 @@ class ModelReturn(ModelSale):
 		if not buyers:
 			buyers = sellers.copy()
 			data['sale_buyer'] = buyers
-# 		pprint.pprint(data)
 		yield from super().__call__(data, make_la_person)
 
 class ModelInventorying(TransactionHandler):
@@ -949,10 +948,9 @@ class KnoedlerPipeline(PipelineBase):
 		for k in same_objects_map:
 			leaders.add(same_objects_map[k][0])
 
-	# Set up environment
-	def get_services(self):
+	def setup_services(self):
 		'''Return a `dict` of named services available to the bonobo pipeline.'''
-		services = super().get_services()
+		services = super().setup_services()
 		
 		same_objects = services['objects_same']['objects']
 		same_object_id_map = self._construct_same_object_map(same_objects)

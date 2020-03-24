@@ -545,10 +545,18 @@ class PopulateObject:
 	@staticmethod
 	def populate_object_statements(data:dict, default_unit=None):
 		hmo = get_crom_object(data)
+		sales_record = get_crom_object(data.get('_record'))
+
+		format = data.get('format')
+		if format:
+			formatstmt = vocab.PhysicalStatement(ident='', content=format)
+			if sales_record:
+				formatstmt.referred_to_by = sales_record
+			hmo.referred_to_by = formatstmt
+
 		materials = data.get('materials')
 		if materials:
 			matstmt = vocab.MaterialStatement(ident='', content=materials)
-			sales_record = get_crom_object(data.get('_record'))
 			if sales_record:
 				matstmt.referred_to_by = sales_record
 			hmo.referred_to_by = matstmt
@@ -556,7 +564,6 @@ class PopulateObject:
 		dimstr = data.get('dimensions')
 		if dimstr:
 			dimstmt = vocab.DimensionStatement(ident='', content=dimstr)
-			sales_record = get_crom_object(data.get('_record'))
 			if sales_record:
 				dimstmt.referred_to_by = sales_record
 			hmo.referred_to_by = dimstmt

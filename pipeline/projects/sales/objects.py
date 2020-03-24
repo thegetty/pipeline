@@ -120,35 +120,6 @@ class PopulateSalesObject(Configurable, pipeline.linkedart.PopulateObject):
 		if notes and notes.lower().startswith('destroyed'):
 			self.populate_destruction_events(data, notes, type_map=destruction_types_map)
 
-	@staticmethod
-	def _populate_object_statements(data:dict):
-		hmo = get_crom_object(data)
-		sales_record = get_crom_object(data['_record'])
-		
-		format = data.get('format')
-		if format:
-			formatstmt = vocab.PhysicalStatement(ident='', content=format)
-			formatstmt.referred_to_by = sales_record
-			hmo.referred_to_by = formatstmt
-
-		materials = data.get('materials')
-		if materials:
-			matstmt = vocab.MaterialStatement(ident='', content=materials)
-			matstmt.referred_to_by = sales_record
-			hmo.referred_to_by = matstmt
-
-		dimstr = data.get('dimensions')
-		if dimstr:
-			dimstmt = vocab.DimensionStatement(ident='', content=dimstr)
-			dimstmt.referred_to_by = sales_record
-			hmo.referred_to_by = dimstmt
-			for dim in extract_physical_dimensions(dimstr):
-				dim.referred_to_by = sales_record
-				hmo.dimension = dim
-		else:
-			pass
-	# 		print(f'No dimension data was parsed from the dimension statement: {dimstr}')
-
 	def _populate_object_present_location(self, data:dict, now_key, destruction_types_map):
 		hmo = get_crom_object(data)
 		location = data.get('present_location')
@@ -281,7 +252,7 @@ class PopulateSalesObject(Configurable, pipeline.linkedart.PopulateObject):
 		record = self._populate_object_catalog_record(data, parent, lot, cno, parent['pi_record_no'])
 		self._populate_object_visual_item(data, subject_genre)
 		self._populate_object_destruction(data, parent, destruction_types_map)
-		self._populate_object_statements(data)
+		self.populate_object_statements(data)
 		self._populate_object_present_location(data, now_key, destruction_types_map)
 		self._populate_object_notes(data, parent, unique_catalogs)
 		self._populate_object_prev_post_sales(data, now_key, post_sale_map)

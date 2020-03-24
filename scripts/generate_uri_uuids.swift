@@ -33,18 +33,6 @@ if filemgr.fileExists(atPath: map_file) {
 	existing_map = [:]
 }
 
-extension Data {
-	struct HexEncodingOptions: OptionSet {
-		let rawValue: Int
-		static let upperCase = HexEncodingOptions(rawValue: 1 << 0)
-	}
-
-	func hexEncodedString(options: HexEncodingOptions = []) -> String {
-		let format = options.contains(.upperCase) ? "%02hhX" : "%02hhx"
-		return map { String(format: format, $0) }.joined()
-	}
-}
-
 func assign_uuids(for uris: Set<String>, prefix: String) -> [String:String] {
 	print("Assigning \(uris.count) UUIDs")
 	var m = [String:String]()

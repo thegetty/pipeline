@@ -437,7 +437,7 @@ def date_cleaner(value):
 		value = value.replace('af.', 'aft.')
 
 	if not value:
-		return value
+		return None
 
 	elif value.startswith("|"):
 		# Broken? null it out
@@ -457,7 +457,7 @@ def date_cleaner(value):
 			y = int(value[:4])
 			return [datetime(y,1,1), datetime(y+10,1,1)]
 		else:
-			print("Bad YYYYs date: %s" % value)
+			warnings.warn("Bad YYYYs date: %s" % value)
 			return None
 
 	elif len(value) == 5 and value[:4].isdigit() and value.endswith('-'):
@@ -477,7 +477,7 @@ def date_cleaner(value):
 			elif value.find('-') > -1:
 				val = date_parse(value, '-')
 			else:
-				print("bad circa: %s" % value)
+				warnings.warn("bad circa: %s" % value)
 				return None
 
 			val[0] -= CIRCA_D
@@ -492,7 +492,7 @@ def date_cleaner(value):
 		try:
 			y = int(value)
 		except:
-			print("Bad aft value: %s" % value)
+			warnings.warn("Bad aft value: %s" % value)
 			return None
 		return [datetime(y,1,1), None]
 
@@ -534,8 +534,8 @@ def date_cleaner(value):
 				r = [d, d+timedelta(days=maxday)]
 				return r
 
-		print("fell through to: %s" % value)
-		return value
+		warnings.warn(f'fell through to: {value!r}')
+		return None
 
 
 @contextmanager

@@ -3,6 +3,7 @@ import os.path
 import hashlib
 import uuid
 import pprint
+import traceback
 import warnings
 from collections import Counter, defaultdict, namedtuple
 # import multiprocessing
@@ -82,7 +83,11 @@ class MergingMemoryWriter(Configurable):
 				if verbose:
 					print('[%d/%d] %.1f%% writing objects for model %s' % (i+1, count, pct, self.model))
 			d = add_crom_data(data={}, what=o)
-			writer(d)
+			try:
+				writer(d)
+			except:
+				traceback.print_exc()
+				continue
 		if verbose:
 			warnings.warn(f'MergingMemoryWriter flush for model {self.model} with {len(self.data)} items')
 		self.data = {}

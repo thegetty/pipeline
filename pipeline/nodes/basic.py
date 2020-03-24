@@ -205,7 +205,8 @@ class GroupKeys(Configurable):
 					subd = p(subd, data)
 			data[key] = subd
 		for k in to_delete:
-			del data[k]
+			with suppress(KeyError):
+				del data[k]
 		return data
 
 class AddDataDependentArchesModel(Configurable):

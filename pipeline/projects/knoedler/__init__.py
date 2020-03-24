@@ -948,6 +948,7 @@ class KnoedlerPipeline(PipelineBase):
 		leaders = set()
 		for k in same_objects_map:
 			leaders.add(same_objects_map[k][0])
+		return same_object_id_map
 
 	def setup_services(self):
 		'''Return a `dict` of named services available to the bonobo pipeline.'''

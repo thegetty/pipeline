@@ -273,6 +273,10 @@ def add_crom_price(data, parent, services, add_citations=False):
 	Add modeling data for `MonetaryAmount` based on properties of the supplied `data` dict.
 	'''
 	currencies = services['currencies']
+	amt = data.get('amount', '')
+	if '[' in amt:
+		data['amount'] = amt.replace('[', '').replace(']', '')
+		pprint.pprint(data)
 	amnt = extract_monetary_amount(data, currency_mapping=currencies, add_citations=add_citations)
 	if amnt:
 		add_crom_data(data=data, what=amnt)
@@ -1131,10 +1135,12 @@ class KnoedlerPipeline(PipelineBase):
 								)
 							},
 							'purchase': {
-								'postprocess': [
-									lambda x, _: strip_key_prefix('purch_', x),
-									lambda d, p: add_crom_price(d, p, services),
-								],
+								'rename_keys': {
+									"purch_amount": 'amount',
+									"purch_currency": 'currency',
+									"purch_note": 'note',
+								},
+								'postprocess': [lambda d, p: add_crom_price(d, p, services)],
 								'properties': (
 									"purch_amount",
 									"purch_currency",
@@ -1142,10 +1148,12 @@ class KnoedlerPipeline(PipelineBase):
 								)
 							},
 							'sale': {
-								'postprocess': [
-									lambda x, _: strip_key_prefix('price_', x),
-									lambda d, p: add_crom_price(d, p, services),
-								],
+								'rename_keys': {
+									"price_amount": 'amount',
+									"price_currency": 'currency',
+									"price_note": 'note',
+								},
+								'postprocess': [lambda d, p: add_crom_price(d, p, services)],
 								'properties': (
 									"price_amount",
 									"price_currency",

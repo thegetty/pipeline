@@ -198,7 +198,6 @@ class KnoedlerUtilityHelper(UtilityHelper):
 		book_id = rec['stock_book_no']
 		page_id = rec['page_number']
 		row_id = rec['row_number']
-		hmo = get_crom_object(data['_object'])
 
 		dir = 'In' if incoming else 'Out'
 		price = data.get('purchase_knoedler_share') if incoming else data.get('sale_knoedler_share')
@@ -330,7 +329,6 @@ class AddGroupURI(Configurable):
 		auth_name = data.get('authority')
 		if data.get('ulan'):
 			ulan = data['ulan']
-			key = f'GROUP-ULAN-{ulan}'
 			data['uri'] = self.helper.make_shared_uri('GROUP', 'ULAN', ulan)
 			data['ulan'] = ulan
 		elif auth_name and '[' not in auth_name:
@@ -642,12 +640,10 @@ class TransactionHandler(Configurable):
 
 	def _add_procurement_payment(self, data:dict, tx, shared_purchase, purchase, people, parenthetical, incoming):
 		knoedler = self.helper.static_instances.get_instance('Group', 'knoedler')
-		sales_record = get_crom_object(data['_text_row'])
+		knoedler_group = [knoedler]
 
 		hmo = get_crom_object(data['_object'])
 		object_label = f'“{hmo._label}”'
-
-		knoedler_group = [knoedler]
 
 		amnt = get_crom_object(purchase)
 		shared_amnt = get_crom_object(shared_purchase)
@@ -689,35 +685,18 @@ class TransactionHandler(Configurable):
 					for kp in knoedler_group:
 						paym.carried_out_by = kp
 
-	def _procurement(self, data, date_key, participants, purchase=None, shared_purchase=None, shared_people=None, incoming=False):
-		for k in ('_procurements', '_people'):
-			if k not in data:
-				data[k] = []
-
-		date = implode_date(data[date_key])
+	def _add_procurement_acquisition(self, data:dict, tx, people, parenthetical, incoming):
 		rec = data['book_record']
 		pi_rec = data['pi_record_no']
-		odata = data['_object']
 		book_id, page_id, row_id = record_id(rec)
-		sales_record = get_crom_object(data['_text_row'])
 
-		knum = odata.get('knoedler_number')
-		if knum:
-			parenthetical = f'{date}; {knum}'
-		else:
-			parenthetical = f'{date}'
+		knoedler = self.helper.static_instances.get_instance('Group', 'knoedler')
+		knoedler_group = [knoedler]
 
-		hmo = get_crom_object(odata)
-		object_label = f'“{hmo._label}”'
-
-		tx = self._empty_tx(data, incoming)
-		tx_uri = tx.id
+		hmo = get_crom_object(data['_object'])
 
 		dir = 'In' if incoming else 'Out'
 		dir_label = 'Knoedler purchase' if incoming else 'Knoedler sale'
-		tx_data = add_crom_data(data={'uri': tx_uri}, what=tx)
-		self.set_date(tx, data, date_key)
-
 		acq_id = self.helper.make_proj_uri('ACQ', dir, book_id, page_id, row_id)
 		acq = model.Acquisition(ident=acq_id)
 		if self.helper.transaction_contains_multiple_objects(data, incoming):
@@ -727,9 +706,40 @@ class TransactionHandler(Configurable):
 		else:
 			tx._label = f'{dir_label} of {pi_rec} ({parenthetical})'
 		acq.transferred_title_of = hmo
+		for person in people:
+			person = [person]
+			if incoming:
+				tx_from, tx_to = person, knoedler_group
+			else:
+				tx_from, tx_to = knoedler_group, person
 
-		knoedler = self.helper.static_instances.get_instance('Group', 'knoedler')
-		knoedler_group = [knoedler]
+			for p in tx_from:
+				acq.transferred_title_from = p
+			for p in tx_to:
+				acq.transferred_title_to = p
+
+		tx.part = acq
+
+	def _procurement(self, data, date_key, participants, purchase=None, shared_purchase=None, shared_people=None, incoming=False):
+		for k in ('_procurements', '_people'):
+			if k not in data:
+				data[k] = []
+
+		date = implode_date(data[date_key])
+		odata = data['_object']
+		sales_record = get_crom_object(data['_text_row'])
+
+		knum = odata.get('knoedler_number')
+		if knum:
+			parenthetical = f'{date}; {knum}'
+		else:
+			parenthetical = f'{date}'
+
+		tx = self._empty_tx(data, incoming)
+		tx_uri = tx.id
+
+		tx_data = add_crom_data(data={'uri': tx_uri}, what=tx)
+		self.set_date(tx, data, date_key)
 
 		role = 'seller' if incoming else 'buyer'
 		people_data = [
@@ -746,20 +756,7 @@ class TransactionHandler(Configurable):
 
 		self._add_procurement_rights(data, tx, shared_people, incoming)
 		self._add_procurement_payment(data, tx, shared_purchase, purchase, people, parenthetical, incoming)
-
-		for person in people:
-			person = [person]
-			if incoming:
-				tx_from, tx_to = person, knoedler_group
-			else:
-				tx_from, tx_to = knoedler_group, person
-
-			for p in tx_from:
-				acq.transferred_title_from = p
-			for p in tx_to:
-				acq.transferred_title_to = p
-
-		tx.part = acq
+		self._add_procurement_acquisition(data, tx, people, parenthetical, incoming)
 
 		data['_procurements'].append(tx_data)
 		data['_people'].extend(people_data)
@@ -814,7 +811,7 @@ class ModelDestruction(TransactionHandler):
 			d.referred_to_by = vocab.Note(ident='', content=rec['verbatim_notes'])
 		hmo.destroyed_by = d
 
-		tx = self.add_incoming_tx(data)
+		self.add_incoming_tx(data)
 		return data
 
 class ModelTheftOrLoss(TransactionHandler):
@@ -825,7 +822,7 @@ class ModelTheftOrLoss(TransactionHandler):
 		rec = data['book_record']
 		pi_rec = data['pi_record_no']
 		hmo = get_crom_object(data['_object'])
-		tx = self.add_incoming_tx(data)
+		self.add_incoming_tx(data)
 		tx_out = self._empty_tx(data, incoming=False)
 
 		tx_type = rec['transaction']

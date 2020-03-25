@@ -172,7 +172,7 @@ class KnoedlerUtilityHelper(UtilityHelper):
 	def title_value(self, title):
 		if not isinstance(title, str):
 			return
-		
+
 		m = self.title_re.search(title)
 		if m:
 			return m.group(1)
@@ -181,7 +181,7 @@ class KnoedlerUtilityHelper(UtilityHelper):
 	def title_reference(self, title):
 		if not isinstance(title, str):
 			return
-		
+
 		m = self.title_re.search(title)
 		if m:
 			return m.group(4)
@@ -199,7 +199,7 @@ class KnoedlerUtilityHelper(UtilityHelper):
 		page_id = rec['page_number']
 		row_id = rec['row_number']
 		hmo = get_crom_object(data['_object'])
-		
+
 		dir = 'In' if incoming else 'Out'
 		price = data.get('purchase_knoedler_share') if incoming else data.get('sale_knoedler_share')
 		if price:
@@ -506,7 +506,7 @@ class PopulateKnoedlerObject(Configurable, pipeline.linkedart.PopulateObject):
 
 		typestring = odata.get('object_type', '')
 		identifiers = []
-		
+
 		apuri = AddPersonURI(helper=self.helper)
 		mlap = MakeLinkedArtPerson()
 		for a in data.get('_artists', []):
@@ -593,14 +593,14 @@ class TransactionHandler(Configurable):
 		d.value = float(100 * frac)
 		right.dimension = d
 		return right
-		
+
 	def _add_procurement_rights(self, data:dict, tx, shared_people, incoming):
 		knoedler = self.helper.static_instances.get_instance('Group', 'knoedler')
 		sales_record = get_crom_object(data['_text_row'])
 
 		hmo = get_crom_object(data['_object'])
 		object_label = f'“{hmo._label}”'
-		
+
 		# this is the group of people along with Knoedler that made the purchase/sale (len > 1 when there is shared ownership)
 		knoedler_group = [knoedler]
 		if shared_people:
@@ -619,16 +619,16 @@ class TransactionHandler(Configurable):
 				share = p['share']
 				share_frac = Fraction(share)
 				remaining -= share_frac
-				
+
 				right = self.ownership_right(share_frac, person)
-				
+
 				rights.append(right)
 				people.append(person_dict)
 				knoedler_group.append(person)
 				print(f'   {share:<10} {name:<50}')
 			k_right = self.ownership_right(remaining, knoedler)
 			rights.insert(0, k_right)
-			
+
 			total_right = vocab.OwnershipRight(ident='', label=f'Total Right of Ownership of {object_label}')
 			total_right.applies_to = hmo
 			for right in rights:
@@ -663,7 +663,7 @@ class TransactionHandler(Configurable):
 					paym.paid_from = kp
 				else:
 					paym.paid_to = kp
-			
+
 			if shared_amnt:
 				shared_payment_id = tx_uri + '-Payment-Knoedler-share'
 				shared_paym = model.Payment(ident=shared_payment_id, label=f"Knoedler's share of Payment for {object_label} ({parenthetical})")
@@ -700,7 +700,7 @@ class TransactionHandler(Configurable):
 		odata = data['_object']
 		book_id, page_id, row_id = record_id(rec)
 		sales_record = get_crom_object(data['_text_row'])
-		
+
 		knum = odata.get('knoedler_number')
 		if knum:
 			parenthetical = f'{date}; {knum}'
@@ -709,7 +709,7 @@ class TransactionHandler(Configurable):
 
 		hmo = get_crom_object(odata)
 		object_label = f'“{hmo._label}”'
-		
+
 		tx = self._empty_tx(data, incoming)
 		tx_uri = tx.id
 
@@ -753,7 +753,7 @@ class TransactionHandler(Configurable):
 				tx_from, tx_to = person, knoedler_group
 			else:
 				tx_from, tx_to = knoedler_group, person
-			
+
 			for p in tx_from:
 				acq.transferred_title_from = p
 			for p in tx_to:
@@ -843,7 +843,7 @@ class ModelTheftOrLoss(TransactionHandler):
 		title = self.helper.title_value(data['_object'].get('title'))
 		short_title = truncate_with_ellipsis(title, 100) or title
 		theft_id = hmo.id + f'-{label_type}'
-		
+
 		warnings.warn('TODO: parse Theft/Loss note for date and location')
 		# Examples:
 		#     "Dec 1947 Looted by Germans during war"
@@ -861,7 +861,7 @@ class ModelTheftOrLoss(TransactionHandler):
 			t.referred_to_by = vocab.Note(ident='', content=notes)
 
 		tx_out.part = t
-		
+
 		data['_procurements'].append(tx_out_data)
 		return data
 
@@ -895,7 +895,7 @@ class ModelReturn(ModelSale):
 class ModelInventorying(TransactionHandler):
 	helper = Option(required=True)
 	make_la_person = Service('make_la_person')
-	
+
 	def __call__(self, data:dict, make_la_person):
 		rec = data['book_record']
 		pi_rec = data['pi_record_no']
@@ -912,19 +912,19 @@ class ModelInventorying(TransactionHandler):
 			parenthetical = f'{date}; {knum}'
 		else:
 			parenthetical = f'{date}'
-		
+
 		inv_uri = self.helper.make_proj_uri('INV', book_id, page_id, row_id)
 		inv = vocab.Inventorying(ident=inv_uri, label=f'Inventorying of {pi_rec} ({parenthetical})')
 		inv.used_specific_object = hmo
 		inv.carried_out_by = self.helper.static_instances.get_instance('Group', 'knoedler')
 		self.set_date(inv, data, 'entry_date')
-		
+
 		inv_data = add_crom_data(data={'uri': inv_uri}, what=inv)
 		if '_activities' not in data:
 			data['_activities'] = []
 		data['_activities'].append(inv_data)
 		return data
-	
+
 #mark - Knoedler Pipeline class
 
 class KnoedlerPipeline(PipelineBase):
@@ -970,12 +970,12 @@ class KnoedlerPipeline(PipelineBase):
 		Same objects data comes in as a list of identity equivalences (each being a list of ID strings).
 		ID strings may appear in multiple equivalences. For example, these 3 equivalences
 		represent a single object with 4 ID strings:
-			
+
 			[['1','2','3'], ['1','3'], ['2','4']]
-		
+
 		This function computes a dict mapping every ID string to a canonical
 		representative ID for that object (being the first ID value, lexicographically):
-		
+
 			{
 				'1': '1',
 				'2': '1',
@@ -1005,14 +1005,14 @@ class KnoedlerPipeline(PipelineBase):
 	def setup_services(self):
 		'''Return a `dict` of named services available to the bonobo pipeline.'''
 		services = super().setup_services()
-		
+
 		same_objects = services['objects_same']['objects']
 		same_object_id_map = self._construct_same_object_map(same_objects)
 		services['same_objects_map'] = same_object_id_map
 
 		different_objects = set(services['objects_different']['knoedler_numbers'])
 		services['different_objects'] = different_objects
-		
+
 		services.update({
 			# to avoid constructing new MakeLinkedArtPerson objects millions of times, this
 			# is passed around as a service to the functions and classes that require it.
@@ -1250,7 +1250,7 @@ class KnoedlerPipeline(PipelineBase):
 			ModelInventorying(helper=self.helper),
 			_input=tx.output
 		)
-		
+
 		sale = graph.add_chain(
 			ExtractKeyedValue(key='Sold'),
 			ModelSale(helper=self.helper),
@@ -1290,7 +1290,7 @@ class KnoedlerPipeline(PipelineBase):
 		for branch in (sale, destruction, theft, loss, inventorying, returned):
 			procurement = graph.add_chain( ExtractKeyedValues(key='_procurements'), _input=branch.output )
 			people = graph.add_chain( ExtractKeyedValues(key='_people'), _input=branch.output )
-		
+
 			if serialize:
 				self.add_serialization_chain(graph, procurement.output, model=self.models['ProvenanceEntry'])
 				self.add_serialization_chain(graph, people.output, model=self.models['Person'])

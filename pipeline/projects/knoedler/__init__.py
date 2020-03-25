@@ -1008,11 +1008,12 @@ class KnoedlerPipeline(PipelineBase):
 								)
 							},
 							'purchase_buyer': {
-								'postprocess': [
-									filter_empty_person,
-									lambda x, _: strip_key_prefix('purchase_buyer_', x),
-									rename_keys({'own': 'name'}),
-								],
+								'rename_keys': {
+									'purchase_buyer_own': 'name',
+									'purchase_buyer_share': 'share',
+									'purchase_buyer_ulan': 'ulan',
+								},
+								'postprocess': [filter_empty_person],
 								'prefixes': (
 									"purchase_buyer_own",
 									"purchase_buyer_share",
@@ -1020,10 +1021,11 @@ class KnoedlerPipeline(PipelineBase):
 								)
 							},
 							'prev_own': {
-								'postprocess': [
-									lambda x, _: strip_key_prefix('prev_', x),
-									rename_keys({'own': 'name'}),
-								],
+								'rename_keys': {
+									'prev_own': 'name',
+									'prev_own_loc': 'loc',
+									'prev_own_ulan': 'ulan',
+								},
 								'prefixes': (
 									"prev_own",
 									"prev_own_loc",
@@ -1115,11 +1117,12 @@ class KnoedlerPipeline(PipelineBase):
 								)
 							},
 							'purchase_knoedler_share': {
-								'postprocess': [
-									lambda x, _: strip_key_prefix('knoedpurch_', x),
-									rename_keys({'amt': 'amount', 'curr': 'currency'}),
-									lambda d, p: add_crom_price(d, p, services),
-								],
+								'rename_keys': {
+									"knoedpurch_amt": 'amount',
+									"knoedpurch_curr": 'currency',
+									"knoedpurch_note": 'note',
+								},
+								'postprocess': [lambda d, p: add_crom_price(d, p, services)],
 								'properties': (
 									"knoedpurch_amt",
 									"knoedpurch_curr",
@@ -1127,11 +1130,12 @@ class KnoedlerPipeline(PipelineBase):
 								)
 							},
 							'sale_knoedler_share': {
-								'postprocess': [
-									lambda x, _: strip_key_prefix('knoedshare_', x),
-									rename_keys({'amt': 'amount', 'curr': 'currency'}),
-									lambda d, p: add_crom_price(d, p, services),
-								],
+								'rename_keys': {
+									"knoedshare_amt": 'amount',
+									"knoedshare_curr": 'currency',
+									"knoedshare_note": 'note',
+								},
+								'postprocess': [lambda d, p: add_crom_price(d, p, services)],
 								'properties': (
 									"knoedshare_amt",
 									"knoedshare_curr",
@@ -1154,10 +1158,10 @@ class KnoedlerPipeline(PipelineBase):
 								)
 							},
 							'post_owner': {
-								'postprocess': [
-									rename_keys({'post_owner': 'post_owner_name'}),
-									lambda x, _: strip_key_prefix('post_owner_', x),
-								],
+								'rename_keys': {
+									"post_owner": 'name',
+									"post_owner_ulan": 'ulan',
+								},
 								'properties': (
 									"post_owner",
 									"post_owner_ulan",

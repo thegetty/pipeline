@@ -25,6 +25,7 @@ if __name__ == '__main__':
 	}
 
 #	factory.production_mode()
+	vocab.conceptual_only_parts()
 	vocab.add_linked_art_boundary_check()
 
 	print_dot = False

@@ -189,10 +189,10 @@ class KnoedlerUtilityHelper(UtilityHelper):
 
 	def transaction_uri_for_record(self, data, incoming=False):
 		'''
-		Return a URI representing the procurement which the object (identified by the
+		Return a URI representing the prov entry which the object (identified by the
 		supplied data) is a part of. This may identify just the object being bought or
 		sold or, in the case of multiple objects being bought for a single price, a
-		single procurement that encompasses multiple object acquisitions.
+		single prov entry that encompasses multiple object acquisitions.
 		'''
 		rec = data['book_record']
 		book_id = rec['stock_book_no']
@@ -219,7 +219,7 @@ class KnoedlerUtilityHelper(UtilityHelper):
 	@staticmethod
 	def transaction_contains_multiple_objects(data, incoming=False):
 		'''
-		Return `True` if the procurement related to the supplied data represents a
+		Return `True` if the prov entry related to the supplied data represents a
 		transaction of multiple objects with a single payment, `False` otherwise.
 		'''
 		price = data.get('purchase_knoedler_share') if incoming else data.get('sale_knoedler_share')
@@ -592,7 +592,7 @@ class TransactionHandler(Configurable):
 		right.dimension = d
 		return right
 
-	def _add_procurement_rights(self, data:dict, tx, shared_people, incoming):
+	def _add_prov_entry_rights(self, data:dict, tx, shared_people, incoming):
 		knoedler = self.helper.static_instances.get_instance('Group', 'knoedler')
 		sales_record = get_crom_object(data['_text_row'])
 
@@ -638,7 +638,7 @@ class TransactionHandler(Configurable):
 
 			data['_people'].extend(people)
 
-	def _add_procurement_payment(self, data:dict, tx, shared_purchase, purchase, people, parenthetical, incoming):
+	def _add_prov_entry_payment(self, data:dict, tx, shared_purchase, purchase, people, parenthetical, incoming):
 		knoedler = self.helper.static_instances.get_instance('Group', 'knoedler')
 		knoedler_group = [knoedler]
 
@@ -685,7 +685,7 @@ class TransactionHandler(Configurable):
 					for kp in knoedler_group:
 						paym.carried_out_by = kp
 
-	def _add_procurement_acquisition(self, data:dict, tx, people, parenthetical, incoming):
+	def _add_prov_entry_acquisition(self, data:dict, tx, people, parenthetical, incoming):
 		rec = data['book_record']
 		pi_rec = data['pi_record_no']
 		book_id, page_id, row_id = record_id(rec)
@@ -720,8 +720,8 @@ class TransactionHandler(Configurable):
 
 		tx.part = acq
 
-	def _procurement(self, data, date_key, participants, purchase=None, shared_purchase=None, shared_people=None, incoming=False):
-		for k in ('_procurements', '_people'):
+	def _prov_entry(self, data, date_key, participants, purchase=None, shared_purchase=None, shared_people=None, incoming=False):
+		for k in ('_prov_entries', '_people'):
 			if k not in data:
 				data[k] = []
 
@@ -754,11 +754,11 @@ class TransactionHandler(Configurable):
 			) for i, p in enumerate(people_data)
 		]
 
-		self._add_procurement_rights(data, tx, shared_people, incoming)
-		self._add_procurement_payment(data, tx, shared_purchase, purchase, people, parenthetical, incoming)
-		self._add_procurement_acquisition(data, tx, people, parenthetical, incoming)
+		self._add_prov_entry_rights(data, tx, shared_people, incoming)
+		self._add_prov_entry_payment(data, tx, shared_purchase, purchase, people, parenthetical, incoming)
+		self._add_prov_entry_acquisition(data, tx, people, parenthetical, incoming)
 
-		data['_procurements'].append(tx_data)
+		data['_prov_entries'].append(tx_data)
 		data['_people'].extend(people_data)
 		return tx
 
@@ -769,7 +769,7 @@ class TransactionHandler(Configurable):
 		sellers = data['purchase_seller']
 		for p in sellers:
 			self.helper.copy_source_information(p, data)
-		return self._procurement(data, 'entry_date', sellers, purch, shared_price, shared_people, incoming=True)
+		return self._prov_entry(data, 'entry_date', sellers, purch, shared_price, shared_people, incoming=True)
 
 	def add_outgoing_tx(self, data):
 		purch = data.get('sale')
@@ -777,7 +777,7 @@ class TransactionHandler(Configurable):
 		buyers = data['sale_buyer']
 		for p in buyers:
 			self.helper.copy_source_information(p, data)
-		return self._procurement(data, 'sale_date', buyers, purch, shared_price, incoming=False)
+		return self._prov_entry(data, 'sale_date', buyers, purch, shared_price, incoming=False)
 
 	@staticmethod
 	def set_date(event, data, date_key, date_key_prefix=''):
@@ -859,7 +859,7 @@ class ModelTheftOrLoss(TransactionHandler):
 
 		tx_out.part = t
 
-		data['_procurements'].append(tx_out_data)
+		data['_prov_entries'].append(tx_out_data)
 		return data
 
 class ModelSale(TransactionHandler):
@@ -1283,13 +1283,13 @@ class KnoedlerPipeline(PipelineBase):
 		if serialize:
 			self.add_serialization_chain(graph, activities.output, model=self.models['Inventorying'])
 
-		# people and procurements can come from any of these chains:
+		# people and prov entries can come from any of these chains:
 		for branch in (sale, destruction, theft, loss, inventorying, returned):
-			procurement = graph.add_chain( ExtractKeyedValues(key='_procurements'), _input=branch.output )
+			prov_entry = graph.add_chain( ExtractKeyedValues(key='_prov_entries'), _input=branch.output )
 			people = graph.add_chain( ExtractKeyedValues(key='_people'), _input=branch.output )
 
 			if serialize:
-				self.add_serialization_chain(graph, procurement.output, model=self.models['ProvenanceEntry'])
+				self.add_serialization_chain(graph, prov_entry.output, model=self.models['ProvenanceEntry'])
 				self.add_serialization_chain(graph, people.output, model=self.models['Person'])
 
 	def add_book_chain(self, graph, sales_records, serialize=True):

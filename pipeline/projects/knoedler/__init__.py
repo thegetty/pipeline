@@ -161,10 +161,9 @@ class KnoedlerUtilityHelper(UtilityHelper):
 	'''
 	Project-specific code for accessing and interpreting sales data.
 	'''
-	def __init__(self, project_name, uid_prefix, static_instances=None):
+	def __init__(self, project_name, static_instances=None):
 		super().__init__(project_name)
 		self.person_identity = PersonIdentity(make_uri=self.make_proj_uri)
-		self.uid_tag_prefix = uid_prefix
 		self.static_instances = static_instances
 		self.csv_source_columns = ['pi_record_no']
 		self.make_la_person = MakeLinkedArtPerson()
@@ -255,17 +254,8 @@ class KnoedlerUtilityHelper(UtilityHelper):
 			uri_key = uri_key[:-1] + ['flag-separated', kn, pi_rec_no]
 		elif kn in same_objects:
 			uri_key[-1] = same_objects[uri_key[-1]]
-		uri = self.make_uri(*uri_key)
+		uri = self.make_proj_uri(*uri_key)
 		return uri
-
-	def make_uri(self, *values):
-		'''Convert a set of identifying `values` into a URI'''
-		if values:
-			suffix = ','.join([urllib.parse.quote(str(v)) for v in values])
-			return self.uid_tag_prefix + suffix
-		else:
-			suffix = str(uuid.uuid4())
-			return self.uid_tag_prefix + suffix
 
 
 def add_crom_price(data, parent, services, add_citations=False):
@@ -276,7 +266,6 @@ def add_crom_price(data, parent, services, add_citations=False):
 	amt = data.get('amount', '')
 	if '[' in amt:
 		data['amount'] = amt.replace('[', '').replace(']', '')
-		pprint.pprint(data)
 	amnt = extract_monetary_amount(data, currency_mapping=currencies, add_citations=add_citations)
 	if amnt:
 		add_crom_data(data=data, what=amnt)
@@ -320,16 +309,16 @@ class AddPersonURI(Configurable):
 		auth_name = data.get('authority')
 		if data.get('ulan'):
 			ulan = data['ulan']
-			data['uri'] = self.helper.make_uri('PERSON', 'ULAN', ulan)
+			data['uri'] = self.helper.make_shared_uri('PERSON', 'ULAN', ulan)
 			data['ulan'] = ulan
 		elif auth_name and '[' not in auth_name:
-			data['uri'] = self.helper.make_uri('PERSON', 'AUTHNAME', auth_name)
+			data['uri'] = self.helper.make_shared_uri('PERSON', 'AUTHNAME', auth_name)
 			data['identifiers'] = [
 				vocab.PrimaryName(ident='', content=auth_name)
 			]
 		else:
 			# not enough information to identify this person uniquely, so use the source location in the input file
-			data['uri'] = self.helper.make_uri('PERSON', 'PI_REC_NO', data['pi_record_no'])
+			data['uri'] = self.helper.make_proj_uri('PERSON', 'PI_REC_NO', data['pi_record_no'])
 
 		return data
 
@@ -342,16 +331,16 @@ class AddGroupURI(Configurable):
 		if data.get('ulan'):
 			ulan = data['ulan']
 			key = f'GROUP-ULAN-{ulan}'
-			data['uri'] = self.helper.make_uri('GROUP', 'ULAN', ulan)
+			data['uri'] = self.helper.make_shared_uri('GROUP', 'ULAN', ulan)
 			data['ulan'] = ulan
 		elif auth_name and '[' not in auth_name:
-			data['uri'] = self.helper.make_uri('GROUP', 'AUTHNAME', auth_name)
+			data['uri'] = self.helper.make_shared_uri('GROUP', 'AUTHNAME', auth_name)
 			data['identifiers'] = [
 				vocab.PrimaryName(ident='', content=auth_name)
 			]
 		else:
 			# not enough information to identify this person uniquely, so use the source location in the input file
-			data['uri'] = self.helper.make_uri('GROUP', 'PI_REC_NO', data['pi_record_no'])
+			data['uri'] = self.helper.make_proj_uri('GROUP', 'PI_REC_NO', data['pi_record_no'])
 
 		return data
 
@@ -365,7 +354,7 @@ class AddBook(Configurable):
 		book = data['book_record']
 		book_id, _, _ = record_id(book)
 		data['_physical_book'] = {
-			'uri': self.helper.make_uri('Book', book_id),
+			'uri': self.helper.make_proj_uri('Book', book_id),
 			'object_type': vocab.Book,
 			'label': f'Knoedler Stock Book {book_id}',
 			'identifiers': [self.helper.knoedler_number_id(book_id)],
@@ -373,7 +362,7 @@ class AddBook(Configurable):
 		make_la_hmo(data['_physical_book'])
 
 		data['_text_book'] = {
-			'uri': self.helper.make_uri('Text', 'Book', book_id),
+			'uri': self.helper.make_proj_uri('Text', 'Book', book_id),
 			'object_type': vocab.AccountBookText,
 			'label': f'Knoedler Stock Book {book_id}',
 			'identifiers': [self.helper.knoedler_number_id(book_id)],
@@ -398,7 +387,7 @@ class AddPage(Configurable):
 		d.unit = vocab.instances['numbers']
 
 		data['_physical_page'] = {
-			'uri': self.helper.make_uri('Book', book_id, 'Page', page_id),
+			'uri': self.helper.make_proj_uri('Book', book_id, 'Page', page_id),
 			'object_type': vocab.Page,
 			'label': f'Knoedler Stock Book {book_id}, Page {page_id}',
 			'identifiers': [self.helper.knoedler_number_id(book_id)],
@@ -407,7 +396,7 @@ class AddPage(Configurable):
 		make_la_hmo(data['_physical_page'])
 
 		data['_text_page'] = {
-			'uri': self.helper.make_uri('Text', 'Book', book_id, 'Page', page_id),
+			'uri': self.helper.make_proj_uri('Text', 'Book', book_id, 'Page', page_id),
 			'object_type': vocab.AccountBookText,
 			'label': f'Knoedler Stock Book {book_id}, Page {page_id}',
 			'identifiers': [(page_id, vocab.LocalNumber(ident=''))],
@@ -446,7 +435,7 @@ class AddRow(Configurable):
 				notes.append(vocab.Note(ident='', content=book[k]))
 
 		data['_text_row'] = {
-			'uri': self.helper.make_uri('Text', 'Book', book_id, 'Page', page_id, 'Row', row_id),
+			'uri': self.helper.make_proj_uri('Text', 'Book', book_id, 'Page', page_id, 'Row', row_id),
 			'label': f'Knoedler Stock Book {book_id}, Page {page_id}, Row {row_id}',
 			'identifiers': [(row_id, vocab.LocalNumber(ident=''))],
 			'part_of': [data['_text_page']],
@@ -915,12 +904,11 @@ class ModelInventorying(TransactionHandler):
 class KnoedlerPipeline(PipelineBase):
 	'''Bonobo-based pipeline for transforming Knoedler data from CSV into JSON-LD.'''
 	def __init__(self, input_path, data, **kwargs):
-		self.uid_tag_prefix = f'tag:getty.edu,2019:digital:pipeline:REPLACE-WITH-UUID:knoedler#'
 		project_name = 'knoedler'
 		self.input_path = input_path
 		self.services = None
 
-		helper = KnoedlerUtilityHelper(project_name, self.uid_tag_prefix)
+		helper = KnoedlerUtilityHelper(project_name)
 		super().__init__(project_name, helper=helper)
 		helper.static_instances = self.static_instances
 
@@ -941,7 +929,7 @@ class KnoedlerPipeline(PipelineBase):
 
 		knoedler_ulan = 500304270
 		knoedler_name = 'M. Knoedler & Co.'
-		KNOEDLER_URI = self.helper.make_uri('ORGANIZATION', 'ULAN', str(knoedler_ulan))
+		KNOEDLER_URI = self.helper.make_shared_uri('ORGANIZATION', 'ULAN', str(knoedler_ulan))
 		knoedler = model.Group(ident=KNOEDLER_URI, label=knoedler_name)
 		knoedler.identified_by = vocab.PrimaryName(ident='', content=knoedler_name)
 		knoedler.exact_match = model.BaseResource(ident=f'http://vocab.getty.edu/ulan/{knoedler_ulan}')

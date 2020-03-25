@@ -3,6 +3,7 @@ import os
 import json
 import sys
 import warnings
+from fractions import Fraction
 import uuid
 import csv
 import pprint
@@ -72,6 +73,7 @@ class PersonIdentity:
 	'''
 	def __init__(self, *, make_uri):
 		self.make_uri = make_uri
+		self.make_la_person = pipeline.linkedart.MakeLinkedArtPerson()
 		self.ignore_authnames = CaseFoldingSet(('NEW', 'NON-UNIQUE'))
 
 	def acceptable_auth_name(self, auth_name):
@@ -104,6 +106,12 @@ class PersonIdentity:
 			else:
 				warnings.warn(f'*** No record identifier given for person identified only by pi_record_number {pi_rec_no}')
 				return ('PERSON', 'PI_REC_NO', pi_rec_no)
+
+	def add_person(self, a, record, relative_id, **kwargs):
+		self.add_uri(a, record_id=relative_id)
+		self.add_names(a, referrer=record, **kwargs)
+		self.make_la_person(a)
+		return get_crom_object(a)
 
 	def add_uri(self, data:dict, **kwargs):
 		keys = self.uri_keys(data, **kwargs)
@@ -258,21 +266,6 @@ class KnoedlerUtilityHelper(UtilityHelper):
 		else:
 			suffix = str(uuid.uuid4())
 			return self.uid_tag_prefix + suffix
-
-	def add_person(self, data:dict, sales_record, rec_id):
-		'''
-		Add modeling data for people, based on properties of the supplied `data` dict.
-
-		This function adds properties to `data` before calling
-		`pipeline.linkedart.MakeLinkedArtPerson` to construct the model objects.
-		'''
-		pi = self.person_identity
-		pi.add_uri(data, record_id=rec_id)
-		pi.add_names(data, referrer=sales_record)
-
-		self.make_la_person(data)
-		return data
-
 
 
 def add_crom_price(data, parent, services, add_citations=False):
@@ -594,6 +587,20 @@ class TransactionHandler(Configurable):
 		tx = vocab.ProvenanceEntry(ident=tx_uri)
 		return tx
 
+	def ownership_right(self, frac, person=None):
+		if person:
+			name = person._label
+			right = vocab.OwnershipRight(ident='', label=f'{frac} ownership by {name}')
+			right.possessed_by = person
+		else:
+			right = vocab.OwnershipRight(ident='', label=f'{frac} ownership')
+
+		d = model.Dimension(ident='')
+		d.unit = vocab.instances['percent']
+		d.value = float(100 * frac)
+		right.dimension = d
+		return right
+		
 	def _procurement(self, data, date_key, participants, purchase=None, shared_purchase=None, shared_people=None, incoming=False):
 		for k in ('_procurements', '_people'):
 			if k not in data:
@@ -638,16 +645,41 @@ class TransactionHandler(Configurable):
 		# this is the group of people along with Knoedler that made the purchase/sale (len > 1 when there is shared ownership)
 		knoedler_group = [knoedler]
 		if shared_people:
+			people = []
+			rights = []
 			role = 'shared-buyer' if incoming else 'shared-seller'
-			people = [
-				self.helper.add_person(
-					self.helper.copy_source_information(p, data),
-					sales_record,
-					f'{role}_{i+1}'
-				) for i, p in enumerate(shared_people)
-			]
-			knoedler_group.extend([get_crom_object(p) for p in shared_people])
-			data['_people'].extend(shared_people)
+			remaining = Fraction(1, 1)
+			for i, p in enumerate(shared_people):
+				person_dict = self.helper.copy_source_information(p, data)
+				person = self.helper.add_person(
+					person_dict,
+					record=sales_record,
+					relative_id=f'{role}_{i+1}'
+				)
+				name = p['name']
+				share = p['share']
+				share_frac = Fraction(share)
+				remaining -= share_frac
+				
+				right = self.ownership_right(share_frac, person)
+				
+				rights.append(right)
+				people.append(person_dict)
+				knoedler_group.append(person)
+				print(f'   {share:<10} {name:<50}')
+			k_right = self.ownership_right(remaining, knoedler)
+			rights.insert(0, k_right)
+			
+			total_right = vocab.OwnershipRight(ident='', label=f'Total Right of Ownership of {object_label}')
+			total_right.applies_to = hmo
+			for right in rights:
+				total_right.part = right
+
+			racq = model.RightAcquisition(ident='')
+			racq.establishes = total_right
+			tx.part = racq
+
+			data['_people'].extend(people)
 
 		amnt = get_crom_object(purchase)
 		shared_amnt = get_crom_object(shared_purchase)
@@ -674,16 +706,20 @@ class TransactionHandler(Configurable):
 				paym.part = shared_paym
 
 		role = 'seller' if incoming else 'buyer'
+		people_data = [
+			self.helper.copy_source_information(p, data)
+			for p in participants
+		]
 		people = [
 			self.helper.add_person(
-				self.helper.copy_source_information(p, data),
-				sales_record,
-				f'{role}_{i+1}'
-			) for i, p in enumerate(participants)
+				p,
+				record=sales_record,
+				relative_id=f'{role}_{i+1}'
+			) for i, p in enumerate(people_data)
 		]
 
-		for person_data in people:
-			person = [get_crom_object(person_data)]
+		for person in people:
+			person = [person]
 			if incoming:
 				if paym:
 					for p in person:
@@ -707,7 +743,7 @@ class TransactionHandler(Configurable):
 		tx.part = acq
 
 		data['_procurements'].append(tx_data)
-		data['_people'].extend(people)
+		data['_people'].extend(people_data)
 		return tx
 
 	def add_incoming_tx(self, data):

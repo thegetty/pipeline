@@ -168,6 +168,7 @@ class KnoedlerUtilityHelper(UtilityHelper):
 		self.csv_source_columns = ['pi_record_no']
 		self.make_la_person = MakeLinkedArtPerson()
 		self.title_re = re.compile(r'\["(.*)" (title )?(info )?from ([^]]+)\]')
+		self.title_ref_re = re.compile(r'Sales Book (\d+), (\d+-\d+), f.(\d+)')
 
 	def title_value(self, title):
 		if not isinstance(title, str):
@@ -178,13 +179,45 @@ class KnoedlerUtilityHelper(UtilityHelper):
 			return m.group(1)
 		return title
 
-	def title_reference(self, title):
+	def add_title_reference(self, data, title):
+		'''
+		If the title matches the pattern indicating it was added by an editor and has
+		and associated source reference, return a `model.LinguisticObject` for that
+		reference.
+		
+		If the reference can be modeled as a hierarchy of folios and books, that data
+		is added to the arrays in the `_physical_objects` and `_linguistic_objects` keys
+		of the `data` dict parameter.
+		'''
 		if not isinstance(title, str):
-			return
+			return None
 
 		m = self.title_re.search(title)
 		if m:
-			return m.group(4)
+			ref_text = m.group(4)
+			ref_match = self.title_ref_re.search(ref_text)
+			if ref_match:
+				book = ref_match.group(1)
+				folio = ref_match.group(3)
+				s_uri = self.make_proj_uri('SalesBook', book)
+				f_uri = self.make_proj_uri('SalesBook', book, 'Folio', folio)
+				
+				s_text = vocab.SalesCatalogText(ident=s_uri + '-Text', label=f'Knoedler Sales Boook {book}')
+				s_hmo = vocab.SalesCatalog(ident=s_uri, label=f'Knoedler Sales Boook {book}')
+				f_text = vocab.FolioText(ident=f_uri + '-Text', label=f'Knoedler Sales Boook {book}, Folio {folio}')
+				f_hmo = vocab.Folio(ident=f_uri, label=f'Knoedler Sales Boook {book}, Folio {folio}')
+
+				s_text.carried_by = s_hmo
+				f_text.carried_by = f_hmo
+				f_text.part_of = s_text
+				f_hmo.part_of = s_hmo
+
+				data['_physical_objects'].extend([add_crom_data({}, s_hmo), add_crom_data({}, f_hmo)])
+				data['_linguistic_objects'].extend([add_crom_data({}, s_text), add_crom_data({}, f_text)])
+				
+				return f_text
+
+			return vocab.BibliographyStatement(ident='', content=ref_text)
 		return None
 
 	def transaction_uri_for_record(self, data, incoming=False):
@@ -496,11 +529,14 @@ class PopulateKnoedlerObject(Configurable, pipeline.linkedart.PopulateObject):
 		super().__init__(*args, **kwargs)
 
 	def __call__(self, data:dict, *, vocab_type_map, make_la_org):
+		data.setdefault('_physical_objects', [])
+		data.setdefault('_linguistic_objects', [])
+
 		odata = data['object']
 
 		# split the title and reference in a value such as 「"Collecting her strength" title info from Sales Book 3, 1874-1879, f.252」
 		label = self.helper.title_value(odata['title'])
-		title_ref = self.helper.title_reference(odata['title'])
+		title_ref = self.helper.add_title_reference(data, odata['title'])
 
 		typestring = odata.get('object_type', '')
 		identifiers = []
@@ -514,7 +550,7 @@ class PopulateKnoedlerObject(Configurable, pipeline.linkedart.PopulateObject):
 
 		if title_ref:
 # 			warnings.warn(f'TODO: parse out citation information from title reference: {title_ref}')
-			title = [label, {'referred_to_by': [vocab.Note(ident='', content=title_ref)]}]
+			title = [label, {'referred_to_by': [title_ref]}]
 		else:
 			title = label
 		data['_object'] = {
@@ -556,6 +592,7 @@ class PopulateKnoedlerObject(Configurable, pipeline.linkedart.PopulateObject):
 		mlao(data['_object'])
 
 		self.populate_object_statements(data['_object'], default_unit='inches')
+		data['_physical_objects'].append(data['_object'])
 		return data
 
 class TransactionSwitch:
@@ -763,13 +800,13 @@ class TransactionHandler(Configurable):
 		self._add_prov_entry_rights(data, tx, shared_people, incoming)
 		self._add_prov_entry_payment(data, tx, shared_purchase, purchase, people, parenthetical, incoming)
 		self._add_prov_entry_acquisition(data, tx, people, parenthetical, incoming, purpose=purpose)
-		print('People:')
-		for p in people:
-			print(f'- {getattr(p, "_label", "(anonymous)")}')
-		print('Shared People:')
-		for p in shared_people:
-			print(f'- {getattr(p, "_label", "(anonymous)")}')
-# 		self._add_prov_entry_custody_transfer(data, tx, people, incoming)
+# 		print('People:')
+# 		for p in people:
+# 			print(f'- {getattr(p, "_label", "(anonymous)")}')
+# 		print('Shared People:')
+# 		for p in shared_people:
+# 			print(f'- {getattr(p, "_label", "(anonymous)")}')
+# # 		self._add_prov_entry_custody_transfer(data, tx, people, incoming)
 
 		data['_prov_entries'].append(tx_data)
 		data['_people'].extend(people_data)
@@ -1376,7 +1413,9 @@ class KnoedlerPipeline(PipelineBase):
 			AddArtists(helper=self.helper),
 			_input=rows.output
 		)
-		hmos = graph.add_chain( ExtractKeyedValue(key='_object'), _input=objects.output )
+		hmos = graph.add_chain( ExtractKeyedValues(key='_physical_objects'), _input=objects.output )
+		texts = graph.add_chain( ExtractKeyedValues(key='_linguistic_objects'), _input=objects.output )
+
 		consigners = graph.add_chain( ExtractKeyedValue(key='_consigner'), _input=objects.output )
 		artists = graph.add_chain(
 			ExtractKeyedValues(key='_artists'),
@@ -1384,6 +1423,7 @@ class KnoedlerPipeline(PipelineBase):
 		)
 		if serialize:
 			self.add_serialization_chain(graph, hmos.output, model=self.models['HumanMadeObject'])
+			self.add_serialization_chain(graph, texts.output, model=self.models['LinguisticObject'])
 			self.add_serialization_chain(graph, consigners.output, model=self.models['Group'])
 			self.add_serialization_chain(graph, artists.output, model=self.models['Person'])
 		return objects

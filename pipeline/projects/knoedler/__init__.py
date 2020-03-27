@@ -566,7 +566,6 @@ class TransactionSwitch:
 	def __call__(self, data:dict):
 		rec = data['book_record']
 		transaction = rec['transaction']
-# 		print(f'{transaction}')
 		if transaction in ('Sold', 'Destroyed', 'Stolen', 'Lost', 'Unsold', 'Returned'):
 			yield {transaction: data}
 		else:
@@ -606,6 +605,7 @@ class TransactionHandler(Configurable):
 			rights = []
 			role = 'shared-buyer' if incoming else 'shared-seller'
 			remaining = Fraction(1, 1)
+			print(f'{1+len(shared_people)}-way split:')
 			for i, p in enumerate(shared_people):
 				person_dict = self.helper.copy_source_information(p, data)
 				person = self.helper.add_person(
@@ -624,6 +624,7 @@ class TransactionHandler(Configurable):
 				people.append(person_dict)
 				knoedler_group.append(person)
 				print(f'   {share:<10} {name:<50}')
+			print(f'   {str(remaining):<10} {knoedler._label:<50}')
 			k_right = self.ownership_right(remaining, knoedler)
 			rights.insert(0, k_right)
 
@@ -685,7 +686,7 @@ class TransactionHandler(Configurable):
 					for kp in knoedler_group:
 						paym.carried_out_by = kp
 
-	def _add_prov_entry_acquisition(self, data:dict, tx, people, parenthetical, incoming):
+	def _add_prov_entry_acquisition(self, data:dict, tx, people, parenthetical, incoming, purpose=None):
 		rec = data['book_record']
 		pi_rec = data['pi_record_no']
 		book_id, page_id, row_id = record_id(rec)
@@ -696,7 +697,10 @@ class TransactionHandler(Configurable):
 		hmo = get_crom_object(data['_object'])
 
 		dir = 'In' if incoming else 'Out'
-		dir_label = 'Knoedler purchase' if incoming else 'Knoedler sale'
+		if purpose == 'returning':
+			dir_label = 'Knoedler return'
+		else:
+			dir_label = 'Knoedler purchase' if incoming else 'Knoedler sale'
 		acq_id = self.helper.make_proj_uri('ACQ', dir, book_id, page_id, row_id)
 		acq = model.Acquisition(ident=acq_id)
 		if self.helper.transaction_contains_multiple_objects(data, incoming):
@@ -720,7 +724,7 @@ class TransactionHandler(Configurable):
 
 		tx.part = acq
 
-	def _prov_entry(self, data, date_key, participants, purchase=None, shared_purchase=None, shared_people=None, incoming=False):
+	def _prov_entry(self, data, date_key, participants, purchase=None, shared_purchase=None, shared_people=None, incoming=False, purpose=None):
 		for k in ('_prov_entries', '_people'):
 			if k not in data:
 				data[k] = []
@@ -753,14 +757,37 @@ class TransactionHandler(Configurable):
 				relative_id=f'{role}_{i+1}'
 			) for i, p in enumerate(people_data)
 		]
-
+		
+		if shared_people is None:
+			shared_people = []
 		self._add_prov_entry_rights(data, tx, shared_people, incoming)
 		self._add_prov_entry_payment(data, tx, shared_purchase, purchase, people, parenthetical, incoming)
-		self._add_prov_entry_acquisition(data, tx, people, parenthetical, incoming)
+		self._add_prov_entry_acquisition(data, tx, people, parenthetical, incoming, purpose=purpose)
+		print('People:')
+		for p in people:
+			print(f'- {getattr(p, "_label", "(anonymous)")}')
+		print('Shared People:')
+		for p in shared_people:
+			print(f'- {getattr(p, "_label", "(anonymous)")}')
+# 		self._add_prov_entry_custody_transfer(data, tx, people, incoming)
 
 		data['_prov_entries'].append(tx_data)
 		data['_people'].extend(people_data)
 		return tx
+
+	def add_return_tx(self, data):
+		rec = data['book_record']
+		pi_rec = data['pi_record_no']
+		book_id, page_id, row_id = record_id(rec)
+
+		purch = data.get('purchase')
+		sellers = data['purchase_seller']
+		shared_people = []
+		for p in sellers:
+			self.helper.copy_source_information(p, data)
+		in_tx = self._prov_entry(data, 'entry_date', sellers, purch, incoming=True)
+		out_tx = self._prov_entry(data, 'entry_date', sellers, purch, incoming=False, purpose='returning')
+		return (in_tx, out_tx)
 
 	def add_incoming_tx(self, data):
 		purch = data.get('purchase')
@@ -887,6 +914,7 @@ class ModelReturn(ModelSale):
 		if not buyers:
 			buyers = sellers.copy()
 			data['sale_buyer'] = buyers
+		self.add_return_tx(data)
 		yield from super().__call__(data, make_la_person)
 
 class ModelInventorying(TransactionHandler):

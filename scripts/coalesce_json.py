@@ -22,6 +22,7 @@ from pipeline.util import CromObjectMerger
 from cromulent.model import factory
 from cromulent import model, vocab, reader
 
+vocab.conceptual_only_parts()
 vocab.add_linked_art_boundary_check()
 vocab.add_attribute_assignment_check()
 

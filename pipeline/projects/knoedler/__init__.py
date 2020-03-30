@@ -723,13 +723,10 @@ class TransactionHandler(Configurable):
 					for kp in knoedler_group:
 						paym.carried_out_by = kp
 
-	def _add_prov_entry_acquisition(self, data:dict, tx, people, parenthetical, incoming, purpose=None):
+	def _add_prov_entry_acquisition(self, data:dict, tx, from_people, to_people, parenthetical, incoming, purpose=None):
 		rec = data['book_record']
 		pi_rec = data['pi_record_no']
 		book_id, page_id, row_id = record_id(rec)
-
-		knoedler = self.helper.static_instances.get_instance('Group', 'knoedler')
-		knoedler_group = [knoedler]
 
 		hmo = get_crom_object(data['_object'])
 
@@ -747,17 +744,11 @@ class TransactionHandler(Configurable):
 		else:
 			tx._label = f'{dir_label} of {pi_rec} ({parenthetical})'
 		acq.transferred_title_of = hmo
-		for person in people:
-			person = [person]
-			if incoming:
-				tx_from, tx_to = person, knoedler_group
-			else:
-				tx_from, tx_to = knoedler_group, person
-
-			for p in tx_from:
-				acq.transferred_title_from = p
-			for p in tx_to:
-				acq.transferred_title_to = p
+		
+		for p in from_people:
+			acq.transferred_title_from = p
+		for p in to_people:
+			acq.transferred_title_to = p
 
 		tx.part = acq
 
@@ -797,9 +788,37 @@ class TransactionHandler(Configurable):
 		
 		if shared_people is None:
 			shared_people = []
-		self._add_prov_entry_rights(data, tx, shared_people, incoming)
+
+		if incoming:
+			self._add_prov_entry_rights(data, tx, shared_people, incoming)
+
+		knoedler = self.helper.static_instances.get_instance('Group', 'knoedler')
+		knoedler_group = [knoedler]
+		if shared_people:
+			# these are the people that joined Knoedler in the purchase/sale
+			role = 'shared-buyer' if incoming else 'shared-seller'
+			for i, p in enumerate(shared_people):
+				person_dict = self.helper.copy_source_information(p, data)
+				person = self.helper.add_person(
+					person_dict,
+					record=sales_record,
+					relative_id=f'{role}_{i+1}'
+				)
+				knoedler_group.append(person)
+
+		from_people = []
+		to_people = []
+		if incoming:
+			from_people = people
+			to_people = knoedler_group
+		else:
+			from_people = knoedler_group
+			to_people = people
+
+		# TODO: use knoedler_group in the payment modeling
 		self._add_prov_entry_payment(data, tx, shared_purchase, purchase, people, parenthetical, incoming)
-		self._add_prov_entry_acquisition(data, tx, people, parenthetical, incoming, purpose=purpose)
+		self._add_prov_entry_acquisition(data, tx, from_people, to_people, parenthetical, incoming, purpose=purpose)
+
 # 		print('People:')
 # 		for p in people:
 # 			print(f'- {getattr(p, "_label", "(anonymous)")}')
@@ -838,10 +857,11 @@ class TransactionHandler(Configurable):
 	def add_outgoing_tx(self, data):
 		purch = data.get('sale')
 		shared_price = data.get('sale_knoedler_share')
+		shared_people = data.get('purchase_buyer')
 		buyers = data['sale_buyer']
 		for p in buyers:
 			self.helper.copy_source_information(p, data)
-		return self._prov_entry(data, 'sale_date', buyers, purch, shared_price, incoming=False)
+		return self._prov_entry(data, 'sale_date', buyers, purch, shared_price, shared_people, incoming=False)
 
 	@staticmethod
 	def set_date(event, data, date_key, date_key_prefix=''):

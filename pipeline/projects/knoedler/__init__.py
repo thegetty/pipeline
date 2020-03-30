@@ -676,15 +676,47 @@ class TransactionHandler(Configurable):
 
 			data['_people'].extend(people)
 
-	def _add_prov_entry_payment(self, data:dict, tx, shared_purchase, purchase, people, parenthetical, incoming):
+	def _add_prov_entry_payment(self, data:dict, tx, knoedler_price_part, price_info, people, shared_people ,parenthetical, incoming):
 		knoedler = self.helper.static_instances.get_instance('Group', 'knoedler')
 		knoedler_group = [knoedler]
 
+		sales_record = get_crom_object(data['_text_row'])
 		hmo = get_crom_object(data['_object'])
 		object_label = f'“{hmo._label}”'
+		
+		price_data = {}
+		if 'currency' in price_info:
+			price_data['currency'] = price_info['currency']
+		
+		amnt = get_crom_object(price_info)
+		knoedler_price_part_amnt = get_crom_object(knoedler_price_part)
+		
+		price_amount = None
+		with suppress(AttributeError):
+			price_amount = amnt.value
+		parts = [(knoedler, knoedler_price_part_amnt)]
+		if shared_people:
+			role = 'shared-buyer' if incoming else 'shared-seller'
+			for i, p in enumerate(shared_people):
+				person_dict = self.helper.copy_source_information(p, data)
+				person = self.helper.add_person(
+					person_dict,
+					record=sales_record,
+					relative_id=f'{role}_{i+1}'
+				)
+				knoedler_group.append(person)
+				name = p['name']
+				share = p['share']
+				share_frac = Fraction(share)
+				if price_amount:
+					price = share_frac * price_amount
+					part_price_data = price_data.copy()
+					part_price_data.update({'price': str(price)})
+					part_amnt = extract_monetary_amount(part_price_data)
+					parts.append((person, part_amnt))
+				else:
+					parts.append((person, None))
 
-		amnt = get_crom_object(purchase)
-		shared_amnt = get_crom_object(shared_purchase)
 		paym = None
 		if amnt:
 			tx_uri = tx.id
@@ -698,28 +730,26 @@ class TransactionHandler(Configurable):
 				else:
 					paym.paid_to = kp
 
-			if shared_amnt:
-				shared_payment_id = tx_uri + '-Payment-Knoedler-share'
-				shared_paym = model.Payment(ident=shared_payment_id, label=f"Knoedler's share of Payment for {object_label} ({parenthetical})")
-				shared_paym.paid_amount = shared_amnt
+			for i, partdata in enumerate(parts):
+				person, part_amnt = partdata
+				shared_payment_id = tx_uri + f'-Payment-{i}-share'
+				shared_paym = model.Payment(ident=shared_payment_id, label=f"{person._label} share of payment for {object_label} ({parenthetical})")
+				shared_paym.paid_amount = part_amnt
 				if incoming:
-					shared_paym.paid_from = knoedler
+					shared_paym.paid_from = person
 				else:
-					shared_paym.paid_to = knoedler
+					shared_paym.paid_to = person
 				paym.part = shared_paym
 
 		for person in people:
-			person = [person]
 			if incoming:
 				if paym:
-					for p in person:
-						paym.paid_to = p
+					paym.paid_to = person
 					for kp in knoedler_group:
 						paym.carried_out_by = kp
 			else:
 				if paym:
-					for p in person:
-						paym.paid_from = p
+					paym.paid_from = person
 					for kp in knoedler_group:
 						paym.carried_out_by = kp
 
@@ -752,7 +782,10 @@ class TransactionHandler(Configurable):
 
 		tx.part = acq
 
-	def _prov_entry(self, data, date_key, participants, purchase=None, shared_purchase=None, shared_people=None, incoming=False, purpose=None):
+	def _prov_entry(self, data, date_key, participants, price_info=None, knoedler_price_part=None, shared_people=None, incoming=False, purpose=None):
+		if shared_people is None:
+			shared_people = []
+
 		for k in ('_prov_entries', '_people'):
 			if k not in data:
 				data[k] = []
@@ -786,12 +819,6 @@ class TransactionHandler(Configurable):
 			) for i, p in enumerate(people_data)
 		]
 		
-		if shared_people is None:
-			shared_people = []
-
-		if incoming:
-			self._add_prov_entry_rights(data, tx, shared_people, incoming)
-
 		knoedler = self.helper.static_instances.get_instance('Group', 'knoedler')
 		knoedler_group = [knoedler]
 		if shared_people:
@@ -815,8 +842,9 @@ class TransactionHandler(Configurable):
 			from_people = knoedler_group
 			to_people = people
 
-		# TODO: use knoedler_group in the payment modeling
-		self._add_prov_entry_payment(data, tx, shared_purchase, purchase, people, parenthetical, incoming)
+		if incoming:
+			self._add_prov_entry_rights(data, tx, shared_people, incoming)
+		self._add_prov_entry_payment(data, tx, knoedler_price_part, price_info, people, shared_people, parenthetical, incoming)
 		self._add_prov_entry_acquisition(data, tx, from_people, to_people, parenthetical, incoming, purpose=purpose)
 
 # 		print('People:')
@@ -836,32 +864,32 @@ class TransactionHandler(Configurable):
 		pi_rec = data['pi_record_no']
 		book_id, page_id, row_id = record_id(rec)
 
-		purch = data.get('purchase')
+		price_info = data.get('purchase')
 		sellers = data['purchase_seller']
 		shared_people = []
 		for p in sellers:
 			self.helper.copy_source_information(p, data)
-		in_tx = self._prov_entry(data, 'entry_date', sellers, purch, incoming=True)
-		out_tx = self._prov_entry(data, 'entry_date', sellers, purch, incoming=False, purpose='returning')
+		in_tx = self._prov_entry(data, 'entry_date', sellers, price_info, incoming=True)
+		out_tx = self._prov_entry(data, 'entry_date', sellers, price_info, incoming=False, purpose='returning')
 		return (in_tx, out_tx)
 
 	def add_incoming_tx(self, data):
-		purch = data.get('purchase')
-		shared_price = data.get('purchase_knoedler_share')
+		price_info = data.get('purchase')
+		knoedler_price_part = data.get('purchase_knoedler_share')
 		shared_people = data.get('purchase_buyer')
 		sellers = data['purchase_seller']
 		for p in sellers:
 			self.helper.copy_source_information(p, data)
-		return self._prov_entry(data, 'entry_date', sellers, purch, shared_price, shared_people, incoming=True)
+		return self._prov_entry(data, 'entry_date', sellers, price_info, knoedler_price_part, shared_people, incoming=True)
 
 	def add_outgoing_tx(self, data):
-		purch = data.get('sale')
-		shared_price = data.get('sale_knoedler_share')
+		price_info = data.get('sale')
+		knoedler_price_part = data.get('sale_knoedler_share')
 		shared_people = data.get('purchase_buyer')
 		buyers = data['sale_buyer']
 		for p in buyers:
 			self.helper.copy_source_information(p, data)
-		return self._prov_entry(data, 'sale_date', buyers, purch, shared_price, shared_people, incoming=False)
+		return self._prov_entry(data, 'sale_date', buyers, price_info, knoedler_price_part, shared_people, incoming=False)
 
 	@staticmethod
 	def set_date(event, data, date_key, date_key_prefix=''):

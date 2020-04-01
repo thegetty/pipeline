@@ -651,11 +651,10 @@ class SalesPipeline(PipelineBase):
 		vocab.register_instance('animal', {'parent': model.Type, 'id': '300249395', 'label': 'Animal'})
 		vocab.register_instance('history', {'parent': model.Type, 'id': '300033898', 'label': 'History'})
 
-		warnings.warn(f'*** TODO: NEED TO USE CORRECT CLASSIFICATION FOR NON-AUCTION SALES ACTIVITIES, LOTTERY CATALOG')
-		vocab.register_vocab_class('LotteryDrawing', {"parent": model.Activity, "id":"000000000", "label": "Lottery Drawing"})
-		vocab.register_vocab_class('Lottery', {"parent": model.Activity, "id":"000000000", "label": "Lottery"})
-		vocab.register_vocab_class('LotteryCatalog', {"parent": model.HumanMadeObject, "id":"000000000", "label": "Lottery Catalog", "metatype": "work type"})
-		vocab.register_vocab_class('LotteryCatalogText', {"parent": model.LinguisticObject, "id":"000000000", "label": "Lottery Catalog", "metatype": "work type"})
+		vocab.register_vocab_class('LotteryDrawing', {"parent": model.Activity, "id":"300438601", "label": "Lottery Drawing"})
+		vocab.register_vocab_class('Lottery', {"parent": model.Activity, "id":"300184191", "label": "Lottery"})
+		vocab.register_vocab_class('LotteryCatalog', {"parent": model.HumanMadeObject, "id":"300438603", "label": "Lottery Catalog", "metatype": "work type"})
+		vocab.register_vocab_class('LotteryCatalogText', {"parent": model.LinguisticObject, "id":"300438603", "label": "Lottery Catalog", "metatype": "work type"})
 
 		super().__init__(project_name, helper=helper)
 

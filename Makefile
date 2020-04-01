@@ -1,4 +1,5 @@
 LIMIT?=100
+CONCURRENCY?=16
 DEBUG?=1
 DOT=dot
 QUIET?=1
@@ -45,16 +46,20 @@ fetchknoedler:
 nt: jsonlist
 	mkdir -p $(GETTY_PIPELINE_TMP_PATH)
 	curl -s 'https://linked.art/ns/v1/linked-art.json' > $(GETTY_PIPELINE_TMP_PATH)/linked-art.json
+	split -n r/$(CONCURRENCY) $(GETTY_PIPELINE_TMP_PATH)/json_files.txt "${GETTY_PIPELINE_TMP_PATH}/json_files.chunk."
 	echo 'Transcoding JSON-LD to N-Triples...'
-	cat $(GETTY_PIPELINE_TMP_PATH)/json_files.txt | sort | xargs -n 128 -P 16 $(PYTHON) ./scripts/json2nt.py $(GETTY_PIPELINE_TMP_PATH)/linked-art.json
+	ls $(GETTY_PIPELINE_TMP_PATH)/json_files.chunk.* | xargs -n 1 -P $(CONCURRENCY) $(PYTHON) ./scripts/json2nt.py -c $(GETTY_PIPELINE_TMP_PATH)/linked-art.json -l
+	rm $(GETTY_PIPELINE_TMP_PATH)/json_files.chunk.*
 
 nq: jsonlist
 	mkdir -p $(GETTY_PIPELINE_TMP_PATH)
 	curl -s 'https://linked.art/ns/v1/linked-art.json' > $(GETTY_PIPELINE_TMP_PATH)/linked-art.json
+	split -n r/$(CONCURRENCY) $(GETTY_PIPELINE_TMP_PATH)/json_files.txt "${GETTY_PIPELINE_TMP_PATH}/json_files.chunk."
 	echo 'Transcoding JSON-LD to N-Quads...'
-	cat $(GETTY_PIPELINE_TMP_PATH)/json_files.txt | xargs -n 256 -P 16 $(PYTHON) ./scripts/json2nq.py $(GETTY_PIPELINE_TMP_PATH)/linked-art.json
+	ls $(GETTY_PIPELINE_TMP_PATH)/json_files.chunk.* | xargs -n 1 -P $(CONCURRENCY) $(PYTHON) ./scripts/json2nq.py -c $(GETTY_PIPELINE_TMP_PATH)/linked-art.json -l
 	find $(GETTY_PIPELINE_OUTPUT) -name '[0-9a-f][0-9a-f]*.nq' | xargs -n 256 cat | gzip - > $(GETTY_PIPELINE_OUTPUT)/all.nq.gz
 	gzip -k $(GETTY_PIPELINE_OUTPUT)/meta.nq
+	rm $(GETTY_PIPELINE_TMP_PATH)/json_files.chunk.*
 
 postprocessjson:
 	ls $(GETTY_PIPELINE_OUTPUT) | PYTHONPATH=`pwd` xargs -n 1 -P 8 -I '{}' $(PYTHON) ./scripts/coalesce_json.py "${GETTY_PIPELINE_OUTPUT}/{}"
@@ -102,10 +107,10 @@ peoplepipeline:
 	QUIET=$(QUIET) GETTY_PIPELINE_DEBUG=$(DEBUG) GETTY_PIPELINE_LIMIT=$(LIMIT) $(PYTHON) ./people.py
 
 peoplepostprocessing: postprocessing_uuidmap postprocessing_rewrite_uris
-	ls $(GETTY_PIPELINE_OUTPUT) | PYTHONPATH=`pwd` xargs -n 1 -P 16 -I '{}' $(PYTHON) ./scripts/coalesce_json.py "${GETTY_PIPELINE_OUTPUT}/{}"
+	ls $(GETTY_PIPELINE_OUTPUT) | PYTHONPATH=`pwd` xargs -n 1 -P $(CONCURRENCY) -I '{}' $(PYTHON) ./scripts/coalesce_json.py "${GETTY_PIPELINE_OUTPUT}/{}"
 	PYTHONPATH=`pwd` $(PYTHON) ./scripts/remove_meaningless_ids.py
 	# Reorganizing JSON files...
-	find $(GETTY_PIPELINE_OUTPUT) -name '*.json' | PYTHONPATH=`pwd` xargs -n 256 -P 16 $(PYTHON) ./scripts/reorganize_json.py
+	find $(GETTY_PIPELINE_OUTPUT) -name '*.json' | PYTHONPATH=`pwd` xargs -n 256 -P $(CONCURRENCY) $(PYTHON) ./scripts/reorganize_json.py
 
 peoplepostsalefilelist: scripts/find_matching_json_files
 	time ./scripts/find_matching_json_files "${GETTY_PIPELINE_TMP_PATH}/post_sale_rewrite_map.json" $(GETTY_PIPELINE_OUTPUT) > $(GETTY_PIPELINE_OUTPUT)/post-sale-matching-files.txt
@@ -140,10 +145,10 @@ salespipeline:
 	QUIET=$(QUIET) GETTY_PIPELINE_DEBUG=$(DEBUG) GETTY_PIPELINE_LIMIT=$(LIMIT) $(PYTHON) ./sales.py
 
 salespostprocessing: salespostsalerewrite postprocessing_uuidmap postprocessing_rewrite_uris
-	ls $(GETTY_PIPELINE_OUTPUT) | PYTHONPATH=`pwd` xargs -n 1 -P 16 -I '{}' $(PYTHON) ./scripts/coalesce_json.py "${GETTY_PIPELINE_OUTPUT}/{}"
+	ls $(GETTY_PIPELINE_OUTPUT) | PYTHONPATH=`pwd` xargs -n 1 -P $(CONCURRENCY) -I '{}' $(PYTHON) ./scripts/coalesce_json.py "${GETTY_PIPELINE_OUTPUT}/{}"
 	PYTHONPATH=`pwd` $(PYTHON) ./scripts/remove_meaningless_ids.py
 	# Reorganizing JSON files...
-	find $(GETTY_PIPELINE_OUTPUT) -name '*.json' | PYTHONPATH=`pwd` xargs -n 256 -P 16 $(PYTHON) ./scripts/reorganize_json.py
+	find $(GETTY_PIPELINE_OUTPUT) -name '*.json' | PYTHONPATH=`pwd` xargs -n 256 -P $(CONCURRENCY) $(PYTHON) ./scripts/reorganize_json.py
 
 salespostsalerewrite: salespostsalefilelist
 	cat $(GETTY_PIPELINE_OUTPUT)/post-sale-matching-files.txt | PYTHONPATH=`pwd`  xargs -n 256 $(PYTHON) ./scripts/rewrite_post_sales_uris.py "${GETTY_PIPELINE_TMP_PATH}/post_sale_rewrite_map.json"
@@ -174,10 +179,10 @@ knoedlerpipeline:
 	QUIET=$(QUIET) GETTY_PIPELINE_DEBUG=$(DEBUG) GETTY_PIPELINE_LIMIT=$(LIMIT) $(PYTHON) ./knoedler.py
 
 knoedlerpostprocessing: postprocessing_uuidmap postprocessing_rewrite_uris
-	ls $(GETTY_PIPELINE_OUTPUT) | PYTHONPATH=`pwd` xargs -n 1 -P 16 -I '{}' $(PYTHON) ./scripts/coalesce_json.py "${GETTY_PIPELINE_OUTPUT}/{}"
+	ls $(GETTY_PIPELINE_OUTPUT) | PYTHONPATH=`pwd` xargs -n 1 -P $(CONCURRENCY) -I '{}' $(PYTHON) ./scripts/coalesce_json.py "${GETTY_PIPELINE_OUTPUT}/{}"
 	PYTHONPATH=`pwd` $(PYTHON) ./scripts/remove_meaningless_ids.py
 	# Reorganizing JSON files...
-	find $(GETTY_PIPELINE_OUTPUT) -name '*.json' | PYTHONPATH=`pwd` xargs -n 256 -P 16 $(PYTHON) ./scripts/reorganize_json.py
+	find $(GETTY_PIPELINE_OUTPUT) -name '*.json' | PYTHONPATH=`pwd` xargs -n 256 -P $(CONCURRENCY) $(PYTHON) ./scripts/reorganize_json.py
 
 knoedlergraph: $(GETTY_PIPELINE_TMP_PATH)/knoedler.pdf
 	open -a Preview $(GETTY_PIPELINE_TMP_PATH)/knoedler.pdf

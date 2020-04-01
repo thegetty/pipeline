@@ -1,5 +1,6 @@
 #!/usr/bin/env python3 -B
 
+import os
 import sys
 from pathlib import Path
 import pprint
@@ -8,21 +9,41 @@ import json
 import uuid
 import re
 
-context_filename = sys.argv[1]
-fh = open(context_filename, 'r')
-ctx = json.load(fh)
+argv_i = 1
+if len(sys.argv) > argv_i and sys.argv[argv_i] == '-c':
+	context_filename = sys.argv[argv_i+1]
+	fh = open(context_filename, 'r')
+	ctx = json.load(fh)
+	argv_i += 2
+else:
+	ctx = None
+
+if len(sys.argv) > argv_i:
+	if sys.argv[argv_i] == '-l':
+		list_file = sys.argv[argv_i+1]
+		with open(list_file, 'r') as fh:
+			files = [f.strip() for f in fh]
+	else:
+		files = sys.argv[argv_i:]
+else:
+	files = [f.strip() for f in sys.stdin]
 
 proc = jsonld.JsonLdProcessor()
 r = re.compile(r'_:(\S+)')
 
 count = 0
-for filename in sys.argv[1:]:
+print(f'[{os.getpid()}] json2nq.py')
+for filename in files:
 	p = Path(filename)
 	with open(filename, 'r') as fh:
 		bnode_map = {}
 		input = json.load(fh)
-		del(input['@context'])
-		triples = proc.to_rdf(input, {'expandContext': ctx, 'format': 'application/n-quads'})
+
+		options = {'format': 'application/n-quads'}
+		if ctx:
+			options['expandContext'] = ctx
+			del(input['@context'])
+		triples = proc.to_rdf(input, options)
 		
 		bids = set(r.findall(triples))
 		for bid in bids:

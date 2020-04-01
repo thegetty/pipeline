@@ -1,19 +1,57 @@
 #!/usr/bin/env python3 -B
 
+import os
 import sys
 from pathlib import Path
 import pprint
-from pyld import jsonld
 import json
 import uuid
 import re
 
+import datetime
+import requests
+from pyld import jsonld
+from pyld.jsonld import set_document_loader
+
+docCache = {}
+def fetch(url):
+	resp = requests.get(url)
+	return resp.json()
+
+def load_document_and_cache(url, *args, **kwargs):
+	if url in docCache:
+		return docCache[url]
+
+	doc = {"expires": None, "contextUrl": None, "documentUrl": None, "document": ""}
+	data = fetch(url)
+	doc["document"] = data
+	doc["expires"] = datetime.datetime.now() + datetime.timedelta(minutes=1440)
+	docCache[url] = doc
+	return doc
+
+set_document_loader(load_document_and_cache)
+
 class JSONLDError(Exception):
 	pass
 
-context_filename = sys.argv[1]
-fh = open(context_filename, 'r')
-ctx = json.load(fh)
+argv_i = 1
+if len(sys.argv) > argv_i and sys.argv[argv_i] == '-c':
+	context_filename = sys.argv[argv_i+1]
+	fh = open(context_filename, 'r')
+	ctx = json.load(fh)
+	argv_i += 2
+else:
+	ctx = None
+
+if len(sys.argv) > argv_i:
+	if sys.argv[argv_i] == '-l':
+		list_file = sys.argv[argv_i+1]
+		with open(list_file, 'r') as fh:
+			files = [f.strip() for f in fh]
+	else:
+		files = sys.argv[argv_i:]
+else:
+	files = [f.strip() for f in sys.stdin]
 
 proc = jsonld.JsonLdProcessor()
 r = re.compile(r'_:(\S+)')
@@ -32,10 +70,15 @@ def convert(p):
 			if not id.startswith('urn:uuid:'):
 				raise JSONLDError(f"file doesn't have a valid top-level UUID: {filename}")
 			gid = id
-			del(input['@context'])
+
+			options = {'format': 'application/n-quads'}
+			if ctx:
+				options['expandContext'] = ctx
+				del(input['@context'])
+
 			input = {'@id': gid, '@graph': input}
-			triples = proc.to_rdf(input, {'expandContext': ctx, 'format': 'application/n-quads'})
-	
+			triples = proc.to_rdf(input, options)
+
 			bids = set(r.findall(triples))
 			for bid in bids:
 				if bid in bnode_map:
@@ -54,7 +97,8 @@ def convert(p):
 	return 0
 
 count = 0
-for filename in sys.argv[2:]:
+for filename in files:
+	print(f'[{os.getpid()}] {filename}')
 	p = Path(filename)
 	if p.is_dir():
 		for p in p.rglob('*.json'):

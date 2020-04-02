@@ -713,6 +713,9 @@ class TransactionHandler(Configurable):
 					part_price_data = price_data.copy()
 					part_price_data.update({'price': str(price)})
 					part_amnt = extract_monetary_amount(part_price_data)
+					if not price.is_integer():
+						part_amnt._label = f'{part_amnt._label} ({share_frac} of {price_amount})'
+# 					print(f'*** {share_frac} of {price_amount} ({part_amnt._label})')
 					parts.append((person, part_amnt))
 				else:
 					parts.append((person, None))

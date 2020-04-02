@@ -609,9 +609,13 @@ class TransactionSwitch:
 			warnings.warn(f'TODO: handle transaction type {transaction}')
 
 class TransactionHandler(Configurable):
-	def _empty_tx(self, data, incoming=False):
+	def _empty_tx(self, data, incoming=False, purpose=None):
 		tx_uri = self.helper.transaction_uri_for_record(data, incoming)
-		tx = vocab.ProvenanceEntry(ident=tx_uri)
+		tx_type = data.get('book_record', {}).get('transaction', 'Sold')
+		if purpose == 'returning':
+			tx = vocab.make_multitype_obj(vocab.SaleAsReturn, vocab.ProvenanceEntry, ident=tx_uri)
+		else:
+			tx = vocab.ProvenanceEntry(ident=tx_uri)
 		return tx
 
 	def ownership_right(self, frac, person=None):
@@ -803,7 +807,7 @@ class TransactionHandler(Configurable):
 		else:
 			parenthetical = f'{date}'
 
-		tx = self._empty_tx(data, incoming)
+		tx = self._empty_tx(data, incoming, purpose=purpose)
 		tx_uri = tx.id
 
 		tx_data = add_crom_data(data={'uri': tx_uri}, what=tx)
@@ -867,13 +871,14 @@ class TransactionHandler(Configurable):
 		pi_rec = data['pi_record_no']
 		book_id, page_id, row_id = record_id(rec)
 
-		price_info = data.get('purchase')
+		purch_info = data.get('purchase')
+		sale_info = data.get('sale')
 		sellers = data['purchase_seller']
 		shared_people = []
 		for p in sellers:
 			self.helper.copy_source_information(p, data)
-		in_tx = self._prov_entry(data, 'entry_date', sellers, price_info, incoming=True)
-		out_tx = self._prov_entry(data, 'entry_date', sellers, price_info, incoming=False, purpose='returning')
+		in_tx = self._prov_entry(data, 'entry_date', sellers, purch_info, incoming=True)
+		out_tx = self._prov_entry(data, 'entry_date', sellers, sale_info, incoming=False, purpose='returning')
 		return (in_tx, out_tx)
 
 	def add_incoming_tx(self, data):
@@ -1050,6 +1055,8 @@ class KnoedlerPipeline(PipelineBase):
 		helper = KnoedlerUtilityHelper(project_name)
 		super().__init__(project_name, helper=helper)
 		helper.static_instances = self.static_instances
+
+		vocab.register_vocab_class('SaleAsReturn', {"parent": model.Activity, "id":"XXXXXX005", "label": "Sale (Return to Original Owner)"})
 
 		self.graph = None
 		self.models = kwargs.get('models', settings.arches_models)

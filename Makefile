@@ -69,6 +69,7 @@ postprocessing_rewrite_uris:
 	PYTHONPATH=`pwd` $(PYTHON) ./scripts/rewrite_uris_to_uuids_parallel.py 'tag:getty.edu,2019:digital:pipeline:REPLACE-WITH-UUID:' "${GETTY_PIPELINE_TMP_PATH}/uri_to_uuid_map.json"
 
 jsonlist:
+	mkdir -p $(GETTY_PIPELINE_TMP_PATH)
 	find $(GETTY_PIPELINE_OUTPUT) -name '*.json' > $(GETTY_PIPELINE_TMP_PATH)/json_files.txt
 
 ### AATA

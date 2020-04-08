@@ -96,10 +96,10 @@ class PIRModelingTest_PrivateContractSales(TestSalesPipelineOutput):
 		prices = [d for d in object_set['dimension'] if d['type'] == 'MonetaryAmount']
 		self.assertEqual(len(prices), 1)
 		self.assertEqual({c['_label'] for c in prices[0]['classified_as']}, {'Asking Price'})
-		self.assertEqual(prices[0]['_label'], "50,000 frs")
+		self.assertEqual(prices[0]['_label'], "50,000.0 frs")
 		self.assertEqual(prices[0]['currency']['_label'], 'French Francs')
 		self.assertEqual(prices[0]['value'], 50000)
-		self.assertEqual({c['_label'] for c in object_set['dimension']}, {"50,000 frs"})
+		self.assertEqual({c['_label'] for c in object_set['dimension']}, {"50,000.0 frs"})
 
 		self.assertIn(object_set_key, {s['id'] for s in hmo['member_of']})
 		

@@ -438,7 +438,7 @@ class AddAcquisitionOrBidding(Configurable):
 		single_seller = (len(sellers) == 1)
 		single_buyer = (len(buyers) == 1)
 
-		for seller_data in sellers:
+		for seq_no, seller_data in enumerate(sellers):
 			seller = get_crom_object(seller_data)
 			mod = seller_data.get('auth_mod_a', '')
 
@@ -455,12 +455,12 @@ class AddAcquisitionOrBidding(Configurable):
 				acq.transferred_title_from = seller
 				paym.paid_to = seller
 			elif mod == 'or anonymous':
-				acq_assignment = vocab.PossibleAssignment(ident='', label=f'Uncertain seller as previous title holder in acquisition')
+				acq_assignment = vocab.PossibleAssignment(ident=acq.id + f'-seller-assignment-{seq_no}', label=f'Uncertain seller as previous title holder in acquisition')
 				acq_assignment.assigned_property = 'transferred_title_from'
 				acq_assignment.assigned = seller
 				acq.attributed_by = acq_assignment
 
-				paym_assignment = vocab.PossibleAssignment(ident='', label=f'Uncertain seller as recipient of payment')
+				paym_assignment = vocab.PossibleAssignment(ident=paym.id + f'-seller-assignment-{seq_no}', label=f'Uncertain seller as recipient of payment')
 				paym_assignment.assigned_property = 'paid_to'
 				paym_assignment.assigned = seller
 				paym.attributed_by = paym_assignment

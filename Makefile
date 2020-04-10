@@ -61,9 +61,6 @@ nq: jsonlist
 	gzip -k $(GETTY_PIPELINE_OUTPUT)/meta.nq
 	rm $(GETTY_PIPELINE_TMP_PATH)/json_files.chunk.*
 
-postprocessjson:
-	ls $(GETTY_PIPELINE_OUTPUT) | PYTHONPATH=`pwd` xargs -n 1 -P 8 -I '{}' $(PYTHON) ./scripts/coalesce_json.py "${GETTY_PIPELINE_OUTPUT}/{}"
-
 scripts/generate_uri_uuids: scripts/generate_uri_uuids.swift
 	swiftc scripts/generate_uri_uuids.swift -o scripts/generate_uri_uuids
 
@@ -77,6 +74,7 @@ postprocessing_rewrite_uris:
 	PYTHONPATH=`pwd` $(PYTHON) ./scripts/rewrite_uris_to_uuids_parallel.py 'tag:getty.edu,2019:digital:pipeline:REPLACE-WITH-UUID:' "${GETTY_PIPELINE_TMP_PATH}/uri_to_uuid_map.json"
 
 jsonlist:
+	mkdir -p $(GETTY_PIPELINE_TMP_PATH)
 	find $(GETTY_PIPELINE_OUTPUT) -name '*.json' > $(GETTY_PIPELINE_TMP_PATH)/json_files.txt
 
 ### AATA
@@ -220,4 +218,4 @@ clean:
 .PHONY: knoedler knoedlergraph
 .PHONY: people peoplegraph peopledata peoplepipeline peoplepostprocessing peoplepostsalefilelist
 .PHONY: sales salesgraph salesdata salespipeline salespostprocessing salespostsalefilelist
-.PHONY: test upload nt docker dockerimage dockertest jsonlist postprocessing_uuidmap postprocessing_rewrite_uris postprocessjson
+.PHONY: test upload nt docker dockerimage dockertest jsonlist postprocessing_uuidmap postprocessing_rewrite_uris

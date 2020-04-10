@@ -360,6 +360,7 @@ class AddArtists(Configurable):
 		or_anon_records = [is_or_anon(a) for a in artists]
 		uncertain_attribution = any(or_anon_records)
 		for seq_no, a in enumerate(artists):
+			attribute_assignment_id = event.id + f'-artist-assignment-{seq_no}'
 			if is_or_anon(a):
 				# do not model the "or anonymous" records; they turn into uncertainty on the other records
 				continue
@@ -393,7 +394,7 @@ class AddArtists(Configurable):
 					# equivalent to no modifier
 					pass
 				elif STYLE_OF.intersects(mods):
-					assignment = vocab.make_multitype_obj(*attrib_assignment_classes, ident='', label=f'In the style of {artist_label}')
+					assignment = vocab.make_multitype_obj(*attrib_assignment_classes, ident=attribute_assignment_id, label=f'In the style of {artist_label}')
 					event.attributed_by = assignment
 					assignment.assigned_property = 'influenced_by'
 					assignment.property_classified_as = vocab.instances['style of']
@@ -417,7 +418,7 @@ class AddArtists(Configurable):
 					subevent.carried_out_by = group
 
 					if uncertain_attribution:
-						assignment = vocab.make_multitype_obj(*attrib_assignment_classes, ident='', label=f'Possibly attributed to {group_label}')
+						assignment = vocab.make_multitype_obj(*attrib_assignment_classes, ident=attribute_assignment_id, label=f'Possibly attributed to {group_label}')
 						event.attributed_by = assignment
 						assignment.assigned_property = 'part'
 						assignment.assigned = subevent
@@ -427,7 +428,7 @@ class AddArtists(Configurable):
 				elif FORMERLY_ATTRIBUTED_TO.intersects(mods):
 					# the {uncertain_attribution} flag does not apply to this branch, because this branch is not making a statement
 					# about a previous attribution. the uncertainty applies only to the current attribution.
-					assignment = vocab.ObsoleteAssignment(ident='', label=f'Formerly attributed to {artist_label}')
+					assignment = vocab.ObsoleteAssignment(ident=attribute_assignment_id, label=f'Formerly attributed to {artist_label}')
 					event.attributed_by = assignment
 					assignment.assigned_property = 'carried_out_by'
 					assignment.assigned = person
@@ -435,11 +436,11 @@ class AddArtists(Configurable):
 				elif UNCERTAIN.intersects(mods):
 					if POSSIBLY.intersects(mods):
 						attrib_assignment_classes.append(vocab.PossibleAssignment)
-						assignment = vocab.make_multitype_obj(*attrib_assignment_classes, ident='', label=f'Possibly attributed to {artist_label}')
+						assignment = vocab.make_multitype_obj(*attrib_assignment_classes, ident=attribute_assignment_id, label=f'Possibly attributed to {artist_label}')
 						assignment._label = f'Possibly by {artist_label}'
 					else:
 						attrib_assignment_classes.append(vocab.ProbableAssignment)
-						assignment = vocab.make_multitype_obj(*attrib_assignment_classes, ident='', label=f'Probably attributed to {artist_label}')
+						assignment = vocab.make_multitype_obj(*attrib_assignment_classes, ident=attribute_assignment_id, label=f'Probably attributed to {artist_label}')
 						assignment._label = f'Probably by {artist_label}'
 					event.attributed_by = assignment
 					assignment.assigned_property = 'carried_out_by'
@@ -476,7 +477,7 @@ class AddArtists(Configurable):
 			subevent = model.Production(ident=subevent_id, label=f'Production sub-event for {artist_label}')
 			subevent.carried_out_by = person
 			if uncertain_attribution or 'or' in mods:
-				assignment = vocab.make_multitype_obj(*attrib_assignment_classes, ident='', label=f'Possibly attributed to {artist_label}')
+				assignment = vocab.make_multitype_obj(*attrib_assignment_classes, ident=attribute_assignment_id, label=f'Possibly attributed to {artist_label}')
 				event.attributed_by = assignment
 				assignment.assigned_property = 'part'
 				assignment.assigned = subevent

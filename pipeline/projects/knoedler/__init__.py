@@ -529,8 +529,21 @@ class PopulateKnoedlerObject(Configurable, pipeline.linkedart.PopulateObject):
 		super().__init__(*args, **kwargs)
 
 	def __call__(self, data:dict, *, vocab_type_map, make_la_org):
+		sales_record = get_crom_object(data['_text_row'])
 		data.setdefault('_physical_objects', [])
 		data.setdefault('_linguistic_objects', [])
+		data.setdefault('_people', [])
+
+		prev_owners = data.get('prev_own', [])
+		for i, p in enumerate(prev_owners):
+			role = 'prev_own'
+			person_dict = self.helper.copy_source_information(p, data)
+			person = self.helper.add_person(
+				person_dict,
+				record=sales_record,
+				relative_id=f'{role}_{i+1}'
+			)
+			data['_people'].append(person_dict)
 
 		odata = data['object']
 
@@ -794,8 +807,7 @@ class TransactionHandler(Configurable):
 			shared_people = []
 
 		for k in ('_prov_entries', '_people'):
-			if k not in data:
-				data[k] = []
+			data.setdefault(k, [])
 
 		date = implode_date(data[date_key])
 		odata = data['_object']
@@ -1471,6 +1483,8 @@ class KnoedlerPipeline(PipelineBase):
 			AddArtists(helper=self.helper),
 			_input=rows.output
 		)
+		
+		people = graph.add_chain( ExtractKeyedValues(key='_people'), _input=objects.output )
 		hmos = graph.add_chain( ExtractKeyedValues(key='_physical_objects'), _input=objects.output )
 		texts = graph.add_chain( ExtractKeyedValues(key='_linguistic_objects'), _input=objects.output )
 
@@ -1480,6 +1494,7 @@ class KnoedlerPipeline(PipelineBase):
 			_input=objects.output
 		)
 		if serialize:
+			self.add_serialization_chain(graph, people.output, model=self.models['Person'])
 			self.add_serialization_chain(graph, hmos.output, model=self.models['HumanMadeObject'])
 			self.add_serialization_chain(graph, texts.output, model=self.models['LinguisticObject'])
 			self.add_serialization_chain(graph, consigners.output, model=self.models['Group'])

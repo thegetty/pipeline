@@ -15,6 +15,10 @@ from pipeline.linkedart import add_crom_data, get_crom_object
 
 
 class ProvenanceBase(Configurable):
+	'''
+	This is a base class providing common functionality in the handling of Provenance Entries.
+	'''
+	
 	helper = Option(required=True)
 
 	def add_person(self, data:dict, record, relative_id, **kwargs):
@@ -55,6 +59,7 @@ class ProvenanceBase(Configurable):
 			make_label = _make_label_default
 
 		tx = vocab.ProvenanceEntry(ident=ident)
+		pprint.pprint(tx_label_args)
 		tx._label = make_label(*tx_label_args)
 		if current_tx:
 			if previous:

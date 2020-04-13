@@ -291,7 +291,7 @@ class AddAcquisitionOrBidding(ProvenanceBase):
 
 	def final_owner_procurement(self, tx_label_args, final_owner, current_tx, hmo, current_ts):
 		tx_uri = hmo.id + '-FinalOwnerProv'
-		tx, acq = self.related_procurement(hmo, tx_label_args, current_tx, current_ts, buyer=final_owner, ident=tx_uri)
+		tx, acq = self.related_procurement(hmo, tx_label_args, current_tx, current_ts, buyer=final_owner, ident=tx_uri, make_label=prov_entry_label)
 		return tx, acq
 
 	def add_transfer_of_custody(self, data, current_tx, xfer_to, xfer_from, sequence=1, purpose=None):
@@ -474,7 +474,7 @@ class AddAcquisitionOrBidding(ProvenanceBase):
 		if final_owner_data:
 			data['_organizations'].append(final_owner_data)
 			final_owner = get_crom_object(final_owner_data)
-			tx_label_args = tuple([sale_type, 'Sold', transaction_types] + list(lot_object_key) + ['leading to the currently known location of'])
+			tx_label_args = tuple([self.helper, sale_type, 'Sold', 'leading to the currently known location of'] + list(lot_object_key))
 			tx, acq = self.final_owner_procurement(tx_label_args, final_owner, current_tx, hmo, ts)
 			note = final_owner_data.get('note')
 			if note:
@@ -509,11 +509,11 @@ class AddAcquisitionOrBidding(ProvenanceBase):
 		ts = getattr(lot, 'timespan', None)
 
 		prev_procurements = []
-		tx_label_args = tuple([sale_type, 'Sold', transaction_types] + list(lot_object_key) + [rel])
+		tx_label_args = tuple([self.helper, sale_type, 'Sold', rel] + list(lot_object_key))
 		for i, seller_data in enumerate(sellers):
 			seller = get_crom_object(seller_data)
 			tx_uri = hmo.id + f'-seller-{i}-Prov'
-			tx, acq = self.related_procurement(hmo, tx_label_args, current_ts=ts, buyer=seller, previous=True, ident=tx_uri)
+			tx, acq = self.related_procurement(hmo, tx_label_args, current_ts=ts, buyer=seller, previous=True, ident=tx_uri, make_label=prov_entry_label)
 			self.attach_source_catalog(data, acq, [seller_data])
 			if source:
 				tx.referred_to_by = source
@@ -622,7 +622,7 @@ class AddAcquisitionOrBidding(ProvenanceBase):
 				data['_organizations'].append(final_owner_data)
 				final_owner = get_crom_object(final_owner_data)
 				hmo = get_crom_object(data)
-				tx_label_args = tuple([sale_type, 'Sold', transaction_types] + list(lot_object_key) + ['leading to the currently known location of'])
+				tx_label_args = tuple([self.helper, sale_type, 'Sold', 'leading to the currently known location of'] + list(lot_object_key))
 				tx, acq = self.final_owner_procurement(tx_label_args, final_owner, None, hmo, ts)
 				note = final_owner_data.get('note')
 				if note:

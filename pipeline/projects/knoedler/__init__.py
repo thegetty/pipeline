@@ -949,10 +949,6 @@ class TransactionHandler(ProvenanceBase):
 # 					# but no other fields set these should not constitute actual records of a prev/post owner.
 # 					continue
 				self.handle_prev_post_owner(data, hmo, tx_data, 'Sold', lot_object_key, owner_record, record_id, rev, ts, make_label=prov_entry_label)
-		
-		if len(prev_owners):
-			print('Procurements:')
-			pprint.pprint(data.get('_prov_entries'))
 
 	def add_outgoing_tx(self, data):
 		price_info = data.get('sale')

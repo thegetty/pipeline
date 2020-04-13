@@ -59,7 +59,6 @@ class ProvenanceBase(Configurable):
 			make_label = _make_label_default
 
 		tx = vocab.ProvenanceEntry(ident=ident)
-		pprint.pprint(tx_label_args)
 		tx._label = make_label(*tx_label_args)
 		if current_tx:
 			if previous:

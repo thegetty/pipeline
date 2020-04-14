@@ -499,7 +499,7 @@ class AddAcquisitionOrBidding(ProvenanceBase):
 				self.handle_prev_post_owner(data, hmo, tx_data, sale_type, lot_object_key, owner_record, record_id, rev, ts, make_label=prov_entry_label)
 		yield data, current_tx
 
-	def add_sellers(self, data:dict, sale_type, transaction, transaction_types, sellers, rel, source=None):
+	def add_sellers(self, data:dict, sale_type, transaction, sellers, rel, source=None):
 		hmo = get_crom_object(data)
 		parent = data['parent_data']
 		auction_data = parent['auction_of_lot']
@@ -529,7 +529,7 @@ class AddAcquisitionOrBidding(ProvenanceBase):
 		own_info_source = f'Listed as the seller of object in {cno} {lno} ({date}) that was not sold'
 		note = vocab.SourceStatement(ident='', content=own_info_source)
 		rel = 'leading to the previous ownership of'
-		return self.add_sellers(data, sale_type, transaction, transaction_types, sellers, rel, source=note)
+		return self.add_sellers(data, sale_type, transaction, sellers, rel, source=note)
 
 	def add_private_sellers(self, data:dict, sellers, sale_type, transaction, transaction_types):
 		parent = data['parent_data']
@@ -539,7 +539,7 @@ class AddAcquisitionOrBidding(ProvenanceBase):
 		own_info_source = f'Listed as the seller of object in {cno} {lno} ({date}) that was privately sold'
 		note = vocab.SourceStatement(ident='', content=own_info_source)
 		rel = 'leading to the previous ownership of'
-		return self.add_sellers(data, sale_type, transaction, transaction_types, sellers, rel, source=note)
+		return self.add_sellers(data, sale_type, transaction, sellers, rel, source=note)
 
 	def add_bidding(self, data:dict, buyers, sellers, buy_sell_modifiers, sale_type, transaction, transaction_types, auction_houses_data):
 		'''Add modeling of bids that did not lead to an acquisition'''

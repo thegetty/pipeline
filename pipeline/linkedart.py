@@ -254,6 +254,9 @@ class MakeLinkedArtLinguisticObject(MakeLinkedArtRecord):
 			hmo = get_crom_object(carrier)
 			thing.carried_by = hmo
 
+		for dimension in data.get('dimensions', []):
+			thing.dimension = dimension
+
 
 	def __call__(self, data: dict):
 		if 'object_type' not in data:

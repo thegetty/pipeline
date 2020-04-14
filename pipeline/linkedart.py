@@ -245,6 +245,11 @@ class MakeLinkedArtLinguisticObject(MakeLinkedArtRecord):
 			parent = get_crom_object(parent_data)
 			thing.part_of = parent
 
+		children = data.get('part', [])
+		for child_data in children:
+			child = get_crom_object(child_data)
+			thing.part = child
+
 		for carrier in data.get('carried_by', []):
 			hmo = get_crom_object(carrier)
 			thing.carried_by = hmo

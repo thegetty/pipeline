@@ -203,10 +203,10 @@ class KnoedlerUtilityHelper(UtilityHelper):
 				s_uri = self.make_proj_uri('SalesBook', book)
 				f_uri = self.make_proj_uri('SalesBook', book, 'Folio', folio)
 				
-				s_text = vocab.SalesCatalogText(ident=s_uri + '-Text', label=f'Knoedler Sales Boook {book}')
-				s_hmo = vocab.SalesCatalog(ident=s_uri, label=f'Knoedler Sales Boook {book}')
-				f_text = vocab.FolioText(ident=f_uri + '-Text', label=f'Knoedler Sales Boook {book}, Folio {folio}')
-				f_hmo = vocab.Folio(ident=f_uri, label=f'Knoedler Sales Boook {book}, Folio {folio}')
+				s_text = vocab.SalesCatalogText(ident=s_uri + '-Text', label=f'Knoedler Sales Book {book}')
+				s_hmo = vocab.SalesCatalog(ident=s_uri, label=f'Knoedler Sales Book {book}')
+				f_text = vocab.FolioText(ident=f_uri + '-Text', label=f'Knoedler Sales Book {book}, Folio {folio}')
+				f_hmo = vocab.Folio(ident=f_uri, label=f'Knoedler Sales Book {book}, Folio {folio}')
 
 				s_text.carried_by = s_hmo
 				f_text.carried_by = f_hmo

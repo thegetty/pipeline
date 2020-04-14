@@ -528,6 +528,21 @@ class PopulateKnoedlerObject(Configurable, pipeline.linkedart.PopulateObject):
 	def __init__(self, *args, **kwargs):
 		super().__init__(*args, **kwargs)
 
+	def _populate_object_visual_item(self, data:dict):
+		hmo = get_crom_object(data)
+		title = data.get('title')
+		title = truncate_with_ellipsis(title, 100) or title
+
+		vi_id = hmo.id + '-VisItem'
+		vi = model.VisualItem(ident=vi_id)
+		vidata = {'uri': vi_id}
+		if title:
+			vidata['label'] = f'Visual work of “{title}”'
+			sales_record = get_crom_object(data['_record'])
+			vidata['names'] = [(title,{'referred_to_by': [sales_record]})]
+		data['_visual_item'] = add_crom_data(data=vidata, what=vi)
+		hmo.shows = vi
+
 	def __call__(self, data:dict, *, vocab_type_map, make_la_org):
 		data.setdefault('_physical_objects', [])
 		data.setdefault('_linguistic_objects', [])
@@ -591,6 +606,7 @@ class PopulateKnoedlerObject(Configurable, pipeline.linkedart.PopulateObject):
 		mlao = MakeLinkedArtHumanMadeObject()
 		mlao(data['_object'])
 
+		self._populate_object_visual_item(data['_object'])
 		self.populate_object_statements(data['_object'], default_unit='inches')
 		data['_physical_objects'].append(data['_object'])
 		return data
@@ -1473,6 +1489,11 @@ class KnoedlerPipeline(PipelineBase):
 		)
 		hmos = graph.add_chain( ExtractKeyedValues(key='_physical_objects'), _input=objects.output )
 		texts = graph.add_chain( ExtractKeyedValues(key='_linguistic_objects'), _input=objects.output )
+		items = graph.add_chain(
+			ExtractKeyedValue(key='_visual_item'),
+			pipeline.linkedart.MakeLinkedArtRecord(),
+			_input=hmos.output
+		)
 
 		consigners = graph.add_chain( ExtractKeyedValue(key='_consigner'), _input=objects.output )
 		artists = graph.add_chain(
@@ -1480,6 +1501,7 @@ class KnoedlerPipeline(PipelineBase):
 			_input=objects.output
 		)
 		if serialize:
+			self.add_serialization_chain(graph, items.output, model=self.models['VisualItem'])
 			self.add_serialization_chain(graph, hmos.output, model=self.models['HumanMadeObject'])
 			self.add_serialization_chain(graph, texts.output, model=self.models['LinguisticObject'])
 			self.add_serialization_chain(graph, consigners.output, model=self.models['Group'])

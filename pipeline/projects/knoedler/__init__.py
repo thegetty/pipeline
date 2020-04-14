@@ -403,17 +403,18 @@ class AddBook(Configurable):
 		}
 		make_la_hmo(data['_physical_book'])
 
+		seq = vocab.SequencePosition(ident='', value=book_id)
+		seq.unit = vocab.instances['numbers']
+
 		data['_text_book'] = {
 			'uri': self.helper.make_proj_uri('Text', 'Book', book_id),
 			'object_type': vocab.AccountBookText,
 			'label': f'Knoedler Stock Book {book_id}',
 			'identifiers': [self.helper.knoedler_number_id(book_id)],
-			'carried_by': [data['_physical_book']]
+			'carried_by': [data['_physical_book']],
+			'dimensions': [seq],
 		}
 		make_la_lo(data['_text_book'])
-		
-		b = get_crom_object(data['_text_book'])
-		b.dimension = vocab.SequencePosition(ident='', value=book_id)
 
 		return data
 
@@ -427,10 +428,6 @@ class AddPage(Configurable):
 		book = data['book_record']
 		book_id, page_id, _ = record_id(book)
 
-		d = vocab.SequencePosition()
-		d.value = page_id
-		d.unit = vocab.instances['numbers']
-
 		data['_physical_page'] = {
 			'uri': self.helper.make_proj_uri('Book', book_id, 'Page', page_id),
 			'object_type': vocab.Page,
@@ -439,6 +436,9 @@ class AddPage(Configurable):
 			'part_of': [data['_physical_book']],
 		}
 		make_la_hmo(data['_physical_page'])
+
+		seq = vocab.SequencePosition(ident='', value=page_id)
+		seq.unit = vocab.instances['numbers']
 
 		data['_text_page'] = {
 			'uri': self.helper.make_proj_uri('Text', 'Book', book_id, 'Page', page_id),
@@ -449,7 +449,7 @@ class AddPage(Configurable):
 			'part_of': [data['_text_book']],
 			'part': [],
 			'carried_by': [data['_physical_page']],
-			'dimensions': [d] # TODO: add dimension handling to MakeLinkedArtLinguisticObject
+			'dimensions': [seq],
 		}
 		if book.get('heading'):
 			# This is a transcription of the heading of the page
@@ -464,9 +464,6 @@ class AddPage(Configurable):
 			data['_text_page']['subheading'] = subheading # TODO: add subheading handling to MakeLinkedArtLinguisticObject
 		make_la_lo(data['_text_page'])
 
-		p = get_crom_object(data['_text_page'])
-		p.dimension = vocab.SequencePosition(ident='', value=page_id)
-
 		return data
 
 class AddRow(Configurable):
@@ -478,9 +475,8 @@ class AddRow(Configurable):
 		book = data['book_record']
 		book_id, page_id, row_id = record_id(book)
 
-		d = vocab.SequencePosition()
-		d.value = row_id
-		d.unit = vocab.instances['numbers']
+		seq = vocab.SequencePosition(ident='', value=row_id)
+		seq.unit = vocab.instances['numbers']
 
 		notes = []
 		# TODO: add attributed star record number to row as a LocalNumber
@@ -493,8 +489,8 @@ class AddRow(Configurable):
 			'label': f'Knoedler Stock Book {book_id}, Page {page_id}, Row {row_id}',
 			'identifiers': [(row_id, vocab.LocalNumber(ident=''))],
 			'part_of': [data['_text_page']],
-			'dimensions': [d], # TODO: add dimension handling to MakeLinkedArtLinguisticObject
 			'referred_to_by': notes,
+			'dimensions': [seq],
 		}
 		make_la_lo(data['_text_row'])
 

@@ -821,7 +821,7 @@ class SalesPipeline(PipelineBase):
 	def add_procurement_chain(self, graph, acquisitions, serialize=True):
 		'''Add modeling of the procurement event of an auction of a lot.'''
 		p = graph.add_chain(
-			ExtractKeyedValues(key='_procurements'),
+			ExtractKeyedValues(key='_prov_entries'),
 			_input=acquisitions.output
 		)
 		if serialize:

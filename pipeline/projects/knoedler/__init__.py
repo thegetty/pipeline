@@ -66,6 +66,7 @@ from pipeline.nodes.basic import \
 			Serializer, \
 			Trace
 from pipeline.util.rewriting import rewrite_output_files, JSONValueRewriter
+from pipeline.provenance import ProvenanceBase
 
 class PersonIdentity:
 	'''
@@ -220,7 +221,7 @@ class KnoedlerUtilityHelper(UtilityHelper):
 			return vocab.BibliographyStatement(ident='', content=ref_text)
 		return None
 
-	def transaction_uri_for_record(self, data, incoming=False):
+	def transaction_key_for_record(self, data, incoming=False):
 		'''
 		Return a URI representing the prov entry which the object (identified by the
 		supplied data) is a part of. This may identify just the object being bought or
@@ -237,8 +238,18 @@ class KnoedlerUtilityHelper(UtilityHelper):
 		if price:
 			n = price.get('note')
 			if n and n.startswith('for numbers '):
-				return self.make_proj_uri('TX-MULTI', dir, n[12:])
-		return self.make_proj_uri('TX', dir, book_id, page_id, row_id)
+				return ('TX-MULTI', dir, n[12:])
+		return ('TX', dir, book_id, page_id, row_id)
+
+	def transaction_uri_for_record(self, data, incoming=False):
+		'''
+		Return a URI representing the prov entry which the object (identified by the
+		supplied data) is a part of. This may identify just the object being bought or
+		sold or, in the case of multiple objects being bought for a single price, a
+		single prov entry that encompasses multiple object acquisitions.
+		'''
+		tx_key = self.transaction_key_for_record(data, incoming)
+		return self.make_proj_uri(*tx_key)
 
 	@staticmethod
 	def transaction_multiple_object_label(data, incoming=False):
@@ -544,8 +555,10 @@ class PopulateKnoedlerObject(Configurable, pipeline.linkedart.PopulateObject):
 		hmo.shows = vi
 
 	def __call__(self, data:dict, *, vocab_type_map, make_la_org):
+		sales_record = get_crom_object(data['_text_row'])
 		data.setdefault('_physical_objects', [])
 		data.setdefault('_linguistic_objects', [])
+		data.setdefault('_people', [])
 
 		odata = data['object']
 
@@ -624,7 +637,15 @@ class TransactionSwitch:
 		else:
 			warnings.warn(f'TODO: handle transaction type {transaction}')
 
-class TransactionHandler(Configurable):
+def prov_entry_label(helper, sale_type, transaction, rel, *key):
+	if key[0] == 'TX-MULTI':
+		_, dir, ids = key
+		return f'Provenance Entry {rel} objects {ids}'
+	else:
+		_, dir, book_id, page_id, row_id = key
+		return f'Provenance Entry {rel} object identified in book {book_id}, page {page_id}, row {row_id}'
+
+class TransactionHandler(ProvenanceBase):
 	def _empty_tx(self, data, incoming=False, purpose=None):
 		tx_uri = self.helper.transaction_uri_for_record(data, incoming)
 		tx_type = data.get('book_record', {}).get('transaction', 'Sold')
@@ -810,8 +831,7 @@ class TransactionHandler(Configurable):
 			shared_people = []
 
 		for k in ('_prov_entries', '_people'):
-			if k not in data:
-				data[k] = []
+			data.setdefault(k, [])
 
 		date = implode_date(data[date_key])
 		odata = data['_object']
@@ -904,7 +924,47 @@ class TransactionHandler(Configurable):
 		sellers = data['purchase_seller']
 		for p in sellers:
 			self.helper.copy_source_information(p, data)
-		return self._prov_entry(data, 'entry_date', sellers, price_info, knoedler_price_part, shared_people, incoming=True)
+		
+		tx = self._prov_entry(data, 'entry_date', sellers, price_info, knoedler_price_part, shared_people, incoming=True)
+		
+		prev_owners = data.get('prev_own', [])
+		lot_object_key = self.helper.transaction_key_for_record(data, incoming=True)
+		if prev_owners:
+			self.model_prev_owners(data, prev_owners, tx, lot_object_key)
+
+		return tx
+
+	def model_prev_owners(self, data, prev_owners, tx, lot_object_key):
+		sales_record = get_crom_object(data['_text_row'])
+		for i, p in enumerate(prev_owners):
+			role = 'prev_own'
+			person_dict = self.helper.copy_source_information(p, data)
+			person = self.helper.add_person(
+				person_dict,
+				record=sales_record,
+				relative_id=f'{role}_{i+1}'
+			)
+			data['_people'].append(person_dict)
+
+		ts = None # TODO
+		prev_post_owner_records = [(prev_owners, True)]
+
+		data['_record'] = data['_text_row']
+		hmo = get_crom_object(data['_object'])
+		for owner_data, rev in prev_post_owner_records:
+			if rev:
+				rev_name = 'prev-owner'
+			else:
+				rev_name = 'post-owner'
+# 			ignore_fields = {'own_so', 'own_auth_l', 'own_auth_d'}
+			tx_data = add_crom_data(data={}, what=tx)
+			for seq_no, owner_record in enumerate(owner_data):
+				record_id = f'{rev_name}-{seq_no+1}'
+# 				if not any([bool(owner_record.get(k)) for k in owner_record.keys() if k not in ignore_fields]):
+# 					# some records seem to have metadata (source information, location, or notes)
+# 					# but no other fields set these should not constitute actual records of a prev/post owner.
+# 					continue
+				self.handle_prev_post_owner(data, hmo, tx_data, 'Sold', lot_object_key, owner_record, record_id, rev, ts, make_label=prov_entry_label)
 
 	def add_outgoing_tx(self, data):
 		price_info = data.get('sale')
@@ -1487,6 +1547,8 @@ class KnoedlerPipeline(PipelineBase):
 			AddArtists(helper=self.helper),
 			_input=rows.output
 		)
+		
+		people = graph.add_chain( ExtractKeyedValues(key='_people'), _input=objects.output )
 		hmos = graph.add_chain( ExtractKeyedValues(key='_physical_objects'), _input=objects.output )
 		texts = graph.add_chain( ExtractKeyedValues(key='_linguistic_objects'), _input=objects.output )
 		items = graph.add_chain(
@@ -1502,6 +1564,7 @@ class KnoedlerPipeline(PipelineBase):
 		)
 		if serialize:
 			self.add_serialization_chain(graph, items.output, model=self.models['VisualItem'])
+			self.add_serialization_chain(graph, people.output, model=self.models['Person'])
 			self.add_serialization_chain(graph, hmos.output, model=self.models['HumanMadeObject'])
 			self.add_serialization_chain(graph, texts.output, model=self.models['LinguisticObject'])
 			self.add_serialization_chain(graph, consigners.output, model=self.models['Group'])

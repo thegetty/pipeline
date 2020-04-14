@@ -411,6 +411,9 @@ class AddBook(Configurable):
 			'carried_by': [data['_physical_book']]
 		}
 		make_la_lo(data['_text_book'])
+		
+		b = get_crom_object(data['_text_book'])
+		b.dimension = vocab.SequencePosition(ident='', value=book_id)
 
 		return data
 
@@ -454,6 +457,9 @@ class AddPage(Configurable):
 			# Transcription of the subheading of the page
 			data['_text_page']['subheading'] = data['subheading'] # TODO: add subheading handling to MakeLinkedArtLinguisticObject
 		make_la_lo(data['_text_page'])
+
+		p = get_crom_object(data['_text_page'])
+		p.dimension = vocab.SequencePosition(ident='', value=page_id)
 
 		return data
 

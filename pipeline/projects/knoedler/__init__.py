@@ -445,17 +445,23 @@ class AddPage(Configurable):
 			'object_type': vocab.AccountBookText,
 			'label': f'Knoedler Stock Book {book_id}, Page {page_id}',
 			'identifiers': [(page_id, vocab.LocalNumber(ident=''))],
+			'referred_to_by': [],
 			'part_of': [data['_text_book']],
+			'part': [],
 			'carried_by': [data['_physical_page']],
 			'dimensions': [d] # TODO: add dimension handling to MakeLinkedArtLinguisticObject
 		}
-		if data.get('heading'):
+		if book.get('heading'):
 			# This is a transcription of the heading of the page
 			# Meaning it is part of the page linguistic object
-			data['_text_page']['heading'] = data['heading'] # TODO: add heading handling to MakeLinkedArtLinguisticObject
-		if data.get('subheading'):
+			heading = book['heading']
+			data['_text_page']['part'].append(add_crom_data(data={}, what=vocab.Heading(ident='', content=heading)))
+			data['_text_page']['heading'] = heading # TODO: add heading handling to MakeLinkedArtLinguisticObject
+		if book.get('subheading'):
 			# Transcription of the subheading of the page
-			data['_text_page']['subheading'] = data['subheading'] # TODO: add subheading handling to MakeLinkedArtLinguisticObject
+			subheading = book['subheading']
+			data['_text_page']['part'].append(add_crom_data(data={}, what=vocab.SubHeading(ident='', content=subheading)))
+			data['_text_page']['subheading'] = subheading # TODO: add subheading handling to MakeLinkedArtLinguisticObject
 		make_la_lo(data['_text_page'])
 
 		p = get_crom_object(data['_text_page'])

@@ -539,9 +539,8 @@ class PopulateKnoedlerObject(Configurable, pipeline.linkedart.PopulateObject):
 	def __init__(self, *args, **kwargs):
 		super().__init__(*args, **kwargs)
 
-	def _populate_object_visual_item(self, data:dict):
+	def _populate_object_visual_item(self, data:dict, title):
 		hmo = get_crom_object(data)
-		title = data.get('title')
 		title = truncate_with_ellipsis(title, 100) or title
 
 		vi_id = hmo.id + '-VisItem'
@@ -619,7 +618,7 @@ class PopulateKnoedlerObject(Configurable, pipeline.linkedart.PopulateObject):
 		mlao = MakeLinkedArtHumanMadeObject()
 		mlao(data['_object'])
 
-		self._populate_object_visual_item(data['_object'])
+		self._populate_object_visual_item(data['_object'], label)
 		self.populate_object_statements(data['_object'], default_unit='inches')
 		data['_physical_objects'].append(data['_object'])
 		return data

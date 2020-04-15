@@ -474,7 +474,7 @@ class AddRow(Configurable):
 	def __call__(self, data:dict, make_la_lo):
 		book = data['book_record']
 		book_id, page_id, row_id = record_id(book)
-
+		rec_num = data["star_record_no"]
 		seq = vocab.SequencePosition(ident='', value=row_id)
 		seq.unit = vocab.instances['numbers']
 
@@ -484,10 +484,11 @@ class AddRow(Configurable):
 			if book.get(k):
 				notes.append(vocab.Note(ident='', content=book[k]))
 
+		star_id = self.helper.gri_number_id(rec_num, vocab.SystemNumber)
 		data['_text_row'] = {
 			'uri': self.helper.make_proj_uri('Text', 'Book', book_id, 'Page', page_id, 'Row', row_id),
 			'label': f'Knoedler Stock Book {book_id}, Page {page_id}, Row {row_id}',
-			'identifiers': [(row_id, vocab.LocalNumber(ident=''))],
+			'identifiers': [vocab.LocalNumber(ident='', content=row_id), star_id],
 			'part_of': [data['_text_page']],
 			'referred_to_by': notes,
 			'dimensions': [seq],

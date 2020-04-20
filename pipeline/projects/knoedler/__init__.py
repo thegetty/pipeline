@@ -177,6 +177,13 @@ class KnoedlerUtilityHelper(UtilityHelper):
 		self.title_re = re.compile(r'\["(.*)" (title )?(info )?from ([^]]+)\]')
 		self.title_ref_re = re.compile(r'Sales Book (\d+), (\d+-\d+), f.(\d+)')
 
+	def add_person(self, data, record, relative_id, **kwargs):
+		self.person_identity.add_uri(data, record_id=relative_id)
+		key = data['uri_keys']
+		if key in self.services['people_groups']:
+			warnings.warn(f'*** TODO: model person record as a GROUP: {pprint.pformat(key)}')
+		return super().add_person(data, record=record, relative_id=relative_id, **kwargs)
+
 	def title_value(self, title):
 		if not isinstance(title, str):
 			return
@@ -1212,6 +1219,15 @@ class KnoedlerPipeline(PipelineBase):
 	def setup_services(self):
 		'''Return a `dict` of named services available to the bonobo pipeline.'''
 		services = super().setup_services()
+
+		people_groups = set()
+		pg_file = pathlib.Path(settings.pipeline_tmp_path).joinpath('people_groups.json')
+		with suppress(FileNotFoundError):
+			with pg_file.open('r') as fh:
+				data = json.load(fh)
+				for key in data['group_keys']:
+					people_groups.add(tuple(key))
+		services['people_groups'] = people_groups
 
 		same_objects = services['objects_same']['objects']
 		same_object_id_map = self._construct_same_object_map(same_objects)

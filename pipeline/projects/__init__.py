@@ -50,6 +50,10 @@ class PersonIdentity:
 	def acceptable_person_auth_name(self, auth_name):
 		if not auth_name or auth_name in self.ignore_authnames:
 			return False
+		elif '[UNIDENTIFIED]' in auth_name:
+			# these are a special case in PEOPLE.
+			# there are ~7k records with auth names containing '[UNIDENTIFIED]'
+			return True
 		elif '[' in auth_name:
 			return False
 		return True

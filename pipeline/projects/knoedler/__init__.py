@@ -80,7 +80,11 @@ class PersonIdentity:
 	def acceptable_auth_name(self, auth_name):
 		if not auth_name or auth_name in self.ignore_authnames:
 			return False
-		if '[' in auth_name:
+		elif '[UNIDENTIFIED]' in auth_name:
+			# these are a special case in PEOPLE.
+			# there are ~7k records with auth names containing '[UNIDENTIFIED]'
+			return True
+		elif '[' in auth_name:
 			return False
 		return True
 
@@ -92,11 +96,12 @@ class PersonIdentity:
 		auth_name = data.get('auth_name')
 		auth_name_q = '?' in data.get('auth_nameq', '')
 
-		if ulan:
-			return ('PERSON', 'ULAN', ulan)
-		elif self.acceptable_auth_name(auth_name):
+		if self.acceptable_auth_name(auth_name):
+			warnings.warn('acceptable auth name')
 			return ('PERSON', 'AUTHNAME', auth_name)
 		else:
+			warnings.warn(f'NOT an acceptable auth name: {auth_name}')
+			pprint.pprint(data)
 			# not enough information to identify this person uniquely, so use the source location in the input file
 			pi_rec_no = data.get('pi_record_no')
 			if not pi_rec_no:
@@ -106,6 +111,7 @@ class PersonIdentity:
 				return ('PERSON', 'PI_REC_NO', pi_rec_no, record_id)
 			else:
 				warnings.warn(f'*** No record identifier given for person identified only by pi_record_number {pi_rec_no}')
+				pprint.pprint(data)
 				return ('PERSON', 'PI_REC_NO', pi_rec_no)
 
 	def add_person(self, a, record, relative_id, **kwargs):
@@ -346,8 +352,11 @@ def record_id(data):
 
 class AddPersonURI(Configurable):
 	helper = Option(required=True)
+	record_id = Option()
 
 	def __call__(self, data:dict):
+		pi = self.helper.person_identity
+		pi.add_uri(data, record_id=self.record_id)
 		# TODO: move this into MakeLinkedArtPerson
 		auth_name = data.get('authority')
 		if data.get('ulan'):
@@ -504,6 +513,7 @@ class AddArtists(Configurable):
 	def __call__(self, data:dict, *, make_la_person):
 		'''Add modeling for artists as people involved in the production of an object'''
 		hmo = get_crom_object(data['_object'])
+		sales_record = get_crom_object(data['_text_row'])
 
 		try:
 			hmo_label = f'{hmo._label}'
@@ -518,18 +528,8 @@ class AddArtists(Configurable):
 		sales_record = get_crom_object(data['_text_row'])
 		pi = self.helper.person_identity
 
-		apuri = AddPersonURI(helper=self.helper)
-		mlap = MakeLinkedArtPerson()
-		for a in artists:
-			self.helper.copy_source_information(a, data)
-			apuri(a)
-			mlap(a)
-
 		for seq_no, a in enumerate(artists):
-			pi.add_uri(a, record_id=f'artist-{seq_no+1}')
-			pi.add_names(a, referrer=sales_record, role='artist')
 			artist_label = a.get('role_label')
-			make_la_person(a)
 			person = get_crom_object(a)
 
 			subprod_path = self.helper.make_uri_path(*a["uri_keys"])
@@ -577,11 +577,14 @@ class PopulateKnoedlerObject(Configurable, pipeline.linkedart.PopulateObject):
 		typestring = odata.get('object_type', '')
 		identifiers = []
 
-		apuri = AddPersonURI(helper=self.helper)
 		mlap = MakeLinkedArtPerson()
-		for a in data.get('_artists', []):
+		for i, a in enumerate(data.get('_artists', [])):
 			self.helper.copy_source_information(a, data)
-			apuri(a)
+			self.helper.person_identity.add_person(
+				a,
+				record=sales_record,
+				relative_id=f'artist-{i}'
+			)
 			mlap(a)
 
 		if title_ref:
@@ -1239,9 +1242,15 @@ class KnoedlerPipeline(PipelineBase):
 					{
 						'group_repeating': {
 							'_artists': {
+								'rename_keys': {
+									"artist_name": 'name',
+									"artist_authority": 'auth_name',
+									"artist_nationality": 'nationality',
+									"artist_attribution_mod": 'attribution_mod',
+									"artist_attribution_mod_auth": 'attribution_mod_auth',
+								},
 								'postprocess': [
 									filter_empty_person,
-									lambda x, _: strip_key_prefix('artist_', x),
 								],
 								'prefixes': (
 									"artist_name",
@@ -1249,8 +1258,8 @@ class KnoedlerPipeline(PipelineBase):
 									"artist_nationality",
 									"artist_attribution_mod",
 									"artist_attribution_mod_auth",
-									"star_rec_no",
-									"artist_ulan")},
+								)
+							},
 							'purchase_seller': {
 								'postprocess': [
 									filter_empty_person,
@@ -1262,32 +1271,31 @@ class KnoedlerPipeline(PipelineBase):
 									"purchase_seller_auth_name",
 									"purchase_seller_auth_loc",
 									"purchase_seller_auth_mod",
-									"purchase_seller_ulan",
 								)
 							},
 							'purchase_buyer': {
 								'rename_keys': {
 									'purchase_buyer_own': 'name',
 									'purchase_buyer_share': 'share',
-									'purchase_buyer_ulan': 'ulan',
+									'purchase_buyer_share_auth': 'auth_name',
 								},
 								'postprocess': [filter_empty_person],
 								'prefixes': (
 									"purchase_buyer_own",
 									"purchase_buyer_share",
-									"purchase_buyer_ulan",
+									"purchase_buyer_share_auth",
 								)
 							},
 							'prev_own': {
 								'rename_keys': {
 									'prev_own': 'name',
+									'prev_own_auth': 'auth_name',
 									'prev_own_loc': 'loc',
-									'prev_own_ulan': 'ulan',
 								},
 								'prefixes': (
 									"prev_own",
+									"prev_own_auth",
 									"prev_own_loc",
-									"prev_own_ulan",
 								)
 							},
 							'sale_buyer': {
@@ -1297,11 +1305,9 @@ class KnoedlerPipeline(PipelineBase):
 								'prefixes': (
 									"sale_buyer_name",
 									"sale_buyer_loc",
-									"sale_buyer_mod",
 									"sale_buyer_auth_name",
 									"sale_buyer_auth_addr",
 									"sale_buyer_auth_mod",
-									"sale_buyer_ulan",
 								)
 							}
 						},
@@ -1313,7 +1319,6 @@ class KnoedlerPipeline(PipelineBase):
 									"present_loc_inst",
 									"present_loc_acc",
 									"present_loc_note",
-									"present_loc_ulan",
 								)
 							},
 							'consigner': {
@@ -1422,11 +1427,11 @@ class KnoedlerPipeline(PipelineBase):
 							'post_owner': {
 								'rename_keys': {
 									"post_owner": 'name',
-									"post_owner_ulan": 'ulan',
+									"post_owner_auth": 'auth_name',
 								},
 								'properties': (
 									"post_owner",
-									"post_owner_ulan",
+									"post_owner_auth",
 								)
 							}
 						}

@@ -113,6 +113,7 @@ data/aata/*.py
 data/knoedler/*.csv
 data/knoedler/*.sql*
 data/knoedler/*.xlsx
+data/people/*.csv
 data/sales/*.csv
 data/sales/*.sql*
 data/sales/data_dictionary

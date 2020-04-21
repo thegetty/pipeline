@@ -332,16 +332,25 @@ class PersonIdentity:
 		If the `role` string is given (e.g. 'artist'), also sets the `role_label` key
 		to a value (e.g. 'artist “RUBENS, PETER PAUL”').
 		'''
+		data.setdefault('identifiers', [])
 		auth_name = data.get('auth_name', '')
+		disp_name = data.get('auth_display_name')
+		name_type = vocab.PrimaryName
+		
+		if disp_name:
+			data['identifiers'].append(vocab.Name(ident='', content=auth_name))
+			auth_name = disp_name
+			name_type = vocab.Name
+
 		role_label = None
 		if self.acceptable_person_auth_name(auth_name):
 			if role:
 				role_label = f'{role} “{auth_name}”'
 			data['label'] = auth_name
-			pname = vocab.PrimaryName(ident='', content=auth_name) # NOTE: most of these are also vocab.SortName, but not 100%, so witholding that assertion for now
+			pname = name_type(ident='', content=auth_name) # NOTE: most of these are also vocab.SortName, but not 100%, so witholding that assertion for now
 			if referrer:
 				pname.referred_to_by = referrer
-			data['identifiers'] = [pname]
+			data['identifiers'].append(pname)
 
 		if 'names' not in data:
 			data['names'] = []

@@ -87,6 +87,17 @@ class PeopleUtilityHelper(UtilityHelper):
 		else:
 			return None
 
+	def add_group(self, data, **kwargs):
+		g = super().add_group(data, **kwargs)
+		
+		# "people" records that are actually groups are recorded here, serialized, and
+		# then used in the Knoedler pipeline so that those records can be properly
+		# asserted as Gorups and not People (since the distinguishing data only appears)
+		# in the PEOPLE dataset, not in Knoedler.
+		key = data['uri_keys']
+		self.services['people_groups']['group_keys'].append(key)
+		return g
+
 class AddPerson(Configurable):
 	helper = Option(required=True)
 	
@@ -214,6 +225,7 @@ class PeoplePipeline(PipelineBase):
 			# to avoid constructing new MakeLinkedArtPerson objects millions of times, this
 			# is passed around as a service to the functions and classes that require it.
 			'make_la_person': pipeline.linkedart.MakeLinkedArtPerson(),
+			'people_groups': {'group_keys': []},
 		})
 		return services
 
@@ -305,6 +317,10 @@ class PeoplePipeline(PipelineBase):
 			self.add_serialization_chain(g, source.output, model=self.models[model], use_memory_writer=False)
 			self.run_graph(g, services={})
 
+		print('Writing people-groups mapping data to disk')
+		pg_file = pathlib.Path(settings.pipeline_tmp_path).joinpath('people_groups.json')
+		with pg_file.open('w') as fh:
+			json.dump(services['people_groups'], fh)
 
 class PeopleFilePipeline(PeoplePipeline):
 	'''

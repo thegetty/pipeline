@@ -163,11 +163,24 @@ $(GETTY_PIPELINE_TMP_PATH)/sales.dot: sales.py
 $(GETTY_PIPELINE_TMP_PATH)/sales.pdf: $(GETTY_PIPELINE_TMP_PATH)/sales.dot
 	$(DOT) -Tpdf -o $(GETTY_PIPELINE_TMP_PATH)/sales.pdf $(GETTY_PIPELINE_TMP_PATH)/sales.dot
 
+
 ### KNOEDLER
 
-knoedler:
+knoedler: knoedlerdata jsonlist
+	cat $(GETTY_PIPELINE_TMP_PATH)/json_files.txt | PYTHONPATH=`pwd` $(PYTHON) ./scripts/generate_metadata_graph.py knoedler
+
+knoedlerdata: knoedlerpipeline knoedlerpostprocessing
+	find $(GETTY_PIPELINE_OUTPUT) -type d -empty -delete
+
+knoedlerpipeline:
+	mkdir -p $(GETTY_PIPELINE_TMP_PATH)/pipeline
 	QUIET=$(QUIET) GETTY_PIPELINE_DEBUG=$(DEBUG) GETTY_PIPELINE_LIMIT=$(LIMIT) $(PYTHON) ./knoedler.py
-# 	PYTHONPATH=`pwd` $(PYTHON) ./scripts/rewrite_uris_to_uuids.py 'tag:getty.edu,2019:digital:pipeline:knoedler:REPLACE-WITH-UUID#'
+
+knoedlerpostprocessing: postprocessing_uuidmap postprocessing_rewrite_uris
+	ls $(GETTY_PIPELINE_OUTPUT) | PYTHONPATH=`pwd` xargs -n 1 -P $(CONCURRENCY) -I '{}' $(PYTHON) ./scripts/coalesce_json.py "${GETTY_PIPELINE_OUTPUT}/{}"
+	PYTHONPATH=`pwd` $(PYTHON) ./scripts/remove_meaningless_ids.py
+	# Reorganizing JSON files...
+	find $(GETTY_PIPELINE_OUTPUT) -name '*.json' | PYTHONPATH=`pwd` xargs -n 256 -P $(CONCURRENCY) $(PYTHON) ./scripts/reorganize_json.py
 
 knoedlergraph: $(GETTY_PIPELINE_TMP_PATH)/knoedler.pdf
 	open -a Preview $(GETTY_PIPELINE_TMP_PATH)/knoedler.pdf

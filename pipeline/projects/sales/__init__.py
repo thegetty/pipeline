@@ -60,6 +60,7 @@ import pipeline.linkedart
 from pipeline.linkedart import add_crom_data, get_crom_object
 from pipeline.io.csv import CurriedCSVReader
 from pipeline.nodes.basic import \
+			RecordCounter, \
 			KeyManagement, \
 			RemoveKeys, \
 			GroupRepeatingKeys, \
@@ -610,22 +611,6 @@ class SalesUtilityHelper(UtilityHelper):
 
 		return add_crom_data(data=a, what=house)
 
-class RecordCounter(Configurable):
-	counts = Service('counts')
-	verbose = Option(bool, default=False)
-	name = Option()
-
-	def __init__(self, *args, **kwargs):
-		super().__init__(self, *args, **kwargs)
-		self.mod = 100
-
-	def __call__(self, data, counts):
-		counts[self.name] += 1
-		count = counts[self.name]
-		if count % self.mod == 0:
-			print(f'\r{count} {self.name}', end='', file=sys.stderr)
-		return data
-
 def add_crom_price(data, parent, services, add_citations=False):
 	'''
 	Add modeling data for `MonetaryAmount`, `StartingPrice`, or `EstimatedPrice`,
@@ -836,7 +821,7 @@ class SalesPipeline(PipelineBase):
 	def add_procurement_chain(self, graph, acquisitions, serialize=True):
 		'''Add modeling of the procurement event of an auction of a lot.'''
 		p = graph.add_chain(
-			ExtractKeyedValues(key='_procurements'),
+			ExtractKeyedValues(key='_prov_entries'),
 			_input=acquisitions.output
 		)
 		if serialize:
@@ -1236,7 +1221,7 @@ class SalesPipeline(PipelineBase):
 		objects = graph.add_chain(
 			ExtractKeyedValue(key='_object'),
 			pipeline.projects.sales.objects.add_object_type,
-			pipeline.projects.sales.objects.PopulateObject(helper=self.helper),
+			pipeline.projects.sales.objects.PopulateSalesObject(helper=self.helper),
 			pipeline.linkedart.MakeLinkedArtHumanMadeObject(),
 			pipeline.projects.sales.objects.AddArtists(helper=self.helper),
 			RecordCounter(name='sales_records', verbose=self.debug),

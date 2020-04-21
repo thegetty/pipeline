@@ -50,6 +50,10 @@ class PersonIdentity:
 	def acceptable_person_auth_name(self, auth_name):
 		if not auth_name or auth_name in self.ignore_authnames:
 			return False
+		elif '[UNIDENTIFIED]' in auth_name:
+			# these are a special case in PEOPLE.
+			# there are ~7k records with auth names containing '[UNIDENTIFIED]'
+			return True
 		elif '[' in auth_name:
 			return False
 		return True
@@ -443,14 +447,16 @@ class PipelineBase:
 		lugt = model.Person(ident=LUGT_URI, label='Frits Lugt')
 		lugt.identified_by = vocab.PrimaryName(ident='', content='Frits Lugt')
 		lugt.exact_match = model.BaseResource(ident=f'http://vocab.getty.edu/ulan/{lugt_ulan}')
-		return {
+		instances = defaultdict(dict)
+		instances.update({
 			'Group': {
 				'gri': gri
 			},
 			'Person': {
 				'lugt': lugt
 			}
-		}
+		})
+		return instances
 
 	def _service_from_path(self, file):
 		if file.suffix == '.json':

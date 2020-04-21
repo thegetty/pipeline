@@ -2,26 +2,30 @@
 
 import os
 import sys
+import csv
 import bonobo
+from cromulent import model, vocab
+from cromulent.model import factory
 
-# project name could be passed on the command line as which pipeline to run
-# and then passed in to the appropriate project
-# then UID_TAG_PREFIX could be managed in the main code
-
-from pipeline.projects.knoedler import Pipeline
-import settings
-from cromulent import vocab
+from pipeline.projects.knoedler import KnoedlerFilePipeline, KnoedlerPipeline
+from settings import project_data_path, output_file_path, arches_models, DEBUG
 
 ### Pipeline
 
 if __name__ == '__main__':
-	if settings.DEBUG:
+	factory.cache_hierarchy()
+	if DEBUG:
 		LIMIT		= int(os.environ.get('GETTY_PIPELINE_LIMIT', 10))
-		PACK_SIZE = 10
 	else:
 		LIMIT		= int(os.environ.get('GETTY_PIPELINE_LIMIT', 10000000))
-		PACK_SIZE = 10000000
 
+	data = {
+		'header_file': 'knoedler_0.csv',
+		'files_pattern': 'knoedler.csv',
+	}
+
+#	factory.production_mode()
+	vocab.conceptual_only_parts()
 	vocab.add_linked_art_boundary_check()
 
 	print_dot = False
@@ -31,12 +35,14 @@ if __name__ == '__main__':
 	parser = bonobo.get_argument_parser()
 	with bonobo.parse_args(parser) as options:
 		try:
-			pipeline = Pipeline(
-				output_path=settings.output_file_path,
-				models=settings.arches_models,
-				pack_size=PACK_SIZE,
+			data_path = project_data_path('knoedler')
+			pipeline = KnoedlerFilePipeline( # KnoedlerPipeline
+				data_path,
+				data=data,
+				output_path=output_file_path,
+				models=arches_models,
 				limit=LIMIT,
-				debug=settings.DEBUG
+				debug=DEBUG
 			)
 			if print_dot:
 				print(pipeline.get_graph()._repr_dot_())

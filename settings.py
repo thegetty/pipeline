@@ -12,6 +12,7 @@ arches_models = {
 	'Bidding': 'bidding',
 	'Drawing': 'drawing',
 	'HumanMadeObject': 'physical_thing',
+	'Inventorying': 'inventorying',
 	'LinguisticObject': 'textual_work',
 	'Person': 'person',
 	'Phase': 'phase',

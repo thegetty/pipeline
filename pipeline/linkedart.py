@@ -5,6 +5,7 @@ import calendar
 
 from cromulent import model, vocab
 from cromulent.model import factory
+from cromulent.extract import extract_physical_dimensions
 from pipeline.util.cleaners import ymd_to_datetime
 
 factory.auto_id_type = 'uuid'
@@ -71,8 +72,10 @@ class MakeLinkedArtRecord:
 						note.classified_as = itype
 			elif isinstance(notedata, model.BaseResource):
 				note = notedata
-			else:
+			elif isinstance(notedata, str):
 				note = vocab.Note(content=notedata)
+			else:
+				note = notedata
 			thing.referred_to_by = note
 
 		for identifier in data.get('identifiers', []):
@@ -242,6 +245,19 @@ class MakeLinkedArtLinguisticObject(MakeLinkedArtRecord):
 			parent = get_crom_object(parent_data)
 			thing.part_of = parent
 
+		children = data.get('part', [])
+		for child_data in children:
+			child = get_crom_object(child_data)
+			thing.part = child
+
+		for carrier in data.get('carried_by', []):
+			hmo = get_crom_object(carrier)
+			thing.carried_by = hmo
+
+		for dimension in data.get('dimensions', []):
+			thing.dimension = dimension
+
+
 	def __call__(self, data: dict):
 		if 'object_type' not in data:
 			data['object_type'] = model.LinguisticObject
@@ -262,10 +278,19 @@ class MakeLinkedArtHumanMadeObject(MakeLinkedArtRecord):
 				set_la_name(thing, title, title_type, set_label=True)
 			elif isinstance(title, (list, tuple)):
 				value, *properties = title
-				n = model.Name(ident='', content=value)
+				n = set_la_name(thing, value, title_type, set_label=True)
 				n.classified_as = title_type
 				self.set_lo_properties(n, *properties)
 				thing.identified_by = n
+
+		parents = data.get('part_of', [])
+		for parent_data in parents:
+			parent = get_crom_object(parent_data)
+			thing.part_of = parent
+
+		for carried in data.get('carries', []):
+			lo = get_crom_object(carried)
+			thing.carries = lo
 
 		for coll in data.get('member_of', []):
 			thing.member_of = coll
@@ -278,16 +303,31 @@ class MakeLinkedArtHumanMadeObject(MakeLinkedArtRecord):
 class MakeLinkedArtAbstract(MakeLinkedArtLinguisticObject):
 	pass
 
-class MakeLinkedArtOrganization(MakeLinkedArtRecord):
+class MakeLinkedArtAgent(MakeLinkedArtRecord):
 	def set_properties(self, data, thing):
 		super().set_properties(data, thing)
-		with suppress(KeyError):
-			thing._label = str(data['label'])
-
 		with suppress(ValueError, TypeError):
 			ulan = int(data.get('ulan'))
 			if ulan:
 				thing.exact_match = model.BaseResource(ident=f'http://vocab.getty.edu/ulan/{ulan}')
+
+		if 'name' in data:
+			title_type = model.Type(ident='http://vocab.getty.edu/aat/300417193', label='Title')
+			name = data['name']
+			if isinstance(name, str):
+				set_la_name(thing, name, title_type, set_label=True)
+			elif isinstance(name, (list, tuple)):
+				value, *properties = name
+				n = model.Name(ident='', content=value)
+				n.classified_as = title_type
+				self.set_lo_properties(n, *properties)
+				thing.identified_by = n
+
+class MakeLinkedArtOrganization(MakeLinkedArtAgent):
+	def set_properties(self, data, thing):
+		super().set_properties(data, thing)
+		with suppress(KeyError):
+			thing._label = str(data['label'])
 
 		for event in data.get('events', []):
 			thing.carried_out = event
@@ -351,16 +391,11 @@ def ymd_to_label(year, month, day):
 		return f'{month_name} {year}'
 
 
-class MakeLinkedArtPerson(MakeLinkedArtRecord):
+class MakeLinkedArtPerson(MakeLinkedArtAgent):
 	def set_properties(self, data, who):
 		super().set_properties(data, who)
 		with suppress(KeyError):
 			who._label = str(data['label'])
-
-		with suppress(ValueError, TypeError):
-			ulan = int(data.get('ulan'))
-			if ulan:
-				who.exact_match = model.BaseResource(ident=f'http://vocab.getty.edu/ulan/{ulan}')
 
 		for ns in ['aat_nationality_1', 'aat_nationality_2','aat_nationality_3']:
 			# add nationality
@@ -375,7 +410,8 @@ class MakeLinkedArtPerson(MakeLinkedArtRecord):
 			else:
 				break
 		for n in data.get('nationality', []):
-			who.classified_as = n
+			if isinstance(n, model.BaseResource):
+				who.classified_as = n
 
 		# nationality field can contain other information, but not useful.
 		# XXX Intentionally ignored but validate with GRI
@@ -509,3 +545,42 @@ def make_la_place(data:dict, base_uri=None):
 	if parent:
 		p.part_of = parent
 	return add_crom_data(data=data, what=p)
+
+class PopulateObject:
+	'''
+	Shared functionality for project-specific bonobo node sub-classes to populate
+	object records.
+	'''
+	@staticmethod
+	def populate_object_statements(data:dict, default_unit=None):
+		hmo = get_crom_object(data)
+		sales_record = get_crom_object(data.get('_record'))
+
+		format = data.get('format')
+		if format:
+			formatstmt = vocab.PhysicalStatement(ident='', content=format)
+			if sales_record:
+				formatstmt.referred_to_by = sales_record
+			hmo.referred_to_by = formatstmt
+
+		materials = data.get('materials')
+		if materials:
+			matstmt = vocab.MaterialStatement(ident='', content=materials)
+			if sales_record:
+				matstmt.referred_to_by = sales_record
+			hmo.referred_to_by = matstmt
+
+		dimstr = data.get('dimensions')
+		if dimstr:
+			dimstmt = vocab.DimensionStatement(ident='', content=dimstr)
+			if sales_record:
+				dimstmt.referred_to_by = sales_record
+			hmo.referred_to_by = dimstmt
+			for dim in extract_physical_dimensions(dimstr, default_unit=default_unit):
+				if sales_record:
+					dim.referred_to_by = sales_record
+				hmo.dimension = dim
+		else:
+			pass
+	# 		print(f'No dimension data was parsed from the dimension statement: {dimstr}')
+

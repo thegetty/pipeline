@@ -30,16 +30,27 @@ fetch: fetchaata fetchsales fetchknoedler
 fetchaata:
 	mkdir -p $(GETTY_PIPELINE_INPUT)/aata
 	aws s3 sync s3://jpgt-or-provenance-01/provenance_batch/data/aata $(GETTY_PIPELINE_INPUT)/aata
+	aws s3 cp s3://jpgt-or-provenance-01/provenance_batch/data/uri_to_uuid_map.json $(GETTY_PIPELINE_INPUT)/
+	cp $(GETTY_PIPELINE_INPUT)/uri_to_uuid_map.json "${GETTY_PIPELINE_TMP_PATH}/uri_to_uuid_map.json"
 
 fetchsales:
 	mkdir -p $(GETTY_PIPELINE_TMP_PATH)/pipeline
 	mkdir -p $(GETTY_PIPELINE_INPUT)/sales
-	aws s3 sync s3://jpgt-or-provenance-01/provenance_batch/data/provenance $(GETTY_PIPELINE_INPUT)/sales
-	cp $(GETTY_PIPELINE_INPUT)/sales/uri_to_uuid_map.json "${GETTY_PIPELINE_TMP_PATH}/uri_to_uuid_map.json"
+	aws s3 sync s3://jpgt-or-provenance-01/provenance_batch/data/sales $(GETTY_PIPELINE_INPUT)/sales
+	aws s3 cp s3://jpgt-or-provenance-01/provenance_batch/data/uri_to_uuid_map.json $(GETTY_PIPELINE_INPUT)/
+	cp $(GETTY_PIPELINE_INPUT)/uri_to_uuid_map.json "${GETTY_PIPELINE_TMP_PATH}/uri_to_uuid_map.json"
 
 fetchknoedler:
 	mkdir -p $(GETTY_PIPELINE_INPUT)/knoedler
 	aws s3 sync s3://jpgt-or-provenance-01/provenance_batch/data/knoedler $(GETTY_PIPELINE_INPUT)/knoedler
+	aws s3 cp s3://jpgt-or-provenance-01/provenance_batch/data/uri_to_uuid_map.json $(GETTY_PIPELINE_INPUT)/
+	cp $(GETTY_PIPELINE_INPUT)/uri_to_uuid_map.json "${GETTY_PIPELINE_TMP_PATH}/uri_to_uuid_map.json"
+
+fetchpeople:
+	mkdir -p $(GETTY_PIPELINE_INPUT)/people
+	aws s3 sync s3://jpgt-or-provenance-01/provenance_batch/data/people $(GETTY_PIPELINE_INPUT)/people
+	aws s3 cp s3://jpgt-or-provenance-01/provenance_batch/data/uri_to_uuid_map.json $(GETTY_PIPELINE_INPUT)/
+	cp $(GETTY_PIPELINE_INPUT)/uri_to_uuid_map.json "${GETTY_PIPELINE_TMP_PATH}/uri_to_uuid_map.json"
 
 ### SHARED POST-PROCESSING
 

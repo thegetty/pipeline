@@ -186,6 +186,7 @@ class AddPerson(Configurable):
 		data.setdefault('events', [])
 		data.setdefault('places', [])
 		data.setdefault('contact_point', [])
+		data.setdefault('identifiers', [])
 
 		self.handle_dates(data)
 		self.handle_statements(data)
@@ -245,6 +246,7 @@ class PeoplePipeline(PipelineBase):
 							'person': {
 								'rename_keys': {
 									'person_authority': 'auth_name',
+									'person_auth_disp': 'auth_display_name',
 									'ulan_id': 'ulan',
 									'birth_date': 'birth',
 									'death_date': 'death',
@@ -253,6 +255,7 @@ class PeoplePipeline(PipelineBase):
 								'properties': (
 									'star_record_no',
 									'person_authority',
+									'person_auth_disp',
 									'variant_names',
 									'type',
 									'project',

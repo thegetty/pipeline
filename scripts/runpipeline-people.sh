@@ -8,10 +8,11 @@ git pull
 PROJECT="people"
 LIMIT=2500000
 # LIMIT=200
-DATETIME=`date --iso-8601=minutes`
-DATE=`date --iso-8601=date`
-LOGFILE="/home/gwilliams/logs/pipeline-${PROJECT}-${DATE}.log"
-OUTPUTPATH=/data/output
+DATETIME=`date -u +"%Y-%m-%dT%H:%M:%SZ"`
+DATE=`date -u +"%Y-%m-%d"`
+LOGFILE="${HOME}/logs/pipeline-${PROJECT}-${DATE}.log"
+# OUTPUTPATH=/data/output
+OUTPUTPATH=/tmp/output
 DATANAME="${PROJECT}-${DATE}"
 DATAPATH="${OUTPUTPATH}/${DATANAME}"
 GITREV=`git rev-parse --short HEAD`

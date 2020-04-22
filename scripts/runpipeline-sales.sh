@@ -35,13 +35,10 @@ echo '' > $LOGFILE
 echo "Pipeline ${GITREV}; ${DATETIME}" >> $LOGFILE
 date >> $LOGFILE
 echo "==================================== Starting pipeline docker container" | tee -a $LOGFILE
-time docker run --env GETTY_PIPELINE_COMMON_SERVICE_FILES_PATH=/services/common --env GETTY_PIPELINE_SERVICE_FILES_PATH=/services --env GETTY_PIPELINE_INPUT=/data --env GETTY_PIPELINE_OUTPUT=/output --env GETTY_PIPELINE_TMP_PATH=/output/tmp --env AWS_ACCESS_KEY_ID=$AWS_ACCESS_KEY_ID --env AWS_SECRET_ACCESS_KEY=$AWS_SECRET_ACCESS_KEY -v/data/input:/data:Z -v"$DATAPATH":/output:Z -v`pwd`/data:/services:Z -it pipeline make clean "fetch${PROJECT}" $PROJECT LIMIT=$LIMIT | tee -a $LOGFILE
+time docker run --env GETTY_PIPELINE_COMMON_SERVICE_FILES_PATH=/services/common --env GETTY_PIPELINE_SERVICE_FILES_PATH=/services --env GETTY_PIPELINE_INPUT=/data --env GETTY_PIPELINE_OUTPUT=/output --env GETTY_PIPELINE_TMP_PATH=/output/tmp --env AWS_ACCESS_KEY_ID=$AWS_ACCESS_KEY_ID --env AWS_SECRET_ACCESS_KEY=$AWS_SECRET_ACCESS_KEY -v/data/input:/data:Z -v"$DATAPATH":/output:Z -v`pwd`/data:/services:Z -it pipeline make clean "fetch${PROJECT}" $PROJECT nq LIMIT=$LIMIT | tee -a $LOGFILE
 echo "==================================== Finished pipeline docker container" | tee -a $LOGFILE
 echo '' > $LOGFILE
 date >> $LOGFILE
-echo "==================================== Starting N-Quads docker container" | tee -a $LOGFILE
-time docker run --env GETTY_PIPELINE_COMMON_SERVICE_FILES_PATH=/services/common --env GETTY_PIPELINE_SERVICE_FILES_PATH=/services --env GETTY_PIPELINE_INPUT=/data --env GETTY_PIPELINE_OUTPUT=/output --env GETTY_PIPELINE_TMP_PATH=/output/tmp --env AWS_ACCESS_KEY_ID=$AWS_ACCESS_KEY_ID --env AWS_SECRET_ACCESS_KEY=$AWS_SECRET_ACCESS_KEY -v/data/input:/data:Z -v"$DATAPATH":/output:Z -v`pwd`/data:/services:Z -it pipeline make nq | tee -a $LOGFILE
-echo "==================================== Finished N-Quads docker container" | tee -a $LOGFILE
 
 echo "Pipeline ${GITREV}; ${DATETIME}" >> $INFOFILE
 

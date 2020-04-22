@@ -18,7 +18,7 @@ GITREV=`git rev-parse --short HEAD`
 JSON_TARFILE="${OUTPUTPATH}/${DATANAME}-jsonld.tar.gz"
 NQ_TARFILE="${OUTPUTPATH}/${DATANAME}-nquads.tar.gz"
 INFOFILE="${DATAPATH}/pipeline-${PROJECT}-info.txt"
-AWS_OUTPUTPATH="s3://jpgt-or-provenance-01/provenance_batch/output/${PROJECT}/"
+AWS_OUTPUTPATH="s3://jpgt-or-provenance-01/provenance_batch/output/${PROJECT}"
 
 make dockerimage
 mkdir -p $DATAPATH
@@ -48,8 +48,8 @@ echo "Created ${JSON_TARFILE}" | tee -a $LOGFILE
 tar --exclude='uri_to_uuid_map.json' --exclude='*.json' --exclude '*.gz' -c -C $OUTPUTPATH $DATANAME | pigz > $NQ_TARFILE
 echo "Created ${NQ_TARFILE}" | tee -a $LOGFILE
 
-aws s3 cp $JSON_TARFILE $AWS_OUTPUTPATH
-aws s3 cp $NQ_TARFILE $AWS_OUTPUTPATH
+aws s3 cp $JSON_TARFILE "${AWS_OUTPUTPATH}/"
+aws s3 cp $NQ_TARFILE "${AWS_OUTPUTPATH}/"
 aws s3 cp "${DATAPATH}/all.nq.gz" "${AWS_OUTPUTPATH}/${PROJECT}-${DATE}-all.nq.gz"
 aws s3 cp "${DATAPATH}/meta.nq.gz" "${AWS_OUTPUTPATH}/${PROJECT}-${DATE}-meta.nq.gz"
 

@@ -37,7 +37,7 @@ date >> $LOGFILE
 echo "==================================== Starting pipeline docker container" | tee -a $LOGFILE
 time docker run --env GETTY_PIPELINE_COMMON_SERVICE_FILES_PATH=/services/common --env GETTY_PIPELINE_SERVICE_FILES_PATH=/services --env GETTY_PIPELINE_INPUT=/data --env GETTY_PIPELINE_OUTPUT=/output --env GETTY_PIPELINE_TMP_PATH=/output/tmp --env AWS_ACCESS_KEY_ID=$AWS_ACCESS_KEY_ID --env AWS_SECRET_ACCESS_KEY=$AWS_SECRET_ACCESS_KEY -v/data/input:/data:Z -v"$DATAPATH":/output:Z -v`pwd`/data:/services:Z -it pipeline make clean "fetch${PROJECT}" $PROJECT nq LIMIT=$LIMIT | tee -a $LOGFILE
 echo "==================================== Finished pipeline docker container" | tee -a $LOGFILE
-echo '' > $LOGFILE
+echo '' >> $LOGFILE
 date >> $LOGFILE
 
 echo "Pipeline ${GITREV}; ${DATETIME}" >> $INFOFILE
@@ -46,7 +46,7 @@ tar --exclude='uri_to_uuid_map.json' --exclude='json_files.txt' --exclude='*.nq'
 echo "Created ${JSON_TARFILE}" | tee -a $LOGFILE
 
 tar --exclude='uri_to_uuid_map.json' --exclude='*.json' --exclude '*.gz' -c -C $OUTPUTPATH $DATANAME | pigz > $NQ_TARFILE
-echo "Created ${NQ_TARFILE}"
+echo "Created ${NQ_TARFILE}" | tee -a $LOGFILE
 
 aws s3 cp $JSON_TARFILE $AWS_OUTPUTPATH
 aws s3 cp $NQ_TARFILE $AWS_OUTPUTPATH

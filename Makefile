@@ -41,6 +41,10 @@ fetchknoedler:
 	mkdir -p $(GETTY_PIPELINE_INPUT)/knoedler
 	aws s3 sync s3://jpgt-or-provenance-01/provenance_batch/data/knoedler $(GETTY_PIPELINE_INPUT)/knoedler
 
+fetchpeople:
+	mkdir -p $(GETTY_PIPELINE_INPUT)/people
+	aws s3 sync s3://jpgt-or-provenance-01/provenance_batch/data/people $(GETTY_PIPELINE_INPUT)/people
+
 ### SHARED POST-PROCESSING
 
 nt: jsonlist

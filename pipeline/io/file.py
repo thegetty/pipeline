@@ -130,6 +130,6 @@ class MergingFileWriter(Configurable):
 				d = factory.toString(model_object, self.compact)
 
 			if d:
-				with open(fn, 'w') as fh:
+				with open(fn, 'w', encoding='utf-8') as fh:
 					fh.write(d)
 			return NOT_MODIFIED

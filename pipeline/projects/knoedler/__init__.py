@@ -72,8 +72,9 @@ class PersonIdentity:
 	'''
 	Utility class to help assign records for people with properties such as `uri` and identifiers.
 	'''
-	def __init__(self, *, make_uri):
-		self.make_uri = make_uri
+	def __init__(self, *, make_shared_uri, make_proj_uri):
+		self.make_shared_uri = make_shared_uri
+		self.make_proj_uri = make_proj_uri
 		self.make_la_person = pipeline.linkedart.MakeLinkedArtPerson()
 		self.ignore_authnames = CaseFoldingSet(('NEW', 'NON-UNIQUE'))
 
@@ -89,6 +90,7 @@ class PersonIdentity:
 		return True
 
 	def uri_keys(self, data:dict, record_id=None):
+		# TODO: this overlaps with shared code elsewhere. it should be refactored
 		ulan = None
 		with suppress(ValueError, TypeError):
 			ulan = int(data.get('ulan'))
@@ -98,7 +100,9 @@ class PersonIdentity:
 
 		if self.acceptable_auth_name(auth_name):
 			warnings.warn('acceptable auth name')
-			return ('PERSON', 'AUTHNAME', auth_name)
+			key = ('PERSON', 'AUTHNAME', auth_name)
+			make = self.make_shared_uri
+			return (key, make)
 		else:
 			warnings.warn(f'NOT an acceptable auth name: {auth_name}')
 			pprint.pprint(data)
@@ -108,11 +112,15 @@ class PersonIdentity:
 				pprint.pprint(data)
 				raise Exception(f'No pi_rec_no in data: {pprint.pformat(data)}')
 			if record_id:
-				return ('PERSON', 'PI_REC_NO', pi_rec_no, record_id)
+				key = ('PERSON', 'PI_REC_NO', pi_rec_no, record_id)
+				make = self.make_proj_uri
+				return (key, make)
 			else:
 				warnings.warn(f'*** No record identifier given for person identified only by pi_record_number {pi_rec_no}')
 				pprint.pprint(data)
-				return ('PERSON', 'PI_REC_NO', pi_rec_no)
+				key = ('PERSON', 'PI_REC_NO', pi_rec_no)
+				make = self.make_proj_uri
+				return (key, make)
 
 	def add_person(self, a, record, relative_id, **kwargs):
 		self.add_uri(a, record_id=relative_id)
@@ -121,9 +129,9 @@ class PersonIdentity:
 		return get_crom_object(a)
 
 	def add_uri(self, data:dict, **kwargs):
-		keys = self.uri_keys(data, **kwargs)
+		keys, make = self.uri_keys(data, **kwargs)
 		data['uri_keys'] = keys
-		data['uri'] = self.make_uri(*keys)
+		data['uri'] = make(*keys)
 
 	def add_names(self, data:dict, referrer=None, role=None):
 		'''
@@ -170,7 +178,7 @@ class KnoedlerUtilityHelper(UtilityHelper):
 	'''
 	def __init__(self, project_name, static_instances=None):
 		super().__init__(project_name)
-		self.person_identity = PersonIdentity(make_uri=self.make_proj_uri)
+		self.person_identity = PersonIdentity(make_shared_uri=self.make_shared_uri, make_proj_uri=self.make_proj_uri)
 		self.static_instances = static_instances
 		self.csv_source_columns = ['pi_record_no']
 		self.make_la_person = MakeLinkedArtPerson()

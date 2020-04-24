@@ -45,7 +45,7 @@ class PersonIdentity:
 		self.anon_dated_re = re.compile(r'\[ANONYMOUS - (\d+)TH C[.]\]')
 		self.anon_period_re = re.compile(r'\[ANONYMOUS - (MODERN|ANTIQUE)\]')
 		self.anon_dated_nationality_re = re.compile(r'\[(\w+) - (\d+)TH C[.]\]')
-		self.anon_nationality_re = re.compile(r'\[(?!ANON)(\w+)\]', re.IGNORECASE)
+		self.anon_nationality_re = re.compile(r'\[(?!ANON|ILLEGIBLE|Unknown)(\w+)\]', re.IGNORECASE)
 
 	def acceptable_person_auth_name(self, auth_name):
 		if not auth_name or auth_name in self.ignore_authnames:
@@ -67,6 +67,11 @@ class PersonIdentity:
 			return True
 		elif self.anon_period_re.match(auth_name):
 			return True
+
+		for anon_key in ('[ILLEGIBLE]', '[Unknown]'):
+			if anon_key == auth_name:
+				return True
+
 		return False
 
 	def is_anonymous(self, data:dict):

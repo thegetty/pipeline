@@ -45,7 +45,7 @@ class PersonIdentity:
 		self.anon_dated_re = re.compile(r'\[ANONYMOUS - (\d+)TH C[.]\]')
 		self.anon_period_re = re.compile(r'\[ANONYMOUS - (MODERN|ANTIQUE)\]')
 		self.anon_dated_nationality_re = re.compile(r'\[(\w+) - (\d+)TH C[.]\]')
-		self.anon_nationality_re = re.compile(r'\[(?!ANON)(\w+)\]', re.IGNORECASE)
+		self.anon_nationality_re = re.compile(r'\[(?!ANON|ILLEGIBLE|Unknown)(\w+)\]', re.IGNORECASE)
 
 	def acceptable_person_auth_name(self, auth_name):
 		if not auth_name or auth_name in self.ignore_authnames:
@@ -67,6 +67,11 @@ class PersonIdentity:
 			return True
 		elif self.anon_period_re.match(auth_name):
 			return True
+
+		for anon_key in ('[ILLEGIBLE]', '[Unknown]'):
+			if anon_key == auth_name:
+				return True
+
 		return False
 
 	def is_anonymous(self, data:dict):
@@ -102,18 +107,24 @@ class PersonIdentity:
 			return key, self.make_shared_uri
 		else:
 			# not enough information to identify this person uniquely, so use the source location in the input file
-			if 'pi_record_no' in data:
-				pi_rec_no = data['pi_record_no']
-				key = ['PERSON', 'PI', pi_rec_no]
-			else:
-				star_record_no = data['star_record_no']
-				key = ['PERSON', 'STAR', star_record_no]
-
+			try:
+				if 'pi_record_no' in data:
+					id_value = data['pi_record_no']
+					id_key = 'PI'
+				else:
+					id_value = data['star_record_no']
+					id_key = 'STAR'
+			except KeyError as e:
+				warnings.warn(f'*** No identifying property with which to construct a URI key: {e}')
+				print(pprint.pformat(data), file=sys.stderr)
+				raise
 			if record_id:
-				key += [record_id]
+				key = ('PERSON', id_key, id_value, record_id)
+				return key, self.make_proj_uri
 			else:
-				warnings.warn(f'*** No record identifier given for person identified by: {key}')
-			return tuple(key), self.make_proj_uri
+				warnings.warn(f'*** No record identifier given for person identified only by {id_key} {id_value}')
+				key = ('PERSON', id_key, id_value)
+				return key, self.make_proj_uri
 
 	def add_person(self, a, record=None, relative_id=None, **kwargs):
 		self.add_uri(a, record_id=relative_id)
@@ -247,9 +258,6 @@ class PersonIdentity:
 		return {}
 
 	def add_props(self, data:dict, role=None, **kwargs):
-		if 'events' not in data:
-			data['events'] = []
-		uri = data['uri']
 		role = role if role else 'person'
 		auth_name = data.get('auth_name', '')
 		period_match = self.anon_period_re.match(auth_name)
@@ -260,16 +268,15 @@ class PersonIdentity:
 				nationalities.append(nationality.lower())
 			elif isinstance(nationality, list):
 				nationalities += [n.lower() for n in nationality]
+
 		data['nationality'] = []
+		data.setdefault('referred_to_by', [])
 		
 		name = data['label']
 		active = self.clamped_timespan_args(data, name)
 		if active:
 			a = self.professional_activity(name, **active)
 			data['events'].append(a)
-
-		if 'referred_to_by' not in data:
-			data['referred_to_by'] = []
 
 		for key in ('notes', 'brief_notes', 'working_notes'):
 			if key in data:
@@ -290,6 +297,7 @@ class PersonIdentity:
 			nationality_match = self.anon_nationality_re.match(auth_name)
 			dated_nationality_match = self.anon_dated_nationality_re.match(auth_name)
 			dated_match = self.anon_dated_re.match(auth_name)
+			data.setdefault('events', [])
 			if nationality_match:
 				with suppress(ValueError):
 					nationality = nationality_match.group(1).lower()
@@ -352,8 +360,7 @@ class PersonIdentity:
 				pname.referred_to_by = referrer
 			data['identifiers'].append(pname)
 
-		if 'names' not in data:
-			data['names'] = []
+		data.setdefault('names', [])
 
 		names = []
 		name = data.get('name')
@@ -370,11 +377,8 @@ class PersonIdentity:
 				data['names'].append((name, {'referred_to_by': [referrer]}))
 			else:
 				data['names'].append(name)
-			if 'label' not in data:
-				data['label'] = name
-
-		if 'label' not in data:
-			data['label'] = '(Anonymous)'
+			data.setdefault('label', name)
+		data.setdefault('label', '(Anonymous)')
 
 		if role and not role_label:
 			role_label = f'anonymous {role}'

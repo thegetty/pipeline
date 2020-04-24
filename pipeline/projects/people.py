@@ -63,6 +63,8 @@ from pipeline.util.rewriting import rewrite_output_files, JSONValueRewriter
 
 #mark - utility functions and classes
 
+class PeoplePersonIdentity(PersonIdentity):
+	pass
 
 class PeopleUtilityHelper(UtilityHelper):
 	'''
@@ -71,7 +73,7 @@ class PeopleUtilityHelper(UtilityHelper):
 	def __init__(self, project_name):
 		super().__init__(project_name)
 		self.csv_source_columns = ['star_record_no']
-		self.person_identity = PersonIdentity(make_shared_uri=self.make_shared_uri, make_proj_uri=self.make_proj_uri)
+		self.person_identity = PeoplePersonIdentity(make_shared_uri=self.make_shared_uri, make_proj_uri=self.make_proj_uri)
 
 	def copy_source_information(self, dst: dict, src: dict):
 		for k in self.csv_source_columns:

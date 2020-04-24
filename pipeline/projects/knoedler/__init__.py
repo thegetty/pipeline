@@ -31,7 +31,7 @@ import settings
 from cromulent import model, vocab
 from cromulent.extract import extract_monetary_amount
 
-from pipeline.projects import PipelineBase, UtilityHelper
+from pipeline.projects import PipelineBase, UtilityHelper, PersonIdentity
 from pipeline.util import \
 			truncate_with_ellipsis, \
 			implode_date, \
@@ -68,109 +68,8 @@ from pipeline.nodes.basic import \
 from pipeline.util.rewriting import rewrite_output_files, JSONValueRewriter
 from pipeline.provenance import ProvenanceBase
 
-class PersonIdentity:
-	'''
-	Utility class to help assign records for people with properties such as `uri` and identifiers.
-	'''
-	def __init__(self, *, make_shared_uri, make_proj_uri):
-		self.make_shared_uri = make_shared_uri
-		self.make_proj_uri = make_proj_uri
-		self.make_la_person = pipeline.linkedart.MakeLinkedArtPerson()
-		self.ignore_authnames = CaseFoldingSet(('NEW', 'NON-UNIQUE'))
-
-	def acceptable_auth_name(self, auth_name):
-		if not auth_name or auth_name in self.ignore_authnames:
-			return False
-		elif '[UNIDENTIFIED]' in auth_name:
-			# these are a special case in PEOPLE.
-			# there are ~7k records with auth names containing '[UNIDENTIFIED]'
-			return True
-		elif '[' in auth_name:
-			return False
-		return True
-
-	def uri_keys(self, data:dict, record_id=None):
-		# TODO: this overlaps with shared code elsewhere. it should be refactored
-		ulan = None
-		with suppress(ValueError, TypeError):
-			ulan = int(data.get('ulan'))
-
-		auth_name = data.get('auth_name')
-		auth_name_q = '?' in data.get('auth_nameq', '')
-
-		if self.acceptable_auth_name(auth_name):
-			warnings.warn('acceptable auth name')
-			key = ('PERSON', 'AUTHNAME', auth_name)
-			make = self.make_shared_uri
-			return (key, make)
-		else:
-			warnings.warn(f'NOT an acceptable auth name: {auth_name}')
-			pprint.pprint(data)
-			# not enough information to identify this person uniquely, so use the source location in the input file
-			pi_rec_no = data.get('pi_record_no')
-			if not pi_rec_no:
-				pprint.pprint(data)
-				raise Exception(f'No pi_rec_no in data: {pprint.pformat(data)}')
-			if record_id:
-				key = ('PERSON', 'PI_REC_NO', pi_rec_no, record_id)
-				make = self.make_proj_uri
-				return (key, make)
-			else:
-				warnings.warn(f'*** No record identifier given for person identified only by pi_record_number {pi_rec_no}')
-				pprint.pprint(data)
-				key = ('PERSON', 'PI_REC_NO', pi_rec_no)
-				make = self.make_proj_uri
-				return (key, make)
-
-	def add_person(self, a, record, relative_id, **kwargs):
-		self.add_uri(a, record_id=relative_id)
-		self.add_names(a, referrer=record, **kwargs)
-		self.make_la_person(a)
-		return get_crom_object(a)
-
-	def add_uri(self, data:dict, **kwargs):
-		keys, make = self.uri_keys(data, **kwargs)
-		data['uri_keys'] = keys
-		data['uri'] = make(*keys)
-
-	def add_names(self, data:dict, referrer=None, role=None):
-		'''
-		Based on the presence of `auth_name` and/or `name` fields in `data`, sets the
-		`label`, `names`, and `identifier` keys to appropriate strings/`model.Identifier`
-		values.
-
-		If the `role` string is given (e.g. 'artist'), also sets the `role_label` key
-		to a value (e.g. 'artist “RUBENS, PETER PAUL”').
-		'''
-		auth_name = data.get('auth_name')
-		role_label = None
-		if self.acceptable_auth_name(auth_name):
-			if role:
-				role_label = f'{role} “{auth_name}”'
-			data['label'] = auth_name
-			pname = vocab.PrimaryName(ident='', content=auth_name) # NOTE: most of these are also vocab.SortName, but not 100%, so witholding that assertion for now
-			if referrer:
-				pname.referred_to_by = referrer
-			data['identifiers'] = [pname]
-
-		name = data.get('name')
-		if name:
-			if role and not role_label:
-				role_label = f'{role} “{name}”'
-			if referrer:
-				data['names'] = [(name, {'referred_to_by': [referrer]})]
-			else:
-				data['names'] = [name]
-			if 'label' not in data:
-				data['label'] = name
-		if 'label' not in data:
-			data['label'] = '(Anonymous)'
-
-		if role and not role_label:
-			role_label = f'anonymous {role}'
-
-		if role:
-			data['role_label'] = role_label
+class KnoedlerPersonIdentity(PersonIdentity):
+	pass
 
 class KnoedlerUtilityHelper(UtilityHelper):
 	'''
@@ -178,7 +77,7 @@ class KnoedlerUtilityHelper(UtilityHelper):
 	'''
 	def __init__(self, project_name, static_instances=None):
 		super().__init__(project_name)
-		self.person_identity = PersonIdentity(make_shared_uri=self.make_shared_uri, make_proj_uri=self.make_proj_uri)
+		self.person_identity = KnoedlerPersonIdentity(make_shared_uri=self.make_shared_uri, make_proj_uri=self.make_proj_uri)
 		self.static_instances = static_instances
 		self.csv_source_columns = ['pi_record_no']
 		self.make_la_person = MakeLinkedArtPerson()
@@ -395,15 +294,16 @@ class AddGroupURI(Configurable):
 	def __call__(self, data:dict):
 		# TODO: move this into MakeLinkedArtOrganization
 		auth_name = data.get('authority')
-		if data.get('ulan'):
-			ulan = data['ulan']
-			data['uri'] = self.helper.make_shared_uri('GROUP', 'ULAN', ulan)
-			data['ulan'] = ulan
-		elif auth_name and '[' not in auth_name:
+		print(f'GROUP DATA: {pprint.pformat(data)}')
+		if auth_name and '[' not in auth_name:
 			data['uri'] = self.helper.make_shared_uri('GROUP', 'AUTHNAME', auth_name)
 			data['identifiers'] = [
 				vocab.PrimaryName(ident='', content=auth_name)
 			]
+		elif data.get('ulan'):
+			ulan = data['ulan']
+			data['uri'] = self.helper.make_shared_uri('GROUP', 'ULAN', ulan)
+			data['ulan'] = ulan
 		else:
 			# not enough information to identify this person uniquely, so use the source location in the input file
 			data['uri'] = self.helper.make_proj_uri('GROUP', 'PI_REC_NO', data['pi_record_no'])
@@ -633,14 +533,14 @@ class PopulateKnoedlerObject(Configurable, pipeline.linkedart.PopulateObject):
 
 		add_group_uri = AddGroupURI(helper=self.helper)
 		consigner = self.helper.copy_source_information(data['consigner'], data)
-		if consigner:
-			add_group_uri(consigner)
-			make_la_org(consigner)
-			if 'no' in consigner:
-				consigner_num = consigner['no']
-				consigner_id = vocab.LocalNumber(ident='', label=f'Consigned number: {consigner_num}', content=consigner_num)
-				data['_object']['identifiers'].append(consigner_id)
-			data['_consigner'] = consigner
+# 		if consigner:
+# 			add_group_uri(consigner)
+# 			make_la_org(consigner)
+# 			if 'no' in consigner:
+# 				consigner_num = consigner['no']
+# 				consigner_id = vocab.LocalNumber(ident='', label=f'Consigned number: {consigner_num}', content=consigner_num)
+# 				data['_object']['identifiers'].append(consigner_id)
+# 			data['_consigner'] = consigner
 
 		mlao = MakeLinkedArtHumanMadeObject()
 		mlao(data['_object'])

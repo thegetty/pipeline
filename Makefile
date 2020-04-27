@@ -93,9 +93,20 @@ jsonlist:
 
 ### AATA
 
-aata:
+aata: aatadata jsonlist
+	cat $(GETTY_PIPELINE_TMP_PATH)/json_files.txt | PYTHONPATH=`pwd` $(PYTHON) ./scripts/generate_metadata_graph.py aata
+
+aatadata: aatapipeline aatapostprocessing
+	find $(GETTY_PIPELINE_OUTPUT) -type d -empty -delete
+
+aatapipeline:
+	mkdir -p $(GETTY_PIPELINE_TMP_PATH)/pipeline
 	QUIET=$(QUIET) GETTY_PIPELINE_DEBUG=$(DEBUG) GETTY_PIPELINE_LIMIT=$(LIMIT) $(PYTHON) ./aata.py
-	PYTHONPATH=`pwd` $(PYTHON) ./scripts/rewrite_uris_to_uuids.py 'tag:getty.edu,2019:digital:pipeline:REPLACE-WITH-UUID:aata#'
+
+aatapostprocessing: postprocessing_uuidmap postprocessing_rewrite_uris
+	ls $(GETTY_PIPELINE_OUTPUT) | PYTHONPATH=`pwd` xargs -n 1 -P $(CONCURRENCY) -I '{}' $(PYTHON) ./scripts/coalesce_json.py "${GETTY_PIPELINE_OUTPUT}/{}"
+	# Reorganizing JSON files...
+	find $(GETTY_PIPELINE_OUTPUT) -name '*.json' | PYTHONPATH=`pwd` xargs -n 256 -P $(CONCURRENCY) $(PYTHON) ./scripts/reorganize_json.py
 
 aatagraph: $(GETTY_PIPELINE_TMP_PATH)/aata.pdf
 	open -a Preview $(GETTY_PIPELINE_TMP_PATH)/aata.pdf
@@ -228,7 +239,7 @@ clean:
 	rm -f "${GETTY_PIPELINE_TMP_PATH}/post_sale_rewrite_map.json"
 
 .PHONY: fetch fetchaata fetchsales fetchknoedler
-.PHONY: aata aatagraph
+.PHONY: aata aatagraph aatadata aatapipeline aatapostprocessing
 .PHONY: knoedler knoedlergraph
 .PHONY: people peoplegraph peopledata peoplepipeline peoplepostprocessing peoplepostsalefilelist
 .PHONY: sales salesgraph salesdata salespipeline salespostprocessing salespostsalefilelist

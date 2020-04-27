@@ -178,9 +178,9 @@ class TestAATAPipelineOutput_Abstracts(unittest.TestCase):
 		
 		self.assertIn('The Forbidden City in Beijing', abstract['content'])
 		self.assertEqual('http://vocab.getty.edu/aat/300026032', abstract['classified_as'][0]['id']) # abstract
-		self.assertEqual('AATA140375', abstract['identified_by'][0]['content'])
+		self.assertEqual('140375', abstract['identified_by'][0]['content'])
 		self.assertEqual('Owner-Assigned Number', abstract['identified_by'][0]['classified_as'][0]['_label'])
-		self.assertEqual('English', abstract['language'][0]['_label'])
+# 		self.assertEqual('English', abstract['language'][0]['_label'])
 		self.assertEqual('LinguisticObject', abstract['type'])
 		
 		abstracted_thing = abstract['refers_to'][0]
@@ -199,17 +199,17 @@ class TestAATAPipelineOutput_Abstracts(unittest.TestCase):
 		self.assertEqual(dict(identifiers), {
 			'Title': {'Secrets of the Forbidden City'},
 			'ISBN Identifier': {'1531703461', '9781531703462'},
-			'Owner-Assigned Number': {'AATA140375'},
+			'Owner-Assigned Number': {'140375'},
 		})
 
 		about = defaultdict(set)
 		for x in merged_thing['about']:
 			about[x['type']].add(x['_label'])
 		self.assertEqual(about, {
-			'Group': {'Palace Museum //Beijing (China)'},
+			'Group': {'Palace Museum (Beijing, China)'},
 			'Type': {
 				'Ming',
-				'Structural studies and consolidation of buildings',
+				'Architectural conservation',
 				'brackets (structural elements)',
 				'building materials',
 				'construction techniques',
@@ -244,9 +244,9 @@ class TestAATAPipelineOutput_Abstracts(unittest.TestCase):
 				print('*** %s' % (e,))
 				org_names[i] = None
 		self.assertEqual(sorted(org_names.values()), [
-			'Lion Television USA //New York (New York, United States)',
-			'Public Broadcasting Associates, Inc. //Boston (Massachusetts, United States)',
-			'WGBH Educational Foundation //Boston (Massachusetts, United States)'
+			'Lion Television USA',
+			'Public Broadcasting Associates, Inc.',
+			'WGBH Educational Foundation'
 		])
 
 	def verify_data_for_AATA140375(self, output, lo_model):
@@ -342,9 +342,9 @@ class TestAATAPipelineOutput_Journals(unittest.TestCase):
 		
 		TAG_PREFIX = 'tag:getty.edu,2019:digital:pipeline:REPLACE-WITH-UUID:aata#'
 		
-		journal = output[journal_model].get(f'{TAG_PREFIX}AATA,Journal,2')
-		issue = output[lo_model].get(f'{TAG_PREFIX}AATA,Journal,2,Issue,9')
-		
+		journal = output[journal_model].get(f'{TAG_PREFIX}Journal,2')
+		issue = output[lo_model].get(f'{TAG_PREFIX}Journal,2,Issue,9')
+
 		self.assertIsNotNone(journal)
 		self.assertIsNotNone(issue)
 		
@@ -362,7 +362,7 @@ class TestAATAPipelineOutput_Journals(unittest.TestCase):
 					'type': 'Type'
 				}
 			],
-			'id': 'tag:getty.edu,2019:digital:pipeline:REPLACE-WITH-UUID:aata#AATA,Journal,2',
+			'id': 'tag:getty.edu,2019:digital:pipeline:REPLACE-WITH-UUID:aata#Journal,2',
 			'identified_by': [
 				{
 					'classified_as': [
@@ -377,6 +377,10 @@ class TestAATAPipelineOutput_Journals(unittest.TestCase):
 				},
 				{
 					'content': 'Green chemistry: an international journal and green chemistry resource',
+					'type': 'Identifier'
+				},
+				{
+					'content': 'Green chemistry: cutting-edge research for a greener sustainable future',
 					'type': 'Identifier'
 				},
 				{
@@ -426,7 +430,7 @@ class TestAATAPipelineOutput_Journals(unittest.TestCase):
 					'type': 'Type'
 				}
 			],
-			'id': 'tag:getty.edu,2019:digital:pipeline:REPLACE-WITH-UUID:aata#AATA,Journal,2,Issue,9',
+			'id': 'tag:getty.edu,2019:digital:pipeline:REPLACE-WITH-UUID:aata#Journal,2,Issue,9',
 			'identified_by': [
 				{
 					'classified_as': [
@@ -461,7 +465,7 @@ class TestAATAPipelineOutput_Journals(unittest.TestCase):
 							'type': 'Type'
 						}
 					],
-					'id': 'tag:getty.edu,2019:digital:pipeline:REPLACE-WITH-UUID:aata#AATA,Journal,2',
+					'id': 'tag:getty.edu,2019:digital:pipeline:REPLACE-WITH-UUID:aata#Journal,2',
 					'identified_by': [
 						{
 							'classified_as': [
@@ -476,6 +480,10 @@ class TestAATAPipelineOutput_Journals(unittest.TestCase):
 						},
 						{
 							'content': 'Green chemistry: an international journal and green chemistry resource',
+							'type': 'Identifier'
+						},
+						{
+							'content': 'Green chemistry: cutting-edge research for a greener sustainable future',
 							'type': 'Identifier'
 						},
 						{
@@ -494,11 +502,29 @@ class TestAATAPipelineOutput_Journals(unittest.TestCase):
 				},
 				{
 					'_label': 'Volume 9 of “Green chemistry”',
-					'id': 'tag:getty.edu,2019:digital:pipeline:REPLACE-WITH-UUID:aata#AATA,Journal,2,Volume,9',
+					'id': 'tag:getty.edu,2019:digital:pipeline:REPLACE-WITH-UUID:aata#Journal,2,Volume,9',
 					'type': 'LinguisticObject'
 				}
 			],
 			'referred_to_by': [
+				{
+					'classified_as': [
+						{
+							'_label': 'Publication Period Note',
+							'classified_as': [
+								{
+									'_label': 'Brief Text',
+									'id': 'http://vocab.getty.edu/aat/300418049',
+									'type': 'Type'
+								}
+							],
+							'id': 'http://vocab.getty.edu/aat/300081446',
+							'type': 'Type'
+						},
+					],
+					'content': '2007',
+					'type': 'LinguisticObject'
+				},
 				{
 					'classified_as': [
 						{

@@ -49,8 +49,6 @@ variantTitleIdentifier = vocab.Identifier # TODO: aat for variant titles?
 
 # utility functions
 
-UID_TAG_PREFIX = 'tag:getty.edu,2019:digital:pipeline:REPLACE-WITH-UUID:aata#'
-
 class AATAUtilityHelper(UtilityHelper):
 	def __init__(self, project_name):
 		super().__init__(project_name)
@@ -123,7 +121,10 @@ class MakePublishingActivity(Configurable):
 			start, end = data['years']
 			uri = self.helper.make_proj_uri(*components, 'Publishing')
 			event = vocab.Publishing(ident=uri, label=f'Publishing event for “{title}”')
-			event.timespan = timespan_from_outer_bounds(start, end, inclusive=True)
+			try:
+				event.timespan = timespan_from_outer_bounds(start, end, inclusive=True)
+			except:
+				pass
 			lo.used_for = event
 			if previous_components:
 				# TODO: handle modeling of history_reason field
@@ -172,7 +173,7 @@ class MakeAATAArticleDict(Configurable):
 		return data
 
 def _gaia_authority_type(code):
-	if code == 'CB':
+	if code in ('CB', 'Corp'):
 		return model.Group
 	elif code in ('PN', 'Person'):
 		return model.Person
@@ -193,9 +194,13 @@ def _gaia_authority_type(code):
 def _extract_sponsor_group(data, helper):
 	aata_id = data['gaia_corp_id']
 	name = data['sponsor_name']
-	geog_id = data['auth_geog_id']
-	city = data['sponsor_city']
-	country = data['sponsor_country']
+	geog_id = data.get('gaia_geog_id')
+	city = data.get('sponsor_city')
+	country = data.get('sponsor_country')
+	
+	identifiers = []
+	if geog_id:
+		identifiers.append(vocab.LocalNumber(ident='', content=geog_id))
 	return {
 		'label': name,
 		'uri': helper.make_proj_uri('Sponsor', aata_id),
@@ -203,7 +208,7 @@ def _extract_sponsor_group(data, helper):
 		'identifiers': [(aata_id, vocab.LocalNumber(ident=''))],
 		'place': {
 			'label': city,
-			'identifiers': [(geog_id, vocab.LocalNumber(ident=''))],
+			'identifiers': identifiers,
 			'type': 'City',
 			'part_of': {
 				'label': country,
@@ -215,9 +220,13 @@ def _extract_sponsor_group(data, helper):
 def _extract_publisher_group(data, helper):
 	aata_id = data['gaia_corp_id']
 	name = data['publisher_name']
-	geog_id = data['gaia_geog_id']
-	city = data['publisher_city']
-	country = data['publisher_country']
+	geog_id = data.get('gaia_geog_id')
+	city = data.get('sponsor_city')
+	country = data.get('sponsor_country')
+
+	identifiers = []
+	if geog_id:
+		identifiers.append(vocab.LocalNumber(ident='', content=geog_id))
 	return {
 		'label': name,
 		'uri': helper.make_proj_uri('Publisher', aata_id),
@@ -225,7 +234,7 @@ def _extract_publisher_group(data, helper):
 		'identifiers': [(aata_id, vocab.LocalNumber(ident=''))],
 		'place': {
 			'label': city,
-			'identifiers': [(geog_id, vocab.LocalNumber(ident=''))],
+			'identifiers': identifiers,
 			'type': 'City',
 			'part_of': {
 				'label': country,
@@ -238,7 +247,11 @@ def _extract_journal(record, helper):
 	'''Extract information about a journal record XML element'''
 	aata_id = record['record_desc_group']['record_id']
 	jg = record['journal_group']
-	title = jg['title']
+	title = jg.get('title')
+	if title:
+		journal_label = f'“{title}”'
+	else:
+		journal_label = f'Journal'
 	var_title_strings = [t for t in _as_list(jg.get('variant_title', []))]
 	translations = [t for t in _as_list(jg.get('title_translated', []))]
 
@@ -262,6 +275,7 @@ def _extract_journal(record, helper):
 		issue_title = ig.get('title')
 		issue_translations = _as_list(ig.get('title_translated'))
 		volume_number = ig.get('volume')
+		issue_id = ig.get('issue_id')
 		issue_number = ig.get('number')
 		
 		date = ig.get('date')
@@ -293,14 +307,16 @@ def _extract_journal(record, helper):
 		if chron:
 			# TODO: is there a more specific Note type we can use for this?
 			notes.append(vocab.Note(ident='', content=chron))
-		
-		volumes[volume_number] = {
-			'uri': helper.make_proj_uri('Journal', aata_id, 'Volume', volume_number),
-			'object_type': vocab.VolumeText,
-			'label': f'Volume {volume_number} of “{title}”',
-			'_aata_record_id': issue_id,
-			'identifiers': [(volume_number, vocab.VolumeNumber(ident=''))],
-		}
+
+		if volume_number:
+			volume_uri = helper.make_proj_uri('Journal', aata_id, 'Volume', volume_number)
+			volumes[volume_number] = {
+				'uri': volume_uri,
+				'object_type': vocab.VolumeText,
+				'label': f'Volume {volume_number} of {journal_label}',
+				'_aata_record_id': issue_id,
+				'identifiers': [(volume_number, vocab.VolumeNumber(ident=''))],
+			}
 		
 		if not issue_title:
 			if issue_number:
@@ -312,8 +328,9 @@ def _extract_journal(record, helper):
 		if issue_number:
 			identifiers.append(vocab.IssueNumber(ident='', content=issue_number))
 
+		issue_uri = helper.make_proj_uri('Journal', aata_id, 'Issue', issue_id)
 		issues.append({
-			'uri': helper.make_proj_uri('Journal', aata_id, 'Issue', issue_number),
+			'uri': issue_uri,
 			'object_type': vocab.IssueText,
 			'label': issue_title,
 			'_aata_record_id': issue_id,
@@ -561,12 +578,12 @@ def _extract_abstracts(data, aata_id):
 	
 	abstracts = []
 	for i, ag in enumerate(ags):
-		content = ag['abstract']
+		content = ag.get('abstract')
 		author_abstract_flag = ag['author_abstract_flag']
 		if ag is not None:
 			language = ag.get('@lang')
 
-			localIds = [vocab.LocalNumber(content=i) for i in rids]
+			localIds = [vocab.LocalNumber(ident='', content=i) for i in rids]
 			legacyIds = [(i, legacyIdentifier) for i in lids]
 			abstract = {
 				'_aata_record_id': aata_id,
@@ -968,7 +985,6 @@ class AATAPipeline(PipelineBase):
 		self.services = None
 
 		helper = AATAUtilityHelper(project_name)
-		self.uid_tag_prefix = UID_TAG_PREFIX
 
 		super().__init__(project_name, helper=helper)
 

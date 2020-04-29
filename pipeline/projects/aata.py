@@ -24,8 +24,9 @@ import xmltodict
 
 import settings
 from cromulent import model, vocab
+from cromulent.model import factory
 from pipeline.projects import PipelineBase, UtilityHelper
-from pipeline.util import identity, ExtractKeyedValues, MatchingFiles, timespan_from_outer_bounds
+from pipeline.util import identity, GraphListSource, ExtractKeyedValue, ExtractKeyedValues, MatchingFiles, timespan_from_outer_bounds
 from pipeline.io.file import MultiFileWriter, MergingFileWriter
 # from pipeline.io.arches import ArchesWriter
 from pipeline.linkedart import \
@@ -53,6 +54,68 @@ class AATAUtilityHelper(UtilityHelper):
 	def __init__(self, project_name):
 		super().__init__(project_name)
 
+	def document_type_class(self, code):
+		document_types = self.services['document_types']
+		clsname = document_types[code]
+		return getattr(vocab, clsname)
+
+	def role_type(self, role):
+		author_roles = self.services['author_roles']
+		code = author_roles.get(role)
+		if code:
+			t = model.Type(ident='http://vocab.getty.edu/aat/' + code, label=role)
+			return t
+
+	def ordered_author_string(self, authors):
+		if not authors:
+			return None
+		elif len(authors) == 1:
+			return authors[0]
+		elif len(authors) == 2:
+			return ' and '.join(authors)
+		else:
+			r = authors.pop()
+			l = authors.pop()
+			authors.append(' and '.join([l, r]))
+			return ', '.join(authors)
+		
+	def language_object_from_code(self, code):
+		'''
+		Given a three-letter language code (which are mostly drawn from ISO639-2, with some
+		exceptions), return a model.Language object for the corresponding language.
+
+		For example, `language_object_from_code('eng')` returns an object representing
+		the English language.
+		'''
+		language_code_map = self.services['language_code_map']
+		try:
+			if code == 'unk': # TODO: verify that 'unk' is 'unknown' and can be skipped
+				return None
+			if code.lower() in vocab.instances:
+				return vocab.instances[code.lower()]
+			elif code in language_code_map:
+				language_name = language_code_map[code]
+				try:
+					return vocab.instances[language_name]
+				except KeyError:
+					if settings.DEBUG:
+						warnings.warn(f'*** No AAT language instance found: {language_name!r}')
+			else:
+				if settings.DEBUG:
+					warnings.warn(f'*** No AAT link for language {code!r}')
+		except Exception as e:
+			print(f'*** language_object_from_code: {e}', file=sys.stderr)
+			raise e
+
+	def article_uri(self, a_id):
+		return self.make_proj_uri('Article', a_id)
+
+	def corporate_body_uri(self, corp_id):
+		return self.make_proj_uri('CB', corp_id)
+
+	def place_uri(self, geog_id):
+		return self.make_proj_uri('Place', geog_id)
+
 def _as_list(data):
 	if isinstance(data, list):
 		return data
@@ -61,81 +124,52 @@ def _as_list(data):
 	else:
 		return [data]
 
-def language_object_from_code(code, language_code_map):
-	'''
-	Given a three-letter language code (which are mostly drawn from ISO639-2, with some
-	exceptions), return a model.Language object for the corresponding language.
-
-	For example, `language_object_from_code('eng')` returns an object representing
-	the English language.
-	'''
-	try:
-		if code == 'unk': # TODO: verify that 'unk' is 'unknown' and can be skipped
-			return None
-		if code.lower() in vocab.instances:
-			return vocab.instances[code.lower()]
-		elif code in language_code_map:
-			language_name = language_code_map[code]
-			try:
-				return vocab.instances[language_name]
-			except KeyError:
-				if settings.DEBUG:
-					print(f'*** No AAT language instance found: {language_name!r}', file=sys.stderr)
-		else:
-			if settings.DEBUG:
-				print(f'*** No AAT link for language {code!r}', file=sys.stderr)
-	except Exception as e:
-		print(f'*** language_object_from_code: {e}', file=sys.stderr)
-		raise e
-
-# main article chain
-
-class MakeAATAJournalDict(Configurable):
-	helper = Option(required=True)
-	
-	def __call__(self, e):
-		record = _xml_element_to_dict(e)['record']
-		data = _extract_journal(record, self.helper)
-		return data
-
-class MakeAATASeriesDict(Configurable):
-	helper = Option(required=True)
-	
-	def __call__(self, e):
-		record = _xml_element_to_dict(e)['record']
-		data = _extract_series(record, self.helper)
-	# 	print(f'SERIES: {pprint.pformat(data)}')
-		return data
-
-class MakePublishingActivity(Configurable):
-	helper = Option(default=True)
-	
-	def __call__(self, data:dict):
-		lo = get_crom_object(data)
-		components = data['uri_components']
-		pubs = data.get('publishers', [])
-		title = data.get('label')
-	
-		previous_components = data.get('previous', {}).get('uri_components')
-		for pub in pubs:
-			start, end = data['years']
-			uri = self.helper.make_proj_uri(*components, 'Publishing')
-			event = vocab.Publishing(ident=uri, label=f'Publishing event for “{title}”')
-			try:
-				event.timespan = timespan_from_outer_bounds(start, end, inclusive=True)
-			except:
-				pass
-			lo.used_for = event
-			if previous_components:
-				# TODO: handle modeling of history_reason field
-				previous_uri = self.helper.make_proj_uri(*previous_components, 'Publishing')
-	# 			print(f'*** {uri} ===[continued]==> {previous_uri}')
-				event.continued = vocab.Publishing(ident=previous_uri)
-
-			if 'events' not in pub:
-				pub['events'] = []
-			pub['events'].append(event)
-		return data
+# class MakeAATAJournalDict(Configurable):
+# 	helper = Option(required=True)
+# 	
+# 	def __call__(self, e):
+# 		record = _xml_element_to_dict(e)['record']
+# 		data = _extract_journal(record, self.helper)
+# 		return data
+# 
+# class MakeAATASeriesDict(Configurable):
+# 	helper = Option(required=True)
+# 	
+# 	def __call__(self, e):
+# 		record = _xml_element_to_dict(e)['record']
+# 		data = _extract_series(record, self.helper)
+# 	# 	print(f'SERIES: {pprint.pformat(data)}')
+# 		return data
+# 
+# class MakePublishingActivity(Configurable):
+# 	helper = Option(default=True)
+# 	
+# 	def __call__(self, data:dict):
+# 		lo = get_crom_object(data)
+# 		components = data['uri_components']
+# 		pubs = data.get('publishers', [])
+# 		title = data.get('label')
+# 	
+# 		previous_components = data.get('previous', {}).get('uri_components')
+# 		for pub in pubs:
+# 			start, end = data['years']
+# 			uri = self.helper.make_proj_uri(*components, 'Publishing')
+# 			event = vocab.Publishing(ident=uri, label=f'Publishing event for “{title}”')
+# 			try:
+# 				event.timespan = timespan_from_outer_bounds(start, end, inclusive=True)
+# 			except:
+# 				pass
+# 			lo.used_for = event
+# 			if previous_components:
+# 				# TODO: handle modeling of history_reason field
+# 				previous_uri = self.helper.make_proj_uri(*previous_components, 'Publishing')
+# 	# 			print(f'*** {uri} ===[continued]==> {previous_uri}')
+# 				event.continued = vocab.Publishing(ident=previous_uri)
+# 
+# 			if 'events' not in pub:
+# 				pub['events'] = []
+# 			pub['events'].append(event)
+# 		return data
 
 def _xml_element_to_dict(e):
 	chunk = lxml.etree.tostring(e).decode('utf-8')
@@ -144,11 +178,273 @@ def _xml_element_to_dict(e):
 	data = json.loads(s)
 	return data
 
-class MakeAATAArticleDict(Configurable):
+class ModelArticle(Configurable):
 	helper = Option(required=True)
 	language_code_map = Service('language_code_map')
 	
-	def __call__(self, e, language_code_map):
+	def model_record_desc_group(self, record, data):
+		code = data['doc_type']['doc_code']
+		cls = self.helper.document_type_class(code)
+		record['object_type'] = cls
+
+	def model_record_id_group(self, record, data):
+		record.setdefault('identifiers', [])
+		record.setdefault('part_of', [])
+
+		rid = data['record_id']
+		aata_ids = _as_list(data.get('aata_id'))
+		cid = data.get('collective_rec_id')
+		
+		record['identifiers'] += [vocab.LocalNumber(ident='', content=aid) for aid in aata_ids]
+		record['identifiers'] += [vocab.LocalNumber(ident='', content=rid)]
+		
+		if cid:
+			uri = self.helper.article_uri(cid)
+			parent = {'uri': uri}
+			make_la_lo = MakeLinkedArtLinguisticObject()
+			make_la_lo(parent)
+			record['part_of'].append(parent)
+
+	def model_authorship_group(self, record, data):
+		if not data:
+			return
+		record.setdefault('_people', [])
+# 		record.setdefault('_events', [])
+		authors = _as_list(data.get('primary_author'))
+		
+		subevents = []
+		mlap = MakeLinkedArtPerson()
+		
+		ordered_data = []
+		article_label = record['label_string']
+		creation_id = record['uri'] + '-Creation'
+		creation = model.Creation(ident=creation_id, label=f'Creation of {article_label}')
+		for a in authors:
+			gaia_id = a['gaia_authority_id']
+			gaia_type = a['gaia_authority_type']
+			name = a['author_name']
+			roles = _as_list(a['author_role'])
+			order = a['author_order']
+			
+			ordered_data.append((order, name))
+
+			identifiers = [self.helper.gci_number_id(gaia_id)]
+			p = {
+				'uri': self.helper.make_proj_uri(gaia_type, 'GAIA', gaia_id),
+				'label': name,
+				'name': name,
+				'identifiers': identifiers,
+			}
+			
+			mlap(p)
+			record['_people'].append(p)
+
+			for role in roles:
+				part = model.Creation(ident='', label=f'{role} Creation sub-event')
+				part.carried_out_by = get_crom_object(p)
+				type = self.helper.role_type(role)
+				if type:
+					part.classified_as = type
+				creation.part = part
+		
+		ordered_authors = [p[1] for p in sorted(ordered_data)]
+		order_string = self.helper.ordered_author_string(ordered_authors)
+		creation.referred_to_by = vocab.Note(ident='', content=order_string)
+		record['created_by'] = creation
+
+	def model_title_group(self, record, data):
+		record.setdefault('identifiers', [])
+		
+		primary = data['primary']
+		title = primary.get('title')
+		translated = primary.get('title_translated')
+		variants = _as_list(primary.get('title_variant'))
+		
+		if title:
+			record['label'] = title
+			record['identifiers'].append(vocab.PrimaryName(ident='', content=title))
+		if translated:
+			record['identifiers'].append(vocab.TranslatedTitle(ident='', content=translated))
+		for v in variants:
+			record['identifiers'].append(vocab.Title(ident='', content=v))
+
+	def model_imprint_group(self, record, data):
+		if not data:
+			return
+		record.setdefault('referred_to_by', [])
+		record.setdefault('identifiers', [])
+
+		edition = data.get('edition')
+		series_number = data.get('series_number')
+		doi = data.get('doi')
+		coden = data.get('coden')
+		website = data.get('website_address')
+		publishers = _as_list(data.get('publisher'))
+			# imprint_group/publisher/gaia_corp_id
+			# imprint_group/publisher/publisher_location/gaia_geog_id
+		distributors = _as_list(data.get('distributor'))
+			# imprint_group/distributor/gaia_corp_id
+			# imprint_group/distributor/distributor_location/gaia_geog_id
+		journal = data.get('journal_info')
+			# imprint_group/journal_info/aata_journal_id
+			# imprint_group/journal_info/aata_issue_id
+		degree = data.get('thesis_degree')
+		tr = data.get('technical_report_number')
+		
+		if edition:
+			record['referred_to_by'].append(vocab.EditionStatement(ident='', content=edition))
+		
+		if series_number:
+			record['referred_to_by'].append(vocab.Note(ident='', content=series_number)) # TODO: classify this Note
+		
+		if doi:
+			record['identifiers'].append(vocab.DoiIdentifier(ident='', content=doi))
+
+		if website:
+			record['referred_to_by'].append(vocab.Note(ident='', content=website))
+		
+		article_label = record['label_string']
+		for publisher in publishers:
+			corp_id = publisher.get('gaia_corp_id')
+			geog_id = publisher.get('publisher_location', {}).get('gaia_geog_id')
+			a = vocab.Publishing(ident='', label=f'Publishing of {article_label}')
+			if corp_id:
+				uri = self.helper.corporate_body_uri(corp_id)
+				a.carried_out_by = model.Group(ident=uri)
+			if geog_id:
+				uri = self.helper.place_uri(geog_id)
+				a.took_place_at = model.Place(ident=uri)
+
+		for distributor in distributors:
+			corp_id = publisher.get('gaia_corp_id')
+			geog_id = publisher.get('distributor_location', {}).get('gaia_geog_id')
+			a = vocab.Distributing(ident='', label=f'Distribution of {article_label}')
+			if corp_id:
+				uri = self.helper.corporate_body_uri(corp_id)
+				a.carried_out_by = model.Group(ident=uri)
+			if geog_id:
+				uri = self.helper.place_uri(geog_id)
+				a.took_place_at = model.Place(ident=uri)
+
+		if journal:
+			aata_id = journal.get('aata_journal_id')
+			issue_id = journal.get('aata_issue_id')
+			warnings.warn('TODO: handle journal link data')
+			# aata_journal_id	Textual Work	part_of
+			# aata_issue_id	Textual Work	(part_of)
+
+		if degree:
+			record['referred_to_by'].append(vocab.Note(ident='', content=degree))
+		
+		if tr:
+			record['identifiers'].append(model.Identifier(ident='', content=tr)) # TODO: classify this Identifier
+
+	def model_physical_desc_group(self, record, data):
+		if not data:
+			return
+		record.setdefault('referred_to_by', [])
+
+		pages = data.get('pages')
+		collation = data.get('collation')
+		illustrations = data.get('illustrations')
+		medium = data.get('electronic_medium_type')
+		
+		if pages:
+			record['referred_to_by'].append(vocab.PaginationStatement(ident='', content=pages))
+			
+		if collation:
+			record['referred_to_by'].append(vocab.Description(ident='', content=collation))
+			
+		if illustrations:
+			record['referred_to_by'].append(vocab.IllustruationStatement(ident='', content=illustrations))
+			
+		if medium:
+			record['referred_to_by'].append(vocab.PhysicalStatement(ident='', content=medium))
+
+	def model_notes_group(self, record, data):
+		if not data:
+			return
+		record.setdefault('language', [])
+		record.setdefault('identifiers', [])
+		record.setdefault('referred_to_by', [])
+		
+		lang_docs = _as_list(data.get('lang_doc'))
+		isbns = _as_list(data.get('isbn'))
+		issns = _as_list(data.get('issn'))
+		citation_note = data.get('citation_note')
+		inotes = _as_list(data.get('internal_note'))
+
+		for lang in lang_docs:
+			l = self.helper.language_object_from_code(lang)
+			if l:
+				record['language'].append(l)
+
+		for isbn in isbns:
+			num = isbn.get('isbn_number')
+			q = isbn.get('isbn_qualifier')
+			if num:
+				i = vocab.IsbnIdentifier(ident='', content=num)
+				if q:
+					i.referred_to_by = vocab.Note(ident='', content=q)
+				record['identifiers'].append(i)
+
+		for issn in issns:
+			i = vocab.IssnIdentifier(ident='', content=issn)
+			record['identifiers'].append(i)
+
+		if citation_note:
+			record['referred_to_by'].append(vocab.Citation(ident='', content=citation_note))
+
+		for inote in inotes:
+			record['referred_to_by'].append(vocab.Note(ident='', content=inote['note']))
+
+	def model_abstract_group(self, record, data):
+		if not data:
+			return
+		record.setdefault('referred_to_by', [])
+
+		a = data.get('abstract')
+		if a:
+			record['referred_to_by'].append(vocab.Abstract(ident='', content=a))
+
+	def model_classification_group(self, record, data):
+		record.setdefault('classified_as', [])
+		
+		code = data['class_code']
+		name = data['class_name']
+		uri = self.helper.make_proj_uri('Classification', code)
+		t = model.Type(ident=uri, label=name)
+		record['classified_as'].append(t)
+
+	def model_index_group(self, record, data):
+		record.setdefault('about', [])
+		
+		opids = _as_list(data.get('other_persistent_id'))
+		for opid in opids:
+			eid = opid['external_id']
+			uri = f'http://vocab.getty.edu/aat/{eid}'
+			t = model.Type(ident=uri)
+			record['about'].append(t)
+		pass
+
+	def model_article(self, data):
+		make_la_lo = MakeLinkedArtLinguisticObject()
+		make_la_lo(data)
+		
+		lo = get_crom_object(data)
+		author = data.get('created_by')
+		if author:
+			lo.created_by = author
+
+		for a in data.get('about', []):
+			lo.about = a
+
+		for c in data.get('classified_as', []):
+			lo.classified_as = c
+
+# 		print(factory.toString(get_crom_object(data), False))
+
+	def __call__(self, data, language_code_map):
 		'''
 		Given an XML element representing an AATA record, extract information about the
 		"article" (this might be a book, chapter, journal article, etc.) including:
@@ -163,547 +459,587 @@ class MakeAATAArticleDict(Configurable):
 		This information is returned in a single `dict`.
 		'''
 
-		record = _xml_element_to_dict(e)['record']
-		data = _extract_article(record, language_code_map, self.helper)
-		aata_id = record['record_id_group']['record_id']
-		_extract_organizations(data, aata_id, self.helper)
-		_extract_authors(data, aata_id, self.helper)
-		_extract_abstracts(data, aata_id)
+		rid = data['record_id_group']['record_id']
+		data['uri'] = self.helper.make_proj_uri('Article', rid)
+		data['label'] = f'Article ({rid})' # this should get overridden in model_title_group
+		data['label_string'] = f'Article ({rid})' # TODO: improve this
+
+		self.model_title_group(data, data['title_group'])
+		self.model_record_desc_group(data, data['record_desc_group'])
+		self.model_record_id_group(data, data['record_id_group'])
+		self.model_authorship_group(data, data.get('authorship_group'))
+		self.model_imprint_group(data, data.get('imprint_group'))
+		self.model_physical_desc_group(data, data.get('physical_desc_group'))
+		self.model_notes_group(data, data.get('notes_group'))
+		self.model_abstract_group(data, data.get('abstract_group'))
+		for cg in _as_list(data.get('classification_group')):
+			self.model_classification_group(data, cg)
+		for ig in _as_list(data.get('index_group')):
+			self.model_index_group(data, ig)
+		self.model_article(data)
 
 		return data
 
-def _gaia_authority_type(code):
-	if code in ('CB', 'Corp'):
-		return model.Group
-	elif code in ('PN', 'Person'):
-		return model.Person
-	elif code == 'GP':
-		return model.Place
-	elif code == 'SH':
-		return model.Type
-	elif code == 'CX':
-		# TODO: handle authority
-		return model.Type
-	elif code == 'TAL':
-		# TODO: handle authority
-		return model.Type
-	else:
-		warnings.warn(f'Not a recognized authority type code: {code}')
-		raise LookupError
-
-def _extract_sponsor_group(data, helper):
-	aata_id = data['gaia_corp_id']
-	name = data['sponsor_name']
-	geog_id = data.get('gaia_geog_id')
-	city = data.get('sponsor_city')
-	country = data.get('sponsor_country')
-	
-	identifiers = []
-	if geog_id:
-		identifiers.append(vocab.LocalNumber(ident='', content=geog_id))
-	return {
-		'label': name,
-		'uri': helper.make_proj_uri('Sponsor', aata_id),
-		'_aata_record_id': aata_id,
-		'identifiers': [(aata_id, vocab.LocalNumber(ident=''))],
-		'place': {
-			'label': city,
-			'identifiers': identifiers,
-			'type': 'City',
-			'part_of': {
-				'label': country,
-				'type': 'Country',
-			}
-		}
-	}
-
-def _extract_publisher_group(data, helper):
-	aata_id = data['gaia_corp_id']
-	name = data['publisher_name']
-	geog_id = data.get('gaia_geog_id')
-	city = data.get('sponsor_city')
-	country = data.get('sponsor_country')
-
-	identifiers = []
-	if geog_id:
-		identifiers.append(vocab.LocalNumber(ident='', content=geog_id))
-	return {
-		'label': name,
-		'uri': helper.make_proj_uri('Publisher', aata_id),
-		'_aata_record_id': aata_id,
-		'identifiers': [(aata_id, vocab.LocalNumber(ident=''))],
-		'place': {
-			'label': city,
-			'identifiers': identifiers,
-			'type': 'City',
-			'part_of': {
-				'label': country,
-				'type': 'Country',
-			}
-		}
-	}
-
-def _extract_journal(record, helper):
-	'''Extract information about a journal record XML element'''
-	aata_id = record['record_desc_group']['record_id']
-	jg = record['journal_group']
-	title = jg.get('title')
-	if title:
-		journal_label = f'“{title}”'
-	else:
-		journal_label = f'Journal'
-	var_title_strings = [t for t in _as_list(jg.get('variant_title', []))]
-	translations = [t for t in _as_list(jg.get('title_translated', []))]
-
-# 	lang_name = e.findtext('./journal_group/language/lang_name')
-# 	lang_scope = e.findtext('./journal_group/language/lang_scope')
-
-	start_year = jg.get('start_year')
-	cease_year = jg.get('cease_year')
-	
-	journal_uri = helper.make_proj_uri('Journal', aata_id)
-	issn = [(i, vocab.IssnIdentifier(ident='')) for i in _as_list(jg.get('issn'))]
-
-	publishers = [_extract_publisher_group(pg, helper) for pg in _as_list(record.get('publisher_group'))]
-	sponsors = [_extract_sponsor_group(sg, helper) for sg in _as_list(record.get('sponsor_group'))]
-
-	issues = []
-	volumes = {}
-	
-	for ig in _as_list(record.get('issue_group')):
-		issue_id = ig['issue_id']
-		issue_title = ig.get('title')
-		issue_translations = _as_list(ig.get('title_translated'))
-		volume_number = ig.get('volume')
-		issue_id = ig.get('issue_id')
-		issue_number = ig.get('number')
-		
-		date = ig.get('date')
-		notes = []
-		if date:
-			season = date.get('display_date')
-			month = date.get('sort_month')
-			year = date.get('sort_year')
-			
-			if year:
-				begin = datetime.strptime(ymd_to_datetime(year, month, None, which='begin'), "%Y-%m-%dT%H:%M:%S")
-				end = datetime.strptime(ymd_to_datetime(year, month, None, which='end'), "%Y-%m-%dT%H:%M:%S")
-				ts = timespan_from_outer_bounds(begin, end, inclusive=True)
-				# TODO: attach ts to the issue somehow
-			elif month:
-				print(f'*** Found an issue with sort_month but not sort_year (!?) in record {aata_id}')
-
-			if season:
-				# TODO: should the PublicationPeriodNote be attached to the issue, or the
-				#       publication date?
-				notes.append(vocab.PublicationPeriodNote(ident='', content=season))
-
-		note = ig.get('note')
-		if note:
-			# TODO: is there a more specific Note type we can use for this?
-			notes.append(note)
-
-		chron = ig.get('enum_chron')
-		if chron:
-			# TODO: is there a more specific Note type we can use for this?
-			notes.append(vocab.Note(ident='', content=chron))
-
-		if volume_number:
-			volume_uri = helper.make_proj_uri('Journal', aata_id, 'Volume', volume_number)
-			volumes[volume_number] = {
-				'uri': volume_uri,
-				'object_type': vocab.VolumeText,
-				'label': f'Volume {volume_number} of {journal_label}',
-				'_aata_record_id': issue_id,
-				'identifiers': [(volume_number, vocab.VolumeNumber(ident=''))],
-			}
-		
-		if not issue_title:
-			if issue_number:
-				issue_title = f'Issue {issue_number} of “{title}”'
-			else:
-				issue_title = f'Issue of “{title}”'
-
-		identifiers = []
-		if issue_number:
-			identifiers.append(vocab.IssueNumber(ident='', content=issue_number))
-
-		issue_uri = helper.make_proj_uri('Journal', aata_id, 'Issue', issue_id)
-		issues.append({
-			'uri': issue_uri,
-			'object_type': vocab.IssueText,
-			'label': issue_title,
-			'_aata_record_id': issue_id,
-			'translations': list(issue_translations),
-			'identifiers': identifiers,
-			'volume': volume_number,
-			'referred_to_by': notes,
-		})
-
-	make_la_lo = MakeLinkedArtLinguisticObject()
-	for volume in volumes.values():
-		make_la_lo(volume)
-
-	previous = None
-	# TODO: where did this data go?
-# 	for jh in e.xpath('./journal_group/journal_history'):
-# 		history_id = jh.findtext('./linked_journal_id')
-# 		history_name = jh.findtext('./linked_journal_name')
-# 		history_reason = jh.findtext('./change_reason')
-# 		huri = helper.make_proj_uri('Journal', history_id)
-# 		previous = {
-# 			'uri': huri,
-# 			'uri_components': ('Journal', history_id),
-# 			'label': history_name,
-# 			'_aata_record_id': history_id,
-# 			'reason': history_reason
+# class MakeAATAArticleDict_old(Configurable):
+# 	helper = Option(required=True)
+# 	language_code_map = Service('language_code_map')
+# 	
+# 	def __call__(self, e, language_code_map):
+# 		'''
+# 		Given an XML element representing an AATA record, extract information about the
+# 		"article" (this might be a book, chapter, journal article, etc.) including:
+# 
+# 		* document type
+# 		* titles and title translations
+# 		* organizations and their role (e.g. publisher)
+# 		* creators and thier role (e.g. author, editor)
+# 		* abstracts
+# 		* languages
+# 
+# 		This information is returned in a single `dict`.
+# 		'''
+# 
+# 		record = _xml_element_to_dict(e)['record']
+# 		data = _extract_article(record, language_code_map, self.helper)
+# 		aata_id = record['record_id_group']['record_id']
+# 		_extract_organizations(data, aata_id, self.helper)
+# 		_extract_authors(data, aata_id, self.helper)
+# 		_extract_abstracts(data, aata_id)
+# 
+# 		return data
+# 
+# def _gaia_authority_type(code):
+# 	if code in ('CB', 'Corp'):
+# 		return model.Group
+# 	elif code in ('PN', 'Person'):
+# 		return model.Person
+# 	elif code == 'GP':
+# 		return model.Place
+# 	elif code == 'SH':
+# 		return model.Type
+# 	elif code == 'CX':
+# 		# TODO: handle authority
+# 		return model.Type
+# 	elif code == 'TAL':
+# 		# TODO: handle authority
+# 		return model.Type
+# 	else:
+# 		warnings.warn(f'Not a recognized authority type code: {code}')
+# 		raise LookupError
+# 
+# def _extract_sponsor_group(data, helper):
+# 	aata_id = data['gaia_corp_id']
+# 	name = data['sponsor_name']
+# 	geog_id = data.get('gaia_geog_id')
+# 	city = data.get('sponsor_city')
+# 	country = data.get('sponsor_country')
+# 	
+# 	identifiers = []
+# 	if geog_id:
+# 		identifiers.append(vocab.LocalNumber(ident='', content=geog_id))
+# 	return {
+# 		'label': name,
+# 		'uri': helper.make_proj_uri('Sponsor', aata_id),
+# 		'_aata_record_id': aata_id,
+# 		'identifiers': [(aata_id, vocab.LocalNumber(ident=''))],
+# 		'place': {
+# 			'label': city,
+# 			'identifiers': identifiers,
+# 			'type': 'City',
+# 			'part_of': {
+# 				'label': country,
+# 				'type': 'Country',
+# 			}
 # 		}
-
-	var_titles = [(var_title, variantTitleIdentifier(ident='')) for var_title in var_title_strings]
-
-	data = {
-		# TODO: lang_name
-		# TODO: lang_scope
-		'parent': record,
-		'uri': journal_uri,
-		'uri_components': ('Journal', aata_id),
-		'label': title,
-		'_aata_record_id': aata_id,
-		'translations': list(translations),
-		'identifiers': issn + var_titles,
-		'issues': issues,
-		'years': [start_year, cease_year],
-		'volumes': volumes,
-		'publishers': publishers,
-		'sponsors': sponsors,
-		'previous': previous,
-		'object_type': vocab.JournalText,
-	}
-	
-	return {k: v for k, v in data.items() if v is not None}
-
-def _extract_series(record, helper):
-	'''Extract information about a series record XML element'''
-	rdg = record['record_desc_group']
-	sg = record['series_group']
-	
-	aata_id = rdg['record_id']
-	title = sg['title']
-	var_title = sg.get('variant_title')
-	translations = [t for t in _as_list(sg.get('title_translated'))]
-
-# 	lang_name = e.findtext('./series_group/language/lang_name')
-# 	lang_scope = e.findtext('./series_group/language/lang_scope')
-
-	start_year = sg.get('start_year')
-	cease_year = sg.get('cease_year')
-	
-	series_uri = helper.make_proj_uri('Series', aata_id)
-
-	issn_strs = sg.get('issn', [])
-	if not isinstance(issn_strs, list):
-		issn_strs = [issn_strs]
-	
-	issn = [(issn, vocab.IssnIdentifier(ident='')) for issn in issn_strs]
-
-	publishers = [_extract_publisher_group(pg, helper) for pg in _as_list(record.get('publisher_group'))]
-	sponsors = [_extract_sponsor_group(sg, helper) for sg in _as_list(record.get('sponsor_group'))]
-
-	previous = None
-	# TODO: where did this data go?
-# 	for jh in e.xpath('./series_group/series_history'):
-# 		history_id = jh.findtext('./linked_series_id')
-# 		history_name = jh.findtext('./linked_series_name')
-# 		history_reason = jh.findtext('./change_reason')
-# 		huri = helper.make_proj_uri('Series', history_id)
-# 		previous = {
-# 			'uri': huri,
-# 			'object_type': vocab.SeriesText,
-# 			'uri_components': ('Series', history_id),
-# 			'label': history_name,
-# 			'_aata_record_id': history_id,
-# 			'reason': history_reason
+# 	}
+# 
+# def _extract_publisher_group(data, helper):
+# 	aata_id = data['gaia_corp_id']
+# 	name = data['publisher_name']
+# 	geog_id = data.get('gaia_geog_id')
+# 	city = data.get('sponsor_city')
+# 	country = data.get('sponsor_country')
+# 
+# 	identifiers = []
+# 	if geog_id:
+# 		identifiers.append(vocab.LocalNumber(ident='', content=geog_id))
+# 	return {
+# 		'label': name,
+# 		'uri': helper.make_proj_uri('Publisher', aata_id),
+# 		'_aata_record_id': aata_id,
+# 		'identifiers': [(aata_id, vocab.LocalNumber(ident=''))],
+# 		'place': {
+# 			'label': city,
+# 			'identifiers': identifiers,
+# 			'type': 'City',
+# 			'part_of': {
+# 				'label': country,
+# 				'type': 'Country',
+# 			}
 # 		}
-
-	var_titles = [(var_title, variantTitleIdentifier(ident=''))] if var_title is not None else []
-
-	data = {
-		# TODO: lang_name
-		# TODO: lang_scope
-		'uri': series_uri,
-		'parent': record,
-		'uri_components': ('Series', aata_id),
-		'label': title,
-		'_aata_record_id': aata_id,
-		'translations': list(translations),
-		'identifiers': issn + var_titles,
-		'years': [start_year, cease_year],
-		'publishers': publishers,
-		'sponsors': sponsors,
-		'previous': previous,
-	}
-	
-	return {k: v for k, v in data.items() if v is not None}
-
-
-def _extract_article(data, language_code_map, helper):
-	'''Extract information about an "article" record XML element'''
-	rdg = data['record_desc_group']
-	doc_code = rdg['doc_type']['doc_code']
-
-	primary = data['title_group']['primary']
-	title = primary.get('title')
-	var_title = primary.get('title_variant')
-	tt = primary.get('title_translated')
-	translations = _as_list(tt)
-
-	ng = data['notes_group']
-	ld = ng.get('lang_doc')
-	doc_langs = set(_as_list(ld))
-	ls = ng.get('lang_summary')
-	sum_langs = set(_as_list(ls))
-
-	isbn_refs = ng.get('isbn', [])
-	if not isinstance(isbn_refs, list):
-		isbn_refs = [isbn_refs]
-
-	issn_strs = ng.get('issn', [])
-	if not isinstance(issn_strs, list):
-		issn_strs = [issn_strs]
-	
-	issn = [(issn, vocab.IssnIdentifier(ident='')) for issn in issn_strs]
-
-	isbn = []
-	qualified_identifiers = []
-	for isbn_ref in isbn_refs:
-		n = isbn_ref['isbn_number']
-		pair = (n, vocab.IsbnIdentifier())
-		q = isbn_ref.get('isbn_qualifier')
-		if q is None or not q:
-			isbn.append(pair)
-		else:
-			notes = (vocab.Note(ident='', content=q),)
-# 			print(f'ISBN: {n} [{q}]')
-			qualified_identifiers.append((n, vocab.IsbnIdentifier, notes))
-
-	
-	rig = data['record_id_group']
-	aata_id = rig['record_id']
-	localIds = [vocab.LocalNumber(content=aata_id)]
-
-	classifications = []
-	code_type = None # TODO: is there a model.Type value for this sort of code?
-	cgroups = _as_list(data['classification_group'])
-	for cg in cgroups:
-		# TODO: there are only 61 unique classifications in AATA data; map these to UIDs
-		cid = cg['class_code']
-		label = cg['class_name']
-
-		name = vocab.PrimaryName(content=label)
-		classification = model.Type(label=label)
-		classification.identified_by = name
-
-		code = model.Identifier(content=cid)
-
-		code.classified_as = code_type
-		classification.identified_by = code
-		classifications.append(classification)
-
-	part_of = []
-	make_la_lo = MakeLinkedArtLinguisticObject()
-	if 'collective_rec_id' in rig:
-		# this is the upward pointing relation between, e.g., chapters and books
-		cid = rig['collective_rec_id']
-		collective = make_la_lo({
-			'uri': helper.make_proj_uri('LinguisticObject', cid)
-		})
-		part_of.append(collective)
-
-	indexings = []
-	for ig in _as_list(data.get('index_group')):
-		try:
-			aid = ig['gaia_auth_id']
-			atype = ig['gaia_auth_type']
-			label = ig['index_term']
-			itype = _gaia_authority_type(atype)
-		except:
-			pprint.pprint(ig)
-			raise
-		name = vocab.Title()
-		name.content = label
-
-		index = itype(label=label)
-		index.identified_by = name
-
-		code = model.Identifier(content=aid)
-
-		code.classified_as = code_type
-		index.identified_by = code
-		indexings.append(index)
-
-	if title is not None and len(doc_langs) == 1:
-		code = doc_langs.pop()
-		try:
-			language = language_object_from_code(code, language_code_map)
-			if language is not None:
-				title = (title, language)
-		except:
-			pass
-
-	var_titles = [(var_title, variantTitleIdentifier(ident=''))] if var_title is not None else []
-
-	id_components = ['LinguisticObject', aata_id]
-	return {
-		'parent': data,
-		'label': title,
-		'document_languages': doc_langs,
-		'summary_languages': sum_langs,
-		'_document_type': doc_code,
-		'_aata_record_id': aata_id,
-		'translations': list(translations),
-		'identifiers': localIds + isbn + issn + var_titles,
-		'qualified_identifiers': qualified_identifiers,
-		'classifications': classifications,
-		'indexing': indexings,
-		'part_of': part_of,
-		'uri': helper.make_proj_uri(*id_components),
-	}
-
-def _extract_abstracts(data, aata_id):
-	'''Extract information about abstracts from an "article" record XML element'''
-	record = data['parent']
-	rids = [record['record_id_group']['record_id']]
-	lids = [i for i in record['record_id_group']['aata_id']]
-	ags = [record['abstract_group']]
-	
-	abstracts = []
-	for i, ag in enumerate(ags):
-		content = ag.get('abstract')
-		author_abstract_flag = ag['author_abstract_flag']
-		if ag is not None:
-			language = ag.get('@lang')
-
-			localIds = [vocab.LocalNumber(ident='', content=i) for i in rids]
-			legacyIds = [(i, legacyIdentifier) for i in lids]
-			abstract = {
-				'_aata_record_id': aata_id,
-				'_aata_record_abstract_seq': i,
-				'content': content,
-				'language': language,
-				'author_abstract_flag': (author_abstract_flag == 'yes'),
-				'identifiers': localIds + legacyIds,
-			}
-			abstracts.append(abstract)
-	data['_abstracts'] = abstracts
-
-
-def _extract_organizations(data, aata_id, helper):
-	'''Extract information about organizations from an "article" record XML element'''
-	i = -1
-	organizations = []
-	record = data['parent']
-	ig = record['imprint_group']
-	
-	keys = set(ig.keys())
-	keys -= {'distributor', 'publisher'}
-
-	orgs = []
-	for d in _as_list(ig.get('distributor', [])):
-		oid = d['gaia_corp_id']
-		name = d['distributor_name']
-		loc = d['distributor_location']
-		orgs.append({'role': 'distributor', 'gaia_corp_id': oid, 'name': name, 'loc': loc})
-	for d in _as_list(ig.get('publisher', [])):
-		oid = d['gaia_corp_id']
-		name = d['publisher_name']
-		loc = d['publisher_location']
-		orgs.append({'role': 'publisher', 'gaia_corp_id': oid, 'name': name, 'loc': loc})
-
-	for i, org in enumerate(orgs):
-		role = org['role']
-		name = org['name']
-		auth_id = org['gaia_corp_id']
-		auth_type = 'CB' # TODO: used to come from the data in the 'gaia_auth_type' field
-		org = {
-			'_aata_record_id': aata_id,
-			'_aata_record_organization_seq': i,
-			'label': name,
-			'role': role,
-# 			'properties': properties,
-			'names': [(name,)],
-			'object_type': _gaia_authority_type(auth_type),
-			'identifiers': [vocab.LocalNumber(ident='', content=auth_id)],
-			'uri': helper.make_proj_uri('Organization', auth_type, auth_id, name),
-		}
-		organizations.append(org)
-	data['_organizations'] = organizations
-
-def _extract_authors(data, aata_id, helper):
-	'''Extract information about authors from an "article" record XML element'''
-	record = data['parent']
-	authorship_group = record.get('authorship_group', {}) or {}
-	
-	primary_authors = authorship_group.get('primary_author', [])
-	parent_book_author = authorship_group.get('parent_book_author', [])
-	if not isinstance(primary_authors, list):
-		primary_authors = [primary_authors]
-	if not isinstance(parent_book_author, list):
-		parent_book_author = [parent_book_author]
-
-	authors = []
-	for role_key, value in authorship_group.items():
-		records = _as_list(value)
-		for i, a in enumerate(records):
-			for role in _as_list(a['author_role']):
-				auth_id = a.get('gaia_authority_id')
-				if auth_id is not None:
-					name = a['author_name']
-					auth_type = a['gaia_authority_type']
-
-					id_components = tuple()
-					if auth_id is None:
-						print('*** no gaia auth id for author in record %r' % (aata_id,))
-						id_components = ('AATA' 'P', 'Internal', aata_id, i)
-					else:
-						id_components = ('AATA' 'P', auth_type, auth_id, name)
-
-					author = {
-						'_aata_record_id': aata_id,
-						'_aata_record_author_seq': i,
-						'label': name,
-						'names': [(name,)],
-						'object_type': _gaia_authority_type(auth_type),
-						'identifiers': [vocab.LocalNumber(ident='', content=auth_id)],
-						'uri': helper.make_proj_uri(*id_components),
-					}
-
-					if role is not None:
-						author['creation_role'] = role
-					else:
-						print('*** No author role found for authorship group')
-						pprint.pprint(a)
-
-					authors.append(author)
-				else:
-					print('*** No author_id found for record %s' % (aata_id,), file=sys.stderr)
-					pprint.pprint(a)
-	data['_authors'] = authors
-
-@use('document_types')
-def add_aata_object_type(data, document_types):
-	'''
-	Given an "article" `dict` containing a `_document_type` key which has a two-letter
-	document type string (e.g. 'JA' for journal article, 'BC' for book), add a new key
-	`object_type` containing the corresponding `vocab` class. This class can be used to
-	construct a model object for this "article".
-
-	For example, `add_aata_object_type({'_document_type': 'AV', ...})` returns the `dict`:
-	`{'_document_type': 'AV', 'document_type': vocab.AudioVisualContent, ...}`.
-	'''
-	atype = data['_document_type']
-	clsname = document_types[atype]
-	data['object_type'] = getattr(vocab, clsname)
-	return data
+# 	}
+# 
+# def _extract_journal(record, helper):
+# 	'''Extract information about a journal record XML element'''
+# 	aata_id = record['record_desc_group']['record_id']
+# 	jg = record['journal_group']
+# 	title = jg.get('title')
+# 	if title:
+# 		journal_label = f'“{title}”'
+# 	else:
+# 		journal_label = f'Journal'
+# 	var_title_strings = [t for t in _as_list(jg.get('variant_title', []))]
+# 	translations = [t for t in _as_list(jg.get('title_translated', []))]
+# 
+# # 	lang_name = e.findtext('./journal_group/language/lang_name')
+# # 	lang_scope = e.findtext('./journal_group/language/lang_scope')
+# 
+# 	start_year = jg.get('start_year')
+# 	cease_year = jg.get('cease_year')
+# 	
+# 	journal_uri = helper.make_proj_uri('Journal', aata_id)
+# 	issn = [(i, vocab.IssnIdentifier(ident='')) for i in _as_list(jg.get('issn'))]
+# 
+# 	publishers = [_extract_publisher_group(pg, helper) for pg in _as_list(record.get('publisher_group'))]
+# 	sponsors = [_extract_sponsor_group(sg, helper) for sg in _as_list(record.get('sponsor_group'))]
+# 
+# 	issues = []
+# 	volumes = {}
+# 	
+# 	for ig in _as_list(record.get('issue_group')):
+# 		issue_id = ig['issue_id']
+# 		issue_title = ig.get('title')
+# 		issue_translations = _as_list(ig.get('title_translated'))
+# 		volume_number = ig.get('volume')
+# 		issue_id = ig.get('issue_id')
+# 		issue_number = ig.get('number')
+# 		
+# 		date = ig.get('date')
+# 		notes = []
+# 		if date:
+# 			season = date.get('display_date')
+# 			month = date.get('sort_month')
+# 			year = date.get('sort_year')
+# 			
+# 			if year:
+# 				begin = datetime.strptime(ymd_to_datetime(year, month, None, which='begin'), "%Y-%m-%dT%H:%M:%S")
+# 				end = datetime.strptime(ymd_to_datetime(year, month, None, which='end'), "%Y-%m-%dT%H:%M:%S")
+# 				ts = timespan_from_outer_bounds(begin, end, inclusive=True)
+# 				# TODO: attach ts to the issue somehow
+# 			elif month:
+# 				print(f'*** Found an issue with sort_month but not sort_year (!?) in record {aata_id}')
+# 
+# 			if season:
+# 				# TODO: should the PublicationPeriodNote be attached to the issue, or the
+# 				#       publication date?
+# 				notes.append(vocab.PublicationPeriodNote(ident='', content=season))
+# 
+# 		note = ig.get('note')
+# 		if note:
+# 			# TODO: is there a more specific Note type we can use for this?
+# 			notes.append(note)
+# 
+# 		chron = ig.get('enum_chron')
+# 		if chron:
+# 			# TODO: is there a more specific Note type we can use for this?
+# 			notes.append(vocab.Note(ident='', content=chron))
+# 
+# 		if volume_number:
+# 			volume_uri = helper.make_proj_uri('Journal', aata_id, 'Volume', volume_number)
+# 			volumes[volume_number] = {
+# 				'uri': volume_uri,
+# 				'object_type': vocab.VolumeText,
+# 				'label': f'Volume {volume_number} of {journal_label}',
+# 				'_aata_record_id': issue_id,
+# 				'identifiers': [(volume_number, vocab.VolumeNumber(ident=''))],
+# 			}
+# 		
+# 		if not issue_title:
+# 			if issue_number:
+# 				issue_title = f'Issue {issue_number} of “{title}”'
+# 			else:
+# 				issue_title = f'Issue of “{title}”'
+# 
+# 		identifiers = []
+# 		if issue_number:
+# 			identifiers.append(vocab.IssueNumber(ident='', content=issue_number))
+# 
+# 		issue_uri = helper.make_proj_uri('Journal', aata_id, 'Issue', issue_id)
+# 		issues.append({
+# 			'uri': issue_uri,
+# 			'object_type': vocab.IssueText,
+# 			'label': issue_title,
+# 			'_aata_record_id': issue_id,
+# 			'translations': list(issue_translations),
+# 			'identifiers': identifiers,
+# 			'volume': volume_number,
+# 			'referred_to_by': notes,
+# 		})
+# 
+# 	make_la_lo = MakeLinkedArtLinguisticObject()
+# 	for volume in volumes.values():
+# 		make_la_lo(volume)
+# 
+# 	previous = None
+# 	# TODO: where did this data go?
+# # 	for jh in e.xpath('./journal_group/journal_history'):
+# # 		history_id = jh.findtext('./linked_journal_id')
+# # 		history_name = jh.findtext('./linked_journal_name')
+# # 		history_reason = jh.findtext('./change_reason')
+# # 		huri = helper.make_proj_uri('Journal', history_id)
+# # 		previous = {
+# # 			'uri': huri,
+# # 			'uri_components': ('Journal', history_id),
+# # 			'label': history_name,
+# # 			'_aata_record_id': history_id,
+# # 			'reason': history_reason
+# # 		}
+# 
+# 	var_titles = [(var_title, variantTitleIdentifier(ident='')) for var_title in var_title_strings]
+# 
+# 	data = {
+# 		# TODO: lang_name
+# 		# TODO: lang_scope
+# 		'parent': record,
+# 		'uri': journal_uri,
+# 		'uri_components': ('Journal', aata_id),
+# 		'label': title,
+# 		'_aata_record_id': aata_id,
+# 		'translations': list(translations),
+# 		'identifiers': issn + var_titles,
+# 		'issues': issues,
+# 		'years': [start_year, cease_year],
+# 		'volumes': volumes,
+# 		'publishers': publishers,
+# 		'sponsors': sponsors,
+# 		'previous': previous,
+# 		'object_type': vocab.JournalText,
+# 	}
+# 	
+# 	return {k: v for k, v in data.items() if v is not None}
+# 
+# def _extract_series(record, helper):
+# 	'''Extract information about a series record XML element'''
+# 	rdg = record['record_desc_group']
+# 	sg = record['series_group']
+# 	
+# 	aata_id = rdg['record_id']
+# 	title = sg['title']
+# 	var_title = sg.get('variant_title')
+# 	translations = [t for t in _as_list(sg.get('title_translated'))]
+# 
+# # 	lang_name = e.findtext('./series_group/language/lang_name')
+# # 	lang_scope = e.findtext('./series_group/language/lang_scope')
+# 
+# 	start_year = sg.get('start_year')
+# 	cease_year = sg.get('cease_year')
+# 	
+# 	series_uri = helper.make_proj_uri('Series', aata_id)
+# 
+# 	issn_strs = sg.get('issn', [])
+# 	if not isinstance(issn_strs, list):
+# 		issn_strs = [issn_strs]
+# 	
+# 	issn = [(issn, vocab.IssnIdentifier(ident='')) for issn in issn_strs]
+# 
+# 	publishers = [_extract_publisher_group(pg, helper) for pg in _as_list(record.get('publisher_group'))]
+# 	sponsors = [_extract_sponsor_group(sg, helper) for sg in _as_list(record.get('sponsor_group'))]
+# 
+# 	previous = None
+# 	# TODO: where did this data go?
+# # 	for jh in e.xpath('./series_group/series_history'):
+# # 		history_id = jh.findtext('./linked_series_id')
+# # 		history_name = jh.findtext('./linked_series_name')
+# # 		history_reason = jh.findtext('./change_reason')
+# # 		huri = helper.make_proj_uri('Series', history_id)
+# # 		previous = {
+# # 			'uri': huri,
+# # 			'object_type': vocab.SeriesText,
+# # 			'uri_components': ('Series', history_id),
+# # 			'label': history_name,
+# # 			'_aata_record_id': history_id,
+# # 			'reason': history_reason
+# # 		}
+# 
+# 	var_titles = [(var_title, variantTitleIdentifier(ident=''))] if var_title is not None else []
+# 
+# 	data = {
+# 		# TODO: lang_name
+# 		# TODO: lang_scope
+# 		'uri': series_uri,
+# 		'parent': record,
+# 		'uri_components': ('Series', aata_id),
+# 		'label': title,
+# 		'_aata_record_id': aata_id,
+# 		'translations': list(translations),
+# 		'identifiers': issn + var_titles,
+# 		'years': [start_year, cease_year],
+# 		'publishers': publishers,
+# 		'sponsors': sponsors,
+# 		'previous': previous,
+# 	}
+# 	
+# 	return {k: v for k, v in data.items() if v is not None}
+# 
+# 
+# def _extract_article(data, language_code_map, helper):
+# 	'''Extract information about an "article" record XML element'''
+# 	rdg = data['record_desc_group']
+# 	doc_code = rdg['doc_type']['doc_code']
+# 
+# 	primary = data['title_group']['primary']
+# 	title = primary.get('title')
+# 	var_title = primary.get('title_variant')
+# 	tt = primary.get('title_translated')
+# 	translations = _as_list(tt)
+# 
+# 	ng = data['notes_group']
+# 	ld = ng.get('lang_doc')
+# 	doc_langs = set(_as_list(ld))
+# 	ls = ng.get('lang_summary')
+# 	sum_langs = set(_as_list(ls))
+# 
+# 	isbn_refs = ng.get('isbn', [])
+# 	if not isinstance(isbn_refs, list):
+# 		isbn_refs = [isbn_refs]
+# 
+# 	issn_strs = ng.get('issn', [])
+# 	if not isinstance(issn_strs, list):
+# 		issn_strs = [issn_strs]
+# 	
+# 	issn = [(issn, vocab.IssnIdentifier(ident='')) for issn in issn_strs]
+# 
+# 	isbn = []
+# 	qualified_identifiers = []
+# 	for isbn_ref in isbn_refs:
+# 		n = isbn_ref['isbn_number']
+# 		pair = (n, vocab.IsbnIdentifier())
+# 		q = isbn_ref.get('isbn_qualifier')
+# 		if q is None or not q:
+# 			isbn.append(pair)
+# 		else:
+# 			notes = (vocab.Note(ident='', content=q),)
+# # 			print(f'ISBN: {n} [{q}]')
+# 			qualified_identifiers.append((n, vocab.IsbnIdentifier, notes))
+# 
+# 	
+# 	rig = data['record_id_group']
+# 	aata_id = rig['record_id']
+# 	localIds = [vocab.LocalNumber(content=aata_id)]
+# 
+# 	classifications = []
+# 	code_type = None # TODO: is there a model.Type value for this sort of code?
+# 	cgroups = _as_list(data['classification_group'])
+# 	for cg in cgroups:
+# 		# TODO: there are only 61 unique classifications in AATA data; map these to UIDs
+# 		cid = cg['class_code']
+# 		label = cg['class_name']
+# 
+# 		name = vocab.PrimaryName(content=label)
+# 		classification = model.Type(label=label)
+# 		classification.identified_by = name
+# 
+# 		code = model.Identifier(content=cid)
+# 
+# 		code.classified_as = code_type
+# 		classification.identified_by = code
+# 		classifications.append(classification)
+# 
+# 	part_of = []
+# 	make_la_lo = MakeLinkedArtLinguisticObject()
+# 	if 'collective_rec_id' in rig:
+# 		# this is the upward pointing relation between, e.g., chapters and books
+# 		cid = rig['collective_rec_id']
+# 		collective = make_la_lo({
+# 			'uri': helper.make_proj_uri('LinguisticObject', cid)
+# 		})
+# 		part_of.append(collective)
+# 
+# 	indexings = []
+# 	for ig in _as_list(data.get('index_group')):
+# 		try:
+# 			aid = ig['gaia_auth_id']
+# 			atype = ig['gaia_auth_type']
+# 			label = ig['index_term']
+# 			itype = _gaia_authority_type(atype)
+# 		except:
+# 			pprint.pprint(ig)
+# 			raise
+# 		name = vocab.Title()
+# 		name.content = label
+# 
+# 		index = itype(label=label)
+# 		index.identified_by = name
+# 
+# 		code = model.Identifier(content=aid)
+# 
+# 		code.classified_as = code_type
+# 		index.identified_by = code
+# 		indexings.append(index)
+# 
+# 	if title is not None and len(doc_langs) == 1:
+# 		code = doc_langs.pop()
+# 		try:
+# 			language = language_object_from_code(code, language_code_map)
+# 			if language is not None:
+# 				title = (title, language)
+# 		except:
+# 			pass
+# 
+# 	var_titles = [(var_title, variantTitleIdentifier(ident=''))] if var_title is not None else []
+# 
+# 	id_components = ['LinguisticObject', aata_id]
+# 	return {
+# 		'parent': data,
+# 		'label': title,
+# 		'document_languages': doc_langs,
+# 		'summary_languages': sum_langs,
+# 		'_document_type': doc_code,
+# 		'_aata_record_id': aata_id,
+# 		'translations': list(translations),
+# 		'identifiers': localIds + isbn + issn + var_titles,
+# 		'qualified_identifiers': qualified_identifiers,
+# 		'classifications': classifications,
+# 		'indexing': indexings,
+# 		'part_of': part_of,
+# 		'uri': helper.make_proj_uri(*id_components),
+# 	}
+# 
+# def _extract_abstracts(data, aata_id):
+# 	'''Extract information about abstracts from an "article" record XML element'''
+# 	record = data['parent']
+# 	rids = [record['record_id_group']['record_id']]
+# 	lids = [i for i in record['record_id_group']['aata_id']]
+# 	ags = [record['abstract_group']]
+# 	
+# 	abstracts = []
+# 	for i, ag in enumerate(ags):
+# 		content = ag.get('abstract')
+# 		author_abstract_flag = ag['author_abstract_flag']
+# 		if ag is not None:
+# 			language = ag.get('@lang')
+# 
+# 			localIds = [vocab.LocalNumber(ident='', content=i) for i in rids]
+# 			legacyIds = [(i, legacyIdentifier) for i in lids]
+# 			abstract = {
+# 				'_aata_record_id': aata_id,
+# 				'_aata_record_abstract_seq': i,
+# 				'content': content,
+# 				'language': language,
+# 				'author_abstract_flag': (author_abstract_flag == 'yes'),
+# 				'identifiers': localIds + legacyIds,
+# 			}
+# 			abstracts.append(abstract)
+# 	data['_abstracts'] = abstracts
+# 
+# 
+# def _extract_organizations(data, aata_id, helper):
+# 	'''Extract information about organizations from an "article" record XML element'''
+# 	i = -1
+# 	organizations = []
+# 	record = data['parent']
+# 	ig = record['imprint_group']
+# 	
+# 	keys = set(ig.keys())
+# 	keys -= {'distributor', 'publisher'}
+# 
+# 	orgs = []
+# 	for d in _as_list(ig.get('distributor', [])):
+# 		oid = d['gaia_corp_id']
+# 		name = d['distributor_name']
+# 		loc = d['distributor_location']
+# 		orgs.append({'role': 'distributor', 'gaia_corp_id': oid, 'name': name, 'loc': loc})
+# 	for d in _as_list(ig.get('publisher', [])):
+# 		oid = d['gaia_corp_id']
+# 		name = d['publisher_name']
+# 		loc = d['publisher_location']
+# 		orgs.append({'role': 'publisher', 'gaia_corp_id': oid, 'name': name, 'loc': loc})
+# 
+# 	for i, org in enumerate(orgs):
+# 		role = org['role']
+# 		name = org['name']
+# 		auth_id = org['gaia_corp_id']
+# 		auth_type = 'CB' # TODO: used to come from the data in the 'gaia_auth_type' field
+# 		org = {
+# 			'_aata_record_id': aata_id,
+# 			'_aata_record_organization_seq': i,
+# 			'label': name,
+# 			'role': role,
+# # 			'properties': properties,
+# 			'names': [(name,)],
+# 			'object_type': _gaia_authority_type(auth_type),
+# 			'identifiers': [vocab.LocalNumber(ident='', content=auth_id)],
+# 			'uri': helper.make_proj_uri('Organization', auth_type, auth_id, name),
+# 		}
+# 		organizations.append(org)
+# 	data['_organizations'] = organizations
+# 
+# def _extract_authors(data, aata_id, helper):
+# 	'''Extract information about authors from an "article" record XML element'''
+# 	record = data['parent']
+# 	authorship_group = record.get('authorship_group', {}) or {}
+# 	
+# 	primary_authors = authorship_group.get('primary_author', [])
+# 	parent_book_author = authorship_group.get('parent_book_author', [])
+# 	if not isinstance(primary_authors, list):
+# 		primary_authors = [primary_authors]
+# 	if not isinstance(parent_book_author, list):
+# 		parent_book_author = [parent_book_author]
+# 
+# 	authors = []
+# 	for role_key, value in authorship_group.items():
+# 		records = _as_list(value)
+# 		for i, a in enumerate(records):
+# 			for role in _as_list(a['author_role']):
+# 				auth_id = a.get('gaia_authority_id')
+# 				if auth_id is not None:
+# 					name = a['author_name']
+# 					auth_type = a['gaia_authority_type']
+# 
+# 					id_components = tuple()
+# 					if auth_id is None:
+# 						print('*** no gaia auth id for author in record %r' % (aata_id,))
+# 						id_components = ('AATA' 'P', 'Internal', aata_id, i)
+# 					else:
+# 						id_components = ('AATA' 'P', auth_type, auth_id, name)
+# 
+# 					author = {
+# 						'_aata_record_id': aata_id,
+# 						'_aata_record_author_seq': i,
+# 						'label': name,
+# 						'names': [(name,)],
+# 						'object_type': _gaia_authority_type(auth_type),
+# 						'identifiers': [vocab.LocalNumber(ident='', content=auth_id)],
+# 						'uri': helper.make_proj_uri(*id_components),
+# 					}
+# 
+# 					if role is not None:
+# 						author['creation_role'] = role
+# 					else:
+# 						print('*** No author role found for authorship group')
+# 						pprint.pprint(a)
+# 
+# 					authors.append(author)
+# 				else:
+# 					print('*** No author_id found for record %s' % (aata_id,), file=sys.stderr)
+# 					pprint.pprint(a)
+# 	data['_authors'] = authors
+# 
+# @use('document_types')
+# def add_aata_object_type(data, document_types):
+# 	'''
+# 	Given an "article" `dict` containing a `_document_type` key which has a two-letter
+# 	document type string (e.g. 'JA' for journal article, 'BC' for book), add a new key
+# 	`object_type` containing the corresponding `vocab` class. This class can be used to
+# 	construct a model object for this "article".
+# 
+# 	For example, `add_aata_object_type({'_document_type': 'AV', ...})` returns the `dict`:
+# 	`{'_document_type': 'AV', 'document_type': vocab.AudioVisualContent, ...}`.
+# 	'''
+# 	atype = data['_document_type']
+# 	clsname = document_types[atype]
+# 	data['object_type'] = getattr(vocab, clsname)
+# 	return data
 
 # imprint organizations chain (publishers, distributors)
 
@@ -860,50 +1196,50 @@ def add_aata_authors(data):
 
 # article abstract chain
 
-@use('language_code_map')
-def detect_title_language(data: dict, language_code_map):
-	'''
-	Given a `dict` representing a Linguistic Object, attempt to detect the language of
-	the value for the `label` key.  If the detected langauge is also one of the languages
-	asserted for the record's summaries or underlying document, then update the `label`
-	to be a tuple consisting of the original label and a Language model object.
-	'''
-	dlangs = data.get('document_languages', set())
-	slangs = data.get('summary_languages', set())
-	languages = dlangs | slangs
-	title = data.get('label')
-	if isinstance(title, tuple):
-		title = title[0]
-	try:
-		if title is None:
-			return NOT_MODIFIED
-		translations = data.get('translations', [])
-		if translations and languages:
-			detected = detect(title)
-			threealpha = iso639.to_iso639_2(detected)
-			if threealpha in languages:
-				language = language_object_from_code(threealpha, language_code_map)
-				if language is not None:
-					# we have confidence that we've matched the language of the title
-					# because it is one of the declared languages for the record
-					# document/summary
-					data['label'] = (title, language)
-					return data
-			else:
-				# the detected language of the title was not declared in the record data,
-				# so we lack confidence to proceed
-				pass
-	except iso639.NonExistentLanguageError as e:
-		print('*** Unrecognized language code detected: %r' % (detected,), file=sys.stderr)
-	except KeyError as e:
-		print(
-			'*** LANGUAGE: detected but unrecognized title language %r '
-			'(cf. declared in metadata: %r): %s' % (e.args[0], languages, title),
-			file=sys.stderr
-		)
-	except Exception as e:
-		print('*** detect_title_language error: %r' % (e,))
-	return NOT_MODIFIED
+# @use('language_code_map')
+# def detect_title_language(data: dict, language_code_map):
+# 	'''
+# 	Given a `dict` representing a Linguistic Object, attempt to detect the language of
+# 	the value for the `label` key.  If the detected langauge is also one of the languages
+# 	asserted for the record's summaries or underlying document, then update the `label`
+# 	to be a tuple consisting of the original label and a Language model object.
+# 	'''
+# 	dlangs = data.get('document_languages', set())
+# 	slangs = data.get('summary_languages', set())
+# 	languages = dlangs | slangs
+# 	title = data.get('label')
+# 	if isinstance(title, tuple):
+# 		title = title[0]
+# 	try:
+# 		if title is None:
+# 			return NOT_MODIFIED
+# 		translations = data.get('translations', [])
+# 		if translations and languages:
+# 			detected = detect(title)
+# 			threealpha = iso639.to_iso639_2(detected)
+# 			if threealpha in languages:
+# 				language = self.helper.language_object_from_code(threealpha)
+# 				if language is not None:
+# 					# we have confidence that we've matched the language of the title
+# 					# because it is one of the declared languages for the record
+# 					# document/summary
+# 					data['label'] = (title, language)
+# 					return data
+# 			else:
+# 				# the detected language of the title was not declared in the record data,
+# 				# so we lack confidence to proceed
+# 				pass
+# 	except iso639.NonExistentLanguageError as e:
+# 		print('*** Unrecognized language code detected: %r' % (detected,), file=sys.stderr)
+# 	except KeyError as e:
+# 		print(
+# 			'*** LANGUAGE: detected but unrecognized title language %r '
+# 			'(cf. declared in metadata: %r): %s' % (e.args[0], languages, title),
+# 			file=sys.stderr
+# 		)
+# 	except Exception as e:
+# 		print('*** detect_title_language error: %r' % (e,))
+# 	return NOT_MODIFIED
 
 class MakeAATAAbstract(Configurable):
 	helper = Option(required=True)
@@ -988,6 +1324,7 @@ class AATAPipeline(PipelineBase):
 
 		super().__init__(project_name, helper=helper)
 
+		vocab.register_vocab_class('IllustruationStatement', {'parent': model.LinguisticObject, 'id': '300015578', 'label': 'Illustruation Statement', 'metatype': 'brief text'})
 		vocab.register_vocab_class('VolumeNumber', {'parent': model.Identifier, 'id': '300265632', 'label': 'Volume'})
 		vocab.register_vocab_class('IssueNumber', {'parent': model.Identifier, 'id': '300312349', 'label': 'Issue'})
 		vocab.register_vocab_class('PublicationPeriodNote', {'parent': model.LinguisticObject, 'id': '300081446', 'label': 'Publication Period Note', 'metatype': 'brief text'})
@@ -1005,42 +1342,65 @@ class AATAPipeline(PipelineBase):
 	def add_articles_chain(self, graph, records, serialize=True):
 		'''Add transformation of article records to the bonobo pipeline.'''
 		articles = graph.add_chain(
-			MakeAATAArticleDict(helper=self.helper),
-			add_aata_object_type,
-			detect_title_language,
-			MakeLinkedArtLinguisticObject(),
-			AddArchesModel(model=self.models['LinguisticObject']),
-			add_imprint_orgs,
+			ExtractKeyedValue(key='record'),
+			ModelArticle(helper=self.helper),
+# 			add_aata_object_type,
+# 			detect_title_language,
+# 			MakeLinkedArtLinguisticObject(),
+# 			AddArchesModel(model=self.models['LinguisticObject']),
+# 			add_imprint_orgs,
 			_input=records.output
 		)
+
+		people = graph.add_chain(ExtractKeyedValues(key='_people'), _input=articles.output)
+		events = graph.add_chain(ExtractKeyedValues(key='_events'), _input=articles.output)
+
 		if serialize:
 			# write ARTICLES data
 			self.add_serialization_chain(graph, articles.output, model=self.models['LinguisticObject'])
+			self.add_serialization_chain(graph, events.output, model=self.models['Event'])
+			_ = self.add_person_or_group_chain(graph, people, serialize=True)
 		return articles
 
-	def add_people_chain(self, graph, articles, serialize=True):
-		'''Add transformation of author records to the bonobo pipeline.'''
-		def trace(d):
-			print(get_crom_object(d))
-			return d
-		
-		articles_with_authors = graph.add_chain(
-			add_aata_authors,
-			_input=articles.output
-		)
-
-		if serialize:
-			# write ARTICLES with their authorship/creation events data
-			self.add_serialization_chain(graph, articles_with_authors.output, model=self.models['LinguisticObject'])
-
-		people = graph.add_chain(
-			ExtractKeyedValues(key='_authors'),
-			_input=articles_with_authors.output
-		)
-		if serialize:
-			# write PEOPLE data
-			self.add_serialization_chain(graph, people.output, model=self.models['Person'])
-		return people
+# 	def add_articles_chain_old(self, graph, records, serialize=True):
+# 		'''Add transformation of article records to the bonobo pipeline.'''
+# 		articles = graph.add_chain(
+# 			MakeAATAArticleDict(helper=self.helper),
+# 			add_aata_object_type,
+# 			detect_title_language,
+# 			MakeLinkedArtLinguisticObject(),
+# 			AddArchesModel(model=self.models['LinguisticObject']),
+# 			add_imprint_orgs,
+# 			_input=records.output
+# 		)
+# 		if serialize:
+# 			# write ARTICLES data
+# 			self.add_serialization_chain(graph, articles.output, model=self.models['LinguisticObject'])
+# 		return articles
+# 
+# 	def add_people_chain(self, graph, articles, serialize=True):
+# 		'''Add transformation of author records to the bonobo pipeline.'''
+# 		def trace(d):
+# 			print(get_crom_object(d))
+# 			return d
+# 		
+# 		articles_with_authors = graph.add_chain(
+# 			add_aata_authors,
+# 			_input=articles.output
+# 		)
+# 
+# 		if serialize:
+# 			# write ARTICLES with their authorship/creation events data
+# 			self.add_serialization_chain(graph, articles_with_authors.output, model=self.models['LinguisticObject'])
+# 
+# 		people = graph.add_chain(
+# 			ExtractKeyedValues(key='_authors'),
+# 			_input=articles_with_authors.output
+# 		)
+# 		if serialize:
+# 			# write PEOPLE data
+# 			self.add_serialization_chain(graph, people.output, model=self.models['Person'])
+# 		return people
 
 	def add_abstracts_chain(self, graph, articles, serialize=True):
 		'''Add transformation of abstract records to the bonobo pipeline.'''
@@ -1064,92 +1424,103 @@ class AATAPipeline(PipelineBase):
 			self.add_serialization_chain(graph, abstracts.output, model=self.models['LinguisticObject'])
 		return abstracts
 
-	def add_organizations_chain(self, graph, articles, key='organizations', serialize=True):
-		'''Add transformation of organization records to the bonobo pipeline.'''
-		organizations = graph.add_chain(
-			ExtractKeyedValues(key=key),
-			MakeLinkedArtOrganization(),
-			_input=articles.output
-		)
-		if serialize:
-			# write ORGANIZATIONS data
-			self.add_serialization_chain(graph, organizations.output, model=self.models['Group'])
-		return organizations
+# 	def add_organizations_chain(self, graph, articles, key='organizations', serialize=True):
+# 		'''Add transformation of organization records to the bonobo pipeline.'''
+# 		organizations = graph.add_chain(
+# 			ExtractKeyedValues(key=key),
+# 			MakeLinkedArtOrganization(),
+# 			_input=articles.output
+# 		)
+# 		if serialize:
+# 			# write ORGANIZATIONS data
+# 			self.add_serialization_chain(graph, organizations.output, model=self.models['Group'])
+# 		return organizations
 
 	def _add_abstracts_graph(self, graph):
 		abstract_records = graph.add_chain(
 			MatchingFiles(path='/', pattern=self.abstracts_pattern, fs='fs.data.aata'),
-			CurriedXMLReader(xpath='/AATA_XML/record', fs='fs.data.aata', limit=self.limit)
+			CurriedXMLReader(xpath='/AATA_XML/record', fs='fs.data.aata', limit=self.limit),
+			_xml_element_to_dict,
 		)
 		articles = self.add_articles_chain(graph, abstract_records)
-		self.add_people_chain(graph, articles)
-		self.add_abstracts_chain(graph, articles)
-		self.add_organizations_chain(graph, articles, key='organizations')
+# 		self.add_people_chain(graph, articles)
+# 		self.add_abstracts_chain(graph, articles)
+# 		self.add_organizations_chain(graph, articles, key='organizations')
 		return articles
 
-	def _add_issues_chain(self, graph, journals, key='issues', serialize=True):
-		issues = graph.add_chain(
-			ExtractKeyedValues(key='issues'),
-			make_issue,
-			MakeLinkedArtLinguisticObject(),
-			_input=journals.output
-		)
-		if serialize:
-			# write ISSUES data
-			self.add_serialization_chain(graph, issues.output, model=self.models['LinguisticObject'])
-		return issues
-
-	def _add_journals_graph(self, graph, serialize=True):
-		journals = graph.add_chain(
-			MatchingFiles(path='/', pattern=self.journals_pattern, fs='fs.data.aata'),
-			CurriedXMLReader(xpath='/journal_XML/record', fs='fs.data.aata', limit=self.limit),
-			MakeAATAJournalDict(helper=self.helper),
-			MakeLinkedArtLinguisticObject(),
-			MakePublishingActivity(helper=self.helper),
-			# Trace(name='journal', ordinals=list(range(100)))
-		)
-		
-		publishers = self.add_organizations_chain(graph, journals, key='publishers', serialize=serialize)
-		sponsors = self.add_organizations_chain(graph, journals, key='sponsors', serialize=serialize)
-		issues = self._add_issues_chain(graph, journals, serialize=serialize)
-		
-		if serialize:
-			# write ARTICLES data
-			self.add_serialization_chain(graph, journals.output, model=self.models['Journal'])
-		return journals
-
-	def _add_series_graph(self, graph, serialize=True):
-		series = graph.add_chain(
-			MatchingFiles(path='/', pattern=self.series_pattern, fs='fs.data.aata'),
-			CurriedXMLReader(xpath='/series_XML/record', fs='fs.data.aata', limit=self.limit),
-			MakeAATASeriesDict(helper=self.helper),
-			MakeLinkedArtLinguisticObject(),
-			MakePublishingActivity(helper=self.helper),
-# 			Trace(name='series')
-		)
-
-		publishers = self.add_organizations_chain(graph, series, key='publishers', serialize=serialize)
-		sponsors = self.add_organizations_chain(graph, series, key='sponsors', serialize=serialize)
-
-		if serialize:
-			# write ARTICLES data
-			self.add_serialization_chain(graph, series.output, model=self.models['Series'])
-		return series
+# 	def _add_abstracts_graph_old(self, graph):
+# 		abstract_records = graph.add_chain(
+# 			MatchingFiles(path='/', pattern=self.abstracts_pattern, fs='fs.data.aata'),
+# 			CurriedXMLReader(xpath='/AATA_XML/record', fs='fs.data.aata', limit=self.limit)
+# 		)
+# 		articles = self.add_articles_chain(graph, abstract_records)
+# 		self.add_people_chain(graph, articles)
+# 		self.add_abstracts_chain(graph, articles)
+# 		self.add_organizations_chain(graph, articles, key='organizations')
+# 		return articles
+# 
+# 	def _add_issues_chain(self, graph, journals, key='issues', serialize=True):
+# 		issues = graph.add_chain(
+# 			ExtractKeyedValues(key='issues'),
+# 			make_issue,
+# 			MakeLinkedArtLinguisticObject(),
+# 			_input=journals.output
+# 		)
+# 		if serialize:
+# 			# write ISSUES data
+# 			self.add_serialization_chain(graph, issues.output, model=self.models['LinguisticObject'])
+# 		return issues
+# 
+# 	def _add_journals_graph_old(self, graph, serialize=True):
+# 		journals = graph.add_chain(
+# 			MatchingFiles(path='/', pattern=self.journals_pattern, fs='fs.data.aata'),
+# 			CurriedXMLReader(xpath='/journal_XML/record', fs='fs.data.aata', limit=self.limit),
+# 			MakeAATAJournalDict(helper=self.helper),
+# 			MakeLinkedArtLinguisticObject(),
+# 			MakePublishingActivity(helper=self.helper),
+# 			# Trace(name='journal', ordinals=list(range(100)))
+# 		)
+# 		
+# 		publishers = self.add_organizations_chain(graph, journals, key='publishers', serialize=serialize)
+# 		sponsors = self.add_organizations_chain(graph, journals, key='sponsors', serialize=serialize)
+# 		issues = self._add_issues_chain(graph, journals, serialize=serialize)
+# 		
+# 		if serialize:
+# 			# write ARTICLES data
+# 			self.add_serialization_chain(graph, journals.output, model=self.models['Journal'])
+# 		return journals
+# 
+# 	def _add_series_graph_old(self, graph, serialize=True):
+# 		series = graph.add_chain(
+# 			MatchingFiles(path='/', pattern=self.series_pattern, fs='fs.data.aata'),
+# 			CurriedXMLReader(xpath='/series_XML/record', fs='fs.data.aata', limit=self.limit),
+# 			MakeAATASeriesDict(helper=self.helper),
+# 			MakeLinkedArtLinguisticObject(),
+# 			MakePublishingActivity(helper=self.helper),
+# # 			Trace(name='series')
+# 		)
+# 
+# 		publishers = self.add_organizations_chain(graph, series, key='publishers', serialize=serialize)
+# 		sponsors = self.add_organizations_chain(graph, series, key='sponsors', serialize=serialize)
+# 
+# 		if serialize:
+# 			# write ARTICLES data
+# 			self.add_serialization_chain(graph, series.output, model=self.models['Series'])
+# 		return series
 
 	def _construct_graph(self):
 		graph = bonobo.Graph()
+
 		articles = self._add_abstracts_graph(graph)
 
-# 		print('### TODO: skipping journal sub-graph')
-		journals = self._add_journals_graph(graph)
-		
-# 		print('### TODO: skipping series sub-graph')
-		series = self._add_series_graph(graph)
+# 		articles = self._add_abstracts_graph_old(graph)
+# 		journals = self._add_journals_graph_old(graph)
+# 		series = self._add_series_graph_old(graph)
 
 		self.graph = graph
 		return graph
 
-	def get_graph(self):
+	def get_graph(self, **kwargs):
 		'''Construct the bonobo pipeline to fully transform AATA data from XML to JSON-LD.'''
 		if not self.graph:
 			self._construct_graph()
@@ -1158,12 +1529,18 @@ class AATAPipeline(PipelineBase):
 	def run(self, **options):
 		'''Run the AATA bonobo pipeline.'''
 		print("- Limiting to %d records per file" % (self.limit,), file=sys.stderr)
-		graph = self.get_graph(**options)
 		services = self.get_services(**options)
-		bonobo.run(
-			graph,
-			services=services
-		)
+		graph = self.get_graph(**options, services=services)
+		self.run_graph(graph, services=services)
+
+		print('Serializing static instances...', file=sys.stderr)
+		for model, instances in self.static_instances.used_instances().items():
+			g = bonobo.Graph()
+			nodes = self.serializer_nodes_for_model(model=self.models[model])
+			values = instances.values()
+			source = g.add_chain(GraphListSource(values))
+			self.add_serialization_chain(g, source.output, model=self.models[model])
+			self.run_graph(g, services={})
 
 class AATAFilePipeline(AATAPipeline):
 	'''

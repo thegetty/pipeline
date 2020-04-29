@@ -1,44 +1,21 @@
-import sys
 import pprint
-import itertools
 import warnings
 
-import json
-import iso639
-from langdetect import detect
-import urllib.parse
-from datetime import datetime
-import bonobo
-from bonobo.config import Configurable, Service, Option, use
-from bonobo.constants import NOT_MODIFIED
-import xmltodict
+from bonobo.config import Configurable, Service, Option
 
-import settings
 from cromulent import model, vocab
-from cromulent.model import factory
-from pipeline.projects import PipelineBase, UtilityHelper
-from pipeline.util import identity, GraphListSource, ExtractKeyedValue, ExtractKeyedValues, MatchingFiles, timespan_from_outer_bounds, _as_list
-from pipeline.io.file import MultiFileWriter, MergingFileWriter
-# from pipeline.io.arches import ArchesWriter
+from pipeline.util import _as_list
 from pipeline.linkedart import \
 			MakeLinkedArtAbstract, \
 			MakeLinkedArtLinguisticObject, \
-			MakeLinkedArtOrganization, \
 			MakeLinkedArtPerson, \
 			get_crom_object, \
 			add_crom_data
-from pipeline.io.xml import CurriedXMLReader
-from pipeline.nodes.basic import \
-			AddArchesModel, \
-			CleanDateToSpan, \
-			Serializer, \
-			Trace
-from pipeline.util.cleaners import ymd_to_datetime
 
 class ModelArticle(Configurable):
 	helper = Option(required=True)
 	language_code_map = Service('language_code_map')
-	
+
 	def model_record_desc_group(self, record, data):
 		code = data['doc_type']['doc_code']
 		cls = self.helper.document_type_class(code)
@@ -51,10 +28,10 @@ class ModelArticle(Configurable):
 		rid = data['record_id']
 		aata_ids = _as_list(data.get('aata_id'))
 		cid = data.get('collective_rec_id')
-		
+
 		record['identifiers'] += [vocab.LocalNumber(ident='', content=aid) for aid in aata_ids]
 		record['identifiers'] += [vocab.LocalNumber(ident='', content=rid)]
-		
+
 		if cid:
 			uri = self.helper.article_uri(cid)
 			parent = {'uri': uri}
@@ -68,10 +45,10 @@ class ModelArticle(Configurable):
 		record.setdefault('_people', [])
 # 		record.setdefault('_events', [])
 		authors = _as_list(data.get('primary_author'))
-		
+
 		subevents = []
 		mlap = MakeLinkedArtPerson()
-		
+
 		ordered_data = []
 		article_label = record['label_string']
 		creation_id = record['uri'] + '-Creation'
@@ -82,7 +59,7 @@ class ModelArticle(Configurable):
 			name = a['author_name']
 			roles = _as_list(a['author_role'])
 			order = a['author_order']
-			
+
 			ordered_data.append((order, name))
 
 			identifiers = [self.helper.gci_number_id(gaia_id)]
@@ -92,7 +69,7 @@ class ModelArticle(Configurable):
 				'name': name,
 				'identifiers': identifiers,
 			}
-			
+
 			mlap(p)
 			record['_people'].append(p)
 
@@ -103,7 +80,7 @@ class ModelArticle(Configurable):
 				if type:
 					part.classified_as = type
 				creation.part = part
-		
+
 		ordered_authors = [p[1] for p in sorted(ordered_data)]
 		order_string = self.helper.ordered_author_string(ordered_authors)
 		creation.referred_to_by = vocab.Note(ident='', content=order_string)
@@ -111,12 +88,12 @@ class ModelArticle(Configurable):
 
 	def model_title_group(self, record, data):
 		record.setdefault('identifiers', [])
-		
+
 		primary = data['primary']
 		title = primary.get('title')
 		translated = primary.get('title_translated')
 		variants = _as_list(primary.get('title_variant'))
-		
+
 		if title:
 			record['label'] = title
 			record['identifiers'].append(vocab.PrimaryName(ident='', content=title))
@@ -147,19 +124,19 @@ class ModelArticle(Configurable):
 			# imprint_group/journal_info/aata_issue_id
 		degree = data.get('thesis_degree')
 		tr = data.get('technical_report_number')
-		
+
 		if edition:
 			record['referred_to_by'].append(vocab.EditionStatement(ident='', content=edition))
-		
+
 		if series_number:
 			record['referred_to_by'].append(vocab.Note(ident='', content=series_number)) # TODO: classify this Note
-		
+
 		if doi:
 			record['identifiers'].append(vocab.DoiIdentifier(ident='', content=doi))
 
 		if website:
 			record['referred_to_by'].append(vocab.Note(ident='', content=website))
-		
+
 		article_label = record['label_string']
 		for publisher in publishers:
 			corp_id = publisher.get('gaia_corp_id')
@@ -192,7 +169,7 @@ class ModelArticle(Configurable):
 
 		if degree:
 			record['referred_to_by'].append(vocab.Note(ident='', content=degree))
-		
+
 		if tr:
 			record['identifiers'].append(model.Identifier(ident='', content=tr)) # TODO: classify this Identifier
 
@@ -205,16 +182,16 @@ class ModelArticle(Configurable):
 		collation = data.get('collation')
 		illustrations = data.get('illustrations')
 		medium = data.get('electronic_medium_type')
-		
+
 		if pages:
 			record['referred_to_by'].append(vocab.PaginationStatement(ident='', content=pages))
-			
+
 		if collation:
 			record['referred_to_by'].append(vocab.Description(ident='', content=collation))
-			
+
 		if illustrations:
 			record['referred_to_by'].append(vocab.IllustruationStatement(ident='', content=illustrations))
-			
+
 		if medium:
 			record['referred_to_by'].append(vocab.PhysicalStatement(ident='', content=medium))
 
@@ -224,7 +201,7 @@ class ModelArticle(Configurable):
 		record.setdefault('language', [])
 		record.setdefault('identifiers', [])
 		record.setdefault('referred_to_by', [])
-		
+
 		lang_docs = _as_list(data.get('lang_doc'))
 		isbns = _as_list(data.get('isbn'))
 		issns = _as_list(data.get('issn'))
@@ -266,7 +243,7 @@ class ModelArticle(Configurable):
 
 	def model_classification_group(self, record, data):
 		record.setdefault('classified_as', [])
-		
+
 		code = data['class_code']
 		name = data['class_name']
 		uri = self.helper.make_proj_uri('Classification', code)
@@ -275,7 +252,7 @@ class ModelArticle(Configurable):
 
 	def model_index_group(self, record, data):
 		record.setdefault('about', [])
-		
+
 		opids = _as_list(data.get('other_persistent_id'))
 		for opid in opids:
 			eid = opid['external_id']
@@ -287,7 +264,7 @@ class ModelArticle(Configurable):
 	def model_article(self, data):
 		make_la_lo = MakeLinkedArtLinguisticObject()
 		make_la_lo(data)
-		
+
 		lo = get_crom_object(data)
 		author = data.get('created_by')
 		if author:

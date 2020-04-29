@@ -45,6 +45,7 @@ from pipeline.nodes.basic import \
 from pipeline.util.cleaners import ymd_to_datetime
 
 from pipeline.projects.aata.articles import ModelArticle
+from pipeline.projects.aata.people import ModelPerson
 
 legacyIdentifier = None # TODO: aat:LegacyIdentifier?
 doiIdentifier = vocab.DoiIdentifier
@@ -114,6 +115,9 @@ class AATAUtilityHelper(UtilityHelper):
 
 	def corporate_body_uri(self, corp_id):
 		return self.make_proj_uri('CB', corp_id)
+
+	def person_uri(self, p_id):
+		return self.make_proj_uri('Person', p_id)
 
 	def place_uri(self, geog_id):
 		return self.make_proj_uri('Place', geog_id)
@@ -1007,7 +1011,7 @@ def filter_abstract_authors(data: dict):
 
 class AATAPipeline(PipelineBase):
 	'''Bonobo-based pipeline for transforming AATA data from XML into JSON-LD.'''
-	def __init__(self, input_path, abstracts_pattern, journals_pattern, series_pattern, **kwargs):
+	def __init__(self, input_path, abstracts_pattern, journals_pattern, series_pattern, people_pattern, **kwargs):
 		project_name = 'aata'
 		self.input_path = input_path
 		self.services = None
@@ -1024,6 +1028,7 @@ class AATAPipeline(PipelineBase):
 		self.graph = None
 		self.models = kwargs.get('models', {})
 		self.abstracts_pattern = abstracts_pattern
+		self.people_pattern = people_pattern
 		self.journals_pattern = journals_pattern
 		self.series_pattern = series_pattern
 		self.limit = kwargs.get('limit')
@@ -1031,6 +1036,18 @@ class AATAPipeline(PipelineBase):
 		self.pipeline_project_service_files_path = kwargs.get('pipeline_project_service_files_path', settings.pipeline_project_service_files_path)
 		self.pipeline_common_service_files_path = kwargs.get('pipeline_common_service_files_path', settings.pipeline_common_service_files_path)
 
+	def add_people_chain(self, graph, records, serialize=True):
+		people = graph.add_chain(
+			ExtractKeyedValue(key='record'),
+			ModelPerson(helper=self.helper),
+			_input=records.output
+		)
+
+		if serialize:
+			# write ARTICLES data
+			_ = self.add_person_or_group_chain(graph, people, serialize=True)
+		return people
+		
 	def add_articles_chain(self, graph, records, serialize=True):
 		'''Add transformation of article records to the bonobo pipeline.'''
 		articles = graph.add_chain(
@@ -1140,6 +1157,15 @@ class AATAPipeline(PipelineBase):
 # 		self.add_organizations_chain(graph, articles, key='organizations')
 		return articles
 
+	def _add_people_graph(self, graph):
+		records = graph.add_chain(
+			MatchingFiles(path='/', pattern=self.people_pattern, fs='fs.data.aata'),
+			CurriedXMLReader(xpath='/auth_person_XML/record', fs='fs.data.aata', limit=self.limit),
+			_xml_element_to_dict,
+		)
+		people = self.add_people_chain(graph, records)
+		return people
+
 # 	def _add_abstracts_graph_old(self, graph):
 # 		abstract_records = graph.add_chain(
 # 			MatchingFiles(path='/', pattern=self.abstracts_pattern, fs='fs.data.aata'),
@@ -1204,6 +1230,7 @@ class AATAPipeline(PipelineBase):
 		graph = bonobo.Graph()
 
 		articles = self._add_abstracts_graph(graph)
+		people = self._add_people_graph(graph)
 
 # 		articles = self._add_abstracts_graph_old(graph)
 # 		journals = self._add_journals_graph_old(graph)
@@ -1241,8 +1268,8 @@ class AATAFilePipeline(AATAPipeline):
 	If in `debug` mode, JSON serialization will use pretty-printing. Otherwise,
 	serialization will be compact.
 	'''
-	def __init__(self, input_path, abstracts_pattern, journals_pattern, series_pattern, **kwargs):
-		super().__init__(input_path, abstracts_pattern, journals_pattern, series_pattern, **kwargs)
+	def __init__(self, input_path, abstracts_pattern, journals_pattern, series_pattern, people_pattern, **kwargs):
+		super().__init__(input_path, abstracts_pattern, journals_pattern, series_pattern, people_pattern, **kwargs)
 		self.use_single_serializer = False
 		self.output_path = kwargs.get('output_path')
 

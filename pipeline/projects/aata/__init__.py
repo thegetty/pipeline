@@ -46,6 +46,7 @@ from pipeline.util.cleaners import ymd_to_datetime
 
 from pipeline.projects.aata.articles import ModelArticle
 from pipeline.projects.aata.people import ModelPerson
+from pipeline.projects.aata.journals import ModelJournal
 
 legacyIdentifier = None # TODO: aat:LegacyIdentifier?
 doiIdentifier = vocab.DoiIdentifier
@@ -121,6 +122,9 @@ class AATAUtilityHelper(UtilityHelper):
 
 	def place_uri(self, geog_id):
 		return self.make_proj_uri('Place', geog_id)
+
+	def journal_uri(self, j_id):
+		return self.make_proj_uri('Journal', j_id)
 
 # class MakeAATAJournalDict(Configurable):
 # 	helper = Option(required=True)
@@ -1044,8 +1048,18 @@ class AATAPipeline(PipelineBase):
 		)
 
 		if serialize:
-			# write ARTICLES data
 			_ = self.add_person_or_group_chain(graph, people, serialize=True)
+		return people
+		
+	def add_journals_chain(self, graph, records, serialize=True):
+		journals = graph.add_chain(
+			ExtractKeyedValue(key='record'),
+			ModelJournal(helper=self.helper),
+			_input=records.output
+		)
+
+		if serialize:
+			self.add_serialization_chain(graph, journals.output, model=self.models['LinguisticObject'])
 		return people
 		
 	def add_articles_chain(self, graph, records, serialize=True):
@@ -1110,29 +1124,29 @@ class AATAPipeline(PipelineBase):
 # 			# write PEOPLE data
 # 			self.add_serialization_chain(graph, people.output, model=self.models['Person'])
 # 		return people
-
-	def add_abstracts_chain(self, graph, articles, serialize=True):
-		'''Add transformation of abstract records to the bonobo pipeline.'''
-		model_id = self.models.get('LinguisticObject', 'XXX-LinguisticObject-Model')
-		abstracts = graph.add_chain(
-			MakeAATAAbstract(helper=self.helper),
-			AddArchesModel(model=self.models['LinguisticObject']),
-			MakeLinkedArtAbstract(),
-			_input=articles.output
-		)
-
-		# for each author of an abstract...
-		author_abstracts = graph.add_chain(
-			filter_abstract_authors,
-			_input=abstracts.output
-		)
-		self.add_people_chain(graph, author_abstracts)
-
-		if serialize:
-			# write ABSTRACTS data
-			self.add_serialization_chain(graph, abstracts.output, model=self.models['LinguisticObject'])
-		return abstracts
-
+# 
+# 	def add_abstracts_chain(self, graph, articles, serialize=True):
+# 		'''Add transformation of abstract records to the bonobo pipeline.'''
+# 		model_id = self.models.get('LinguisticObject', 'XXX-LinguisticObject-Model')
+# 		abstracts = graph.add_chain(
+# 			MakeAATAAbstract(helper=self.helper),
+# 			AddArchesModel(model=self.models['LinguisticObject']),
+# 			MakeLinkedArtAbstract(),
+# 			_input=articles.output
+# 		)
+# 
+# 		# for each author of an abstract...
+# 		author_abstracts = graph.add_chain(
+# 			filter_abstract_authors,
+# 			_input=abstracts.output
+# 		)
+# 		self.add_people_chain(graph, author_abstracts)
+# 
+# 		if serialize:
+# 			# write ABSTRACTS data
+# 			self.add_serialization_chain(graph, abstracts.output, model=self.models['LinguisticObject'])
+# 		return abstracts
+# 
 # 	def add_organizations_chain(self, graph, articles, key='organizations', serialize=True):
 # 		'''Add transformation of organization records to the bonobo pipeline.'''
 # 		organizations = graph.add_chain(
@@ -1165,6 +1179,15 @@ class AATAPipeline(PipelineBase):
 		)
 		people = self.add_people_chain(graph, records)
 		return people
+
+	def _add_journals_graph(self, graph):
+		records = graph.add_chain(
+			MatchingFiles(path='/', pattern=self.journals_pattern, fs='fs.data.aata'),
+			CurriedXMLReader(xpath='/journal_XML/record', fs='fs.data.aata', limit=self.limit),
+			_xml_element_to_dict,
+		)
+		journals = self.add_journals_chain(graph, records)
+		return journals
 
 # 	def _add_abstracts_graph_old(self, graph):
 # 		abstract_records = graph.add_chain(
@@ -1231,6 +1254,7 @@ class AATAPipeline(PipelineBase):
 
 		articles = self._add_abstracts_graph(graph)
 		people = self._add_people_graph(graph)
+		journals = self._add_journals_graph(graph)
 
 # 		articles = self._add_abstracts_graph_old(graph)
 # 		journals = self._add_journals_graph_old(graph)

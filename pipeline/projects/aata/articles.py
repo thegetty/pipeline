@@ -62,12 +62,16 @@ class ModelArticle(Configurable):
 
 			ordered_data.append((order, name))
 
-			identifiers = [self.helper.gci_number_id(gaia_id)]
+			if gaia_type == 'Person':
+				uri = self.helper.person_uri(gaia_id)
+			else:
+				raise Exception(f'Unexpected type of authorship record: {gaia_type}')
+# 				uri = self.helper.make_proj_uri(gaia_type, 'GAIA', gaia_id)
+
 			p = {
-				'uri': self.helper.make_proj_uri(gaia_type, 'GAIA', gaia_id),
+				'uri': uri,
 				'label': name,
 				'name': name,
-				'identifiers': identifiers,
 			}
 
 			mlap(p)

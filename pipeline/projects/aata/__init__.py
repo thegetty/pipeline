@@ -117,7 +117,7 @@ class AATAUtilityHelper(UtilityHelper):
 		return self.make_proj_uri('CB', corp_id)
 
 	def person_uri(self, p_id):
-		return self.make_proj_uri('Person', p_id)
+		return self.make_proj_uri('Person', 'GAIA', p_id)
 
 	def place_uri(self, geog_id):
 		return self.make_proj_uri('Place', geog_id)

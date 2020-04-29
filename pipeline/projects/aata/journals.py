@@ -64,14 +64,21 @@ class ModelJournal(Configurable):
 		if issn:
 			record['identifiers'].append(vocab.IssnIdentifier(ident='', content=issn))
 
-		if coden:
-			record['identifiers'].append(vocab.CodenIdentifier(ident='', content=coden))
+# TODO:
+# 		if coden:
+# 			record['identifiers'].append(vocab.CodenIdentifier(ident='', content=coden))
 
 	def model_publisher_group(self, record, data):
-		# TODO:
-		# publisher_group/gaia_corp_id
-		# publisher_group/gaia_geog_id
-		pass
+		journal_label = record['label']
+		corp_id = data.get('gaia_corp_id')
+		geog_id = data.get('gaia_geog_id')
+		a = vocab.Publishing(ident='', label=f'Publishing of {journal_label}')
+		if corp_id:
+			uri = self.helper.corporate_body_uri(corp_id)
+			a.carried_out_by = model.Group(ident=uri)
+		if geog_id:
+			uri = self.helper.place_uri(geog_id)
+			a.took_place_at = model.Place(ident=uri)
 
 	def model_sponsor_group(self, record, data):
 		# TODO:
@@ -79,22 +86,89 @@ class ModelJournal(Configurable):
 		pass
 
 	def model_issue_group(self, record, data):
+		record.setdefault('^part', [])
+		record.setdefault('_activities', [])
+		
+		issue_id = data['issue_id']
+		title = data.get('title')
+		title_translated = data.get('title_translated')
+		date = data.get('date')
+			# issue_group/date/display_date
+			# issue_group/date/sort_year
+		volume = data.get('volume')
+		number = data.get('number')
+		note = data.get('note')
+		
+		journal_label = record['label']
+		issue_label = f'Issue of {journal_label}'
+		if title:
+			issue_label = f'{journal_label}: “{title}”'
+			if volume and number:
+			   issue_label = f'{issue_label} (v. {volume}, n. {number})'
+		elif volume and number:
+		   issue_label = f'{journal_label} (v. {volume}, n. {number})'
+
+		jid = record['record_desc_group']['record_id']
+		issue = {
+			'uri': self.helper.issue_uri(jid, issue_id),
+			'label': issue_label,
+			'object_type': vocab.IssueText,
+			'identifiers': [self.helper.gci_number_id(issue_id)],
+			'referred_to_by': [],
+			'used_for': [],
+		}
+		if title:
+			issue['identifiers'].append(vocab.PrimaryName(ident='', content=title))
+		if title_translated:
+			issue['identifiers'].append(vocab.TranslatedTitle(ident='', content=title_translated))
+		
+		if date:
+			display_date = date.get('display_date')
+			sort_year = date.get('sort_year')
+			if display_date or sort_year:
+				a_uri = issue['uri'] + f'-pub'
+				a = vocab.Publishing(ident=a_uri, label=f'Publishing of {issue_label}')
+				ts = model.TimeSpan(ident='')
+				if display_date:
+					ts._label = display_date
+					ts.identified_by = vocab.DisplayName(ident='', content=display_date)
+				if sort_year:
+					try:
+						year = int(sort_year)
+						ts.begin_of_the_begin = '%04d-01-01:00:00:00Z' % (year,)
+						ts.end_of_the_end = '%04d-01-01:00:00:00Z' % (year+1,)
+					except:
+						pass
+				a.timespan = ts
+				issue['used_for'].append(a)
+# 				record['_activities'].append(add_crom_data({}, a))
+		
 		# TODO:
-		# /issue_group
-		# issue_group/issue_id
-		# issue_group/title
-		# issue_group/title_translated
-		# issue_group/date/display_date
-		# issue_group/date/sort_year
-		# issue_group/volume
-		# issue_group/number
-		# issue_group/note
-		pass
+		# volume
+		# number
+		
+		if note:
+			issue['referred_to_by'].append(vocab.Note(ident='', content=note))
+		
+		mlalo = MakeLinkedArtLinguisticObject()
+		mlalo(issue)
+
+		i = get_crom_object(issue)
+		for a in issue.get('used_for', []):
+			i.used_for = a
+
+		record['^part'].append(issue)
 
 	def model_journal(self, data):
 		data['object_type'] = vocab.JournalText
 		mlalo = MakeLinkedArtLinguisticObject()
 		mlalo(data)
+		journal = get_crom_object(data)
+		data.setdefault('_texts', [])
+		for i in data.get('^part', []):
+			issue = get_crom_object(i)
+			issue.part_of = journal
+			data['_texts'].append(i)
 
 	def __call__(self, data):
 		jid = data['record_desc_group']['record_id']
@@ -102,6 +176,8 @@ class ModelJournal(Configurable):
 		
 		self.model_record_desc_group(data, data['record_desc_group'])
 		self.model_journal_group(data, data.get('journal_group'))
+		data.setdefault('label', f'Journal ({jid})')
+
 		for ig in _as_list(data.get('issue_group')):
 			self.model_issue_group(data, ig)
 		for pg in _as_list(data.get('publisher_group')):
@@ -109,6 +185,5 @@ class ModelJournal(Configurable):
 		for sg in _as_list(data.get('sponsor_group')):
 			self.model_sponsor_group(data, sg)
 
-		data.setdefault('label', f'Journal ({jid})')
 		self.model_journal(data)
 		return data

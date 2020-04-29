@@ -50,7 +50,7 @@ class ModelArticle(Configurable):
 		mlap = MakeLinkedArtPerson()
 
 		ordered_data = []
-		article_label = record['label_string']
+		article_label = record['label']
 		creation_id = record['uri'] + '-Creation'
 		creation = model.Creation(ident=creation_id, label=f'Creation of {article_label}')
 		for a in authors:
@@ -110,6 +110,10 @@ class ModelArticle(Configurable):
 		if not data:
 			return
 		record.setdefault('referred_to_by', [])
+		record.setdefault('used_for', [])
+		record.setdefault('_activities', [])
+		record.setdefault('_groups', [])
+		record.setdefault('_places', [])
 		record.setdefault('identifiers', [])
 
 		edition = data.get('edition')
@@ -118,11 +122,7 @@ class ModelArticle(Configurable):
 		coden = data.get('coden')
 		website = data.get('website_address')
 		publishers = _as_list(data.get('publisher'))
-			# imprint_group/publisher/gaia_corp_id
-			# imprint_group/publisher/publisher_location/gaia_geog_id
 		distributors = _as_list(data.get('distributor'))
-			# imprint_group/distributor/gaia_corp_id
-			# imprint_group/distributor/distributor_location/gaia_geog_id
 		journal = data.get('journal_info')
 			# imprint_group/journal_info/aata_journal_id
 			# imprint_group/journal_info/aata_issue_id
@@ -141,28 +141,42 @@ class ModelArticle(Configurable):
 		if website:
 			record['referred_to_by'].append(vocab.Note(ident='', content=website))
 
-		article_label = record['label_string']
-		for publisher in publishers:
+		article_label = record['label']
+		for i, publisher in enumerate(publishers):
 			corp_id = publisher.get('gaia_corp_id')
 			geog_id = publisher.get('publisher_location', {}).get('gaia_geog_id')
-			a = vocab.Publishing(ident='', label=f'Publishing of {article_label}')
+			a_uri = record['uri'] + f'-pub-{i}'
+			a = vocab.Publishing(ident=a_uri, label=f'Publishing of {article_label}')
 			if corp_id:
 				uri = self.helper.corporate_body_uri(corp_id)
-				a.carried_out_by = model.Group(ident=uri)
+				g = model.Group(ident=uri)
+				a.carried_out_by = g
+				record['_groups'].append(add_crom_data({}, g))
 			if geog_id:
 				uri = self.helper.place_uri(geog_id)
-				a.took_place_at = model.Place(ident=uri)
+				p = model.Place(ident=uri)
+				a.took_place_at = p
+				record['_places'].append(add_crom_data({}, p))
+			record['used_for'].append(a)
+# 			record['_activities'].append(add_crom_data({}, a))
 
-		for distributor in distributors:
+		for i, distributor in enumerate(distributors):
 			corp_id = publisher.get('gaia_corp_id')
 			geog_id = publisher.get('distributor_location', {}).get('gaia_geog_id')
-			a = vocab.Distributing(ident='', label=f'Distribution of {article_label}')
+			a_uri = record['uri'] + f'-dist-{i}'
+			a = vocab.Distributing(ident=a_uri, label=f'Distribution of {article_label}')
 			if corp_id:
 				uri = self.helper.corporate_body_uri(corp_id)
-				a.carried_out_by = model.Group(ident=uri)
+				g = model.Group(ident=uri)
+				a.carried_out_by = g
+				record['_groups'].append(add_crom_data({}, g))
 			if geog_id:
 				uri = self.helper.place_uri(geog_id)
-				a.took_place_at = model.Place(ident=uri)
+				p = model.Place(ident=uri)
+				a.took_place_at = p
+				record['_places'].append(add_crom_data({}, p))
+			record['used_for'].append(a)
+# 			record['_activities'].append(add_crom_data({}, a))
 
 		if journal:
 			aata_id = journal.get('aata_journal_id')
@@ -274,6 +288,9 @@ class ModelArticle(Configurable):
 		if author:
 			lo.created_by = author
 
+		for a in data.get('used_for', []):
+			lo.used_for = a
+
 		for a in data.get('about', []):
 			lo.about = a
 
@@ -299,10 +316,9 @@ class ModelArticle(Configurable):
 
 		rid = data['record_id_group']['record_id']
 		data['uri'] = self.helper.make_proj_uri('Article', rid)
-		data['label'] = f'Article ({rid})' # this should get overridden in model_title_group
-		data['label_string'] = f'Article ({rid})' # TODO: improve this
 
 		self.model_title_group(data, data['title_group'])
+		data.setdefault('label', f'Article ({rid})') # this should get overridden in model_title_group)
 		self.model_record_desc_group(data, data['record_desc_group'])
 		self.model_record_id_group(data, data['record_id_group'])
 		self.model_authorship_group(data, data.get('authorship_group'))

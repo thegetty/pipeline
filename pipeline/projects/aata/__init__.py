@@ -126,6 +126,9 @@ class AATAUtilityHelper(UtilityHelper):
 	def journal_uri(self, j_id):
 		return self.make_proj_uri('Journal', j_id)
 
+	def issue_uri(self, j_id, i_id):
+		return self.make_proj_uri('Journal', j_id, 'Issue', i_id)
+
 # class MakeAATAJournalDict(Configurable):
 # 	helper = Option(required=True)
 # 	
@@ -1058,7 +1061,12 @@ class AATAPipeline(PipelineBase):
 			_input=records.output
 		)
 
+		activities = graph.add_chain(ExtractKeyedValues(key='_activities'), _input=journals.output)
+		texts = graph.add_chain(ExtractKeyedValues(key='_texts'), _input=journals.output)
+
 		if serialize:
+			self.add_serialization_chain(graph, activities.output, model=self.models['Activity'])
+			self.add_serialization_chain(graph, texts.output, model=self.models['LinguisticObject'])
 			self.add_serialization_chain(graph, journals.output, model=self.models['LinguisticObject'])
 		return people
 		
@@ -1077,11 +1085,17 @@ class AATAPipeline(PipelineBase):
 
 		people = graph.add_chain(ExtractKeyedValues(key='_people'), _input=articles.output)
 		events = graph.add_chain(ExtractKeyedValues(key='_events'), _input=articles.output)
+		activities = graph.add_chain(ExtractKeyedValues(key='_activities'), _input=articles.output)
+		groups = graph.add_chain(ExtractKeyedValues(key='_groups'), _input=articles.output)
+		places = graph.add_chain(ExtractKeyedValues(key='_places'), _input=articles.output)
 
 		if serialize:
 			# write ARTICLES data
 			self.add_serialization_chain(graph, articles.output, model=self.models['LinguisticObject'])
 			self.add_serialization_chain(graph, events.output, model=self.models['Event'])
+			self.add_serialization_chain(graph, groups.output, model=self.models['Group'])
+			self.add_serialization_chain(graph, places.output, model=self.models['Place'])
+			self.add_serialization_chain(graph, activities.output, model=self.models['Activity'])
 			_ = self.add_person_or_group_chain(graph, people, serialize=True)
 		return articles
 
@@ -1253,8 +1267,8 @@ class AATAPipeline(PipelineBase):
 		graph = bonobo.Graph()
 
 		articles = self._add_abstracts_graph(graph)
-		people = self._add_people_graph(graph)
 		journals = self._add_journals_graph(graph)
+		people = self._add_people_graph(graph)
 
 # 		articles = self._add_abstracts_graph_old(graph)
 # 		journals = self._add_journals_graph_old(graph)

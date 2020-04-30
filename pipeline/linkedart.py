@@ -182,6 +182,18 @@ class MakeLinkedArtLinguisticObject(MakeLinkedArtRecord):
 		if 'label' in data:
 			name = set_la_name(thing, data['label'], title_type, set_label=True)
 
+		for author in data.get('created_by', []):
+			thing.created_by = author
+
+		for a in data.get('used_for', []):
+			thing.used_for = a
+
+		for a in data.get('about', []):
+			thing.about = a
+
+		for c in data.get('classified_as', []):
+			thing.classified_as = c
+
 		for t in data.get('translations', []):
 			n = set_la_name(thing, t, title_type)
 			if name is not None:

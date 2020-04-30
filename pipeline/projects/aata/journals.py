@@ -1,5 +1,6 @@
 import pprint
 import warnings
+from contextlib import suppress
 
 from bonobo.config import Configurable, Service, Option
 
@@ -58,36 +59,42 @@ class ModelJournal(Configurable):
 		if frequency:
 			record['referred_to_by'].append(vocab.Note(ident='', content=frequency))
 
-		# TODO: start_year
-		# TODO: cease_year
+		if start_year:
+			record['_publishing_start_year'] = start_year
+		if cease_year:
+			record['_publishing_cease_year'] = cease_year
 
 		if issn:
 			record['identifiers'].append(vocab.IssnIdentifier(ident='', content=issn))
 
-# TODO:
-# 		if coden:
-# 			record['identifiers'].append(vocab.CodenIdentifier(ident='', content=coden))
+		if coden:
+			record['identifiers'].append(vocab.CodenIdentifier(ident='', content=coden))
 
-	def model_publisher_group(self, record, data):
+	def model_publisher_group(self, record, data, seq):
+		record.setdefault('_publishings', [])
+
 		journal_label = record['label']
 		corp_id = data.get('gaia_corp_id')
 		geog_id = data.get('gaia_geog_id')
-		a = vocab.Publishing(ident='', label=f'Publishing of {journal_label}')
+		
+		a_uri = record['uri'] + f'-pub-{seq}'
+		cb_label = f' by CB{corp_id}' if corp_id else f' by publisher #{seq}'
+		a = vocab.Publishing(ident=a_uri, label=f'Publishing of {journal_label}' + cb_label)
 		if corp_id:
 			uri = self.helper.corporate_body_uri(corp_id)
 			a.carried_out_by = model.Group(ident=uri)
 		if geog_id:
 			uri = self.helper.place_uri(geog_id)
 			a.took_place_at = model.Place(ident=uri)
+		record['_publishings'].append(a)
 
 	def model_sponsor_group(self, record, data):
 		# TODO:
 		# sponsor_group/ ???
 		pass
 
-	def model_issue_group(self, record, data):
+	def model_issue_group(self, record, data, seq):
 		record.setdefault('^part', [])
-		record.setdefault('_activities', [])
 		
 		issue_id = data['issue_id']
 		title = data.get('title')
@@ -141,7 +148,6 @@ class ModelJournal(Configurable):
 						pass
 				a.timespan = ts
 				issue['used_for'].append(a)
-# 				record['_activities'].append(add_crom_data({}, a))
 		
 		# TODO:
 		# volume
@@ -159,10 +165,43 @@ class ModelJournal(Configurable):
 
 		record['^part'].append(issue)
 
+	def model_publishing(self, data):
+		journal_label = data['label']
+		a_uri = data['uri'] + f'-pub'
+		a = vocab.Publishing(ident=a_uri, label=f'Publishing of {journal_label}')
+		start_year = data.get('_publishing_start_year')
+		cease_year = data.get('_publishing_cease_year')
+		if start_year or cease_year:
+			ts = model.TimeSpan(ident='')
+			if start_year:
+				with suppress(ValueError):
+					year = int(start_year)
+					ts.begin_of_the_begin = '%04d-01-01:00:00:00Z' % (year,)
+			if cease_year:
+				with suppress(ValueError):
+					year = int(cease_year)
+					ts.end_of_the_end = '%04d-01-01:00:00:00Z' % (year+1,)
+			a.timespan = ts
+
+		publishings = data.get('_publishings', [])
+		if publishings:
+			if len(publishings) > 1:
+				print(f'{len(publishings)} publishings of {journal_label}')
+			journal_label = data['label']
+			for sub in publishings:
+				a.part = sub
+
+		data['used_for'].append(a)
+
 	def model_journal(self, data):
+		data.setdefault('used_for', [])
 		data['object_type'] = vocab.JournalText
+
+		self.model_publishing(data)
+
 		mlalo = MakeLinkedArtLinguisticObject()
 		mlalo(data)
+		
 		journal = get_crom_object(data)
 		data.setdefault('_texts', [])
 		for i in data.get('^part', []):
@@ -178,10 +217,10 @@ class ModelJournal(Configurable):
 		self.model_journal_group(data, data.get('journal_group'))
 		data.setdefault('label', f'Journal ({jid})')
 
-		for ig in _as_list(data.get('issue_group')):
-			self.model_issue_group(data, ig)
-		for pg in _as_list(data.get('publisher_group')):
-			self.model_publisher_group(data, pg)
+		for i, ig in enumerate(_as_list(data.get('issue_group'))):
+			self.model_issue_group(data, ig, i)
+		for i, pg in enumerate(_as_list(data.get('publisher_group'))):
+			self.model_publisher_group(data, pg, i)
 		for sg in _as_list(data.get('sponsor_group')):
 			self.model_sponsor_group(data, sg)
 

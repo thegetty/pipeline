@@ -120,6 +120,7 @@ class ModelArticle(Configurable):
 			return
 		record.setdefault('referred_to_by', [])
 		record.setdefault('used_for', [])
+		record.setdefault('part_of', [])
 		record.setdefault('_activities', [])
 		record.setdefault('_groups', [])
 		record.setdefault('_places', [])
@@ -191,8 +192,11 @@ class ModelArticle(Configurable):
 # 			record['_activities'].append(add_crom_data({}, a))
 
 		if journal:
-			aata_id = journal.get('aata_journal_id')
+			journal_id = journal.get('aata_journal_id')
 			issue_id = journal.get('aata_issue_id')
+			issue_uri = self.helper.issue_uri(journal_id, issue_id)
+			issue = vocab.IssueText(ident=issue_uri)
+			record['part_of'].append(add_crom_data({'uri': issue_uri}, issue))
 			warnings.warn('TODO: handle journal link data')
 			# aata_journal_id	Textual Work	part_of
 			# aata_issue_id	Textual Work	(part_of)

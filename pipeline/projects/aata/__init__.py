@@ -133,7 +133,7 @@ class AATAUtilityHelper(UtilityHelper):
 				# set, so we lack confidence to proceed.
 				return None
 		except iso639.NonExistentLanguageError as e:
-			warnings.warn('*** Unrecognized language code detected: %r' % (detected,))
+			warnings.warn('*** Unrecognized language code detected: %s' % (e,))
 		except KeyError as e:
 			warnings.warn(
 				'*** LANGUAGE: detected but unrecognized title language %r '
@@ -1058,7 +1058,7 @@ class AATAPipeline(PipelineBase):
 		if serialize:
 			self.add_serialization_chain(graph, activities.output, model=self.models['Activity'])
 			self.add_serialization_chain(graph, texts.output, model=self.models['LinguisticObject'])
-			self.add_serialization_chain(graph, journals.output, model=self.models['LinguisticObject'])
+			self.add_serialization_chain(graph, journals.output, model=self.models['Journal'])
 		return people
 		
 	def add_corp_chain(self, graph, records, serialize=True):

@@ -113,6 +113,36 @@ class AATAUtilityHelper(UtilityHelper):
 			print(f'*** language_object_from_code: {e}', file=sys.stderr)
 			raise e
 
+	def validated_string_language(self, title, restrict=None):
+		try:
+			restrict_codes = {iso639.to_iso639_2(l) for l in restrict}
+			detected = detect(title)
+			threealpha = iso639.to_iso639_2(detected)
+			ok = True if restrict is None else (threealpha in restrict_codes)
+			if ok:
+				language = self.language_object_from_code(threealpha)
+				if language is not None:
+					# If there was a restricted set of languages passed to this function,
+					# we have confidence that we've matched the language of the title
+					# because it is one of the restricted languages.
+					# (If no restriction was supplied, then we use whatever language
+					# was detected in the title.)
+					return language
+			else:
+				# The detected language of the title was not a member of the restricted
+				# set, so we lack confidence to proceed.
+				return None
+		except iso639.NonExistentLanguageError as e:
+			warnings.warn('*** Unrecognized language code detected: %r' % (detected,))
+		except KeyError as e:
+			warnings.warn(
+				'*** LANGUAGE: detected but unrecognized title language %r '
+				'(cf. declared in metadata: %r): %s' % (e.args[0], languages, title)
+			)
+		except Exception as e:
+			print('*** detect_title_language error: %r' % (e,))
+		return None
+
 	def article_uri(self, a_id):
 		return self.make_proj_uri('Article', a_id)
 
@@ -901,51 +931,6 @@ def add_aata_authors(data):
 
 # article abstract chain
 
-# @use('language_code_map')
-# def detect_title_language(data: dict, language_code_map):
-# 	'''
-# 	Given a `dict` representing a Linguistic Object, attempt to detect the language of
-# 	the value for the `label` key.  If the detected langauge is also one of the languages
-# 	asserted for the record's summaries or underlying document, then update the `label`
-# 	to be a tuple consisting of the original label and a Language model object.
-# 	'''
-# 	dlangs = data.get('document_languages', set())
-# 	slangs = data.get('summary_languages', set())
-# 	languages = dlangs | slangs
-# 	title = data.get('label')
-# 	if isinstance(title, tuple):
-# 		title = title[0]
-# 	try:
-# 		if title is None:
-# 			return NOT_MODIFIED
-# 		translations = data.get('translations', [])
-# 		if translations and languages:
-# 			detected = detect(title)
-# 			threealpha = iso639.to_iso639_2(detected)
-# 			if threealpha in languages:
-# 				language = self.helper.language_object_from_code(threealpha)
-# 				if language is not None:
-# 					# we have confidence that we've matched the language of the title
-# 					# because it is one of the declared languages for the record
-# 					# document/summary
-# 					data['label'] = (title, language)
-# 					return data
-# 			else:
-# 				# the detected language of the title was not declared in the record data,
-# 				# so we lack confidence to proceed
-# 				pass
-# 	except iso639.NonExistentLanguageError as e:
-# 		print('*** Unrecognized language code detected: %r' % (detected,), file=sys.stderr)
-# 	except KeyError as e:
-# 		print(
-# 			'*** LANGUAGE: detected but unrecognized title language %r '
-# 			'(cf. declared in metadata: %r): %s' % (e.args[0], languages, title),
-# 			file=sys.stderr
-# 		)
-# 	except Exception as e:
-# 		print('*** detect_title_language error: %r' % (e,))
-# 	return NOT_MODIFIED
-
 class MakeAATAAbstract(Configurable):
 	helper = Option(required=True)
 	language_code_map = Service('language_code_map')
@@ -1120,11 +1105,6 @@ class AATAPipeline(PipelineBase):
 		articles = graph.add_chain(
 			ExtractKeyedValue(key='record'),
 			ModelArticle(helper=self.helper),
-# 			add_aata_object_type,
-# 			detect_title_language,
-# 			MakeLinkedArtLinguisticObject(),
-# 			AddArchesModel(model=self.models['LinguisticObject']),
-# 			add_imprint_orgs,
 			_input=records.output
 		)
 
@@ -1357,7 +1337,7 @@ class AATAPipeline(PipelineBase):
 
 	def run(self, **options):
 		'''Run the AATA bonobo pipeline.'''
-		print("- Limiting to %d records per file" % (self.limit,), file=sys.stderr)
+		print(f"- Limiting to {self.limit} records per file", file=sys.stderr)
 		services = self.get_services(**options)
 		graph = self.get_graph(**options, services=services)
 		self.run_graph(graph, services=services)

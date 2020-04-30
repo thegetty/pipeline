@@ -4,11 +4,13 @@ import warnings
 from bonobo.config import Configurable, Service, Option
 
 from cromulent import model, vocab
+from cromulent.model import factory
 from pipeline.util import _as_list
 from pipeline.linkedart import \
 			MakeLinkedArtAbstract, \
 			MakeLinkedArtLinguisticObject, \
 			MakeLinkedArtPerson, \
+			MakeLinkedArtOrganization, \
 			get_crom_object, \
 			add_crom_data
 
@@ -43,11 +45,12 @@ class ModelArticle(Configurable):
 		if not data:
 			return
 		record.setdefault('_people', [])
-# 		record.setdefault('_events', [])
+		record.setdefault('created_by', [])
 		authors = _as_list(data.get('primary_author'))
 
 		subevents = []
 		mlap = MakeLinkedArtPerson()
+		mlao = MakeLinkedArtOrganization()
 
 		ordered_data = []
 		article_label = record['label']
@@ -62,19 +65,23 @@ class ModelArticle(Configurable):
 
 			ordered_data.append((order, name))
 
-			if gaia_type == 'Person':
-				uri = self.helper.person_uri(gaia_id)
-			else:
-				raise Exception(f'Unexpected type of authorship record: {gaia_type}')
-# 				uri = self.helper.make_proj_uri(gaia_type, 'GAIA', gaia_id)
-
 			p = {
-				'uri': uri,
 				'label': name,
 				'name': name,
 			}
 
-			mlap(p)
+			if gaia_type == 'Person':
+				uri = self.helper.person_uri(gaia_id)
+				p['uri'] = uri
+				mlap(p)
+			elif gaia_type == 'Corp':
+				uri = self.helper.corporate_body_uri(gaia_id)
+				p['uri'] = uri
+				mlao(p)
+			else:
+				raise Exception(f'Unexpected type of authorship record: {gaia_type}')
+# 				uri = self.helper.make_proj_uri(gaia_type, 'GAIA', gaia_id)
+
 			record['_people'].append(p)
 
 			for role in roles:
@@ -88,7 +95,7 @@ class ModelArticle(Configurable):
 		ordered_authors = [p[1] for p in sorted(ordered_data)]
 		order_string = self.helper.ordered_author_string(ordered_authors)
 		creation.referred_to_by = vocab.Note(ident='', content=order_string)
-		record['created_by'] = creation
+		record['created_by'].append(creation)
 
 	def model_title_group(self, record, data):
 		record.setdefault('identifiers', [])
@@ -100,7 +107,9 @@ class ModelArticle(Configurable):
 
 		if title:
 			record['label'] = title
-			record['identifiers'].append(vocab.PrimaryName(ident='', content=title))
+			if 'title' in record:
+				raise Exception(f'existing title!')
+			record['title'] = title
 		if translated:
 			record['identifiers'].append(vocab.TranslatedTitle(ident='', content=translated))
 		for v in variants:
@@ -137,6 +146,9 @@ class ModelArticle(Configurable):
 
 		if doi:
 			record['identifiers'].append(vocab.DoiIdentifier(ident='', content=doi))
+
+		if coden:
+			record['identifiers'].append(vocab.CodenIdentifier(ident='', content=coden))
 
 		if website:
 			record['referred_to_by'].append(vocab.Note(ident='', content=website))
@@ -216,17 +228,23 @@ class ModelArticle(Configurable):
 	def model_notes_group(self, record, data):
 		if not data:
 			return
+		record.setdefault('_declared_languages', set())
 		record.setdefault('language', [])
 		record.setdefault('identifiers', [])
 		record.setdefault('referred_to_by', [])
 
 		lang_docs = _as_list(data.get('lang_doc'))
+		lang_summaries = _as_list(data.get('lang_summary'))
 		isbns = _as_list(data.get('isbn'))
 		issns = _as_list(data.get('issn'))
 		citation_note = data.get('citation_note')
 		inotes = _as_list(data.get('internal_note'))
 
+		for lang in lang_summaries:
+			record['_declared_languages'].add(lang)
+
 		for lang in lang_docs:
+			record['_declared_languages'].add(lang)
 			l = self.helper.language_object_from_code(lang)
 			if l:
 				record['language'].append(l)
@@ -279,25 +297,39 @@ class ModelArticle(Configurable):
 			record['about'].append(t)
 		pass
 
+	def add_title(self, data):
+		'''
+		Special handling is given to modeling of the title (PrimaryName) of the article.
+		If we can detect that it is written in a language that matches one of the
+		languages asserted for either the document or summaries, then we assert that
+		as the language of the title Linguistic Object.
+		'''
+		if data.get('title'):
+			title = data['title']
+			restrict = data['_declared_languages']
+			lang = self.helper.validated_string_language(title, restrict)
+			pn = vocab.PrimaryName(ident='', content=title)
+			if lang:
+				pn.language = lang
+			data['identifiers'].append(pn)
+
 	def model_article(self, data):
 		make_la_lo = MakeLinkedArtLinguisticObject()
 		make_la_lo(data)
 
-		lo = get_crom_object(data)
-		author = data.get('created_by')
-		if author:
-			lo.created_by = author
-
-		for a in data.get('used_for', []):
-			lo.used_for = a
-
-		for a in data.get('about', []):
-			lo.about = a
-
-		for c in data.get('classified_as', []):
-			lo.classified_as = c
-
-# 		print(factory.toString(get_crom_object(data), False))
+# 		lo = get_crom_object(data)
+# 		author = data.get('created_by')
+# 		if author:
+# 			lo.created_by = get_crom_object(author)
+# 
+# 		for a in data.get('used_for', []):
+# 			lo.used_for = get_crom_object(a)
+# 
+# 		for a in data.get('about', []):
+# 			lo.about = get_crom_object(a)
+# 
+# 		for c in data.get('classified_as', []):
+# 			lo.classified_as = get_crom_object(c)
 
 	def __call__(self, data, language_code_map):
 		'''
@@ -330,6 +362,8 @@ class ModelArticle(Configurable):
 			self.model_classification_group(data, cg)
 		for ig in _as_list(data.get('index_group')):
 			self.model_index_group(data, ig)
+
+		self.add_title(data)
 		self.model_article(data)
 
 		return data

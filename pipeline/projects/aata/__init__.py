@@ -47,6 +47,8 @@ from pipeline.util.cleaners import ymd_to_datetime
 from pipeline.projects.aata.articles import ModelArticle
 from pipeline.projects.aata.people import ModelPerson
 from pipeline.projects.aata.journals import ModelJournal
+from pipeline.projects.aata.places import ModelPlace
+from pipeline.projects.aata.corps import ModelCorp
 
 legacyIdentifier = None # TODO: aat:LegacyIdentifier?
 doiIdentifier = vocab.DoiIdentifier
@@ -115,7 +117,7 @@ class AATAUtilityHelper(UtilityHelper):
 		return self.make_proj_uri('Article', a_id)
 
 	def corporate_body_uri(self, corp_id):
-		return self.make_proj_uri('CB', corp_id)
+		return self.make_proj_uri('Corp', corp_id)
 
 	def person_uri(self, p_id):
 		return self.make_proj_uri('Person', 'GAIA', p_id)
@@ -1018,7 +1020,7 @@ def filter_abstract_authors(data: dict):
 
 class AATAPipeline(PipelineBase):
 	'''Bonobo-based pipeline for transforming AATA data from XML into JSON-LD.'''
-	def __init__(self, input_path, abstracts_pattern, journals_pattern, series_pattern, people_pattern, **kwargs):
+	def __init__(self, input_path, abstracts_pattern, journals_pattern, series_pattern, people_pattern, corp_pattern, geog_pattern, subject_pattern, **kwargs):
 		project_name = 'aata'
 		self.input_path = input_path
 		self.services = None
@@ -1035,9 +1037,13 @@ class AATAPipeline(PipelineBase):
 		self.graph = None
 		self.models = kwargs.get('models', {})
 		self.abstracts_pattern = abstracts_pattern
-		self.people_pattern = people_pattern
 		self.journals_pattern = journals_pattern
 		self.series_pattern = series_pattern
+		self.people_pattern = people_pattern
+		self.corp_pattern = corp_pattern
+		self.geog_pattern = geog_pattern
+		self.subject_pattern = subject_pattern
+		
 		self.limit = kwargs.get('limit')
 		self.debug = kwargs.get('debug', False)
 		self.pipeline_project_service_files_path = kwargs.get('pipeline_project_service_files_path', settings.pipeline_project_service_files_path)
@@ -1070,6 +1076,45 @@ class AATAPipeline(PipelineBase):
 			self.add_serialization_chain(graph, journals.output, model=self.models['LinguisticObject'])
 		return people
 		
+	def add_corp_chain(self, graph, records, serialize=True):
+		corps = graph.add_chain(
+			ExtractKeyedValue(key='record'),
+			ModelCorp(helper=self.helper),
+			_input=records.output
+		)
+
+		activities = graph.add_chain(ExtractKeyedValues(key='_activities'), _input=corps.output)
+
+		if serialize:
+			self.add_serialization_chain(graph, activities.output, model=self.models['Activity'])
+			self.add_serialization_chain(graph, corps.output, model=self.models['Group'])
+		return people
+		
+# 	def add_subject_chain(self, graph, records, serialize=True):
+# 		subjects = graph.add_chain(
+# 			ExtractKeyedValue(key='record'),
+# 			ModelSubject(helper=self.helper),
+# 			_input=records.output
+# 		)
+# 
+# 		if serialize:
+# 			self.add_serialization_chain(graph, subjects.output, model=self.models['XXX'])
+# 		return people
+		
+	def add_geog_chain(self, graph, records, serialize=True):
+		places = graph.add_chain(
+			ExtractKeyedValue(key='record'),
+			ModelPlace(helper=self.helper),
+			_input=records.output
+		)
+
+		activities = graph.add_chain(ExtractKeyedValues(key='_activities'), _input=places.output)
+
+		if serialize:
+			self.add_serialization_chain(graph, activities.output, model=self.models['Activity'])
+			self.add_serialization_chain(graph, places.output, model=self.models['Place'])
+		return people
+		
 	def add_articles_chain(self, graph, records, serialize=True):
 		'''Add transformation of article records to the bonobo pipeline.'''
 		articles = graph.add_chain(
@@ -1084,7 +1129,6 @@ class AATAPipeline(PipelineBase):
 		)
 
 		people = graph.add_chain(ExtractKeyedValues(key='_people'), _input=articles.output)
-		events = graph.add_chain(ExtractKeyedValues(key='_events'), _input=articles.output)
 		activities = graph.add_chain(ExtractKeyedValues(key='_activities'), _input=articles.output)
 		groups = graph.add_chain(ExtractKeyedValues(key='_groups'), _input=articles.output)
 		places = graph.add_chain(ExtractKeyedValues(key='_places'), _input=articles.output)
@@ -1092,7 +1136,6 @@ class AATAPipeline(PipelineBase):
 		if serialize:
 			# write ARTICLES data
 			self.add_serialization_chain(graph, articles.output, model=self.models['LinguisticObject'])
-			self.add_serialization_chain(graph, events.output, model=self.models['Event'])
 			self.add_serialization_chain(graph, groups.output, model=self.models['Group'])
 			self.add_serialization_chain(graph, places.output, model=self.models['Place'])
 			self.add_serialization_chain(graph, activities.output, model=self.models['Activity'])
@@ -1203,6 +1246,36 @@ class AATAPipeline(PipelineBase):
 		journals = self.add_journals_chain(graph, records)
 		return journals
 
+	def _add_corp_graph(self, graph):
+		records = graph.add_chain(
+			MatchingFiles(path='/', pattern=self.corp_pattern, fs='fs.data.aata'),
+			CurriedXMLReader(xpath='/auth_corp_XML/record', fs='fs.data.aata', limit=self.limit),
+			_xml_element_to_dict,
+		)
+		corps = self.add_corp_chain(graph, records)
+		return corps
+
+	def _add_geog_graph(self, graph):
+		records = graph.add_chain(
+			MatchingFiles(path='/', pattern=self.geog_pattern, fs='fs.data.aata'),
+			CurriedXMLReader(xpath='/auth_geog_XML/record', fs='fs.data.aata', limit=self.limit),
+			_xml_element_to_dict,
+		)
+		geog = self.add_geog_chain(graph, records)
+		return geog
+
+# 	def _add_subject_graph(self, graph):
+# 		records = graph.add_chain(
+# 			MatchingFiles(path='/', pattern=self.subject_pattern, fs='fs.data.aata'),
+# 			CurriedXMLReader(xpath='/auth_subject_XML/record', fs='fs.data.aata', limit=self.limit),
+# 			_xml_element_to_dict,
+# 		)
+# 		subject = self.add_subject_chain(graph, records)
+# 		return subject
+
+
+
+
 # 	def _add_abstracts_graph_old(self, graph):
 # 		abstract_records = graph.add_chain(
 # 			MatchingFiles(path='/', pattern=self.abstracts_pattern, fs='fs.data.aata'),
@@ -1269,10 +1342,9 @@ class AATAPipeline(PipelineBase):
 		articles = self._add_abstracts_graph(graph)
 		journals = self._add_journals_graph(graph)
 		people = self._add_people_graph(graph)
-
-# 		articles = self._add_abstracts_graph_old(graph)
-# 		journals = self._add_journals_graph_old(graph)
-# 		series = self._add_series_graph_old(graph)
+		corps	= self._add_corp_graph(graph)
+		places	= self._add_geog_graph(graph)
+# 		subjects = self._add_subject_graph(graph)
 
 		self.graph = graph
 		return graph
@@ -1306,8 +1378,8 @@ class AATAFilePipeline(AATAPipeline):
 	If in `debug` mode, JSON serialization will use pretty-printing. Otherwise,
 	serialization will be compact.
 	'''
-	def __init__(self, input_path, abstracts_pattern, journals_pattern, series_pattern, people_pattern, **kwargs):
-		super().__init__(input_path, abstracts_pattern, journals_pattern, series_pattern, people_pattern, **kwargs)
+	def __init__(self, input_path, abstracts_pattern, journals_pattern, series_pattern, people_pattern, corp_pattern, geog_pattern, subject_pattern, **kwargs):
+		super().__init__(input_path, abstracts_pattern, journals_pattern, series_pattern, people_pattern, corp_pattern, geog_pattern, subject_pattern, **kwargs)
 		self.use_single_serializer = False
 		self.output_path = kwargs.get('output_path')
 

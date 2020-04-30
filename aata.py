@@ -23,6 +23,9 @@ if __name__ == '__main__':
 	journals_pattern = 'AATA*Journal.xml'
 	series_pattern = 'AATA*Series.xml'
 	people_pattern = 'Auth_person.xml'
+	corp_pattern = 'Auth_corp.xml'
+	geog_pattern = 'Auth_geog.xml'
+	subject_pattern = 'Auth_subject.xml'
 
 	vocab.add_linked_art_boundary_check()
 
@@ -40,6 +43,9 @@ if __name__ == '__main__':
 				journals_pattern=journals_pattern,
 				series_pattern=series_pattern,
 				people_pattern=people_pattern,
+				corp_pattern=corp_pattern,
+				geog_pattern=geog_pattern,
+				subject_pattern=subject_pattern,
 				output_path=output_file_path,
 				models=arches_models,
 				limit=LIMIT,

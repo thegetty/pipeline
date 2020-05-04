@@ -269,7 +269,6 @@ class MakeLinkedArtLinguisticObject(MakeLinkedArtRecord):
 		for dimension in data.get('dimensions', []):
 			thing.dimension = dimension
 
-
 	def __call__(self, data: dict):
 		if 'object_type' not in data:
 			data['object_type'] = model.LinguisticObject
@@ -506,6 +505,55 @@ class MakeLinkedArtPerson(MakeLinkedArtAgent):
 	def __call__(self, data: dict):
 		if 'object_type' not in data:
 			data['object_type'] = model.Person
+		return super().__call__(data)
+
+class MakeLinkedArtPlace(MakeLinkedArtRecord):
+	TYPES = {
+		'city': vocab.instances['city'],
+		'province': vocab.instances['province'],
+		'state': vocab.instances['province'],
+		'country': vocab.instances['nation'],
+	}
+
+	def __init__(self, base_uri=None, *args, **kwargs):
+		super().__init__(*args, **kwargs)
+		self.base_uri = base_uri
+
+	def set_properties(self, data, thing):
+		super().set_properties(data, thing)
+		type_name = data.get('type', 'place').lower()
+		name = data.get('name')
+		label = name
+		parent_data = data.get('part_of')
+
+		place_type = MakeLinkedArtPlace.TYPES.get(type_name)
+		parent = None
+		if parent_data:
+			parent_data = self(parent_data)
+			parent = get_crom_object(parent_data)
+			if label:
+				try:
+					label = f'{label}, {parent._label}'
+				except AttributeError:
+					print('*** NO LABEL IN PARENT:' + factory.toString(parent, False))
+
+		placeargs = {'label': label}
+		if data.get('uri'):
+			placeargs['ident'] = data['uri']
+
+		if place_type:
+			thing.classified_as = place_type
+		if not name:
+			warnings.warn(f'Place with missing name on {thing.id}')
+		if parent:
+			print(f'*** Setting parent on place object: {parent}')
+			thing.part_of = parent
+
+	def __call__(self, data: dict):
+		if 'object_type' not in data:
+			data['object_type'] = model.Place
+		if self.base_uri and not data.get('uri'):
+			data['uri'] = self.base_uri + urllib.parse.quote(data['name'])
 		return super().__call__(data)
 
 def make_la_place(data:dict, base_uri=None):

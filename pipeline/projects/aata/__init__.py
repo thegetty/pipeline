@@ -47,6 +47,7 @@ from pipeline.util.cleaners import ymd_to_datetime
 from pipeline.projects.aata.articles import ModelArticle
 from pipeline.projects.aata.people import ModelPerson
 from pipeline.projects.aata.journals import ModelJournal
+from pipeline.projects.aata.series import ModelSeries
 from pipeline.projects.aata.places import ModelPlace
 from pipeline.projects.aata.corps import ModelCorp
 
@@ -157,6 +158,9 @@ class AATAUtilityHelper(UtilityHelper):
 
 	def journal_uri(self, j_id):
 		return self.make_proj_uri('Journal', j_id)
+
+	def series_uri(self, s_id):
+		return self.make_proj_uri('Series', s_id)
 
 	def issue_uri(self, j_id, i_id):
 		return self.make_proj_uri('Journal', j_id, 'Issue', i_id)
@@ -1059,7 +1063,23 @@ class AATAPipeline(PipelineBase):
 			self.add_serialization_chain(graph, activities.output, model=self.models['Activity'])
 			self.add_serialization_chain(graph, texts.output, model=self.models['LinguisticObject'])
 			self.add_serialization_chain(graph, journals.output, model=self.models['Journal'])
-		return people
+		return journals
+		
+	def add_series_chain(self, graph, records, serialize=True):
+		series = graph.add_chain(
+			ExtractKeyedValue(key='record'),
+			ModelSeries(helper=self.helper),
+			_input=records.output
+		)
+
+		activities = graph.add_chain(ExtractKeyedValues(key='_activities'), _input=series.output)
+		texts = graph.add_chain(ExtractKeyedValues(key='_texts'), _input=series.output)
+
+		if serialize:
+			self.add_serialization_chain(graph, activities.output, model=self.models['Activity'])
+			self.add_serialization_chain(graph, texts.output, model=self.models['LinguisticObject'])
+			self.add_serialization_chain(graph, series.output, model=self.models['Journal'])
+		return series
 		
 	def add_corp_chain(self, graph, records, serialize=True):
 		corps = graph.add_chain(
@@ -1097,6 +1117,7 @@ class AATAPipeline(PipelineBase):
 
 		if serialize:
 			self.add_serialization_chain(graph, activities.output, model=self.models['Activity'])
+			self.add_places_chain(graph, places, key=None, serialize=True)
 			self.add_serialization_chain(graph, places.output, model=self.models['Place'])
 		return people
 		
@@ -1226,6 +1247,15 @@ class AATAPipeline(PipelineBase):
 		journals = self.add_journals_chain(graph, records)
 		return journals
 
+	def _add_series_graph(self, graph):
+		records = graph.add_chain(
+			MatchingFiles(path='/', pattern=self.series_pattern, fs='fs.data.aata'),
+			CurriedXMLReader(xpath='/series_XML/record', fs='fs.data.aata', limit=self.limit),
+			_xml_element_to_dict,
+		)
+		series = self.add_series_chain(graph, records)
+		return series
+
 	def _add_corp_graph(self, graph):
 		records = graph.add_chain(
 			MatchingFiles(path='/', pattern=self.corp_pattern, fs='fs.data.aata'),
@@ -1321,6 +1351,7 @@ class AATAPipeline(PipelineBase):
 
 		articles = self._add_abstracts_graph(graph)
 		journals = self._add_journals_graph(graph)
+		series = self._add_series_graph(graph)
 		people = self._add_people_graph(graph)
 		corps	= self._add_corp_graph(graph)
 		places	= self._add_geog_graph(graph)

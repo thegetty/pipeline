@@ -7,5 +7,6 @@
 	"JW": "IssueText",
 	"PA": "PatentText",
 	"TH": "ThesisText",
-	"TR": "TechnicalReportText"
+	"TR": "TechnicalReportText",
+	"WB": "WebPage"
 }

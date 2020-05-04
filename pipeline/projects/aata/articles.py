@@ -174,8 +174,8 @@ class ModelArticle(Configurable):
 # 			record['_activities'].append(add_crom_data({}, a))
 
 		for i, distributor in enumerate(distributors):
-			corp_id = publisher.get('gaia_corp_id')
-			geog_id = publisher.get('distributor_location', {}).get('gaia_geog_id')
+			corp_id = distributor.get('gaia_corp_id')
+			geog_id = distributor.get('distributor_location', {}).get('gaia_geog_id')
 			a_uri = record['uri'] + f'-dist-{i}'
 			a = vocab.Distributing(ident=a_uri, label=f'Distribution of {article_label}')
 			if corp_id:

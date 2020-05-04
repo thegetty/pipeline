@@ -518,9 +518,12 @@ class PipelineBase:
 
 	def add_places_chain(self, graph, auction_events, key='_locations', serialize=True):
 		'''Add extraction and serialization of locations.'''
+		nodes = []
+		if key:
+			nodes.append(ExtractKeyedValues(key=key))
+		nodes.append(RecursiveExtractKeyedValue(key='part_of'))
 		places = graph.add_chain(
-			ExtractKeyedValues(key=key),
-			RecursiveExtractKeyedValue(key='part_of'),
+			*nodes,
 			_input=auction_events.output
 		)
 		if serialize:

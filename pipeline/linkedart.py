@@ -334,6 +334,9 @@ class MakeLinkedArtAgent(MakeLinkedArtRecord):
 				self.set_lo_properties(n, *properties)
 				thing.identified_by = n
 
+		for uri in data.get('exact_match', []):
+			thing.exact_match = uri
+
 		# Locations are names of residence places (P74 -> E53)
 		# XXX FIXME: Places are their own model
 		if 'places' in data:
@@ -499,9 +502,6 @@ class MakeLinkedArtPerson(MakeLinkedArtAgent):
 				else:
 					pl = model.Name(ident='', content=p)
 				who.contact_point = pl
-
-		for uri in data.get('exact_match', []):
-			who.exact_match = uri
 
 	def __call__(self, data: dict):
 		if 'object_type' not in data:

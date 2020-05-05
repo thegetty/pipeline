@@ -2,14 +2,12 @@ import pprint
 import warnings
 from contextlib import suppress
 
-from bonobo.config import Configurable, Service, Option
+from bonobo.config import Configurable, Option
 
 from cromulent import model, vocab
 from pipeline.util import _as_list
 from pipeline.linkedart import \
-			MakeLinkedArtAbstract, \
 			MakeLinkedArtLinguisticObject, \
-			MakeLinkedArtPerson, \
 			get_crom_object, \
 			add_crom_data
 
@@ -24,7 +22,7 @@ class ModelSeries(Configurable):
 		inote = data.get('internal_note')
 		snote = data.get('source_note')
 		record['identifiers'].append(self.helper.gci_number_id(jid))
-		
+
 		if inote:
 			record['referred_to_by'].append(vocab.Note(ident='', content=inote))
 		if snote:
@@ -52,6 +50,8 @@ class ModelSeries(Configurable):
 			record['identifiers'].append(vocab.PrimaryName(ident='', content=title))
 		if title_translated:
 			record['identifiers'].append(vocab.TranslatedTitle(ident='', content=title))
+		for vtitle in variant_titles:
+			record['identifiers'].append(vocab.Title(ident='', content=vtitle))
 		for lang in lang_docs:
 			l = self.helper.language_object_from_code(lang)
 			if l:
@@ -76,7 +76,7 @@ class ModelSeries(Configurable):
 		series_label = record['label']
 		corp_id = data.get('gaia_corp_id')
 		geog_id = data.get('gaia_geog_id')
-		
+
 		a_uri = record['uri'] + f'-pub-{seq}'
 		cb_label = f' by CB{corp_id}' if corp_id else f' by publisher #{seq}'
 		a = vocab.Publishing(ident=a_uri, label=f'Publishing of {series_label}' + cb_label)
@@ -93,7 +93,8 @@ class ModelSeries(Configurable):
 		# sponsor_group/ ???
 		pass
 
-	def model_publishing(self, data):
+	@staticmethod
+	def model_publishing(data):
 		series_label = data['label']
 		a_uri = data['uri'] + f'-pub'
 		a = vocab.Publishing(ident=a_uri, label=f'Publishing of {series_label}')
@@ -132,9 +133,8 @@ class ModelSeries(Configurable):
 
 	def __call__(self, data):
 		jid = data['record_desc_group']['record_id']
-		print(f'Series: {jid}')
 		data['uri'] = self.helper.series_uri(jid)
-		
+
 		self.model_record_desc_group(data, data['record_desc_group'])
 		self.model_series_group(data, data.get('series_group'))
 		data.setdefault('label', f'Series ({jid})')

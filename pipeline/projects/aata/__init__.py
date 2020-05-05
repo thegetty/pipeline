@@ -11,16 +11,17 @@ import itertools
 import warnings
 
 import json
-import iso639
+import urllib.parse
+from datetime import datetime
 import lxml.etree
 from sqlalchemy import create_engine
 from langdetect import detect
-import urllib.parse
-from datetime import datetime
+import xmltodict
+import iso639
+
 import bonobo
 from bonobo.config import Configurable, Service, Option, use
 from bonobo.constants import NOT_MODIFIED
-import xmltodict
 
 import settings
 from cromulent import model, vocab
@@ -63,9 +64,6 @@ variantTitleIdentifier = vocab.Identifier # TODO: aat for variant titles?
 # utility functions
 
 class AATAUtilityHelper(UtilityHelper):
-	def __init__(self, project_name):
-		super().__init__(project_name)
-
 	def document_type_class(self, code):
 		document_types = self.services['document_types']
 		clsname = document_types[code]
@@ -79,7 +77,8 @@ class AATAUtilityHelper(UtilityHelper):
 			return t
 		return None
 
-	def ordered_author_string(self, authors):
+	@staticmethod
+	def ordered_author_string(authors):
 		if not authors:
 			return None
 		elif len(authors) == 1:
@@ -119,6 +118,7 @@ class AATAUtilityHelper(UtilityHelper):
 		except Exception as e:
 			print(f'*** language_object_from_code: {e}', file=sys.stderr)
 			raise e
+		return None
 
 	def validated_string_language(self, title, restrict=None):
 		try:
@@ -143,8 +143,7 @@ class AATAUtilityHelper(UtilityHelper):
 			warnings.warn('*** Unrecognized language code detected: %s' % (e,))
 		except KeyError as e:
 			warnings.warn(
-				'*** LANGUAGE: detected but unrecognized title language %r '
-				'(cf. declared in metadata: %r): %s' % (e.args[0], languages, title)
+				'*** LANGUAGE: detected but unrecognized title language %r: %s' % (e.args[0], title)
 			)
 		except Exception as e:
 			print('*** detect_title_language error: %r' % (e,))
@@ -384,7 +383,7 @@ class MakeAATAAbstract(Configurable):
 			abstract.refers_to = lod_object
 			langcode = a.get('language')
 			if langcode is not None:
-				language = language_object_from_code(langcode, language_code_map)
+				language = self.helper.language_object_from_code(langcode, language_code_map)
 				if language is not None:
 					abstract.language = language
 					abstract_dict['language'] = language
@@ -424,7 +423,7 @@ def filter_abstract_authors(data: dict):
 
 class AATAPipeline(PipelineBase):
 	'''Bonobo-based pipeline for transforming AATA data from XML into JSON-LD.'''
-	def __init__(self, input_path, abstracts_pattern, journals_pattern, series_pattern, people_pattern, corp_pattern, geog_pattern, subject_pattern, **kwargs):
+	def __init__(self, input_path, **kwargs):
 		project_name = 'aata'
 		self.input_path = input_path
 		self.services = None
@@ -440,13 +439,13 @@ class AATAPipeline(PipelineBase):
 
 		self.graph = None
 		self.models = kwargs.get('models', {})
-		self.abstracts_pattern = abstracts_pattern
-		self.journals_pattern = journals_pattern
-		self.series_pattern = series_pattern
-		self.people_pattern = people_pattern
-		self.corp_pattern = corp_pattern
-		self.geog_pattern = geog_pattern
-		self.subject_pattern = subject_pattern
+		self.abstracts_pattern = kwargs.get('abstracts_pattern')
+		self.journals_pattern = kwargs.get('journals_pattern')
+		self.series_pattern = kwargs.get('series_pattern')
+		self.people_pattern = kwargs.get('people_pattern')
+		self.corp_pattern = kwargs.get('corp_pattern')
+		self.geog_pattern = kwargs.get('geog_pattern')
+		self.subject_pattern = kwargs.get('subject_pattern')
 
 		self.limit = kwargs.get('limit')
 		self.debug = kwargs.get('debug', False)
@@ -509,7 +508,7 @@ class AATAPipeline(PipelineBase):
 			self.add_places_chain(graph, corps, key='_places', serialize=True)
 			self.add_serialization_chain(graph, activities.output, model=self.models['Activity'])
 			self.add_serialization_chain(graph, corps.output, model=self.models['Group'])
-		return people
+		return corps
 
 # 	def add_subject_chain(self, graph, records, serialize=True):
 # 		subjects = graph.add_chain(
@@ -535,7 +534,7 @@ class AATAPipeline(PipelineBase):
 			self.add_serialization_chain(graph, activities.output, model=self.models['Activity'])
 			self.add_places_chain(graph, places, key=None, serialize=True)
 			self.add_serialization_chain(graph, places.output, model=self.models['Place'])
-		return people
+		return places
 
 	def add_articles_chain(self, graph, records, serialize=True):
 		'''Add transformation of article records to the bonobo pipeline.'''
@@ -624,13 +623,13 @@ class AATAPipeline(PipelineBase):
 	def _construct_graph(self):
 		graph = bonobo.Graph()
 
-		articles = self._add_abstracts_graph(graph)
-		journals = self._add_journals_graph(graph)
-		series = self._add_series_graph(graph)
-		people = self._add_people_graph(graph)
-		corps	= self._add_corp_graph(graph)
-		places	= self._add_geog_graph(graph)
-# 		subjects = self._add_subject_graph(graph)
+		_ = self._add_abstracts_graph(graph)
+		_ = self._add_journals_graph(graph)
+		_ = self._add_series_graph(graph)
+		_ = self._add_people_graph(graph)
+		_ = self._add_corp_graph(graph)
+		_ = self._add_geog_graph(graph)
+# 		_ = self._add_subject_graph(graph)
 
 		self.graph = graph
 		return graph
@@ -651,7 +650,6 @@ class AATAPipeline(PipelineBase):
 		print('Serializing static instances...', file=sys.stderr)
 		for model_name, instances in self.static_instances.used_instances().items():
 			g = bonobo.Graph()
-			nodes = self.serializer_nodes_for_model(model=self.models[model_name])
 			values = instances.values()
 			source = g.add_chain(GraphListSource(values))
 			self.add_serialization_chain(g, source.output, model=self.models[model_name])
@@ -664,12 +662,12 @@ class AATAFilePipeline(AATAPipeline):
 	If in `debug` mode, JSON serialization will use pretty-printing. Otherwise,
 	serialization will be compact.
 	'''
-	def __init__(self, input_path, abstracts_pattern, journals_pattern, series_pattern, people_pattern, corp_pattern, geog_pattern, subject_pattern, **kwargs):
-		super().__init__(input_path, abstracts_pattern, journals_pattern, series_pattern, people_pattern, corp_pattern, geog_pattern, subject_pattern, **kwargs)
+	def __init__(self, input_path, **kwargs):
+		super().__init__(input_path, **kwargs)
 		self.use_single_serializer = False
 		self.output_path = kwargs.get('output_path')
 
-	def serializer_nodes_for_model(self, model=None):
+	def serializer_nodes_for_model(self, model=None, *args, **kwargs):
 		nodes = []
 		if self.debug:
 			nodes.append(MergingFileWriter(directory=self.output_path, partition_directories=True, compact=False, model=model))

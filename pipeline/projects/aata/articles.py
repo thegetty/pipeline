@@ -48,7 +48,6 @@ class ModelArticle(Configurable):
 		record.setdefault('created_by', [])
 		authors = _as_list(data.get('primary_author'))
 
-		subevents = []
 		mlap = MakeLinkedArtPerson()
 		mlao = MakeLinkedArtOrganization()
 
@@ -87,9 +86,9 @@ class ModelArticle(Configurable):
 			for role in roles:
 				part = model.Creation(ident='', label=f'{role} Creation sub-event')
 				part.carried_out_by = get_crom_object(p)
-				type = self.helper.role_type(role)
-				if type:
-					part.classified_as = type
+				cl = self.helper.role_type(role)
+				if cl:
+					part.classified_as = cl
 				creation.part = part
 
 		ordered_authors = [p[1] for p in sorted(ordered_data)]
@@ -207,7 +206,8 @@ class ModelArticle(Configurable):
 		if tr:
 			record['identifiers'].append(model.Identifier(ident='', content=tr)) # TODO: classify this Identifier
 
-	def model_physical_desc_group(self, record, data):
+	@staticmethod
+	def model_physical_desc_group(record, data):
 		if not data:
 			return
 		record.setdefault('referred_to_by', [])
@@ -272,7 +272,8 @@ class ModelArticle(Configurable):
 		for inote in inotes:
 			record['referred_to_by'].append(vocab.Note(ident='', content=inote['note']))
 
-	def model_abstract_group(self, record, data):
+	@staticmethod
+	def model_abstract_group(record, data):
 		if not data:
 			return
 		record.setdefault('referred_to_by', [])
@@ -290,7 +291,8 @@ class ModelArticle(Configurable):
 		t = model.Type(ident=uri, label=name)
 		record['classified_as'].append(t)
 
-	def model_index_group(self, record, data):
+	@staticmethod
+	def model_index_group(record, data):
 		record.setdefault('about', [])
 
 		opids = _as_list(data.get('other_persistent_id'))
@@ -299,7 +301,6 @@ class ModelArticle(Configurable):
 			uri = f'http://vocab.getty.edu/aat/{eid}'
 			t = model.Type(ident=uri)
 			record['about'].append(t)
-		pass
 
 	def add_title(self, data):
 		'''
@@ -317,7 +318,8 @@ class ModelArticle(Configurable):
 				pn.language = lang
 			data['identifiers'].append(pn)
 
-	def model_article(self, data):
+	@staticmethod
+	def model_article(data):
 		make_la_lo = MakeLinkedArtLinguisticObject()
 		make_la_lo(data)
 
@@ -325,13 +327,13 @@ class ModelArticle(Configurable):
 # 		author = data.get('created_by')
 # 		if author:
 # 			lo.created_by = get_crom_object(author)
-# 
+#
 # 		for a in data.get('used_for', []):
 # 			lo.used_for = get_crom_object(a)
-# 
+#
 # 		for a in data.get('about', []):
 # 			lo.about = get_crom_object(a)
-# 
+#
 # 		for c in data.get('classified_as', []):
 # 			lo.classified_as = get_crom_object(c)
 

@@ -2,14 +2,12 @@ import pprint
 import warnings
 from contextlib import suppress
 
-from bonobo.config import Configurable, Service, Option
+from bonobo.config import Configurable, Option
 
 from cromulent import model, vocab
 from pipeline.util import _as_list
 from pipeline.linkedart import \
-			MakeLinkedArtAbstract, \
 			MakeLinkedArtLinguisticObject, \
-			MakeLinkedArtPerson, \
 			get_crom_object, \
 			add_crom_data
 
@@ -24,7 +22,7 @@ class ModelJournal(Configurable):
 		inote = data.get('internal_note')
 		snote = data.get('source_note')
 		record['identifiers'].append(self.helper.gci_number_id(jid))
-		
+
 		if inote:
 			record['referred_to_by'].append(vocab.Note(ident='', content=inote))
 		if snote:
@@ -52,6 +50,8 @@ class ModelJournal(Configurable):
 			record['identifiers'].append(vocab.PrimaryName(ident='', content=title))
 		if title_translated:
 			record['identifiers'].append(vocab.TranslatedTitle(ident='', content=title))
+		for vtitle in variant_titles:
+			record['identifiers'].append(vocab.Title(ident='', content=vtitle))
 		for lang in lang_docs:
 			l = self.helper.language_object_from_code(lang)
 			if l:
@@ -76,7 +76,7 @@ class ModelJournal(Configurable):
 		journal_label = record['label']
 		corp_id = data.get('gaia_corp_id')
 		geog_id = data.get('gaia_geog_id')
-		
+
 		a_uri = record['uri'] + f'-pub-{seq}'
 		cb_label = f' by CB{corp_id}' if corp_id else f' by publisher #{seq}'
 		a = vocab.Publishing(ident=a_uri, label=f'Publishing of {journal_label}' + cb_label)
@@ -95,7 +95,7 @@ class ModelJournal(Configurable):
 
 	def model_issue_group(self, record, data, seq):
 		record.setdefault('^part', [])
-		
+
 		issue_id = data['issue_id']
 		title = data.get('title')
 		title_translated = data.get('title_translated')
@@ -105,7 +105,7 @@ class ModelJournal(Configurable):
 		volume = data.get('volume')
 		number = data.get('number')
 		note = data.get('note')
-		
+
 		journal_label = record['label']
 		issue_label = f'Issue of {journal_label}'
 		if title:
@@ -128,7 +128,7 @@ class ModelJournal(Configurable):
 			issue['identifiers'].append(vocab.PrimaryName(ident='', content=title))
 		if title_translated:
 			issue['identifiers'].append(vocab.TranslatedTitle(ident='', content=title_translated))
-		
+
 		if date:
 			display_date = date.get('display_date')
 			sort_year = date.get('sort_year')
@@ -148,14 +148,14 @@ class ModelJournal(Configurable):
 						pass
 				a.timespan = ts
 				issue['used_for'].append(a)
-		
+
 		# TODO:
 		# volume
 		# number
-		
+
 		if note:
 			issue['referred_to_by'].append(vocab.Note(ident='', content=note))
-		
+
 		mlalo = MakeLinkedArtLinguisticObject()
 		mlalo(issue)
 
@@ -165,7 +165,8 @@ class ModelJournal(Configurable):
 
 		record['^part'].append(issue)
 
-	def model_publishing(self, data):
+	@staticmethod
+	def model_publishing(data):
 		journal_label = data['label']
 		a_uri = data['uri'] + f'-pub'
 		a = vocab.Publishing(ident=a_uri, label=f'Publishing of {journal_label}')
@@ -201,7 +202,7 @@ class ModelJournal(Configurable):
 
 		mlalo = MakeLinkedArtLinguisticObject()
 		mlalo(data)
-		
+
 		journal = get_crom_object(data)
 		data.setdefault('_texts', [])
 		for i in data.get('^part', []):
@@ -212,7 +213,7 @@ class ModelJournal(Configurable):
 	def __call__(self, data):
 		jid = data['record_desc_group']['record_id']
 		data['uri'] = self.helper.journal_uri(jid)
-		
+
 		self.model_record_desc_group(data, data['record_desc_group'])
 		self.model_journal_group(data, data.get('journal_group'))
 		data.setdefault('label', f'Journal ({jid})')

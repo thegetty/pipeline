@@ -1,15 +1,12 @@
 import pprint
 import warnings
 
-from bonobo.config import Configurable, Service, Option
+from bonobo.config import Configurable, Option
 
 from cromulent import model, vocab
 from pipeline.util import _as_list
 from pipeline.linkedart import \
-			MakeLinkedArtAbstract, \
-			MakeLinkedArtLinguisticObject, \
 			MakeLinkedArtOrganization, \
-			MakeLinkedArtPerson, \
 			MakeLinkedArtPlace, \
 			get_crom_object, \
 			add_crom_data
@@ -55,7 +52,8 @@ class ModelCorp(Configurable):
 				record['places'].append(geog_data)
 				record['_places'].append(geog_data)
 
-	def model_term_group(self, record, data):
+	@staticmethod
+	def model_term_group(record, data):
 		record.setdefault('identifiers', [])
 		term_type = data['term_type']
 		cl = model.Name
@@ -66,7 +64,8 @@ class ModelCorp(Configurable):
 		record.setdefault('label', name)
 		record['identifiers'].append(cl(ident='', content=name))
 
-	def model_place(self, data):
+	@staticmethod
+	def model_place(data):
 		mlao = MakeLinkedArtOrganization()
 		mlao(data)
 

@@ -1,3 +1,4 @@
+import re
 import pprint
 import warnings
 
@@ -15,6 +16,7 @@ class ModelCorp(Configurable):
 	helper = Option(required=True)
 
 	def model_concept_group(self, record, data):
+		record.setdefault('referred_to_by', [])
 		record.setdefault('identifiers', [])
 		record.setdefault('_places', []) # for extraction/serialization by the pipeline
 		record.setdefault('places', []) # for pipeline.linkedart modeling code
@@ -59,10 +61,57 @@ class ModelCorp(Configurable):
 		cl = model.Name
 		if term_type == 'main':
 			cl = vocab.PrimaryName
+		elif term_type == 'in-house':
+			# TODO: flag as no-display
+			pass
 		name = data['corp_name']
 
 		record.setdefault('label', name)
 		record['identifiers'].append(cl(ident='', content=name))
+
+	def model_exact_match_group(self, record, data):
+		record.setdefault('exact_match', [])
+
+		brief_name = data.get('resource_brief_name')
+		full_name = data.get('resource_full_name')
+		rid = data.get('resource_id')
+		if brief_name and rid:
+			uri = self.helper.exact_match_uri(brief_name, rid)
+			if uri:
+				exact_match = model.BaseResource(ident=uri)
+				record['exact_match'].append(exact_match)
+
+	def model_warrant_group(self, record, data):
+		record.setdefault('referred_to_by', [])
+		record.setdefault('exact_match', [])
+
+		brief_name = data.get('resource_brief_name')
+		description = data.get('warrant_description')
+		note = data.get('warrant_note')
+		if brief_name and description:
+			if brief_name == 'Unknown' and description.startswith('Bib Record #'):
+				return # ignore internal references
+		
+		if brief_name == 'LCSH' and note:
+			lcsh_pattern = re.compile(r'((nb|nr|no|ns|sh|n)(\d+))')
+			match = lcsh_pattern.search(note)
+			if match:
+				lcid = match.group(1)
+				lcuri = f'http://id.loc.gov/authorities/names/{lcid}'
+				exact_match = model.BaseResource(ident=lcuri)
+				record['exact_match'].append(exact_match)
+				return
+
+		if description and note:
+			n = vocab.BibliographyStatement(ident='', content=note)
+			n.identified_by = model.Name(ident='', content=description)
+			record['referred_to_by'].append(n)
+		elif description:
+			n = vocab.BibliographyStatement(ident='', content=description)
+			record['referred_to_by'].append(n)
+		elif note:
+			n = vocab.BibliographyStatement(ident='', content=note)
+			record['referred_to_by'].append(n)
 
 	@staticmethod
 	def model_place(data):
@@ -73,6 +122,10 @@ class ModelCorp(Configurable):
 		self.model_concept_group(data, data['concept_group'])
 		for tg in _as_list(data.get('term_group')):
 			self.model_term_group(data, tg)
+		for mg in _as_list(data.get('exact_match_group')):
+			self.model_exact_match_group(data, mg)
+		for wg in _as_list(data.get('warrant_group')):
+			self.model_warrant_group(data, wg)
 
 		self.model_place(data)
 		return data

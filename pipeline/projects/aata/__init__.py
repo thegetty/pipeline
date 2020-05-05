@@ -77,6 +77,7 @@ class AATAUtilityHelper(UtilityHelper):
 		if code:
 			t = model.Type(ident='http://vocab.getty.edu/aat/' + code, label=role)
 			return t
+		return None
 
 	def ordered_author_string(self, authors):
 		if not authors:
@@ -476,7 +477,7 @@ class AATAPipeline(PipelineBase):
 		if serialize:
 			self.add_serialization_chain(graph, activities.output, model=self.models['Activity'])
 			self.add_serialization_chain(graph, texts.output, model=self.models['LinguisticObject'])
-			self.add_serialization_chain(graph, journals.output, model=self.models['Journal'])
+			self.add_serialization_chain(graph, journals.output, model=self.models['LinguisticObject'])
 		return journals
 
 	def add_series_chain(self, graph, records, serialize=True):
@@ -492,7 +493,7 @@ class AATAPipeline(PipelineBase):
 		if serialize:
 			self.add_serialization_chain(graph, activities.output, model=self.models['Activity'])
 			self.add_serialization_chain(graph, texts.output, model=self.models['LinguisticObject'])
-			self.add_serialization_chain(graph, series.output, model=self.models['Journal'])
+			self.add_serialization_chain(graph, series.output, model=self.models['LinguisticObject'])
 		return series
 
 	def add_corp_chain(self, graph, records, serialize=True):
@@ -648,12 +649,12 @@ class AATAPipeline(PipelineBase):
 		self.run_graph(graph, services=services)
 
 		print('Serializing static instances...', file=sys.stderr)
-		for model, instances in self.static_instances.used_instances().items():
+		for model_name, instances in self.static_instances.used_instances().items():
 			g = bonobo.Graph()
-			nodes = self.serializer_nodes_for_model(model=self.models[model])
+			nodes = self.serializer_nodes_for_model(model=self.models[model_name])
 			values = instances.values()
 			source = g.add_chain(GraphListSource(values))
-			self.add_serialization_chain(g, source.output, model=self.models[model])
+			self.add_serialization_chain(g, source.output, model=self.models[model_name])
 			self.run_graph(g, services={})
 
 class AATAFilePipeline(AATAPipeline):

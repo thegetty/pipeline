@@ -334,6 +334,27 @@ class MakeLinkedArtAgent(MakeLinkedArtRecord):
 				self.set_lo_properties(n, *properties)
 				thing.identified_by = n
 
+		# Locations are names of residence places (P74 -> E53)
+		# XXX FIXME: Places are their own model
+		if 'places' in data:
+			for p in data['places']:
+				if isinstance(p, model.Place):
+					pl = p
+				elif isinstance(p, dict):
+					pl = get_crom_object(p)
+				else:
+					pl = model.Place(ident='', label=p)
+				#pl._label = p['label']
+				#nm = model.Name()
+				#nm.content = p['label']
+				#pl.identified_by = nm
+				#for s in p['sources']:
+				#		l = model.LinguisticObject(ident="urn:uuid:%s" % s[1])
+					# l._label = _row_label(s[2], s[3], s[4])
+				#	pl.referred_to_by = l
+				thing.residence = pl
+
+
 class MakeLinkedArtOrganization(MakeLinkedArtAgent):
 	def set_properties(self, data, thing):
 		super().set_properties(data, thing)
@@ -478,26 +499,6 @@ class MakeLinkedArtPerson(MakeLinkedArtAgent):
 				else:
 					pl = model.Name(ident='', content=p)
 				who.contact_point = pl
-
-		# Locations are names of residence places (P74 -> E53)
-		# XXX FIXME: Places are their own model
-		if 'places' in data:
-			for p in data['places']:
-				if isinstance(p, model.Place):
-					pl = p
-				elif isinstance(p, dict):
-					pl = get_crom_object(p)
-				else:
-					pl = model.Place(ident='', label=p)
-				#pl._label = p['label']
-				#nm = model.Name()
-				#nm.content = p['label']
-				#pl.identified_by = nm
-				#for s in p['sources']:
-				#		l = model.LinguisticObject(ident="urn:uuid:%s" % s[1])
-					# l._label = _row_label(s[2], s[3], s[4])
-				#	pl.referred_to_by = l
-				who.residence = pl
 
 		for uri in data.get('exact_match', []):
 			who.exact_match = uri

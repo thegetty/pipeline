@@ -149,6 +149,13 @@ class AATAUtilityHelper(UtilityHelper):
 			print('*** detect_title_language error: %r' % (e,))
 		return None
 
+	def exact_match_uri(self, source, ident):
+		sources = self.services['external_match_sources']
+		if source in sources:
+			base = sources[source]
+			return base + ident
+		return None
+
 	def article_uri(self, a_id):
 		return self.make_proj_uri('Article', a_id)
 
@@ -432,6 +439,7 @@ class AATAPipeline(PipelineBase):
 
 		super().__init__(project_name, helper=helper)
 
+		vocab.register_vocab_class('InternalNote', {'parent': model.LinguisticObject, 'id': 'XXXXXXXX', 'label': 'Internal Note', 'metatype': 'brief text'})
 		vocab.register_vocab_class('IllustruationStatement', {'parent': model.LinguisticObject, 'id': '300015578', 'label': 'Illustruation Statement', 'metatype': 'brief text'})
 		vocab.register_vocab_class('VolumeNumber', {'parent': model.Identifier, 'id': '300265632', 'label': 'Volume'})
 		vocab.register_vocab_class('IssueNumber', {'parent': model.Identifier, 'id': '300312349', 'label': 'Issue'})
@@ -446,6 +454,7 @@ class AATAPipeline(PipelineBase):
 		self.corp_pattern = kwargs.get('corp_pattern')
 		self.geog_pattern = kwargs.get('geog_pattern')
 		self.subject_pattern = kwargs.get('subject_pattern')
+		self.tal_pattern = kwargs.get('tal_pattern')
 
 		self.limit = kwargs.get('limit')
 		self.debug = kwargs.get('debug', False)
@@ -520,6 +529,19 @@ class AATAPipeline(PipelineBase):
 # 		if serialize:
 # 			self.add_serialization_chain(graph, subjects.output, model=self.models['XXX'])
 # 		return people
+# 
+# 	def add_tal_chain(self, graph, records, serialize=True):
+# 		tal = graph.add_chain(
+# 			ExtractKeyedValue(key='record'),
+# 			ModelTAL(helper=self.helper),
+# 			_input=records.output
+# 		)
+# 
+# 		if serialize:
+# 			self.add_serialization_chain(graph, activities.output, model=self.models['Activity'])
+# 			self.add_places_chain(graph, places, key=None, serialize=True)
+# 			self.add_serialization_chain(graph, places.output, model=self.models['Place'])
+# 		return places
 
 	def add_geog_chain(self, graph, records, serialize=True):
 		places = graph.add_chain(
@@ -604,12 +626,21 @@ class AATAPipeline(PipelineBase):
 
 	def _add_geog_graph(self, graph):
 		records = graph.add_chain(
-			MatchingFiles(path='/', pattern=self.geog_pattern, fs='fs.data.aata'),
+			MatchingFiles(path='/', pattern=self.tal_pattern, fs='fs.data.aata'),
 			CurriedXMLReader(xpath='/auth_geog_XML/record', fs='fs.data.aata', limit=self.limit),
 			_xml_element_to_dict,
 		)
 		geog = self.add_geog_chain(graph, records)
 		return geog
+
+	def _add_tal_graph(self, graph):
+		records = graph.add_chain(
+			MatchingFiles(path='/', pattern=self.geog_pattern, fs='fs.data.aata'),
+			CurriedXMLReader(xpath='/auth_TAL_XML/record', fs='fs.data.aata', limit=self.limit),
+			_xml_element_to_dict,
+		)
+		tal = self.add_tal_chain(graph, records)
+		return tal
 
 # 	def _add_subject_graph(self, graph):
 # 		records = graph.add_chain(
@@ -629,6 +660,7 @@ class AATAPipeline(PipelineBase):
 		_ = self._add_people_graph(graph)
 		_ = self._add_corp_graph(graph)
 		_ = self._add_geog_graph(graph)
+# 		_ = self._add_tal_graph(graph)
 # 		_ = self._add_subject_graph(graph)
 
 		self.graph = graph

@@ -26,6 +26,7 @@ if __name__ == '__main__':
 	corp_pattern = 'Auth_corp.xml'
 	geog_pattern = 'Auth_geog.xml'
 	subject_pattern = 'Auth_subject.xml'
+	tal_pattern = 'Auth_TAL.xml'
 
 	vocab.add_linked_art_boundary_check()
 
@@ -46,6 +47,7 @@ if __name__ == '__main__':
 				corp_pattern=corp_pattern,
 				geog_pattern=geog_pattern,
 				subject_pattern=subject_pattern,
+				tal_pattern=tal_pattern,
 				output_path=output_file_path,
 				models=arches_models,
 				limit=LIMIT,

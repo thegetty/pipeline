@@ -628,7 +628,7 @@ class AATAPipeline(PipelineBase):
 
 	def _add_geog_graph(self, graph):
 		records = graph.add_chain(
-			MatchingFiles(path='/', pattern=self.tal_pattern, fs='fs.data.aata'),
+			MatchingFiles(path='/', pattern=self.geog_pattern, fs='fs.data.aata'),
 			CurriedXMLReader(xpath='/auth_geog_XML/record', fs='fs.data.aata', limit=self.limit),
 			_xml_element_to_dict,
 		)
@@ -637,7 +637,7 @@ class AATAPipeline(PipelineBase):
 
 	def _add_tal_graph(self, graph):
 		records = graph.add_chain(
-			MatchingFiles(path='/', pattern=self.geog_pattern, fs='fs.data.aata'),
+			MatchingFiles(path='/', pattern=self.tal_pattern, fs='fs.data.aata'),
 			CurriedXMLReader(xpath='/auth_TAL_XML/record', fs='fs.data.aata', limit=self.limit),
 			_xml_element_to_dict,
 		)

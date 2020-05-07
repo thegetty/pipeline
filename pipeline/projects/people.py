@@ -184,11 +184,12 @@ class AddPerson(Configurable):
 				yield data
 
 	def __call__(self, data:dict):
+		star_id = data.get('star_record_no')
 		data.setdefault('referred_to_by', [])
 		data.setdefault('events', [])
 		data.setdefault('places', [])
 		data.setdefault('contact_point', [])
-		data.setdefault('identifiers', [])
+		data.setdefault('identifiers', [self.helper.gri_number_id(star_id)])
 
 		self.handle_dates(data)
 		self.handle_statements(data)

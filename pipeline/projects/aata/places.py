@@ -1,4 +1,3 @@
-import pprint
 import warnings
 
 from bonobo.config import Configurable, Option
@@ -13,8 +12,8 @@ from pipeline.linkedart import \
 class ModelPlace(Configurable):
 	helper = Option(required=True)
 
-	@staticmethod
-	def model_concept_group(record, data):
+	def model_concept_group(self, record, data):
+		record.setdefault('classified_as', [])
 		if data.get('country_name'):
 			country = data['country_name']
 			print(f'*** COUNTRY: {country}')
@@ -23,6 +22,11 @@ class ModelPlace(Configurable):
 				'name': country,
 				'type': 'country'
 			}
+		place_type = data.get('place_type')
+		cl = self.helper.place_classification(place_type)
+		if cl:
+			print(f'{data["gaia_auth_id"]}: {place_type}: {cl}')
+			record['classified_as'].append(cl)
 
 	@staticmethod
 	def model_term_group(record, data):
@@ -61,7 +65,6 @@ class ModelPlace(Configurable):
 		data.setdefault('label', f'Place ({pid})')
 		place_base = self.helper.make_proj_uri('Place:')
 		mlap = MakeLinkedArtPlace(base_uri=place_base)
-# 		print(f'MAKE PLACE: {pprint.pformat(data)}')
 		mlap(data)
 		place = get_crom_object(data)
 # 		print('===================>')
@@ -69,6 +72,8 @@ class ModelPlace(Configurable):
 
 	def __call__(self, data):
 		pid = data['concept_group']['gaia_auth_id']
+		data.setdefault('identifiers', [])
+		data['identifiers'].append(self.helper.gci_number_id(pid))
 
 		self.model_concept_group(data, data['concept_group'])
 		for tg in _as_list(data.get('term_group')):

@@ -158,6 +158,15 @@ class AATAUtilityHelper(UtilityHelper):
 			warnings.warn(f'*** No external matching source found for brief name: {source}')
 		return None
 
+	def place_classification(self, name):
+		place_types = self.services['place_types']
+		if name in place_types:
+			aat = place_types[name]
+			return model.Type(ident=f'http://vocab.getty.edu/aat/{aat}', label=name)
+		else:
+			warnings.warn(f'*** No matching AAT code for place type: {name}')
+		return None
+
 	def article_uri(self, a_id):
 		return self.make_proj_uri('Article', a_id)
 

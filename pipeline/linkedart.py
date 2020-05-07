@@ -544,6 +544,8 @@ class MakeLinkedArtPlace(MakeLinkedArtRecord):
 
 		if place_type:
 			thing.classified_as = place_type
+		for c in data.get('classified_as', []):
+			thing.classified_as = c
 		if not name:
 			warnings.warn(f'Place with missing name on {thing.id}')
 		if parent:

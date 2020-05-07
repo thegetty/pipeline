@@ -3,6 +3,7 @@ import warnings
 
 from bonobo.config import Configurable, Option
 
+from pipeline.projects.aata.modeling import ModelBase
 from cromulent import model, vocab
 from pipeline.util import _as_list
 from pipeline.linkedart import \
@@ -10,9 +11,7 @@ from pipeline.linkedart import \
 			get_crom_object, \
 			add_crom_data
 
-class ModelPerson(Configurable):
-	helper = Option(required=True)
-
+class ModelPerson(ModelBase):
 	def model_concept_group(self, record, data):
 		record.setdefault('identifiers', [])
 		record.setdefault('nationality', [])
@@ -49,14 +48,6 @@ class ModelPerson(Configurable):
 		# TODO
 		pass
 
-	def model_match_group(self, record, data):
-		# TODO
-		pass
-
-	def model_warrant_group(self, record, data):
-		# TODO
-		pass
-
 	@staticmethod
 	def model_person(data):
 		mlap = MakeLinkedArtPerson()
@@ -71,7 +62,7 @@ class ModelPerson(Configurable):
 		for rg in _as_list(data.get('gaia_auth_relationship_group')):
 			self.model_relationship_group(data, rg)
 		for mg in _as_list(data.get('exact_match_group')):
-			self.model_match_group(data, mg)
+			self.model_exact_match_group(data, mg)
 		for wg in _as_list(data.get('warrant_group')):
 			self.model_warrant_group(data, wg)
 

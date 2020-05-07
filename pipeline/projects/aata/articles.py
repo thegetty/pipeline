@@ -196,9 +196,6 @@ class ModelArticle(Configurable):
 			issue_uri = self.helper.issue_uri(journal_id, issue_id)
 			issue = vocab.IssueText(ident=issue_uri)
 			record['part_of'].append(add_crom_data({'uri': issue_uri}, issue))
-			warnings.warn('TODO: handle journal link data')
-			# aata_journal_id	Textual Work	part_of
-			# aata_issue_id	Textual Work	(part_of)
 
 		if degree:
 			record['referred_to_by'].append(vocab.Note(ident='', content=degree))

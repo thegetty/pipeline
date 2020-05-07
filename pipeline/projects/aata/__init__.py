@@ -154,6 +154,8 @@ class AATAUtilityHelper(UtilityHelper):
 		if source in sources:
 			base = sources[source]
 			return base + ident
+		else:
+			warnings.warn(f'*** No external matching source found for brief name: {source}')
 		return None
 
 	def article_uri(self, a_id):

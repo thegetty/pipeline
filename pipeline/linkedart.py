@@ -549,7 +549,7 @@ class MakeLinkedArtPlace(MakeLinkedArtRecord):
 		if not name:
 			warnings.warn(f'Place with missing name on {thing.id}')
 		if parent:
-			print(f'*** Setting parent on place object: {parent}')
+			# print(f'*** Setting parent on place object: {parent}')
 			thing.part_of = parent
 
 	def __call__(self, data: dict):

@@ -321,20 +321,6 @@ class ModelArticle(Configurable):
 		make_la_lo = MakeLinkedArtLinguisticObject()
 		make_la_lo(data)
 
-# 		lo = get_crom_object(data)
-# 		author = data.get('created_by')
-# 		if author:
-# 			lo.created_by = get_crom_object(author)
-#
-# 		for a in data.get('used_for', []):
-# 			lo.used_for = get_crom_object(a)
-#
-# 		for a in data.get('about', []):
-# 			lo.about = get_crom_object(a)
-#
-# 		for c in data.get('classified_as', []):
-# 			lo.classified_as = get_crom_object(c)
-
 	def __call__(self, data, language_code_map):
 		'''
 		Given an XML element representing an AATA record, extract information about the

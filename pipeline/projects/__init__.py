@@ -670,7 +670,7 @@ class UtilityHelper:
 		if id_class is None:
 			id_class = vocab.LocalNumber
 		catalog_id = id_class(ident='', content=content)
-		assignment = model.AttributeAssignment(ident='')
+		assignment = model.AttributeAssignment(ident=self.make_shared_uri('__gci_attribute_assignment'))
 		assignment.carried_out_by = self.static_instances.get_instance('Group', 'gci')
 		catalog_id.assigned_by = assignment
 		return catalog_id
@@ -679,7 +679,7 @@ class UtilityHelper:
 		if id_class is None:
 			id_class = vocab.LocalNumber
 		catalog_id = id_class(ident='', content=content)
-		assignment = model.AttributeAssignment(ident='')
+		assignment = model.AttributeAssignment(ident=self.make_shared_uri('__gri_attribute_assignment'))
 		assignment.carried_out_by = self.static_instances.get_instance('Group', 'gri')
 		catalog_id.assigned_by = assignment
 		return catalog_id

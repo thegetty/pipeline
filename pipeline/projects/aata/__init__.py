@@ -184,7 +184,6 @@ class AATAUtilityHelper(UtilityHelper):
 		named_places = self.services['places_with_named_uris']
 		if geog_id in named_places:
 			uri = named_places[geog_id]
-			print(f'RE-USING NAMED PLACE {geog_id}: {uri}')
 			return uri
 		if names and place_type in ('country', 'nation', 'former nation/state/empire', 'state', 'province'):
 			uri = self.named_place_uri(*names)

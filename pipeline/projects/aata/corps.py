@@ -43,7 +43,7 @@ class ModelCorp(ModelBase):
 				geog_uri = self.helper.place_uri(geog_id)
 				geog_data = {
 					'uri': geog_uri,
-					'identifiers': [self.helper.gci_number_id(geog_id)],
+					'identifiers': [],
 				}
 				geog_name = loc.get('location_string')
 				if geog_name:

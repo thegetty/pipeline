@@ -16,8 +16,9 @@ class ModelPlace(Configurable):
 		record.setdefault('classified_as', [])
 		if data.get('country_name'):
 			country = data['country_name']
-			print(f'*** COUNTRY: {country}')
+# 			print(f'*** COUNTRY: {country}')
 			record['country'] = {
+				'uri': self.helper.named_place_uri(country),
 				'label': country,
 				'name': country,
 				'type': 'country'
@@ -25,8 +26,8 @@ class ModelPlace(Configurable):
 		place_type = data.get('place_type')
 		cl = self.helper.place_classification(place_type)
 		if cl:
-			print(f'{data["gaia_auth_id"]}: {place_type}: {cl}')
 			record['classified_as'].append(cl)
+# 			print(f'{data["gaia_auth_id"]}: {place_type}: {cl}')
 
 	@staticmethod
 	def model_term_group(record, data):
@@ -37,14 +38,15 @@ class ModelPlace(Configurable):
 
 		country = data.get('country', {}).get('label')
 		if state:
-			print(f'*** STATE: {state}')
 			parent = data.get('country')
+# 			print(f'*** STATE: {state}')
 			state = {
 				'name': state,
 				'label': state,
 				'type': 'state'
 			}
 			if country:
+				state['uri'] = self.helper.named_place_uri(country, state),
 				state['label'] = f'{state}, {country}'
 			record['state'] = state
 
@@ -70,6 +72,25 @@ class ModelPlace(Configurable):
 # 		print('===================>')
 # 		print(factory.toString(place, False))
 
+	def add_uri(self, data):
+		cg = data.get('concept_group', {})
+		pid = cg['gaia_auth_id']
+		terms = _as_list(data.get('term_group', []))
+		names = [t.get('term_name') for t in terms if t.get('term_type') == 'main']
+		name = names[0] if names else None
+		place_type = cg.get('place_type')
+
+		country = data.get('country')
+		state = data.get('state')
+		names = []
+		if country:
+			names.append(country['label'])
+		if state:
+			names.append(state['label'])
+		names.append(name)
+
+		data['uri'] = self.helper.place_uri(pid, *names, place_type=place_type)
+
 	def __call__(self, data):
 		pid = data['concept_group']['gaia_auth_id']
 		data.setdefault('identifiers', [])
@@ -79,6 +100,6 @@ class ModelPlace(Configurable):
 		for tg in _as_list(data.get('term_group')):
 			self.model_term_group(data, tg)
 
-		data['uri'] = self.helper.place_uri(pid)
+		self.add_uri(data)
 		self.model_place(data)
 		return data

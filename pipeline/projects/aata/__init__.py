@@ -9,6 +9,7 @@ import sys
 import pprint
 import itertools
 import warnings
+from collections import defaultdict
 
 import json
 import urllib.parse
@@ -176,8 +177,22 @@ class AATAUtilityHelper(UtilityHelper):
 	def person_uri(self, p_id):
 		return self.make_proj_uri('Person', 'GAIA', p_id)
 
-	def place_uri(self, geog_id):
-		return self.make_proj_uri('Place', geog_id)
+	def named_place_uri(self, *names):
+		return self.make_proj_uri('Place', 'Named', *names)
+
+	def place_uri(self, geog_id, *names, place_type=None):
+		named_places = self.services['places_with_named_uris']
+		if geog_id in named_places:
+			uri = named_places[geog_id]
+			print(f'RE-USING NAMED PLACE {geog_id}: {uri}')
+			return uri
+		if names and place_type in ('country', 'nation', 'former nation/state/empire', 'state', 'province'):
+			uri = self.named_place_uri(*names)
+			if geog_id:
+				named_places[geog_id] = uri
+			return uri
+		else:
+			return self.make_proj_uri('Place', 'ID', geog_id)
 
 	def journal_uri(self, j_id):
 		return self.make_proj_uri('Journal', j_id)
@@ -456,7 +471,8 @@ class AATAPipeline(PipelineBase):
 		vocab.register_vocab_class('IssueNumber', {'parent': model.Identifier, 'id': '300312349', 'label': 'Issue'})
 		vocab.register_vocab_class('PublicationPeriodNote', {'parent': model.LinguisticObject, 'id': '300081446', 'label': 'Publication Period Note', 'metatype': 'brief text'})
 
-		self.graph = None
+		self.graph_0 = None
+		self.graphs = None
 		self.models = kwargs.get('models', {})
 		self.abstracts_pattern = kwargs.get('abstracts_pattern')
 		self.journals_pattern = kwargs.get('journals_pattern')
@@ -471,6 +487,16 @@ class AATAPipeline(PipelineBase):
 		self.debug = kwargs.get('debug', False)
 		self.pipeline_project_service_files_path = kwargs.get('pipeline_project_service_files_path', settings.pipeline_project_service_files_path)
 		self.pipeline_common_service_files_path = kwargs.get('pipeline_common_service_files_path', settings.pipeline_common_service_files_path)
+
+	def setup_services(self):
+	# Set up environment
+		'''Return a `dict` of named services available to the bonobo pipeline.'''
+		services = super().setup_services()
+		services.update({
+			'places_with_named_uris': {},
+			'counts': defaultdict(int)
+		})
+		return services
 
 	def add_people_chain(self, graph, records, serialize=True):
 		people = graph.add_chain(
@@ -662,33 +688,52 @@ class AATAPipeline(PipelineBase):
 # 		subject = self.add_subject_chain(graph, records)
 # 		return subject
 
-	def _construct_graph(self):
-		graph = bonobo.Graph()
+	def _construct_graph(self, single_graph=False, services=None):
+		if single_graph:
+			graph = bonobo.Graph()
+			g1 = graph
+			g2 = graph
+		else:
+			g1 = bonobo.Graph()
+			g2 = bonobo.Graph()
 
-		_ = self._add_abstracts_graph(graph)
-		_ = self._add_journals_graph(graph)
-		_ = self._add_series_graph(graph)
-		_ = self._add_people_graph(graph)
-		_ = self._add_corp_graph(graph)
-		_ = self._add_geog_graph(graph)
-# 		_ = self._add_tal_graph(graph)
-# 		_ = self._add_subject_graph(graph)
+		_ = self._add_geog_graph(g1)
 
-		self.graph = graph
-		return graph
+		_ = self._add_abstracts_graph(g2)
+		_ = self._add_journals_graph(g2)
+		_ = self._add_series_graph(g2)
+		_ = self._add_people_graph(g2)
+		_ = self._add_corp_graph(g2)
+# 		_ = self._add_tal_graph(g2)
+# 		_ = self._add_subject_graph(g2)
+
+		if single_graph:
+			self.graph_0 = graph
+			return [graph]
+		else:
+			self.graphs = [g1, g2]
+			return self.graphs
 
 	def get_graph(self, **kwargs):
+		if not self.graph_0:
+			self._construct_graph(single_graph=True, **kwargs)
+
+		return self.graph_0
+
+	def get_graphs(self, **kwargs):
 		'''Construct the bonobo pipeline to fully transform AATA data from XML to JSON-LD.'''
-		if not self.graph:
-			self._construct_graph()
-		return self.graph
+		if not self.graphs:
+			self._construct_graph(**kwargs)
+		return self.graphs
 
 	def run(self, **options):
 		'''Run the AATA bonobo pipeline.'''
 		print(f"- Limiting to {self.limit} records per file", file=sys.stderr)
 		services = self.get_services(**options)
-		graph = self.get_graph(**options, services=services)
-		self.run_graph(graph, services=services)
+		graphs = self.get_graphs(**options, services=services)
+		for i, graph in enumerate(graphs):
+			print(f'Running graph component {i+1}', file=sys.stderr)
+			self.run_graph(graph, services=services)
 
 		print('Serializing static instances...', file=sys.stderr)
 		for model_name, instances in self.static_instances.used_instances().items():

@@ -186,9 +186,9 @@ class ModelJournal(Configurable):
 
 		publishings = data.get('_publishings', [])
 		if publishings:
-			if len(publishings) > 1:
-				print(f'{len(publishings)} publishings of {journal_label}')
 			journal_label = data['label']
+# 			if len(publishings) > 1:
+# 				print(f'{len(publishings)} publishings of {journal_label}')
 			for sub in publishings:
 				a.part = sub
 

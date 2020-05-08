@@ -114,9 +114,9 @@ class ModelSeries(Configurable):
 
 		publishings = data.get('_publishings', [])
 		if publishings:
-			if len(publishings) > 1:
-				print(f'{len(publishings)} publishings of {series_label}')
 			series_label = data['label']
+# 			if len(publishings) > 1:
+# 				print(f'{len(publishings)} publishings of {series_label}')
 			for sub in publishings:
 				a.part = sub
 

@@ -290,14 +290,15 @@ class ModelArticle(Configurable):
 
 	@staticmethod
 	def model_index_group(record, data):
-		record.setdefault('about', [])
+		record.setdefault('indexing', [])
 
+		term = data['index_term']
 		opids = _as_list(data.get('other_persistent_id'))
 		for opid in opids:
 			eid = opid['external_id']
 			uri = f'http://vocab.getty.edu/aat/{eid}'
-			t = model.Type(ident=uri)
-			record['about'].append(t)
+			t = model.Type(ident=uri, label=term)
+			record['indexing'].append(t)
 
 	def add_title(self, data):
 		'''

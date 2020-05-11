@@ -30,9 +30,7 @@ fetch: fetchaata fetchsales fetchknoedler
 fetchaata:
 	mkdir -p $(GETTY_PIPELINE_TMP_PATH)/pipeline
 	mkdir -p $(GETTY_PIPELINE_INPUT)/aata
-	aws s3 sync s3://jpgt-or-provenance-01/provenance_batch/data/aata $(GETTY_PIPELINE_INPUT)/aata
-	aws s3 cp s3://jpgt-or-provenance-01/provenance_batch/data/uri_to_uuid_map.json $(GETTY_PIPELINE_INPUT)/
-	cp $(GETTY_PIPELINE_INPUT)/uri_to_uuid_map.json "${GETTY_PIPELINE_TMP_PATH}/uri_to_uuid_map.json"
+	aws s3 sync s3://jpgt-or-pvt-semantic/AATAConversion $(GETTY_PIPELINE_INPUT)/aata
 
 fetchsales:
 	mkdir -p $(GETTY_PIPELINE_TMP_PATH)/pipeline

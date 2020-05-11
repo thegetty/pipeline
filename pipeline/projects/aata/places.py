@@ -94,7 +94,7 @@ class ModelPlace(Configurable):
 	def __call__(self, data):
 		pid = data['concept_group']['gaia_auth_id']
 		data.setdefault('identifiers', [])
-		data['identifiers'].append(self.helper.gci_number_id(pid))
+		data['identifiers'].append(self.helper.gci_number_id(pid, id_class=vocab.SystemNumber))
 
 		self.model_concept_group(data, data['concept_group'])
 		for tg in _as_list(data.get('term_group')):

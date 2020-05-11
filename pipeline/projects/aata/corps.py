@@ -27,7 +27,7 @@ class ModelCorp(ModelBase):
 		locations = _as_list(data.get('location', []))
 
 		record['uri'] = self.helper.corporate_body_uri(gaia_id)
-		record['identifiers'].append(self.helper.gci_number_id(gaia_id))
+		record['identifiers'].append(self.helper.gci_number_id(gaia_id, id_class=vocab.SystemNumber))
 
 		if snote:
 			record['referred_to_by'].append(vocab.Note(ident='', content=snote))

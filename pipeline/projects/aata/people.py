@@ -18,7 +18,7 @@ class ModelPerson(ModelBase):
 
 		gaia_id = data['gaia_auth_id']
 		record['uri'] = self.helper.person_uri(gaia_id)
-		record['identifiers'].append(self.helper.gci_number_id(gaia_id))
+		record['identifiers'].append(self.helper.gci_number_id(gaia_id, id_class=vocab.SystemNumber))
 
 		n = data.get('nationality')
 		if n:

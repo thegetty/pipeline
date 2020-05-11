@@ -30,7 +30,7 @@ fetch: fetchaata fetchsales fetchknoedler
 fetchaata:
 	mkdir -p $(GETTY_PIPELINE_TMP_PATH)/pipeline
 	mkdir -p $(GETTY_PIPELINE_INPUT)/aata
-	aws s3 sync s3://jpgt-or-pvt-semantic/AATAConversion/data/aata $(GETTY_PIPELINE_INPUT)/aata
+	aws s3 sync s3://jpgt-or-pvt-semantic/data/aata $(GETTY_PIPELINE_INPUT)/aata
 
 fetchsales:
 	mkdir -p $(GETTY_PIPELINE_TMP_PATH)/pipeline

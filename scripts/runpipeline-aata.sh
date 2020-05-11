@@ -18,7 +18,7 @@ GITREV=`git rev-parse --short HEAD`
 JSON_TARFILE="${OUTPUTPATH}/${DATANAME}-jsonld.tar.gz"
 NQ_TARFILE="${OUTPUTPATH}/${DATANAME}-nquads.tar.gz"
 INFOFILE="${DATAPATH}/pipeline-${PROJECT}-info.txt"
-AWS_OUTPUTPATH="s3://jpgt-or-pvt-semantic/AATAConversion/output/${PROJECT}"
+AWS_OUTPUTPATH="s3://jpgt-or-pvt-semantic/output/${PROJECT}"
 
 make dockerimage
 mkdir -p $DATAPATH

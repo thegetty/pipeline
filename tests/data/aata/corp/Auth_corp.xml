@@ -1,0 +1,30 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<auth_corp_XML p1:noNamespaceSchemaLocation="http://aata2-stage.getty.edu:8080/AATA_Auth_corp_XML_Schema_v1.0.xsd" xmlns:p1="http://www.w3.org/2001/XMLSchema-instance">
+  <record>
+    <concept_group>
+      <gaia_auth_id>3032</gaia_auth_id>
+      <record_status>Approved</record_status>
+      <vocab_contrib_status>Unknown</vocab_contrib_status>
+      <sub_code>no restriction</sub_code>
+      <editor_info>
+        <user_id>1</user_id>
+        <user_type>record_originator</user_type>
+        <first_name>AATA</first_name>
+        <last_name>Legacy Data Load</last_name>
+        <user_initials>LDL</user_initials>
+      </editor_info>
+      <rec_date_created>19941209</rec_date_created>
+      <rec_date_last_modified>19941213</rec_date_last_modified>
+      <location>
+        <gaia_geog_id>399</gaia_geog_id>
+        <location_string>Princeton</location_string>
+      </location>
+    </concept_group>
+    <term_group>
+      <gaia_term_id>63</gaia_term_id>
+      <term_type>main</term_type>
+      <lang_type>English</lang_type>
+      <corp_name>American School of Classical Studies at Athens</corp_name>
+    </term_group>
+  </record>
+</auth_corp_XML>

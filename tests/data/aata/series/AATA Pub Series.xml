@@ -1,0 +1,38 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<series_XML p1:noNamespaceSchemaLocation="http://aata2-stage.getty.edu:8080/AATA_Pub_series_XML_Schema_v2.0.xsd" xmlns:p1="http://www.w3.org/2001/XMLSchema-instance">
+  <record>
+    <record_desc_group>
+      <record_id>4</record_id>
+      <record_status>approved</record_status>
+      <record_create_date>n.a.</record_create_date>
+      <priority>Ceased</priority>
+      <editor_info>
+        <user_id>36</user_id>
+        <user_type>record_originator</user_type>
+        <first_name>Alison L.</first_name>
+        <last_name>Luxner</last_name>
+        <user_initials>ALL</user_initials>
+      </editor_info>
+      <editor_info>
+        <user_id>1163</user_id>
+        <user_type>last_updated_by</user_type>
+        <first_name>Lynda</first_name>
+        <last_name>Bunting</last_name>
+        <user_initials>LBU</user_initials>
+      </editor_info>
+    </record_desc_group>
+    <series_group>
+      <title>History of science and technology in India</title>
+      <lang_doc>English</lang_doc>
+      <start_year>1969</start_year>
+      <cease_year>1993</cease_year>
+    </series_group>
+    <publisher_group>
+      <gaia_corp_id>16680</gaia_corp_id>
+      <publisher_name>Sundeep Prakashan</publisher_name>
+      <gaia_geog_id>271</gaia_geog_id>
+      <publisher_city>Delhi</publisher_city>
+      <publisher_country>India</publisher_country>
+    </publisher_group>
+  </record>
+</series_XML>

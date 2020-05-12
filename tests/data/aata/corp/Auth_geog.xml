@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="utf-8"?>
+<auth_geog_XML p1:noNamespaceSchemaLocation="http://aata2-stage.getty.edu:8080/AATA_Auth_geog_XML_Schema_v1.0.xsd" xmlns:p1="http://www.w3.org/2001/XMLSchema-instance">
+  <record>
+    <concept_group>
+      <gaia_auth_id>399</gaia_auth_id>
+      <record_status>Approved</record_status>
+      <vocab_contrib_status>Unknown</vocab_contrib_status>
+      <sub_code>used as link from corp body only</sub_code>
+      <editor_info>
+        <user_id>1</user_id>
+        <user_type>record_originator</user_type>
+        <first_name>AATA</first_name>
+        <last_name>Legacy Data Load</last_name>
+        <user_initials>LDL</user_initials>
+      </editor_info>
+      <rec_date_created>19941205</rec_date_created>
+      <rec_date_last_modified>19941205</rec_date_last_modified>
+      <place_type>inhabited place</place_type>
+      <country_name>United States</country_name>
+    </concept_group>
+    <term_group>
+      <gaia_term_id>399</gaia_term_id>
+      <term_type>main</term_type>
+      <lang_type>English</lang_type>
+      <term_name>Princeton</term_name>
+      <state_province>New Jersey</state_province>
+      <country_name />
+    </term_group>
+  </record>
+</auth_geog_XML>

@@ -521,9 +521,11 @@ class MakeLinkedArtPlace(MakeLinkedArtRecord):
 		self.base_uri = base_uri
 
 	def set_properties(self, data, thing):
-		super().set_properties(data, thing)
-		type_name = data.get('type', 'place').lower()
 		name = data.get('name')
+		data.setdefault('names', [name])
+		super().set_properties(data, thing)
+
+		type_name = data.get('type', 'place').lower()
 		label = name
 		parent_data = data.get('part_of')
 

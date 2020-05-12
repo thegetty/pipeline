@@ -725,10 +725,11 @@ class AATAPipeline(PipelineBase):
 			self._construct_graph(**kwargs)
 		return self.graphs
 
-	def run(self, **options):
+	def run(self, services=None, **options):
 		'''Run the AATA bonobo pipeline.'''
 		print(f"- Limiting to {self.limit} records per file", file=sys.stderr)
-		services = self.get_services(**options)
+		if not services:
+			services = self.get_services(**options)
 		graphs = self.get_graphs(**options, services=services)
 		for i, graph in enumerate(graphs):
 			print(f'Running graph component {i+1}', file=sys.stderr)

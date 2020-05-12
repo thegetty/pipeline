@@ -494,7 +494,7 @@ class PipelineBase:
 			e = create_engine(s)
 			return e
 
-	def get_services(self):
+	def get_services(self, **kwargs):
 		'''Return a `dict` of named services available to the bonobo pipeline.'''
 		return self.services
 

@@ -450,19 +450,29 @@ class PipelineBase:
 		serialize the related Group or Person record for that attribution, even if it does
 		not appear in the source data.
 		'''
-		GETTY_GRI_URI = self.helper.make_proj_uri('ORGANIZATION', 'LOCATION-CODE', 'JPGM')
 		lugt_ulan = 500321736
 		gri_ulan = 500115990
+		gci_ulan = 500115991
+		GETTY_GRI_URI = self.helper.make_proj_uri('ORGANIZATION', 'LOCATION-CODE', 'JPGM')
+		GETTY_GCI_URI = self.helper.make_shared_uri('STATIC', 'ORGANIZATION', 'Getty Conservation Institute')
 		LUGT_URI = self.helper.make_proj_uri('PERSON', 'ULAN', lugt_ulan)
+
+		gci = model.Group(ident=GETTY_GCI_URI, label='Getty Conservation Institute')
+		gci.identified_by = vocab.PrimaryName(ident='', content='Getty Conservation Institute')
+		gci.exact_match = model.BaseResource(ident=f'http://vocab.getty.edu/ulan/{gci_ulan}')
+
 		gri = model.Group(ident=GETTY_GRI_URI, label='Getty Research Institute')
 		gri.identified_by = vocab.PrimaryName(ident='', content='Getty Research Institute')
 		gri.exact_match = model.BaseResource(ident=f'http://vocab.getty.edu/ulan/{gri_ulan}')
+
 		lugt = model.Person(ident=LUGT_URI, label='Frits Lugt')
 		lugt.identified_by = vocab.PrimaryName(ident='', content='Frits Lugt')
 		lugt.exact_match = model.BaseResource(ident=f'http://vocab.getty.edu/ulan/{lugt_ulan}')
+
 		instances = defaultdict(dict)
 		instances.update({
 			'Group': {
+				'gci': gci,
 				'gri': gri
 			},
 			'Person': {
@@ -484,7 +494,7 @@ class PipelineBase:
 			e = create_engine(s)
 			return e
 
-	def get_services(self):
+	def get_services(self, **kwargs):
 		'''Return a `dict` of named services available to the bonobo pipeline.'''
 		return self.services
 
@@ -508,9 +518,12 @@ class PipelineBase:
 
 	def add_places_chain(self, graph, auction_events, key='_locations', serialize=True):
 		'''Add extraction and serialization of locations.'''
+		nodes = []
+		if key:
+			nodes.append(ExtractKeyedValues(key=key))
+		nodes.append(RecursiveExtractKeyedValue(key='part_of'))
 		places = graph.add_chain(
-			ExtractKeyedValues(key=key),
-			RecursiveExtractKeyedValue(key='part_of'),
+			*nodes,
 			_input=auction_events.output
 		)
 		if serialize:
@@ -653,11 +666,20 @@ class UtilityHelper:
 			data['part_of'] = parent_data
 		return add_crom_data(data=data, what=p)
 
+	def gci_number_id(self, content, id_class=None):
+		if id_class is None:
+			id_class = vocab.LocalNumber
+		catalog_id = id_class(ident='', content=content)
+		assignment = model.AttributeAssignment(ident=self.make_shared_uri('__gci_attribute_assignment'))
+		assignment.carried_out_by = self.static_instances.get_instance('Group', 'gci')
+		catalog_id.assigned_by = assignment
+		return catalog_id
+
 	def gri_number_id(self, content, id_class=None):
 		if id_class is None:
 			id_class = vocab.LocalNumber
 		catalog_id = id_class(ident='', content=content)
-		assignment = model.AttributeAssignment(ident='')
+		assignment = model.AttributeAssignment(ident=self.make_shared_uri('__gri_attribute_assignment'))
 		assignment.carried_out_by = self.static_instances.get_instance('Group', 'gri')
 		catalog_id.assigned_by = assignment
 		return catalog_id

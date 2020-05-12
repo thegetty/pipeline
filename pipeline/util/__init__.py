@@ -674,3 +674,11 @@ class GraphListSource:
 
 def rename_keys(mapping:dict):
 	return lambda d, p: {mapping[k] if k in mapping else k: v for k, v in d.items()}
+
+def _as_list(data):
+	if isinstance(data, list):
+		return data
+	elif data is None:
+		return []
+	else:
+		return [data]

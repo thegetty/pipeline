@@ -3,7 +3,6 @@ import os
 arches_models = {
 	'Event': 'event',
 	'Group': 'group',
-	'Journal': 'journal',
 	'Place': 'place',
 	'ProvenanceEntry': 'provenance_activity',
 	'Series': 'series',

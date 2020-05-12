@@ -6,11 +6,13 @@ import uuid
 import pprint
 import unittest
 from pathlib import Path
+from collections import defaultdict
 
 from cromulent import model, vocab, reader
 from cromulent.model import factory
 from pipeline.util import CromObjectMerger
 from pipeline.projects.sales import SalesPipeline
+from pipeline.projects.aata import AATAPipeline
 from pipeline.projects.sales.util import SalesTree
 from pipeline.nodes.basic import Serializer, AddArchesModel
 
@@ -199,3 +201,147 @@ class TestSalesPipelineOutput(unittest.TestCase):
 		pipeline.run()
 		self.prev_post_sales_map = pipeline.prev_post_sales_map
 		return writer.processed_output()
+
+##########################################################################################
+
+class AATATestPipeline(AATAPipeline):
+	'''
+	Test Provenance pipeline subclass that allows using a custom Writer.
+	'''
+	def __init__(self, writer, input_path, *args, **kwargs):
+		self.uid_tag_prefix	= 'tag:getty.edu,2019:digital:pipeline:TESTS:REPLACE-WITH-UUID#'
+		super().__init__(input_path, *args, **kwargs)
+		self.writer = writer
+
+	def serializer_nodes_for_model(self, *args, model=None, **kwargs):
+		nodes = []
+		if model:
+			nodes.append(AddArchesModel(model=model))
+		nodes.append(Serializer(compact=False))
+		nodes.append(self.writer)
+		return nodes
+
+	def get_services(self):
+		services = super().get_services()
+# 		services.update({
+# 		})
+		return services
+
+	def run(self, **options):
+		vocab.add_linked_art_boundary_check()
+		vocab.add_attribute_assignment_check()
+		services = self.get_services(**options)
+		super().run(services=services, **options)
+
+
+class TestAATAPipelineOutput(unittest.TestCase):
+	'''
+	Parse test CSV data and run the Provenance pipeline with the in-memory TestWriter.
+	Then verify that the serializations in the TestWriter object are what was expected.
+	'''
+	def setUp(self):
+		self.patterns = {
+			'abstracts_pattern': 'tests/data/aata/empty.xml',
+			'journals_pattern': 'tests/data/aata/empty.xml',
+			'series_pattern': 'tests/data/aata/empty.xml',
+			'people_pattern': 'tests/data/aata/empty.xml',
+			'corp_pattern': 'tests/data/aata/empty.xml',
+			'geog_pattern': 'tests/data/aata/empty.xml',
+			'subject_pattern': 'tests/data/aata/empty.xml',
+			'tal_pattern': 'tests/data/aata/empty.xml',
+		}
+		os.environ['QUIET'] = '1'
+
+	def tearDown(self):
+		pass
+
+	def run_pipeline(self, test_name):
+		input_path = os.getcwd()
+		
+		tests_path = Path(f'tests/data/aata/{test_name}')
+
+		patterns = {
+			'abstracts_pattern': 'AATA_[0-9]*.xml',
+			'journals_pattern': 'AATA*Journal.xml',
+			'series_pattern': 'AATA*Series.xml',
+			'people_pattern': 'Auth_person.xml',
+			'corp_pattern': 'Auth_corp.xml',
+			'geog_pattern': 'Auth_geog.xml',
+			'subject_pattern': 'Auth_subject.xml',
+			'tal_pattern': 'Auth_TAL.xml'
+		}
+
+		kwargs = self.patterns.copy()
+		for k, pattern in patterns.items():
+			files = list(tests_path.rglob(pattern))
+			if files:
+				kwargs[k] = str(tests_path / pattern)
+
+		writer = TestWriter()
+		pipeline = AATATestPipeline(
+				writer,
+				input_path,
+				models=MODELS,
+				limit=100,
+				debug=True,
+				**kwargs,
+		)
+		pipeline.run()
+		return writer.processed_output()
+
+	def verify_content(self, data, **kwargs):
+		for k, expected in kwargs.items():
+			self.assertIn(k, data)
+			got = data.get(k)
+			if isinstance(got, list):
+				values = [g['content'] for g in got]
+				self.assertIn(expected, values)
+			else:
+				value = got['content']
+				self.assertEqual(value, expected)
+
+	def verify_property(self, data, property, **kwargs):
+		for k, expected in kwargs.items():
+			self.assertIn(k, data)
+			got = data.get(k)
+			if isinstance(got, list):
+				values = [g[property] for g in got]
+				self.assertIn(expected, values)
+			else:
+				value = got[property]
+				self.assertEqual(value, expected)
+
+	def get_classification_labels(self, data):
+		cl = data.get('classified_as', [])
+		for c in cl:
+			clabel = c['_label']
+			yield clabel
+		
+	def get_typed_referrers(self, data):
+		return self.get_typed_content('referred_to_by', data)
+		
+	def get_typed_identifiers(self, data):
+		return self.get_typed_content('identified_by', data)
+		
+	def get_typed_content(self, prop, data):
+		identified_by = data.get(prop, [])
+		identifiers = defaultdict(set)
+		for i in identified_by:
+			content = i['content']
+			for clabel in self.get_classification_labels(i):
+				identifiers[clabel].add(content)
+		for k in identifiers.keys():
+			if len(identifiers[k]) == 1:
+				identifiers[k] = identifiers[k].pop()
+		return dict(identifiers)
+		
+	def verify_place_hierarchy(self, places, place, expected_names):
+		while place:
+			expected = expected_names.pop(0)
+			self.verify_content(place, identified_by=expected)
+			place = place.get('part_of', [])
+			if place:
+				i = place[0]['id']
+				place = places.get(i)
+		self.assertEqual(len(expected_names), 0)
+

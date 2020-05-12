@@ -22,6 +22,11 @@ if __name__ == '__main__':
 	abstracts_pattern = 'AATA_[0-9]*.xml'
 	journals_pattern = 'AATA*Journal.xml'
 	series_pattern = 'AATA*Series.xml'
+	people_pattern = 'Auth_person.xml'
+	corp_pattern = 'Auth_corp.xml'
+	geog_pattern = 'Auth_geog.xml'
+	subject_pattern = 'Auth_subject.xml'
+	tal_pattern = 'Auth_TAL.xml'
 
 	vocab.add_linked_art_boundary_check()
 
@@ -34,10 +39,15 @@ if __name__ == '__main__':
 		try:
 			aata_data_path = project_data_path('aata')
 			pipeline = AATAFilePipeline(
-				aata_data_path,
-				abstracts_pattern,
-				journals_pattern,
-				series_pattern,
+				input_path=aata_data_path,
+				abstracts_pattern=abstracts_pattern,
+				journals_pattern=journals_pattern,
+				series_pattern=series_pattern,
+				people_pattern=people_pattern,
+				corp_pattern=corp_pattern,
+				geog_pattern=geog_pattern,
+				subject_pattern=subject_pattern,
+				tal_pattern=tal_pattern,
 				output_path=output_file_path,
 				models=arches_models,
 				limit=LIMIT,

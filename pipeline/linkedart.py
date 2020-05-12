@@ -182,6 +182,18 @@ class MakeLinkedArtLinguisticObject(MakeLinkedArtRecord):
 		if 'label' in data:
 			name = set_la_name(thing, data['label'], title_type, set_label=True)
 
+		for author in data.get('created_by', []):
+			thing.created_by = author
+
+		for a in data.get('used_for', []):
+			thing.used_for = a
+
+		for a in data.get('about', []):
+			thing.about = a
+
+		for c in data.get('classified_as', []):
+			thing.classified_as = c
+
 		for t in data.get('translations', []):
 			n = set_la_name(thing, t, title_type)
 			if name is not None:
@@ -257,7 +269,6 @@ class MakeLinkedArtLinguisticObject(MakeLinkedArtRecord):
 		for dimension in data.get('dimensions', []):
 			thing.dimension = dimension
 
-
 	def __call__(self, data: dict):
 		if 'object_type' not in data:
 			data['object_type'] = model.LinguisticObject
@@ -322,6 +333,30 @@ class MakeLinkedArtAgent(MakeLinkedArtRecord):
 				n.classified_as = title_type
 				self.set_lo_properties(n, *properties)
 				thing.identified_by = n
+
+		for uri in data.get('exact_match', []):
+			thing.exact_match = uri
+
+		# Locations are names of residence places (P74 -> E53)
+		# XXX FIXME: Places are their own model
+		if 'places' in data:
+			for p in data['places']:
+				if isinstance(p, model.Place):
+					pl = p
+				elif isinstance(p, dict):
+					pl = get_crom_object(p)
+				else:
+					pl = model.Place(ident='', label=p)
+				#pl._label = p['label']
+				#nm = model.Name()
+				#nm.content = p['label']
+				#pl.identified_by = nm
+				#for s in p['sources']:
+				#		l = model.LinguisticObject(ident="urn:uuid:%s" % s[1])
+					# l._label = _row_label(s[2], s[3], s[4])
+				#	pl.referred_to_by = l
+				thing.residence = pl
+
 
 class MakeLinkedArtOrganization(MakeLinkedArtAgent):
 	def set_properties(self, data, thing):
@@ -468,32 +503,62 @@ class MakeLinkedArtPerson(MakeLinkedArtAgent):
 					pl = model.Name(ident='', content=p)
 				who.contact_point = pl
 
-		# Locations are names of residence places (P74 -> E53)
-		# XXX FIXME: Places are their own model
-		if 'places' in data:
-			for p in data['places']:
-				if isinstance(p, model.Place):
-					pl = p
-				elif isinstance(p, dict):
-					pl = get_crom_object(p)
-				else:
-					pl = model.Place(ident='', label=p)
-				#pl._label = p['label']
-				#nm = model.Name()
-				#nm.content = p['label']
-				#pl.identified_by = nm
-				#for s in p['sources']:
-				#		l = model.LinguisticObject(ident="urn:uuid:%s" % s[1])
-					# l._label = _row_label(s[2], s[3], s[4])
-				#	pl.referred_to_by = l
-				who.residence = pl
-
-		for uri in data.get('exact_match', []):
-			who.exact_match = uri
-
 	def __call__(self, data: dict):
 		if 'object_type' not in data:
 			data['object_type'] = model.Person
+		return super().__call__(data)
+
+class MakeLinkedArtPlace(MakeLinkedArtRecord):
+	TYPES = {
+		'city': vocab.instances['city'],
+		'province': vocab.instances['province'],
+		'state': vocab.instances['province'],
+		'country': vocab.instances['nation'],
+	}
+
+	def __init__(self, base_uri=None, *args, **kwargs):
+		super().__init__(*args, **kwargs)
+		self.base_uri = base_uri
+
+	def set_properties(self, data, thing):
+		name = data.get('name')
+		data.setdefault('names', [name])
+		super().set_properties(data, thing)
+
+		type_name = data.get('type', 'place').lower()
+		label = name
+		parent_data = data.get('part_of')
+
+		place_type = MakeLinkedArtPlace.TYPES.get(type_name)
+		parent = None
+		if parent_data:
+			parent_data = self(parent_data)
+			parent = get_crom_object(parent_data)
+			if label:
+				try:
+					label = f'{label}, {parent._label}'
+				except AttributeError:
+					print('*** NO LABEL IN PARENT:' + factory.toString(parent, False))
+
+		placeargs = {'label': label}
+		if data.get('uri'):
+			placeargs['ident'] = data['uri']
+
+		if place_type:
+			thing.classified_as = place_type
+		for c in data.get('classified_as', []):
+			thing.classified_as = c
+		if not name:
+			warnings.warn(f'Place with missing name on {thing.id}')
+		if parent:
+			# print(f'*** Setting parent on place object: {parent}')
+			thing.part_of = parent
+
+	def __call__(self, data: dict):
+		if 'object_type' not in data:
+			data['object_type'] = model.Place
+		if self.base_uri and not data.get('uri'):
+			data['uri'] = self.base_uri + urllib.parse.quote(data['name'])
 		return super().__call__(data)
 
 def make_la_place(data:dict, base_uri=None):

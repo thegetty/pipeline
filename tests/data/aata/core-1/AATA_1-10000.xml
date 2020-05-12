@@ -1,0 +1,123 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<AATA_XML p1:noNamespaceSchemaLocation="http://aata2-stage.getty.edu:8080/AATA_Bib_XML_Schema_v3.0.xsd" xmlns:p1="http://www.w3.org/2001/XMLSchema-instance">
+  <record>
+    <record_desc_group>
+      <doc_type>
+        <doc_code>BM</doc_code>
+        <doc_name>Book Monograph</doc_name>
+      </doc_type>
+      <doc_pub_date>
+        <date_string>1985</date_string>
+        <sort_year_start>1985</sort_year_start>
+        <sort_year_end>1985</sort_year_end>
+      </doc_pub_date>
+      <db_code>AATA</db_code>
+      <record_state>Published</record_state>
+      <record_online_date>20020701</record_online_date>
+      <editor_info>
+        <user_id>1</user_id>
+        <user_type>record_originator</user_type>
+        <first_name>AATA</first_name>
+        <last_name>Legacy Data Load</last_name>
+        <user_initials>LDL</user_initials>
+      </editor_info>
+    </record_desc_group>
+    <record_id_group>
+      <record_id>1</record_id>
+      <aata_id>27-546</aata_id>
+      <aata_id>1990-1</aata_id>
+    </record_id_group>
+    <authorship_group>
+      <primary_author>
+        <gaia_authority_id>17368</gaia_authority_id>
+        <gaia_authority_type>Person</gaia_authority_type>
+        <author_name>Petéus, Thomas</author_name>
+        <author_order>1</author_order>
+        <author_role_display>Author</author_role_display>
+        <author_role>Author</author_role>
+      </primary_author>
+    </authorship_group>
+    <title_group>
+      <primary>
+        <title>Méthodes modernes: description des méthodes modernes de restauration des peintures sur toile</title>
+        <title_translated>Modern methods: description of modern methods of restoration of canvas paintings</title_translated>
+      </primary>
+    </title_group>
+    <imprint_group>
+      <publisher>
+        <gaia_corp_id>3033</gaia_corp_id>
+        <publisher_name>Stiftelsen Västsvensk Konservatorsateljé</publisher_name>
+        <publisher_location>
+          <gaia_geog_id>135981</gaia_geog_id>
+          <location_name>Gothenburg</location_name>
+          <country_name>Sweden</country_name>
+        </publisher_location>
+      </publisher>
+    </imprint_group>
+    <physical_desc_group>
+      <pages>63 p.</pages>
+      <collation>44 ills., product table, bibliog.</collation>
+    </physical_desc_group>
+    <notes_group>
+      <lang_doc>English</lang_doc>
+      <lang_doc>Chinese</lang_doc>
+      <lang_doc>French</lang_doc>
+    </notes_group>
+    <abstract_group>
+      <abstract>Translation of a textbook for students at the Danish Royal Institute of Restoration, where the author teaches. According to him, traditional but controversial lining methods did not take the nature of the paint and support or the origin of damage into sufficient account and made excessive use of the vacuum hot table. The new methods he surveys show better possibilities. He explains how to set up and use the low-pressure cold lining table with nap-bond system; the R. Fieux electrostatic hold table; and the B. Hacke low-pressure table. Other techniques are presented; their designers are: the author, M. Scarff, W. Mitka, A. Albano, and B. Maxwell. Pressure, heat, humidification, and tension are the factors considered, and the following steps in treatment described are: flattening, impregnation, consolidation, reduction of tears, reinforcement of edges, relining. Damage and changes in texture and other technical problems are studied, and a final part deals with the synthetic products used in paintings restoration.</abstract>
+      <author_abstract_flag>no</author_abstract_flag>
+      <abstractor>
+        <user_id>612</user_id>
+        <first_name>Michele</first_name>
+        <last_name>Buchholz</last_name>
+        <user_initials>MB</user_initials>
+        <abstractor_full_name>Michele Buchholz</abstractor_full_name>
+      </abstractor>
+    </abstract_group>
+    <classification_group>
+      <class_order>1</class_order>
+      <class_code>G3</class_code>
+      <class_name>Pigments, paints, and paintings</class_name>
+    </classification_group>
+    <index_group>
+      <gaia_auth_id>124695</gaia_auth_id>
+      <gaia_auth_type>SH</gaia_auth_type>
+      <index_term>history of conservation</index_term>
+      <index_order>1</index_order>
+      <other_persistent_id>
+        <external_name>AAT</external_name>
+        <external_id>300379379</external_id>
+      </other_persistent_id>
+    </index_group>
+    <index_group>
+      <gaia_auth_id>125666</gaia_auth_id>
+      <gaia_auth_type>SH</gaia_auth_type>
+      <index_term>lining (process)</index_term>
+      <index_order>2</index_order>
+      <other_persistent_id>
+        <external_name>AAT</external_name>
+        <external_id>300162124</external_id>
+      </other_persistent_id>
+    </index_group>
+    <index_group>
+      <gaia_auth_id>126949</gaia_auth_id>
+      <gaia_auth_type>SH</gaia_auth_type>
+      <index_term>paintings (visual works)</index_term>
+      <index_order>3</index_order>
+      <other_persistent_id>
+        <external_name>AAT</external_name>
+        <external_id>300033618</external_id>
+      </other_persistent_id>
+    </index_group>
+    <index_group>
+      <gaia_auth_id>129667</gaia_auth_id>
+      <gaia_auth_type>SH</gaia_auth_type>
+      <index_term>textbooks</index_term>
+      <index_order>4</index_order>
+      <other_persistent_id>
+        <external_name>AAT</external_name>
+        <external_id>300026384</external_id>
+      </other_persistent_id>
+    </index_group>
+  </record>
+</AATA_XML>

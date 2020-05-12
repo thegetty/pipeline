@@ -1,0 +1,133 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<auth_geog_XML p1:noNamespaceSchemaLocation="http://aata2-stage.getty.edu:8080/AATA_Auth_geog_XML_Schema_v1.0.xsd" xmlns:p1="http://www.w3.org/2001/XMLSchema-instance">
+  <record>
+    <concept_group>
+      <gaia_auth_id>2</gaia_auth_id>
+      <record_status>Approved</record_status>
+      <vocab_contrib_status>Unknown</vocab_contrib_status>
+      <sub_code>used as link from corp body only</sub_code>
+      <editor_info>
+        <user_id>1</user_id>
+        <user_type>record_originator</user_type>
+        <first_name>AATA</first_name>
+        <last_name>Legacy Data Load</last_name>
+        <user_initials>LDL</user_initials>
+      </editor_info>
+      <rec_date_created>19941205</rec_date_created>
+      <rec_date_last_modified>19941205</rec_date_last_modified>
+      <place_type>nation</place_type>
+    </concept_group>
+    <term_group>
+      <gaia_term_id>2</gaia_term_id>
+      <term_type>main</term_type>
+      <lang_type>English</lang_type>
+      <term_name>Burundi</term_name>
+    </term_group>
+  </record>
+  <record>
+    <concept_group>
+      <gaia_auth_id>83</gaia_auth_id>
+      <record_status>Approved</record_status>
+      <vocab_contrib_status>Unknown</vocab_contrib_status>
+      <sub_code>used as link from corp body only</sub_code>
+      <editor_info>
+        <user_id>1</user_id>
+        <user_type>record_originator</user_type>
+        <first_name>AATA</first_name>
+        <last_name>Legacy Data Load</last_name>
+        <user_initials>LDL</user_initials>
+      </editor_info>
+      <editor_info>
+        <user_id>1198</user_id>
+        <user_type>last_updated_by</user_type>
+        <first_name>Karen</first_name>
+        <last_name>Karyadi</last_name>
+        <user_initials>KKA</user_initials>
+      </editor_info>
+      <rec_date_created>19941205</rec_date_created>
+      <rec_date_last_modified>20200305</rec_date_last_modified>
+      <place_type>state</place_type>
+      <country_name>United States</country_name>
+    </concept_group>
+    <term_group>
+      <gaia_term_id>83</gaia_term_id>
+      <term_type>main</term_type>
+      <lang_type>English</lang_type>
+      <term_name>California</term_name>
+      <country_name />
+    </term_group>
+    <term_group>
+      <gaia_term_id>16473</gaia_term_id>
+      <term_type>in-house shortcut</term_type>
+      <lang_type>English</lang_type>
+      <term_name>california</term_name>
+    </term_group>
+  </record>
+  <record>
+    <concept_group>
+      <gaia_auth_id>130791</gaia_auth_id>
+      <record_status>Approved</record_status>
+      <vocab_contrib_status>Synchronized</vocab_contrib_status>
+      <sub_code>used for indexing only</sub_code>
+      <editor_info>
+        <user_id>1</user_id>
+        <user_type>record_originator</user_type>
+        <first_name>AATA</first_name>
+        <last_name>Legacy Data Load</last_name>
+        <user_initials>LDL</user_initials>
+      </editor_info>
+      <rec_date_created>20080926</rec_date_created>
+      <rec_date_last_modified>20080926</rec_date_last_modified>
+      <place_type>island group</place_type>
+    </concept_group>
+    <term_group>
+      <gaia_term_id>3065</gaia_term_id>
+      <term_type>main</term_type>
+      <lang_type>English</lang_type>
+      <term_name>Caribbean Islands</term_name>
+    </term_group>
+  </record>
+  <record>
+    <concept_group>
+      <gaia_auth_id>132543</gaia_auth_id>
+      <record_status>Approved</record_status>
+      <vocab_contrib_status>Unknown</vocab_contrib_status>
+      <sub_code>used for indexing only</sub_code>
+      <editor_info>
+        <user_id>1</user_id>
+        <user_type>record_originator</user_type>
+        <first_name>AATA</first_name>
+        <last_name>Legacy Data Load</last_name>
+        <user_initials>LDL</user_initials>
+      </editor_info>
+      <editor_info>
+        <user_id>527</user_id>
+        <user_type>last_updated_by</user_type>
+        <first_name>Kari E.</first_name>
+        <last_name>Johnson</last_name>
+        <user_initials>KEJ</user_initials>
+      </editor_info>
+      <rec_date_created>20080926</rec_date_created>
+      <rec_date_last_modified>20141015</rec_date_last_modified>
+      <place_type>group of nations/states/cities</place_type>
+    </concept_group>
+    <term_group>
+      <gaia_term_id>4817</gaia_term_id>
+      <term_type>main</term_type>
+      <lang_type>English</lang_type>
+      <term_name>European Union</term_name>
+    </term_group>
+    <term_group>
+      <gaia_term_id>13402</gaia_term_id>
+      <term_type>variant</term_type>
+      <lang_type>English</lang_type>
+      <term_name>EU</term_name>
+    </term_group>
+    <exact_match_group>
+      <resource_brief_name>TGN</resource_brief_name>
+      <resource_full_name>Getty Thesaurus of geographic names [electronic resource]. [Los Angeles]: J. Paul Getty Trust, http://www.getty.edu/gri/vocabularies</resource_full_name>
+      <resource_id>7030305</resource_id>
+      <date_verified>20141015</date_verified>
+    </exact_match_group>
+  </record>
+</auth_geog_XML>

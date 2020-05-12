@@ -31,8 +31,8 @@ class ModelArticle(Configurable):
 		aata_ids = _as_list(data.get('aata_id'))
 		cid = data.get('collective_rec_id')
 
-		record['identifiers'] += [vocab.LocalNumber(ident='', content=aid) for aid in aata_ids]
-		record['identifiers'] += [vocab.LocalNumber(ident='', content=rid)]
+		record['identifiers'] += [self.helper.gci_number_id(aid) for aid in aata_ids]
+		record['identifiers'] += [self.helper.gci_number_id(rid, id_class=vocab.SystemNumber)]
 
 		if cid:
 			uri = self.helper.article_uri(cid)

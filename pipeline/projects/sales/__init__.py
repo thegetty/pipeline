@@ -989,7 +989,7 @@ class SalesPipeline(PipelineBase):
 		if serialize:
 			# write SALES data
 			self.add_serialization_chain(graph, auctions_of_lot.output, model=self.models['AuctionOfLot'], limit=1000)
-			self.add_serialization_chain(graph, private_sale_activities.output, model=self.models['Activity'], limit=1000)
+			self.add_serialization_chain(graph, private_sale_activities.output, model=self.models['AuctionOfLot'], limit=1000)
 			self.add_serialization_chain(graph, lottery_drawings.output, model=self.models['Drawing'], limit=1000)
 		return sales
 

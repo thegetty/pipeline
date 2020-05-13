@@ -215,6 +215,6 @@ def list_models():
 	p = output_path
 	models = [s.relative_to(output_path.parent) for s in p.glob('*') if s.is_dir()]
 	names = {v: k for k, v in settings.arches_models.items()}
-	items = sorted([(names.get(s.name, s), s) for s in models])
+	items = sorted([(names.get(s.name, str(s)), s) for s in models])
 	items_html = ''.join([f'<li><a href="/{s}">{label}</a></li>\n' for label, s in items])
 	return f'<ul>{items_html}</ul>'

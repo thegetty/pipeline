@@ -1,5 +1,7 @@
 output*
 data/*.sqlite
+data/old
+data/aata
 data/sales
 data/people
 data/aata/*.xml

@@ -20,7 +20,6 @@ COPY scripts scripts
 COPY pipeline pipeline
 COPY tests tests
 COPY data/common /data/common
-COPY data/aata/*.json /data/aata/
 COPY Makefile setup.py aata.py sales.py knoedler.py people.py settings.py ./
 
 FROM swift:latest

@@ -98,8 +98,8 @@ def convert(p):
 
 count = 0
 for filename in files:
-	print(f'[{os.getpid()}] {filename}')
 	p = Path(filename)
+# 	print(f'[{os.getpid()}] {filename}')
 	if p.is_dir():
 		for p in p.rglob('*.json'):
 			print(p)

@@ -319,7 +319,7 @@ class AddAcquisitionOrBidding(ProvenanceBase):
 		xfer = model.TransferOfCustody(ident=xfer_id, label=xfer_label)
 		xfer.transferred_custody_of = hmo
 		if purpose in self.custody_xfer_purposes:
-			xfer.specific_purpose = self.custody_xfer_purposes[purpose]
+			xfer.general_purpose = self.custody_xfer_purposes[purpose]
 
 		for seller_data in sellers:
 			seller = get_crom_object(seller_data)

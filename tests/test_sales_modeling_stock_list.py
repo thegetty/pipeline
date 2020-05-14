@@ -34,6 +34,7 @@ class PIRModelingTest_StockListSales(TestSalesPipelineOutput):
 		objects = output['model-object']
 		activities = output['model-activity']
 		texts = output['model-lo']
+# 		pprint.pprint(output)
 
 		expected_catalog_text_id = 'tag:getty.edu,2019:digital:pipeline:REPLACE-WITH-UUID:sales#CATALOG,Br-541'
 		expected_event_id = 'tag:getty.edu,2019:digital:pipeline:REPLACE-WITH-UUID:sales#STOCK_LIST-EVENT,Br-541'
@@ -70,13 +71,14 @@ class PIRModelingTest_StockListSales(TestSalesPipelineOutput):
 		'''
 		objects = output['model-object']
 		activities = output['model-activity']
+		lotauctions = output['model-auction-of-lot']
 		sets = output['model-set']
 		texts = output['model-lo']
 
 		hmo_key = 'tag:getty.edu,2019:digital:pipeline:REPLACE-WITH-UUID:sales#OBJ,Br-541,%5B0001%5D,1808'
 		hmo = objects[hmo_key]
 		
-		sale_curr = activities['tag:getty.edu,2019:digital:pipeline:REPLACE-WITH-UUID:sales#AUCTION,Br-541,%5B0001%5D,1808']
+		sale_curr = lotauctions['tag:getty.edu,2019:digital:pipeline:REPLACE-WITH-UUID:sales#AUCTION,Br-541,%5B0001%5D,1808']
 		
 		event_key = 'tag:getty.edu,2019:digital:pipeline:REPLACE-WITH-UUID:sales#STOCK_LIST-EVENT,Br-541'
 		sale_event = activities[event_key]

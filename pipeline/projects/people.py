@@ -140,7 +140,7 @@ class AddPerson(Configurable):
 
 		addresses = {l.strip() for l in data.get('address', '').split(';')} - {''}
 		for address in addresses:
-			contact = vocab.Name(ident='', content=address)
+			contact = model.Identifier(ident='', content=address)
 			contact_data = add_crom_data(data={}, what=contact)
 			data['contact_point'].append(contact_data)
 

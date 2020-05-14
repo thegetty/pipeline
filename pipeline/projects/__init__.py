@@ -178,7 +178,10 @@ class PersonIdentity:
 		else:
 			classified_as = [vocab.Active]
 		
-		a = vocab.make_multitype_obj(*classified_as, ident='', label=f'Professional activity of {name}')
+		args = {'ident': '', 'label': f'Professional activity of {name}'}
+		if 'ident' in kwargs:
+			args['ident'] = kwargs['ident']
+		a = vocab.make_multitype_obj(*classified_as, **args)
 
 		ts = self.active_timespan(century=century, date_range=date_range, **kwargs)
 		if ts:
@@ -275,7 +278,8 @@ class PersonIdentity:
 		name = data['label']
 		active = self.clamped_timespan_args(data, name)
 		if active:
-			a = self.professional_activity(name, **active)
+			pact_uri = data['uri'] + '-ProfAct-active'
+			a = self.professional_activity(name, ident=pact_uri, **active)
 			data['events'].append(a)
 
 		for key in ('notes', 'brief_notes', 'working_notes'):
@@ -311,14 +315,16 @@ class PersonIdentity:
 					century = int(dated_nationality_match.group(2))
 					group_label = self.anonymous_group_label(role, century=century, nationality=nationality)
 					data['label'] = group_label
-					a = self.professional_activity(group_label, century=century, narrow=True)
+					pact_uri = data['uri'] + '-ProfAct-dated-natl'
+					a = self.professional_activity(group_label, ident=pact_uri, century=century, narrow=True)
 					data['events'].append(a)
 			elif dated_match:
 				with suppress(ValueError):
 					century = int(dated_match.group(1))
 					group_label = self.anonymous_group_label(role, century=century)
 					data['label'] = group_label
-					a = self.professional_activity(group_label, century=century, narrow=True)
+					pact_uri = data['uri'] + '-ProfAct-dated'
+					a = self.professional_activity(group_label, ident=pact_uri, century=century, narrow=True)
 					data['events'].append(a)
 			elif period_match:
 				period = period_match.group(1).lower()

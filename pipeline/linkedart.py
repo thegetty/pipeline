@@ -500,7 +500,7 @@ class MakeLinkedArtPerson(MakeLinkedArtAgent):
 				elif isinstance(p, dict):
 					pl = get_crom_object(p)
 				else:
-					pl = model.Name(ident='', content=p)
+					pl = model.Identifier(ident='', content=p)
 				who.contact_point = pl
 
 	def __call__(self, data: dict):

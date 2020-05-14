@@ -60,7 +60,7 @@ from pipeline.projects.aata.corps import ModelCorp
 
 legacyIdentifier = None # TODO: aat:LegacyIdentifier?
 doiIdentifier = vocab.DoiIdentifier
-variantTitleIdentifier = vocab.Identifier # TODO: aat for variant titles?
+variantTitleIdentifier = model.Identifier # TODO: aat for variant titles?
 
 # utility functions
 

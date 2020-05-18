@@ -217,5 +217,5 @@ Swift was chosen because:
 * it was performant both as a compiled language and because it can take full advantage of hardware-based parallelism
 * it was simple to add support in the Docker image
 
-`scripts/generate_uri_uuids.swift` updated the URI to UUID mapping file in-place.
-Once updated, the actual rewriting of URIs in the JSON-LD files is an embarrassingly parallel task (module the enumerating and partitioning of the JSON-LD files) and suitable for the Python implementation found in `scripts/rewrite_uris_to_uuids_parallel.py`.
+`scripts/generate_uri_uuids.swift` updates the URI to UUID mapping file in-place.
+Once updated, the actual rewriting of URIs in the JSON-LD files is an embarrassingly parallel task (modulo the enumeration and partitioning of the JSON-LD files) and suitable for the Python implementation found in `scripts/rewrite_uris_to_uuids_parallel.py`.

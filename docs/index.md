@@ -196,7 +196,7 @@ The keys of the object, when prepended with the special `tag:` URI, result in th
 For example, `"shared#PERSON,AUTH,SCHOOF"` represents the URI `<tag:getty.edu,2019:digital:pipeline:REPLACE-WITH-UUID:shared#PERSON,AUTH,SCHOOF>`.
 
 The values of the object are UUID values, encoded in Base64.
-This encoded is used to reduce the overall size of the JSON file due to memory pressure and resulting problems that results in Python as the file size approached 2GB (at the time of writing, May 2020, the size of the mapping file is roughly 1.6GB).
+This encoded is used to reduce the overall size of the JSON file due to memory pressure and problems that result in Python as the file size approaches 2GB (at the time of writing, May 2020, the size of the mapping file is roughly 1.6GB).
 It was chosen as a reasonable balance of size reduction and portability (being easily decoded in both Python and Swift).
 For example, `"mBy40hS4QhqKLb/fqqgPgg=="` represents the UUID `<urn:uuid:981cb8d2-14b8-421a-8a2d-bfdfaaa80f82>`.
 

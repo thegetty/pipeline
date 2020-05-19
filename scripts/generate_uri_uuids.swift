@@ -143,7 +143,12 @@ func process(map: [String:String], path pathu: URL, prefix: String) -> [String:S
 		} catch {}
 	}
 	print("\n")
-	process_queue.sync(flags: .barrier) {}
+	process_queue.sync(flags: .barrier) {
+		// ensure no more tasks are added to the serial queue
+	}
+	serial.sync {
+		// ensure all serial tasks have completed updating the found_uris set
+	}
 
 	let uris = found_uris.subtracting(map_keys)
 	let end = DispatchTime.now()
@@ -153,7 +158,7 @@ func process(map: [String:String], path pathu: URL, prefix: String) -> [String:S
 	let assignments = assign_uuids(for: uris, prefix: prefix)
 //	try! printDict("assignments", assignments)
 	print("\(count) file processed in \(elapsed)s")
-	print("\(found_uris.count) found URIs")
+	print("\(found_uris.count) found un-defined URIs")
 	print("\(map_keys.count) pre-defined URIs")
 	print("\(uris.count) URIs needing assignment")
 

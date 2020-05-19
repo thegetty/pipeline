@@ -159,12 +159,12 @@ def set_la_name(thing, value, title_type=None, set_label=False):
 		label = value
 		language = None
 	if set_label:
+		if not label:
+			warnings.warn(f'Setting empty label on {thing.id}')
 		thing._label = label
 	name = model.Name(ident='', content=label)
 	if title_type is not None:
 		name.classified_as = title_type
-	if not label:
-		warnings.warn(f'Setting empty name on {thing.id}')
 	thing.identified_by = name
 	if language is not None:
 		name.language = language

@@ -5,6 +5,8 @@
 * [Table of Contents](#table-of-contents)
 * [Pipeline Infrastructure](#pipeline-infrastructure)
 * [Code and File Organization](#code-and-file-organization)
+	* [Bonobo](#bonobo)
+	* [File Structure Overview](#file-structure-overview)
 * [Projects](#projects)
     * [Provenance Index](#provenance-index)
         * [Sales](#sales)
@@ -40,28 +42,28 @@ The components are run sequentially and use Bonobo "services" as a way to pass d
 
 The overall structure of files in the repository:
 
-* `Dockerfile` - Used to build the Docker image which allows the pipeline to run in AWS
-* `Makefile` - Used in conjunction with `Dockerfile` to both build the Docker image as well as run code within that image
-* `aata.py` - Script used to start the AATA pipeline
-* `data` - Common and per-project data files (JSON files are loaded automatically as Bonobo "services")
-* `docs` - Documentation
-* `knoedler.py` - Script used to start the Knoedler pipeline
-* `people.py` - Script used to start the People pipeline
-* `pipeline` - Python code
-    * `execution.py` - Bonobo-compatible, single-threaded graph evaluation
-    * `io` - Code related to file I/O
-    * `linkedart.py` - Shared code to create `cromulent` objects from python data dictionaries
-    * `nodes` - Common classes/functions that are used as Bonobo graph nodes
-    * `projects` - Per-project pipeline implementation
-    * `provenance` - Shared base class used by the provenance project pipelines (Sales and Knoedler)
-    * `util` - Utility classes/functions used throughout the code
-* `requirements.txt` - Python dependencies
-* `sales.py` - Script used to start the Sales pipeline
-* `scripts` - Scripts used in running the pipeline, and post-processing data
-* `settings.py` - Some configuration values that are used in the pipeline code
-* `setup.py` - Python package management
-* `tests` - Tests
-* `wsgi.py` - A flask-based webserver to allow simple visualization of JSON-LD output files
+* [`Dockerfile`](../Dockerfile) - Used to build the Docker image which allows the pipeline to run in AWS
+* [`Makefile`](../Makefile) - Used in conjunction with [`Dockerfile`](../Dockerfile) to both build the Docker image as well as run code within that image
+* [`aata.py`](../aata.py) - Script used to start the AATA pipeline
+* [`data`](../data/) - Common and per-project data files (JSON files are loaded automatically as Bonobo "services")
+* [`docs`](../docs/) - Documentation
+* [`knoedler.py`](../knoedler.py) - Script used to start the Knoedler pipeline
+* [`people.py`](../people.py) - Script used to start the People pipeline
+* [`pipeline`](../pipeline/) - Python code
+    * [`execution.py`](../pipeline/execution.py) - Bonobo-compatible, single-threaded graph evaluation
+    * [`io`](../pipeline/io/) - Code related to file I/O
+    * [`linkedart.py`](../pipeline/linkedart.py) - Shared code to create `cromulent` objects from python data dictionaries
+    * [`nodes`](../pipeline/nodes/) - Common classes/functions that are used as Bonobo graph nodes
+    * [`projects`](../pipeline/projects/) - Per-project pipeline implementation
+    * [`provenance`](../pipeline/provenance/) - Shared base class used by the provenance project pipelines (Sales and Knoedler)
+    * [`util`](../pipeline/util/) - Utility classes/functions used throughout the code
+* [`requirements.txt`](../requirements.txt) - Python dependencies
+* [`sales.py`](../sales.py) - Script used to start the Sales pipeline
+* [`scripts`](../scripts/) - Scripts used in running the pipeline, and post-processing data
+* [`settings.py`](../settings.py) - Some configuration values that are used in the pipeline code
+* [`setup.py`](../setup.py) - Python package management
+* [`tests`](../tests/) - Tests
+* [`wsgi.py`](../wsgi.py) - A flask-based webserver to allow simple visualization of JSON-LD output files
 
 ## Projects
 
@@ -147,7 +149,7 @@ Subsequently, places that are referenced by an internal ID are assigned a URI co
 ## Running in AWS
 
 The pipeline code and tooling has been constructed to allow it to run entirely on a virtual machine in AWS.
-To do this, each project has a `run` script (in `scripts/`) which orchestrates a number of tasks:
+To do this, each project has a `run` script (in [`scripts/`](../scripts/)) which orchestrates a number of tasks:
 
 * Pulls the most recent code in the `aws` branch from GitHub
 * Builds a Docker image with that code (via the `dockerimage` Makefile target)
@@ -210,12 +212,12 @@ The URI to UUID mapping process involves:
 * generating new UUID values for each such URI
 
 Due to the performance-sensitive nature of this process, we found that a Python implementation was not suitable.
-For this reason, a small Swift program (`scripts/generate_uri_uuids.swift`) was written to perform this task.
+For this reason, a small Swift program ([`scripts/generate_uri_uuids.swift`](../scripts/generate_uri_uuids.swift)) was written to perform this task.
 Swift was chosen because:
 
 * it could concisely represented the task
 * it was performant both as a compiled language and because it can take full advantage of hardware-based parallelism
 * it was simple to add support in the Docker image
 
-`scripts/generate_uri_uuids.swift` updates the URI to UUID mapping file in-place.
-Once updated, the actual rewriting of URIs in the JSON-LD files is an embarrassingly parallel task (modulo the enumeration and partitioning of the JSON-LD files) and suitable for the Python implementation found in `scripts/rewrite_uris_to_uuids_parallel.py`.
+[`scripts/generate_uri_uuids.swift`](../scripts/generate_uri_uuids.swift) updates the URI to UUID mapping file in-place.
+Once updated, the actual rewriting of URIs in the JSON-LD files is an embarrassingly parallel task (modulo the enumeration and partitioning of the JSON-LD files) and suitable for the Python implementation found in [`scripts/rewrite_uris_to_uuids_parallel.py`](../scripts/rewrite_uris_to_uuids_parallel.py).

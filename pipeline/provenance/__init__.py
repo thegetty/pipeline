@@ -59,7 +59,10 @@ class ProvenanceBase(Configurable):
 			make_label = _make_label_default
 
 		tx = vocab.ProvenanceEntry(ident=ident)
-		tx._label = make_label(*tx_label_args)
+		tx_label = make_label(*tx_label_args)
+		tx._label = tx_label
+		tx.identified_by = model.Name(ident='', content=tx_label)
+
 		if current_tx:
 			if previous:
 				tx.ends_before_the_start_of = current_tx

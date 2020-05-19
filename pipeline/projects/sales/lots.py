@@ -208,7 +208,9 @@ class AddAuctionOfLot(Configurable):
 			tx_uri = self.helper.transaction_uri_for_lot(auction_data, data)
 			lots = self.helper.lots_in_transaction(auction_data, data)
 			tx = vocab.ProvenanceEntry(ident=tx_uri)
-			tx._label = prov_entry_label(self.helper, sale_type, transaction, 'of', cno, lots, date)
+			tx_label = prov_entry_label(self.helper, sale_type, transaction, 'of', cno, lots, date)
+			tx._label = tx_label
+			tx.identified_by = model.Name(ident='', content=tx_label)
 			lot.caused = tx
 			tx_data = {'uri': tx_uri}
 

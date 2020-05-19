@@ -40,28 +40,28 @@ The components are run sequentially and use Bonobo "services" as a way to pass d
 
 The overall structure of files in the repository:
 
-* `Dockerfile` - Used to build the Docker image which allows the pipeline to run in AWS
-* `Makefile` - Used in conjunction with `Dockerfile` to both build the Docker image as well as run code within that image
-* `aata.py` - Script used to start the AATA pipeline
-* `data` - Common and per-project data files (JSON files are loaded automatically as Bonobo "services")
-* `docs` - Documentation
-* `knoedler.py` - Script used to start the Knoedler pipeline
-* `people.py` - Script used to start the People pipeline
-* `pipeline` - Python code
-    * `execution.py` - Bonobo-compatible, single-threaded graph evaluation
-    * `io` - Code related to file I/O
-    * `linkedart.py` - Shared code to create `cromulent` objects from python data dictionaries
-    * `nodes` - Common classes/functions that are used as Bonobo graph nodes
-    * `projects` - Per-project pipeline implementation
-    * `provenance` - Shared base class used by the provenance project pipelines (Sales and Knoedler)
-    * `util` - Utility classes/functions used throughout the code
-* `requirements.txt` - Python dependencies
-* `sales.py` - Script used to start the Sales pipeline
-* `scripts` - Scripts used in running the pipeline, and post-processing data
-* `settings.py` - Some configuration values that are used in the pipeline code
-* `setup.py` - Python package management
-* `tests` - Tests
-* `wsgi.py` - A flask-based webserver to allow simple visualization of JSON-LD output files
+* [`Dockerfile`](../Dockerfile) - Used to build the Docker image which allows the pipeline to run in AWS
+* [`Makefile`](../Makefile) - Used in conjunction with [`data`](../data) to both build the Docker image as well as run code within that image
+* [`aata.py`](../aata.py) - Script used to start the AATA pipeline
+* [`data`](../data/) - Common and per-project data files (JSON files are loaded automatically as Bonobo "services")
+* [`docs`](../docs/) - Documentation
+* [`knoedler.py`](../knoedler.py) - Script used to start the Knoedler pipeline
+* [`people.py`](../people.py) - Script used to start the People pipeline
+* [`pipeline`](../pipeline/) - Python code
+    * [`execution.py`](../pipeline/execution.py) - Bonobo-compatible, single-threaded graph evaluation
+    * [`io`](../pipeline/io/) - Code related to file I/O
+    * [`linkedart.py`](../pipeline/linkedart.py) - Shared code to create `cromulent` objects from python data dictionaries
+    * [`nodes`](../pipeline/nodes/) - Common classes/functions that are used as Bonobo graph nodes
+    * [`projects`](../pipeline/projects/) - Per-project pipeline implementation
+    * [`provenance`](../pipeline/provenance/) - Shared base class used by the provenance project pipelines (Sales and Knoedler)
+    * [`util`](../pipeline/util/) - Utility classes/functions used throughout the code
+* [`requirements.txt`](../requirements.txt) - Python dependencies
+* [`sales.py`](../sales.py) - Script used to start the Sales pipeline
+* [`scripts`](../scripts/) - Scripts used in running the pipeline, and post-processing data
+* [`settings.py`](../settings.py) - Some configuration values that are used in the pipeline code
+* [`setup.py`](../setup.py) - Python package management
+* [`tests`](../tests/) - Tests
+* [`wsgi.py`](../wsgi.py) - A flask-based webserver to allow simple visualization of JSON-LD output files
 
 ## Projects
 

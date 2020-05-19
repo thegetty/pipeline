@@ -291,14 +291,17 @@ class ModelArticle(Configurable):
 	@staticmethod
 	def model_index_group(record, data):
 		record.setdefault('indexing', [])
-
 		term = data['index_term']
+		auth_type = data.get('gaia_auth_type')
 		opids = _as_list(data.get('other_persistent_id'))
 		for opid in opids:
 			eid = opid['external_id']
-			uri = f'http://vocab.getty.edu/aat/{eid}'
-			t = model.Type(ident=uri, label=term)
-			record['indexing'].append(t)
+			ename = opid['external_name']
+			if ename in ('AAT', 'ULAN', 'TGN'):
+				v = ename.lower()
+				uri = f'http://vocab.getty.edu/{v}/{eid}'
+				t = model.Type(ident=uri, label=term)
+				record['indexing'].append(t)
 
 	def add_title(self, data):
 		'''

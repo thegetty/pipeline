@@ -258,7 +258,7 @@ class PopulateSalesObject(Configurable, pipeline.linkedart.PopulateObject):
 		self._populate_object_prev_post_sales(data, now_key, post_sale_map)
 		for p in data.get('portal', []):
 			url = p['portal_url']
-			hmo.referred_to_by = vocab.WebPage(ident=url)
+			hmo.referred_to_by = vocab.WebPage(ident=url, label=url)
 
 		if 'title' in data:
 			title = data['title']

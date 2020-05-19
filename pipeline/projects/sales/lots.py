@@ -156,8 +156,6 @@ class AddAuctionOfLot(Configurable):
 			url = auction_data['link_to_pdf']
 			page = vocab.WebPage(ident=url, label=url)
 			lot.referred_to_by = page
-			data.setdefault('_texts', [])
-			data['_texts'].append(add_crom_data(data={}, what=page))
 
 		for problem_key, problem in problematic_records.get('lots', []):
 			# TODO: this is inefficient, but will probably be OK so long as the number

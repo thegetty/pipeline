@@ -154,9 +154,7 @@ class AddAuctionOfLot(Configurable):
 
 		if 'link_to_pdf' in auction_data:
 			url = auction_data['link_to_pdf']
-			page_url = self.helper.make_shared_uri('WEB', url)
-			page = vocab.WebPage(ident=page_url, label=url)
-			page.digitally_carried_by = model.DigitalObject(ident=url)
+			page = vocab.WebPage(ident=url, label=url)
 			lot.referred_to_by = page
 			data.setdefault('_texts', [])
 			data['_texts'].append(add_crom_data(data={}, what=page))

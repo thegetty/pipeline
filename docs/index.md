@@ -147,7 +147,7 @@ Subsequently, places that are referenced by an internal ID are assigned a URI co
 ## Running in AWS
 
 The pipeline code and tooling has been constructed to allow it to run entirely on a virtual machine in AWS.
-To do this, each project has a `run` script (in `scripts/`) which orchestrates a number of tasks:
+To do this, each project has a `run` script (in [`scripts/`](../scripts/)) which orchestrates a number of tasks:
 
 * Pulls the most recent code in the `aws` branch from GitHub
 * Builds a Docker image with that code (via the `dockerimage` Makefile target)
@@ -210,12 +210,12 @@ The URI to UUID mapping process involves:
 * generating new UUID values for each such URI
 
 Due to the performance-sensitive nature of this process, we found that a Python implementation was not suitable.
-For this reason, a small Swift program (`scripts/generate_uri_uuids.swift`) was written to perform this task.
+For this reason, a small Swift program ([`scripts/generate_uri_uuids.swift`](../scripts/generate_uri_uuids.swift)) was written to perform this task.
 Swift was chosen because:
 
 * it could concisely represented the task
 * it was performant both as a compiled language and because it can take full advantage of hardware-based parallelism
 * it was simple to add support in the Docker image
 
-`scripts/generate_uri_uuids.swift` updates the URI to UUID mapping file in-place.
-Once updated, the actual rewriting of URIs in the JSON-LD files is an embarrassingly parallel task (modulo the enumeration and partitioning of the JSON-LD files) and suitable for the Python implementation found in `scripts/rewrite_uris_to_uuids_parallel.py`.
+[`scripts/generate_uri_uuids.swift`](../scripts/generate_uri_uuids.swift) updates the URI to UUID mapping file in-place.
+Once updated, the actual rewriting of URIs in the JSON-LD files is an embarrassingly parallel task (modulo the enumeration and partitioning of the JSON-LD files) and suitable for the Python implementation found in [`scripts/rewrite_uris_to_uuids_parallel.py`](../scripts/rewrite_uris_to_uuids_parallel.py).

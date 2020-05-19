@@ -1494,7 +1494,7 @@ class KnoedlerPipeline(PipelineBase):
 			_input=hmos.output
 		)
 
-		consigners = graph.add_chain( ExtractKeyedValue(key='_consigner'), _input=objects.output )
+# 		consigners = graph.add_chain( ExtractKeyedValue(key='_consigner'), _input=objects.output )
 		artists = graph.add_chain(
 			ExtractKeyedValues(key='_artists'),
 			_input=objects.output
@@ -1504,7 +1504,7 @@ class KnoedlerPipeline(PipelineBase):
 			self.add_serialization_chain(graph, people.output, model=self.models['Person'])
 			self.add_serialization_chain(graph, hmos.output, model=self.models['HumanMadeObject'])
 			self.add_serialization_chain(graph, texts.output, model=self.models['LinguisticObject'])
-			self.add_serialization_chain(graph, consigners.output, model=self.models['Group'])
+# 			self.add_serialization_chain(graph, consigners.output, model=self.models['Group'])
 			self.add_serialization_chain(graph, artists.output, model=self.models['Person'])
 		return objects
 

@@ -41,7 +41,7 @@ The components are run sequentially and use Bonobo "services" as a way to pass d
 The overall structure of files in the repository:
 
 * [`Dockerfile`](../Dockerfile) - Used to build the Docker image which allows the pipeline to run in AWS
-* [`Makefile`](../Makefile) - Used in conjunction with [`data`](../data) to both build the Docker image as well as run code within that image
+* [`Makefile`](../Makefile) - Used in conjunction with [`Dockerfile`](../Dockerfile) to both build the Docker image as well as run code within that image
 * [`aata.py`](../aata.py) - Script used to start the AATA pipeline
 * [`data`](../data/) - Common and per-project data files (JSON files are loaded automatically as Bonobo "services")
 * [`docs`](../docs/) - Documentation

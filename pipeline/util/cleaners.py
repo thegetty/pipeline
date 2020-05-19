@@ -103,6 +103,7 @@ _US_STATES = {
 	'CO': 'Colorado',
 	'CT': 'Connecticut',
 	'DC': 'District of Columbia',
+	'D.C.': 'District of Columbia', # Some of the data uses syntax with dots for DC
 	'DE': 'Delaware',
 	'FL': 'Florida',
 	'GA': 'Georgia',

@@ -129,7 +129,7 @@ class PopulateAuctionEvent(Configurable):
 		for p in data.get('portal', []):
 			url = p['portal_url']
 			if url.startswith('http'):
-				auction.referred_to_by = vocab.WebPage(ident=url)
+				auction.referred_to_by = vocab.WebPage(ident=url, label=url)
 			else:
 				warnings.warn(f'*** Portal URL value does not appear to be a valid URL: {url}')
 

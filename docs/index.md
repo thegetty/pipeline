@@ -5,6 +5,8 @@
 * [Table of Contents](#table-of-contents)
 * [Pipeline Infrastructure](#pipeline-infrastructure)
 * [Code and File Organization](#code-and-file-organization)
+	* [Bonobo](#bonobo)
+	* [File Structure Overview](#file-structure-overview)
 * [Projects](#projects)
     * [Provenance Index](#provenance-index)
         * [Sales](#sales)

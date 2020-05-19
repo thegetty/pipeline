@@ -42,10 +42,10 @@ date >> $LOGFILE
 
 echo "Pipeline ${GITREV}; ${DATETIME}" >> $INFOFILE
 
-tar --exclude='uri_to_uuid_map.json' --exclude='json_files.txt' --exclude='*.nq' -c -C $OUTPUTPATH $DATANAME | pigz > $JSON_TARFILE
+tar --exclude 'json_files.txt' --exclude 'meta.nq' --exclude 'all.nq.gz' --exclude='uri_to_uuid_map.json' --exclude='json_files.txt' --exclude='*.nq' -c -C $OUTPUTPATH $DATANAME | pigz > $JSON_TARFILE
 echo "Created ${JSON_TARFILE}" | tee -a $LOGFILE
 
-tar --exclude='uri_to_uuid_map.json' --exclude='*.json' --exclude '*.gz' -c -C $OUTPUTPATH $DATANAME | pigz > $NQ_TARFILE
+tar --exclude 'json_files.txt' --exclude 'meta.nq' --exclude 'all.nq.gz' --exclude='uri_to_uuid_map.json' --exclude='*.json' --exclude '*.gz' -c -C $OUTPUTPATH $DATANAME | pigz > $NQ_TARFILE
 echo "Created ${NQ_TARFILE}" | tee -a $LOGFILE
 
 aws s3 cp $JSON_TARFILE "${AWS_OUTPUTPATH}/"

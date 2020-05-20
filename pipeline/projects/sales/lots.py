@@ -576,7 +576,9 @@ class AddAcquisitionOrBidding(ProvenanceBase):
 
 		if amnts:
 			bidding_id = hmo.id + '-Bidding'
-			all_bids = model.Activity(ident=bidding_id, label=f'Bidding on {cno} {lno} ({date})')
+			all_bids_label = f'Bidding on {cno} {lno} ({date})'
+			all_bids = model.Activity(ident=bidding_id, label=all_bids_label)
+			all_bids.identified_by = model.Name(ident='', content=all_bids_label)
 			for tx_data in prev_procurements:
 				tx = get_crom_object(tx_data)
 				all_bids.starts_after_the_end_of = tx
@@ -593,15 +595,13 @@ class AddAcquisitionOrBidding(ProvenanceBase):
 				try:
 					amnt_label = amnt._label
 					bid_label = f'Bid of {amnt_label} on {cno} {lno} ({date})'
-					bid._label = bid_label
-					bid.identified_by = model.Name(ident='', content=bid_label)
 					prop = model.PropositionalObject(ident=prop_id, label=f'Promise to pay {amnt_label}')
 				except AttributeError:
 					bid_label = f'Bid on {cno} {lno} ({date})'
-					bid._label = bid_label
-					bid.identified_by = model.Name(ident='', content=bid_label)
 					prop = model.PropositionalObject(ident=prop_id, label=f'Promise to pay')
 
+				bid._label = bid_label
+				bid.identified_by = model.Name(ident='', content=bid_label)
 				prop.refers_to = amnt
 				bid.created = prop
 

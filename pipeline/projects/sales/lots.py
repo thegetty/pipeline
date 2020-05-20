@@ -86,10 +86,11 @@ class AddAuctionOfLot(Configurable):
 
 	def set_lot_objects(self, lot, cno, lno, auction_of_lot_uri, data, sale_type):
 		'''Associate the set of objects with the auction lot.'''
-		set_type = vocab.AuctionLotSet if sale_type == 'Auction' else vocab.CollectionSet
-		coll = set_type(ident=f'{auction_of_lot_uri}-Set')
 		shared_lot_number = self.helper.shared_lot_number_from_lno(lno)
-		coll._label = f'Object Set for Lot {cno} {shared_lot_number}'
+		set_type = vocab.AuctionLotSet if sale_type == 'Auction' else vocab.CollectionSet
+		coll_label = f'Object Set for Lot {cno} {shared_lot_number}'
+		coll = set_type(ident=f'{auction_of_lot_uri}-Set', label=coll_label)
+		coll.identified_by = model.Name(ident='', content=coll_label)
 		est_price = data.get('estimated_price')
 		if est_price:
 			coll.dimension = get_crom_object(est_price)
@@ -576,7 +577,9 @@ class AddAcquisitionOrBidding(ProvenanceBase):
 
 		if amnts:
 			bidding_id = hmo.id + '-Bidding'
-			all_bids = model.Activity(ident=bidding_id, label=f'Bidding on {cno} {lno} ({date})')
+			all_bids_label = f'Bidding on {cno} {lno} ({date})'
+			all_bids = model.Activity(ident=bidding_id, label=all_bids_label)
+			all_bids.identified_by = model.Name(ident='', content=all_bids_label)
 			for tx_data in prev_procurements:
 				tx = get_crom_object(tx_data)
 				all_bids.starts_after_the_end_of = tx
@@ -592,12 +595,14 @@ class AddAcquisitionOrBidding(ProvenanceBase):
 				prop_id = hmo.id + f'-Bid-{seq_no}-Promise'
 				try:
 					amnt_label = amnt._label
-					bid._label = f'Bid of {amnt_label} on {cno} {lno} ({date})'
+					bid_label = f'Bid of {amnt_label} on {cno} {lno} ({date})'
 					prop = model.PropositionalObject(ident=prop_id, label=f'Promise to pay {amnt_label}')
 				except AttributeError:
-					bid._label = f'Bid on {cno} {lno} ({date})'
+					bid_label = f'Bid on {cno} {lno} ({date})'
 					prop = model.PropositionalObject(ident=prop_id, label=f'Promise to pay')
 
+				bid._label = bid_label
+				bid.identified_by = model.Name(ident='', content=bid_label)
 				prop.refers_to = amnt
 				bid.created = prop
 

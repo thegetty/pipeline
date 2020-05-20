@@ -86,10 +86,11 @@ class AddAuctionOfLot(Configurable):
 
 	def set_lot_objects(self, lot, cno, lno, auction_of_lot_uri, data, sale_type):
 		'''Associate the set of objects with the auction lot.'''
-		set_type = vocab.AuctionLotSet if sale_type == 'Auction' else vocab.CollectionSet
-		coll = set_type(ident=f'{auction_of_lot_uri}-Set')
 		shared_lot_number = self.helper.shared_lot_number_from_lno(lno)
-		coll._label = f'Object Set for Lot {cno} {shared_lot_number}'
+		set_type = vocab.AuctionLotSet if sale_type == 'Auction' else vocab.CollectionSet
+		coll_label = f'Object Set for Lot {cno} {shared_lot_number}'
+		coll = set_type(ident=f'{auction_of_lot_uri}-Set', label=coll_label)
+		coll.identified_by = model.Name(ident='', content=coll_label)
 		est_price = data.get('estimated_price')
 		if est_price:
 			coll.dimension = get_crom_object(est_price)

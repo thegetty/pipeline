@@ -228,17 +228,17 @@ class SalesUtilityHelper(UtilityHelper):
 		if sale_type in ('Auction', 'Collection Catalog'):
 			lot_id = f'{cno} {shared_lot_number} ({date})'
 			lot_label = f'Auction of Lot {lot_id}'
-			lot._label = lot_label
 		elif sale_type in ('Private Contract Sale', 'Stock List'):
 			lot_id = f'{cno} {shared_lot_number} ({date})'
 			lot_label = f'Sale of {lot_id}'
-			lot._label = lot_label
 		elif sale_type == 'Lottery':
 			lot_id = f'{cno} {shared_lot_number} ({date})'
 			lot_label = f'Lottery Drawing for {lot_id}'
-			lot._label = lot_label
 		else:
 			warnings.warn(f'*** Unexpected sale type: {sale_type!r}')
+		if lot_label:
+			lot._label = lot_label
+			lot.identified_by = model.Name(ident='', content=lot_label)
 		return lot
 
 	def sale_event_for_catalog_number(self, catalog_number, sale_type='Auction'):

@@ -592,10 +592,14 @@ class AddAcquisitionOrBidding(ProvenanceBase):
 				prop_id = hmo.id + f'-Bid-{seq_no}-Promise'
 				try:
 					amnt_label = amnt._label
-					bid._label = f'Bid of {amnt_label} on {cno} {lno} ({date})'
+					bid_label = f'Bid of {amnt_label} on {cno} {lno} ({date})'
+					bid._label = bid_label
+					bid.identified_by = model.Name(ident='', content=bid_label)
 					prop = model.PropositionalObject(ident=prop_id, label=f'Promise to pay {amnt_label}')
 				except AttributeError:
-					bid._label = f'Bid on {cno} {lno} ({date})'
+					bid_label = f'Bid on {cno} {lno} ({date})'
+					bid._label = bid_label
+					bid.identified_by = model.Name(ident='', content=bid_label)
 					prop = model.PropositionalObject(ident=prop_id, label=f'Promise to pay')
 
 				prop.refers_to = amnt

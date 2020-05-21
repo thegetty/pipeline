@@ -1033,16 +1033,25 @@ class ModelInventorying(TransactionHandler):
 		else:
 			parenthetical = f'{date}'
 
+		in_tx = self.add_incoming_tx(data)
+		tx_out = self._empty_tx(data, incoming=False)
+		tx_out_label = f'Inventorying of {pi_rec} ({parenthetical})' # TODO: improve label here so that it's not duplicating the label of the actual inventorying (below)
+		tx_out._label = tx_out_label
+		tx_out.identified_by = model.Name(ident='', content=tx_out_label)
+
 		inv_uri = self.helper.make_proj_uri('INV', book_id, page_id, row_id)
-		inv = vocab.Inventorying(ident=inv_uri, label=f'Inventorying of {pi_rec} ({parenthetical})')
-		inv.used_specific_object = hmo
+		inv_label = f'Inventorying of {pi_rec} ({parenthetical})'
+		inv = vocab.Inventorying(ident=inv_uri, label=inv_label)
+		inv.identified_by = model.Name(ident='', content=inv_label)
 		inv.carried_out_by = self.helper.static_instances.get_instance('Group', 'knoedler')
+		inv.encountered = hmo
 		self.set_date(inv, data, 'entry_date')
 
-		inv_data = add_crom_data(data={'uri': inv_uri}, what=inv)
-		if '_activities' not in data:
-			data['_activities'] = []
-		data['_activities'].append(inv_data)
+		tx_out.part = inv
+
+		tx_out_data = add_crom_data(data={'uri': tx_out.id, 'label': inv_label}, what=tx_out)
+		data['_prov_entries'].append(tx_out_data)
+
 		return data
 
 #mark - Knoedler Pipeline class

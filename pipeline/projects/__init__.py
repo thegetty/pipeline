@@ -371,6 +371,7 @@ class PersonIdentity:
 		names = []
 		name = data.get('name')
 		if name:
+			del data['name'] # this will be captured in the 'names' array, so remove it here so the output isn't duplicated
 			names.append(name)
 		variant_names = data.get('variant_names')
 		if variant_names:
@@ -379,10 +380,12 @@ class PersonIdentity:
 		for name in names:
 			if role and not role_label:
 				role_label = f'{role} “{name}”'
+			name_kwargs = {}
+# 			name_kwargs['classified_as'] = model.Type(ident='http://vocab.getty.edu/aat/300266386', label='Personal Name')
+			name_kwargs['classified_as'] = vocab.PersonalName
 			if referrer:
-				data['names'].append((name, {'referred_to_by': [referrer]}))
-			else:
-				data['names'].append(name)
+				name_kwargs['referred_to_by'] = [referrer]
+			data['names'].append((name, name_kwargs))
 			data.setdefault('label', name)
 		data.setdefault('label', '(Anonymous)')
 

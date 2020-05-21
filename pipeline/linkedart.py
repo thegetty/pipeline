@@ -37,9 +37,14 @@ class MakeLinkedArtRecord:
 		`names` -	An array of arrays of one or two elements. The first element of each
 					array is a name string, and is set as the value of a `model.Name` for
 					`thing`. If there is a `dict` second element, its contents are used to
-					assert properties of the name. An array associated with the key
-					`'referred_to_by'` will be used to assert that the `LinguisticObject`s
-					(or `dict`s representing a `LinguisticObject`) refer to the name.
+					assert properties of the name:
+					
+					- An array associated with the key `'referred_to_by'` will be used to
+					  assert that the `LinguisticObject`s (or `dict`s representing a
+					  `LinguisticObject`) refer to the name.
+					- A value associated with the key `'classified_as'` (either a
+					  `model.Type` or a cromulent vocab class) will be asserted as the
+					  classification of the `model.Name`.
 
 		Example data:
 
@@ -49,6 +54,8 @@ class MakeLinkedArtRecord:
 				[
 					'Getty',
 					{
+						'classified_as': model.Type(ident='http://vocab.getty.edu/aat/300404670', label='Primary Name'),
+		# or:			'classified_as': vocab.PrimaryName,
 						'referred_to_by': [
 							{'uri': 'tag:getty.edu,2019:digital:pipeline:REPLACE-WITH-UUID:knoedler#K-ROW-1-2-3'},
 							model.LinguisticObject(ident='tag:getty.edu,2019:digital:pipeline:REPLACE-WITH-UUID:knoedler#K-ROW-1-7-10'),
@@ -113,8 +120,15 @@ class MakeLinkedArtRecord:
 				name, *properties = namedata
 			else:
 				name = namedata
-				properties = {}
-			n = set_la_name(thing, name)
+				properties = []
+			name_kwargs = {}
+			for props in properties:
+				if 'classified_as' in props:
+					cl = props['classified_as']
+					del props['classified_as']
+					name_kwargs['title_type'] = cl
+
+			n = set_la_name(thing, name, **name_kwargs)
 			self.set_lo_properties(n, *properties)
 
 	def set_lo_properties(self, n, *properties):
@@ -164,7 +178,10 @@ def set_la_name(thing, value, title_type=None, set_label=False):
 		thing._label = label
 	name = model.Name(ident='', content=label)
 	if title_type is not None:
-		name.classified_as = title_type
+		if isinstance(title_type, model.Type):
+			name.classified_as = title_type
+		else:
+			vocab.add_classification(name, title_type)
 	thing.identified_by = name
 	if language is not None:
 		name.language = language

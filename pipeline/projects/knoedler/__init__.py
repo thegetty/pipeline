@@ -1051,7 +1051,6 @@ class ModelInventorying(TransactionHandler):
 
 		tx_out_data = add_crom_data(data={'uri': tx_out.id, 'label': inv_label}, what=tx_out)
 		data['_prov_entries'].append(tx_out_data)
-		pprint.pprint(data['_prov_entries'])
 
 		return data
 

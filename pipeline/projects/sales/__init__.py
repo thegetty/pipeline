@@ -361,7 +361,7 @@ class SalesUtilityHelper(UtilityHelper):
 		ulan = None
 		with suppress(ValueError, TypeError):
 			ulan = int(a.get('ulan'))
-		auth_name = a.get('auth')
+		auth_name = a.get('auth_name', a.get('auth'))
 		a['identifiers'] = []
 		if ulan:
 			a['ulan'] = ulan
@@ -371,9 +371,12 @@ class SalesUtilityHelper(UtilityHelper):
 				pname.referred_to_by = event_record
 			a['identifiers'].append(pname)
 			a['label'] = auth_name
+			name = a.get('name')
+			if name and name == auth_name:
+				del a['name']
 
 		name = a.get('name')
-		if name:
+		if name and name != auth_name:
 			n = model.Name(ident='', content=name)
 			if event_record:
 				n.referred_to_by = event_record

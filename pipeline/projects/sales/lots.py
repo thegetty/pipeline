@@ -165,11 +165,12 @@ class AddAuctionOfLot(Configurable):
 			#       have to do post-processing on the services JSON files after loading.
 			if tuple(problem_key) == lot_object_key:
 				note = model.LinguisticObject(ident='', content=problem)
-				note.classified_as = vocab.instances["brief text"]
-				note.classified_as = model.Type(
+				problem_classification = model.Type(
 					ident=self.helper.problematic_record_uri,
 					label='Problematic Record'
 				)
+				problem_classification.classified_as = vocab.instances["brief text"]
+				note.classified_as = problem_classification
 				lot.referred_to_by = note
 
 		cite_content = []

@@ -102,6 +102,13 @@ class PeopleUtilityHelper(UtilityHelper):
 
 class AddPerson(Configurable):
 	helper = Option(required=True)
+
+	def __init__(self, *args, **kwargs):
+		super().__init__(*args, **kwargs)
+		self.single_year = re.compile(r'[ ]?\(((in )?\d{4}[^)]*)\)')
+		self.year_range = re.compile(r'[ ]?\((\d{4}-\d{4}[^)]*)\)')
+		self.bound_year = re.compile(r'[ ]?\(((until|from|after) \d{4}[^)]*)\)')
+		self.c_year = re.compile(r'[ ]?\((c \d{4}[^)]*)\)')
 	
 	def handle_dates(self, data):
 		if 'birth' in data:
@@ -131,7 +138,32 @@ class AddPerson(Configurable):
 			data['referred_to_by'].append(cite)
 
 	def handle_places(self, data):
-		locations = {l.strip() for l in data.get('location', '').split(';')} - {''}
+		locations = []
+		location = data.get('location', '')
+		if location:
+			for l in {loc.strip() for loc in location.split(';')}:
+				if not l:
+					continue
+				year_range = self.year_range.search(l)
+				single_year = self.single_year.search(l)
+				bound_year = self.bound_year.search(l)
+				c_year = self.c_year.search(l)
+				m = None
+				if year_range:
+					m = year_range
+				elif single_year:
+					m = single_year
+				elif bound_year:
+					m = bound_year
+				elif c_year:
+					m = c_year
+				if m:
+					all = m.group(0)
+					note = m.group(1)
+					l = l.replace(all, '')
+					note = vocab.BibliographyStatement(ident='', content=f'Residence in {l} ({note})')
+					data['referred_to_by'].append(note)
+				locations.append(l)
 		base_uri = self.helper.make_proj_uri('PLACE', '')
 		for l in locations:
 			current = parse_location_name(l, uri_base=self.helper.proj_prefix)

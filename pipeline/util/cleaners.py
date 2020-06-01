@@ -477,7 +477,8 @@ def date_cleaner(value):
 				val = date_parse(value, '/')
 			elif value.find('-') > -1:
 				val = date_parse(value, '-')
-			else:
+
+			if not val:
 				warnings.warn("bad circa: %s" % value)
 				return None
 

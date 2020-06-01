@@ -66,7 +66,10 @@ nt: jsonlist
 nq: jsonlist
 	mkdir -p $(GETTY_PIPELINE_TMP_PATH)
 	curl -s 'https://linked.art/ns/v1/linked-art.json' > $(GETTY_PIPELINE_TMP_PATH)/linked-art.json
-	split -n r/$(CONCURRENCY) $(GETTY_PIPELINE_TMP_PATH)/json_files.txt "${GETTY_PIPELINE_TMP_PATH}/json_files.chunk."
+# This is a more efficient split based on the number of processes we can run concurrently, but it depends on linux-specific arguments to split.
+# 	split -n r/$(CONCURRENCY) $(GETTY_PIPELINE_TMP_PATH)/json_files.txt "${GETTY_PIPELINE_TMP_PATH}/json_files.chunk."
+# This is slightly less efficient, especially for small datasets, but will work reasonably well in the expected cases and will work on both linux and MacOS.
+	split -l 100000 $(GETTY_PIPELINE_TMP_PATH)/json_files.txt "${GETTY_PIPELINE_TMP_PATH}/json_files.chunk."
 	echo 'Transcoding JSON-LD to N-Quads...'
 	ls $(GETTY_PIPELINE_TMP_PATH)/json_files.chunk.* | xargs -n 1 -P $(CONCURRENCY) $(PYTHON) ./scripts/json2nq.py -c $(GETTY_PIPELINE_TMP_PATH)/linked-art.json -l
 	find $(GETTY_PIPELINE_OUTPUT) -name '[0-9a-f][0-9a-f]*.nq' | xargs -n 256 cat | gzip - > $(GETTY_PIPELINE_OUTPUT)/all.nq.gz

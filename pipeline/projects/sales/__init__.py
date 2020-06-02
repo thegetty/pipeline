@@ -792,17 +792,9 @@ class SalesPipeline(PipelineBase):
 							},
 							'other_titles': {
 								'rename_keys': {
-									'prev_sale_ttlx': 'title',
-									'post_sale_ttl': 'title' # TODO: does this ever cause a collision?
+									'post_sale_ttl': 'title'
 								},
-# 								'postprocess': [
-# 									lambda x, _: strip_key_prefix('prev_sale_', x),
-# 									lambda x, _: strip_key_prefix('post_sale_', x),
-# 									lambda x, _: replace_key_pattern(r'(ttlx)', 'title', x),
-# 									lambda x, _: replace_key_pattern(r'(ttl)', 'title', x)
-# 								],
 								'prefixes': (
-									'prev_sale_ttlx',
 									'post_sale_ttl')},
 							'prev_sale': {
 								'rename_keys': {
@@ -812,10 +804,6 @@ class SalesPipeline(PipelineBase):
 									'prev_sale_lot': 'lot',
 									'prev_sale_loc': 'loc',
 									'prev_sale_ques': 'ques',
-									'prev_sale_artx': 'artx',
-									'prev_sale_ttlx': 'ttlx',
-									'prev_sale_note': 'note',
-									'prev_sale_coll': 'coll',
 									'prev_sale_cat': 'cat'
 								},
 # 								'postprocess': lambda x, _: strip_key_prefix('prev_sale_', x),
@@ -826,10 +814,6 @@ class SalesPipeline(PipelineBase):
 									'prev_sale_lot',
 									'prev_sale_loc',
 									'prev_sale_ques',
-									'prev_sale_artx',
-									'prev_sale_ttlx',
-									'prev_sale_note',
-									'prev_sale_coll',
 									'prev_sale_cat'
 								)
 							},
@@ -896,7 +880,6 @@ class SalesPipeline(PipelineBase):
 									'present_loc_accq': 'accq',
 									'present_loc_note': 'note',
 								},
-# 								'postprocess': lambda x, _: strip_key_prefix('present_loc_', x),
 								'properties': (
 									'present_loc_geog',
 									'present_loc_inst',

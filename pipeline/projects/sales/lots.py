@@ -680,7 +680,7 @@ class AddAcquisitionOrBidding(ProvenanceBase):
 
 		sale_type = non_auctions.get(cno, 'Auction')
 		if transaction in SOLD:
-			data['_owner_locations'] = []
+			data.setdefault('_owner_locations', [])
 			for data, current_tx in self.add_acquisition(data, buyers, sellers, non_auctions, buy_sell_modifiers, transaction, transaction_types):
 				houses = [self.helper.add_auction_house_data(h) for h in auction_houses_data.get(cno, [])]
 				experts = event_experts.get(cno, [])

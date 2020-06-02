@@ -773,6 +773,8 @@ class SalesPipeline(PipelineBase):
 									'prev_own_auth_d': 'own_auth_d',
 									'prev_own_auth_l': 'own_auth_l',
 									'prev_own_auth_q': 'own_auth_q',
+									'prev_own_auth_e': 'own_auth_e',
+									'prev_own_auth_p': 'own_auth_p',
 									'prev_own_ulan': 'own_ulan'
 								},
 # 								'postprocess': [
@@ -787,6 +789,8 @@ class SalesPipeline(PipelineBase):
 									'prev_own_auth_d',
 									'prev_own_auth_l',
 									'prev_own_auth_q',
+									'prev_own_auth_e',
+									'prev_own_auth_p',
 									'prev_own_ulan'
 								)
 							},
@@ -853,6 +857,8 @@ class SalesPipeline(PipelineBase):
 									'post_own_auth_d': 'own_auth_d',
 									'post_own_auth_l': 'own_auth_l',
 									'post_own_auth_q': 'own_auth_q',
+									'post_own_auth_e': 'own_auth_e',
+									'post_own_auth_p': 'own_auth_p',
 									'post_own_ulan': 'own_ulan'
 								},
 # 								'postprocess': lambda x, _: strip_key_prefix('post_', x),
@@ -864,6 +870,8 @@ class SalesPipeline(PipelineBase):
 									'post_own_auth_d',
 									'post_own_auth_l',
 									'post_own_auth_q',
+									'post_own_auth_e',
+									'post_own_auth_p',
 									'post_own_ulan'
 								)
 							},

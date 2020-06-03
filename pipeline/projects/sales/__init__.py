@@ -766,10 +766,10 @@ class SalesPipeline(PipelineBase):
 							},
 							'prev_owner': {
 								'rename_keys': {
-									'prev_owner': 'own',
+									'prev_owner': 'name',
 									'prev_own_ques': 'own_ques',
 									'prev_own_so': 'own_so',
-									'prev_own_auth': 'own_auth',
+									'prev_own_auth': 'auth_name',
 									'prev_own_auth_d': 'own_auth_d',
 									'prev_own_auth_l': 'own_auth_l',
 									'prev_own_auth_q': 'own_auth_q',
@@ -850,10 +850,10 @@ class SalesPipeline(PipelineBase):
 							},
 							'post_owner': {
 								'rename_keys': {
-									'post_own': 'own',
+									'post_own': 'name',
 									'post_own_q': 'own_q',
 									'post_own_so': 'own_so',
-									'post_own_auth': 'own_auth',
+									'post_own_auth': 'auth_name',
 									'post_own_auth_d': 'own_auth_d',
 									'post_own_auth_l': 'own_auth_l',
 									'post_own_auth_q': 'own_auth_q',
@@ -953,6 +953,7 @@ class SalesPipeline(PipelineBase):
 								'properties': (
 									'ask_price',
 									'ask_price_curr',
+									'ask_price_desc',
 									'ask_price_so')},
 						}
 					}

@@ -105,8 +105,6 @@ class ProvenanceBase(Configurable):
 		owner_record.update({
 			'pi_record_no': data['pi_record_no'],
 			'ulan': owner_record.get('ulan', owner_record.get('own_ulan')),
-			'auth_name': owner_record.get('auth_name', owner_record.get('own_auth')),
-			'name': owner_record.get('name', owner_record.get('own')),
 		})
 		self.add_person(owner_record, record=sales_record, relative_id=record_id, role='artist')
 		owner = get_crom_object(owner_record)

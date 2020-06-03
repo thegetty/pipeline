@@ -105,8 +105,6 @@ class ProvenanceBase(Configurable):
 		owner_record.update({
 			'pi_record_no': data['pi_record_no'],
 			'ulan': owner_record.get('ulan', owner_record.get('own_ulan')),
-			'auth_name': owner_record.get('auth_name', owner_record.get('own_auth')),
-			'name': owner_record.get('name', owner_record.get('own')),
 		})
 		self.add_person(owner_record, record=sales_record, relative_id=record_id, role='artist')
 		owner = get_crom_object(owner_record)
@@ -121,12 +119,19 @@ class ProvenanceBase(Configurable):
 			owner.residence = place
 			data['_owner_locations'].append(place_data)
 
+		if owner_record.get('own_auth_p'):
+			content = owner_record['own_auth_p']
+			owner.referred_to_by = vocab.Note(ident='', content=content)
+
 		data.setdefault('_other_owners', [])
 		data['_other_owners'].append(owner_record)
 
 		tx_uri = hmo.id + f'-{record_id}-Prov'
 		tx_label_args = tuple([self.helper, sale_type, 'Sold', rel] + list(lot_object_key))
 		tx, _ = self.related_procurement(hmo, tx_label_args, current_tx, ts, buyer=owner, previous=rev, ident=tx_uri, make_label=make_label)
+		if owner_record.get('own_auth_e'):
+			content = owner_record['own_auth_e']
+			tx.referred_to_by = vocab.Note(ident='', content=content)
 
 		own_info_source = owner_record.get('own_so')
 		if own_info_source:

@@ -766,13 +766,15 @@ class SalesPipeline(PipelineBase):
 							},
 							'prev_owner': {
 								'rename_keys': {
-									'prev_owner': 'own',
+									'prev_owner': 'name',
 									'prev_own_ques': 'own_ques',
 									'prev_own_so': 'own_so',
-									'prev_own_auth': 'own_auth',
+									'prev_own_auth': 'auth_name',
 									'prev_own_auth_d': 'own_auth_d',
 									'prev_own_auth_l': 'own_auth_l',
 									'prev_own_auth_q': 'own_auth_q',
+									'prev_own_auth_e': 'own_auth_e',
+									'prev_own_auth_p': 'own_auth_p',
 									'prev_own_ulan': 'own_ulan'
 								},
 # 								'postprocess': [
@@ -787,22 +789,16 @@ class SalesPipeline(PipelineBase):
 									'prev_own_auth_d',
 									'prev_own_auth_l',
 									'prev_own_auth_q',
+									'prev_own_auth_e',
+									'prev_own_auth_p',
 									'prev_own_ulan'
 								)
 							},
 							'other_titles': {
 								'rename_keys': {
-									'prev_sale_ttlx': 'title',
-									'post_sale_ttl': 'title' # TODO: does this ever cause a collision?
+									'post_sale_ttl': 'title'
 								},
-# 								'postprocess': [
-# 									lambda x, _: strip_key_prefix('prev_sale_', x),
-# 									lambda x, _: strip_key_prefix('post_sale_', x),
-# 									lambda x, _: replace_key_pattern(r'(ttlx)', 'title', x),
-# 									lambda x, _: replace_key_pattern(r'(ttl)', 'title', x)
-# 								],
 								'prefixes': (
-									'prev_sale_ttlx',
 									'post_sale_ttl')},
 							'prev_sale': {
 								'rename_keys': {
@@ -812,10 +808,6 @@ class SalesPipeline(PipelineBase):
 									'prev_sale_lot': 'lot',
 									'prev_sale_loc': 'loc',
 									'prev_sale_ques': 'ques',
-									'prev_sale_artx': 'artx',
-									'prev_sale_ttlx': 'ttlx',
-									'prev_sale_note': 'note',
-									'prev_sale_coll': 'coll',
 									'prev_sale_cat': 'cat'
 								},
 # 								'postprocess': lambda x, _: strip_key_prefix('prev_sale_', x),
@@ -826,10 +818,6 @@ class SalesPipeline(PipelineBase):
 									'prev_sale_lot',
 									'prev_sale_loc',
 									'prev_sale_ques',
-									'prev_sale_artx',
-									'prev_sale_ttlx',
-									'prev_sale_note',
-									'prev_sale_coll',
 									'prev_sale_cat'
 								)
 							},
@@ -862,13 +850,15 @@ class SalesPipeline(PipelineBase):
 							},
 							'post_owner': {
 								'rename_keys': {
-									'post_own': 'own',
+									'post_own': 'name',
 									'post_own_q': 'own_q',
 									'post_own_so': 'own_so',
-									'post_own_auth': 'own_auth',
+									'post_own_auth': 'auth_name',
 									'post_own_auth_d': 'own_auth_d',
 									'post_own_auth_l': 'own_auth_l',
 									'post_own_auth_q': 'own_auth_q',
+									'post_own_auth_e': 'own_auth_e',
+									'post_own_auth_p': 'own_auth_p',
 									'post_own_ulan': 'own_ulan'
 								},
 # 								'postprocess': lambda x, _: strip_key_prefix('post_', x),
@@ -880,6 +870,8 @@ class SalesPipeline(PipelineBase):
 									'post_own_auth_d',
 									'post_own_auth_l',
 									'post_own_auth_q',
+									'post_own_auth_e',
+									'post_own_auth_p',
 									'post_own_ulan'
 								)
 							},
@@ -896,7 +888,6 @@ class SalesPipeline(PipelineBase):
 									'present_loc_accq': 'accq',
 									'present_loc_note': 'note',
 								},
-# 								'postprocess': lambda x, _: strip_key_prefix('present_loc_', x),
 								'properties': (
 									'present_loc_geog',
 									'present_loc_inst',
@@ -962,6 +953,7 @@ class SalesPipeline(PipelineBase):
 								'properties': (
 									'ask_price',
 									'ask_price_curr',
+									'ask_price_desc',
 									'ask_price_so')},
 						}
 					}

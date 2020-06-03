@@ -481,6 +481,10 @@ class AddAcquisitionOrBidding(ProvenanceBase):
 				acq.referred_to_by = vocab.Note(ident='', content=note)
 			data['_prov_entries'].append(add_crom_data(data={}, what=tx))
 
+		self.add_prev_post_owners(data, hmo, tx_data, sale_type, lot_object_key, ts)
+		yield data, current_tx
+
+	def add_prev_post_owners(self, data, hmo, tx_data, sale_type, lot_object_key, ts=None):
 		post_own = data.get('post_owner', [])
 		prev_own = data.get('prev_owner', [])
 		prev_post_owner_records = [(post_own, False), (prev_own, True)]
@@ -497,7 +501,6 @@ class AddAcquisitionOrBidding(ProvenanceBase):
 					# but no other fields set these should not constitute actual records of a prev/post owner.
 					continue
 				self.handle_prev_post_owner(data, hmo, tx_data, sale_type, lot_object_key, owner_record, record_id, rev, ts, make_label=prov_entry_label)
-		yield data, current_tx
 
 	def add_sellers(self, data:dict, sale_type, transaction, sellers, rel, source=None):
 		hmo = get_crom_object(data)
@@ -575,6 +578,8 @@ class AddAcquisitionOrBidding(ProvenanceBase):
 
 		data.setdefault('_prov_entries', [])
 		data['_prov_entries'].append(tx_data)
+
+		self.add_prev_post_owners(data, hmo, tx_data, sale_type, lot_object_key, ts)
 
 		if amnts:
 			bidding_id = hmo.id + '-Bidding'
@@ -680,7 +685,7 @@ class AddAcquisitionOrBidding(ProvenanceBase):
 
 		sale_type = non_auctions.get(cno, 'Auction')
 		if transaction in SOLD:
-			data['_owner_locations'] = []
+			data.setdefault('_owner_locations', [])
 			for data, current_tx in self.add_acquisition(data, buyers, sellers, non_auctions, buy_sell_modifiers, transaction, transaction_types):
 				houses = [self.helper.add_auction_house_data(h) for h in auction_houses_data.get(cno, [])]
 				experts = event_experts.get(cno, [])

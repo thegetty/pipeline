@@ -17,6 +17,7 @@ import settings
 
 import pipeline.execution
 from cromulent import model, vocab
+
 from pipeline.util import \
 			CaseFoldingSet, \
 			ExtractKeyedValues, \
@@ -352,7 +353,8 @@ class PersonIdentity:
 		name_type = vocab.PrimaryName
 		
 		if disp_name:
-			data['identifiers'].append(vocab.Name(ident='', content=auth_name))
+			if auth_name:
+				data['identifiers'].append(vocab.Name(ident='', content=auth_name))
 			auth_name = disp_name
 			name_type = vocab.Name
 

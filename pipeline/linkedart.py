@@ -342,14 +342,15 @@ class MakeLinkedArtAgent(MakeLinkedArtRecord):
 		if 'name' in data:
 			title_type = model.Type(ident='http://vocab.getty.edu/aat/300417193', label='Title')
 			name = data['name']
-			if isinstance(name, str):
-				set_la_name(thing, name, title_type, set_label=True)
-			elif isinstance(name, (list, tuple)):
-				value, *properties = name
-				n = model.Name(ident='', content=value)
-				n.classified_as = title_type
-				self.set_lo_properties(n, *properties)
-				thing.identified_by = n
+			if name:
+				if isinstance(name, str):
+					set_la_name(thing, name, title_type, set_label=True)
+				elif isinstance(name, (list, tuple)):
+					value, *properties = name
+					n = model.Name(ident='', content=value)
+					n.classified_as = title_type
+					self.set_lo_properties(n, *properties)
+					thing.identified_by = n
 
 		for uri in data.get('exact_match', []):
 			thing.exact_match = uri

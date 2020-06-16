@@ -107,7 +107,8 @@ class KeyManagement(Configurable):
 								subd = p(subd, data)
 						data[key] = subd
 					for k in to_delete:
-						del data[k]
+						with suppress(KeyError):
+							del data[k]
 				elif op == 'group_repeating':
 					for key, mapping in op_data.items():
 						property_prefixes = mapping['prefixes']

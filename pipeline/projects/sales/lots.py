@@ -396,10 +396,23 @@ class AddAcquisitionOrBidding(ProvenanceBase):
 		single_seller = (len(sellers) == 1)
 		single_buyer = (len(buyers) == 1)
 
+
+		pi = self.helper.person_identity
+		def is_or_anon(data:dict):
+			mods = {m.lower().strip() for m in data.get('auth_mod_a', '').split(';')}
+			return 'or anonymous' in mods
+		or_anon_records = [is_or_anon(a) for a in sellers]
+		uncertain_attribution = any(or_anon_records)
+		if uncertain_attribution:
+			print(f'Uncertain seller: {sellers}')
+
 		for seq_no, seller_data in enumerate(sellers):
 			seller = get_crom_object(seller_data)
 			mod = seller_data.get('auth_mod_a', '')
-
+			attrib_assignment_classes = [model.AttributeAssignment]
+			if uncertain_attribution:
+				attrib_assignment_classes.append(vocab.PossibleAssignment)
+			
 			if mod == 'or':
 				mod_non_auth = seller_data.get('auth_mod')
 				if mod_non_auth:
@@ -412,7 +425,7 @@ class AddAcquisitionOrBidding(ProvenanceBase):
 			elif mod in FOR:
 				acq.transferred_title_from = seller
 				paym.paid_to = seller
-			elif mod == 'or anonymous':
+			elif uncertain_attribution: # this is true if ANY of the sellers have an 'or anonymous' modifier
 				acq_assignment = vocab.PossibleAssignment(ident=acq.id + f'-seller-assignment-{seq_no}', label=f'Uncertain seller as previous title holder in acquisition')
 				acq_assignment.assigned_property = 'transferred_title_from'
 				acq_assignment.assigned = seller

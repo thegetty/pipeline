@@ -130,7 +130,7 @@ peoplepipeline:
 	mkdir -p $(GETTY_PIPELINE_TMP_PATH)/pipeline
 	QUIET=$(QUIET) GETTY_PIPELINE_DEBUG=$(DEBUG) GETTY_PIPELINE_LIMIT=$(LIMIT) $(PYTHON) ./people.py
 
-peoplepostprocessing: postprocessing_uuidmap postprocessing_rewrite_uris
+peoplepostprocessing: postprocessing_rewrite_uris
 	ls $(GETTY_PIPELINE_OUTPUT) | PYTHONPATH=`pwd` xargs -n 1 -P $(CONCURRENCY) -I '{}' $(PYTHON) ./scripts/coalesce_json.py "${GETTY_PIPELINE_OUTPUT}/{}"
 	PYTHONPATH=`pwd` $(PYTHON) ./scripts/remove_meaningless_ids.py
 	# Reorganizing JSON files...

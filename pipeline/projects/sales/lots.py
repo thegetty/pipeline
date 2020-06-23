@@ -8,7 +8,7 @@ from bonobo.config import Option, Service, Configurable
 from cromulent import model, vocab
 
 import pipeline.execution
-from pipeline.projects.sales.util import object_key
+from pipeline.projects.sales.util import object_key, object_key_string
 from pipeline.util import \
 		implode_date, \
 		timespan_from_outer_bounds, \
@@ -396,15 +396,12 @@ class AddAcquisitionOrBidding(ProvenanceBase):
 		single_seller = (len(sellers) == 1)
 		single_buyer = (len(buyers) == 1)
 
-
 		pi = self.helper.person_identity
 		def is_or_anon(data:dict):
 			mods = {m.lower().strip() for m in data.get('auth_mod_a', '').split(';')}
 			return 'or anonymous' in mods
 		or_anon_records = [is_or_anon(a) for a in sellers]
 		uncertain_attribution = any(or_anon_records)
-		if uncertain_attribution:
-			print(f'Uncertain seller: {sellers}')
 
 		for seq_no, seller_data in enumerate(sellers):
 			seller = get_crom_object(seller_data)
@@ -681,6 +678,9 @@ class AddAcquisitionOrBidding(ProvenanceBase):
 			) for i, p in enumerate(parent['buyer'])
 		]
 
+		data.setdefault('_prov_entries', [])
+		data.setdefault('_other_owners', [])
+
 		sellers = [
 			self.add_person(
 				self.helper.copy_source_information(p, parent),
@@ -689,12 +689,24 @@ class AddAcquisitionOrBidding(ProvenanceBase):
 				catalog_number=cno
 			) for i, p in enumerate(parent['seller'])
 		]
+		all_mods = {m.lower().strip() for a in sellers for m in a.get('auth_mod_a', '').split(';')} - {''}
+		seller_group = (all_mods == {'or'}) # the seller is *one* of the named people, model as a group
+		
+		if seller_group:
+			tx_data = parent['_prov_entry_data']
+			current_tx = get_crom_object(tx_data)
+			group_id = current_tx.id + '-SellerGroup'
+			g_label = f'Group containing the seller of {object_key_string(cno, lno, date)}'
+			g = model.Group(ident=group_id, label=g_label)
+			for seller_data in sellers:
+				seller = get_crom_object(seller_data)
+				seller.member_of = g
+				data['_other_owners'].append(seller_data)
+			sellers = [add_crom_data({}, g)]
 
 		SOLD = transaction_types['sold']
 		UNSOLD = transaction_types['unsold']
 		UNKNOWN = transaction_types['unknown']
-
-		data.setdefault('_prov_entries', [])
 
 		sale_type = non_auctions.get(cno, 'Auction')
 		data.setdefault('_owner_locations', [])

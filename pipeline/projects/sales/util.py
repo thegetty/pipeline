@@ -38,6 +38,9 @@ def add_pir_record_ids(data, parent):
 		data[p] = parent.get(p)
 	return data
 
+def object_key_string(cno, lno, date):
+	return f'{cno} {lno} ({date})'
+
 def object_key(data):
 	'''
 	Returns a 3-tuple of (catalog number, lot number, sale date) that identify an object

@@ -76,14 +76,8 @@ nq: jsonlist
 	gzip -k $(GETTY_PIPELINE_OUTPUT)/meta.nq
 	rm $(GETTY_PIPELINE_TMP_PATH)/json_files.chunk.*
 
-scripts/generate_uri_uuids: scripts/generate_uri_uuids.swift
-	swiftc scripts/generate_uri_uuids.swift -o scripts/generate_uri_uuids
-
 scripts/find_matching_json_files: scripts/find_matching_json_files.swift
 	swiftc scripts/find_matching_json_files.swift -o scripts/find_matching_json_files
-
-postprocessing_uuidmap: ./scripts/generate_uri_uuids
-	./scripts/generate_uri_uuids "${GETTY_PIPELINE_TMP_PATH}/uri_to_uuid_map.json" $(GETTY_PIPELINE_OUTPUT) 'tag:getty.edu,2019:digital:pipeline:REPLACE-WITH-UUID:'
 
 postprocessing_rewrite_uris:
 	PYTHONPATH=`pwd` $(PYTHON) ./scripts/rewrite_uris_to_uuids_parallel.py 'tag:getty.edu,2019:digital:pipeline:REPLACE-WITH-UUID:' "${GETTY_PIPELINE_TMP_PATH}/uri_to_uuid_map.json"
@@ -104,7 +98,7 @@ aatapipeline:
 	mkdir -p $(GETTY_PIPELINE_TMP_PATH)/pipeline
 	QUIET=$(QUIET) GETTY_PIPELINE_DEBUG=$(DEBUG) GETTY_PIPELINE_LIMIT=$(LIMIT) $(PYTHON) ./aata.py
 
-aatapostprocessing: postprocessing_uuidmap postprocessing_rewrite_uris
+aatapostprocessing: postprocessing_rewrite_uris
 	ls $(GETTY_PIPELINE_OUTPUT) | PYTHONPATH=`pwd` xargs -n 1 -P $(CONCURRENCY) -I '{}' $(PYTHON) ./scripts/coalesce_json.py "${GETTY_PIPELINE_OUTPUT}/{}"
 	# Reorganizing JSON files...
 	find $(GETTY_PIPELINE_OUTPUT) -name '*.json' | PYTHONPATH=`pwd` xargs -n 256 -P $(CONCURRENCY) $(PYTHON) ./scripts/reorganize_json.py
@@ -202,7 +196,7 @@ knoedlerpipeline:
 	mkdir -p $(GETTY_PIPELINE_TMP_PATH)/pipeline
 	QUIET=$(QUIET) GETTY_PIPELINE_DEBUG=$(DEBUG) GETTY_PIPELINE_LIMIT=$(LIMIT) $(PYTHON) ./knoedler.py
 
-knoedlerpostprocessing: postprocessing_uuidmap postprocessing_rewrite_uris
+knoedlerpostprocessing: postprocessing_rewrite_uris
 	ls $(GETTY_PIPELINE_OUTPUT) | PYTHONPATH=`pwd` xargs -n 1 -P $(CONCURRENCY) -I '{}' $(PYTHON) ./scripts/coalesce_json.py "${GETTY_PIPELINE_OUTPUT}/{}"
 	PYTHONPATH=`pwd` $(PYTHON) ./scripts/remove_meaningless_ids.py
 	# Reorganizing JSON files...
@@ -244,4 +238,4 @@ clean:
 .PHONY: knoedler knoedlergraph
 .PHONY: people peoplegraph peopledata peoplepipeline peoplepostprocessing peoplepostsalefilelist
 .PHONY: sales salesgraph salesdata salespipeline salespostprocessing salespostsalefilelist
-.PHONY: test upload nt docker dockerimage dockertest jsonlist postprocessing_uuidmap postprocessing_rewrite_uris
+.PHONY: test upload nt docker dockerimage dockertest jsonlist postprocessing_rewrite_uris

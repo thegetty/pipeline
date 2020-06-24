@@ -47,7 +47,7 @@ class AddPhysicalCatalogObjects(Configurable):
 		owner = data['owner_code']
 		copy = data['copy_number']
 		sale_type = non_auctions.get(cno, 'Auction')
-		catalogObject = self.helper.physical_catalog(cno, sale_type, owner, copy)
+		catalogObject = self.helper.physical_catalog(cno, sale_type, owner, copy, add_name=True)
 		data['uri'] = catalogObject.id
 		info = data.get('annotation_info')
 		if info:

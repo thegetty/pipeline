@@ -410,12 +410,6 @@ class AddAcquisitionOrBidding(ProvenanceBase):
 			if uncertain_attribution:
 				attrib_assignment_classes.append(vocab.PossibleAssignment)
 			
-			if mod == 'or':
-				mod_non_auth = seller_data.get('auth_mod')
-				if mod_non_auth:
-					acq.referred_to_by = vocab.Note(ident='', label=f'Seller modifier', content=mod_non_auth)
-				warnings.warn('Handle OR buyer modifier') # TODO: some way to model this uncertainty?
-
 			if mod in THROUGH:
 				acq.carried_out_by = seller
 				paym.carried_out_by = seller
@@ -692,6 +686,7 @@ class AddAcquisitionOrBidding(ProvenanceBase):
 		all_mods = {m.lower().strip() for a in sellers for m in a.get('auth_mod_a', '').split(';')} - {''}
 		seller_group = (all_mods == {'or'}) # the seller is *one* of the named people, model as a group
 		
+		orig_sellers = sellers
 		if seller_group:
 			tx_data = parent['_prov_entry_data']
 			current_tx = get_crom_object(tx_data)
@@ -712,6 +707,15 @@ class AddAcquisitionOrBidding(ProvenanceBase):
 		data.setdefault('_owner_locations', [])
 		if transaction in SOLD:
 			for data, current_tx in self.add_acquisition(data, buyers, sellers, non_auctions, buy_sell_modifiers, transaction, transaction_types):
+				if seller_group:
+					# the sellers are uncertain, and modeled as a group, but we still want
+					# to attach a note about this uncertainty to the acquisition.
+					acq = get_crom_object(data['_acquisition'])
+					for seller_data in orig_sellers:
+						seller = get_crom_object(seller_data)
+						mod_non_auth = seller_data.get('auth_mod')
+						if mod_non_auth:
+							acq.referred_to_by = vocab.Note(ident='', label=f'Seller modifier', content=mod_non_auth)
 				houses = [self.helper.add_auction_house_data(h) for h in auction_houses_data.get(cno, [])]
 				experts = event_experts.get(cno, [])
 				commissaires = event_commissaires.get(cno, [])

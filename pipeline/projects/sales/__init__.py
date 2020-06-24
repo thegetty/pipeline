@@ -431,6 +431,8 @@ class SalesPipeline(PipelineBase):
 		vocab.register_instance('animal', {'parent': model.Type, 'id': '300249395', 'label': 'Animal'})
 		vocab.register_instance('history', {'parent': model.Type, 'id': '300033898', 'label': 'History'})
 
+		vocab.register_vocab_class('UncertainMemberClosedGroup', {'parent': model.Group, 'id': 'XXXXXX006', 'label': 'Closed Group Representing an Uncertain Person'})
+
 		super().__init__(project_name, helper=helper)
 
 		self.graph_0 = None

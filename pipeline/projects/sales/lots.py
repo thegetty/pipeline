@@ -692,7 +692,7 @@ class AddAcquisitionOrBidding(ProvenanceBase):
 			current_tx = get_crom_object(tx_data)
 			group_id = current_tx.id + '-SellerGroup'
 			g_label = f'Group containing the seller of {object_key_string(cno, lno, date)}'
-			g = model.Group(ident=group_id, label=g_label)
+			g = vocab.UncertainMemberClosedGroup(ident=group_id, label=g_label)
 			for seller_data in sellers:
 				seller = get_crom_object(seller_data)
 				seller.member_of = g

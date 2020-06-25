@@ -116,27 +116,32 @@ class KeyManagement(Configurable):
 						rename = mapping.get('rename_keys', {})
 						data[key] = []
 						to_delete = set()
-						with suppress(KeyError):
-							for i in itertools.count(1):
-								ks = ((prefix, f'{prefix}_{i}') for prefix in property_prefixes)
-								subd = {}
-								for p, k in ks:
+						exit = False
+						for i in itertools.count(1):
+							if exit:
+								break
+							ks = ((prefix, f'{prefix}_{i}') for prefix in property_prefixes)
+							subd = {}
+							for p, k in ks:
+								try:
 									sub_key = rename.get(p, p)
 									subd[sub_key] = data[k]
 									to_delete.add(k)
-								if self.drop_empty:
-									values_unset = list(map(lambda v: not bool(v), subd.values()))
-									if all(values_unset):
-										continue
-								if postprocess and subd:
-									if callable(postprocess):
-										postprocess = [postprocess]
-									for p in postprocess:
-										subd = p(subd, data)
-										if not subd:
-											break
-								if subd:
-									data[key].append(subd)
+								except KeyError:
+									exit = True
+							if self.drop_empty:
+								values_unset = list(map(lambda v: not bool(v), subd.values()))
+								if all(values_unset):
+									continue
+							if postprocess and subd:
+								if callable(postprocess):
+									postprocess = [postprocess]
+								for p in postprocess:
+									subd = p(subd, data)
+									if not subd:
+										break
+							if subd:
+								data[key].append(subd)
 						for k in to_delete:
 							del data[k]
 				else:
@@ -160,26 +165,31 @@ class GroupRepeatingKeys(Configurable):
 			postprocess = mapping.get('postprocess')
 			data[key] = []
 			to_delete = set()
-			with suppress(KeyError):
-				for i in itertools.count(1):
-					ks = ((prefix, f'{prefix}_{i}') for prefix in property_prefixes)
-					subd = {}
-					for p, k in ks:
+			exit = False
+			for i in itertools.count(1):
+				if exit:
+					break
+				ks = ((prefix, f'{prefix}_{i}') for prefix in property_prefixes)
+				subd = {}
+				for p, k in ks:
+					try:
 						subd[p] = data[k]
 						to_delete.add(k)
-					if self.drop_empty:
-						values_unset = list(map(lambda v: not bool(v), subd.values()))
-						if all(values_unset):
-							continue
-					if postprocess and subd:
-						if callable(postprocess):
-							postprocess = [postprocess]
-						for p in postprocess:
-							subd = p(subd, data)
-							if not subd:
-								break
-					if subd:
-						data[key].append(subd)
+					except KeyError:
+						exit = True
+				if self.drop_empty:
+					values_unset = list(map(lambda v: not bool(v), subd.values()))
+					if all(values_unset):
+						continue
+				if postprocess and subd:
+					if callable(postprocess):
+						postprocess = [postprocess]
+					for p in postprocess:
+						subd = p(subd, data)
+						if not subd:
+							break
+				if subd:
+					data[key].append(subd)
 			for k in to_delete:
 				del data[k]
 		return data

@@ -73,9 +73,9 @@ class PIRModelingTest_AttributionModifiers(TestSalesPipelineOutput):
 		self.assertEqual(acq_people, pay_people)
 		self.assertEqual(acq_people, {'Raymond', 'Pond, Arthur'})
 
-		# the verbatim text of 'or' modifiers are preserved in notes attached to the acquisition; in this case, the sellers are 'or'
+		# the verbatim text of modifiers are preserved in notes attached to the acquisition; in this case, the sellers are 'or'
 		acq_notes = {n['content'] for n in acq['referred_to_by']}
-		self.assertEqual(acq_notes, {'or Orford, Robert Walpole, 1st Earl of', 'or Orford, Robert Walpole, 2nd Earl of'})
+		self.assertEqual(acq_notes, {'or'})
 		
 		# TODO: this transaction is not modeled, as it is 'Bought In'
 		# seller 'and' is modeled as a procurement with multiple records for both transferred_title_from and paid_to

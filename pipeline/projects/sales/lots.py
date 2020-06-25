@@ -8,7 +8,7 @@ from bonobo.config import Option, Service, Configurable
 from cromulent import model, vocab
 
 import pipeline.execution
-from pipeline.projects.sales.util import object_key
+from pipeline.projects.sales.util import object_key, object_key_string
 from pipeline.util import \
 		implode_date, \
 		timespan_from_outer_bounds, \
@@ -396,23 +396,27 @@ class AddAcquisitionOrBidding(ProvenanceBase):
 		single_seller = (len(sellers) == 1)
 		single_buyer = (len(buyers) == 1)
 
+		pi = self.helper.person_identity
+		def is_or_anon(data:dict):
+			mods = {m.lower().strip() for m in data.get('auth_mod_a', '').split(';')}
+			return 'or anonymous' in mods
+		or_anon_records = [is_or_anon(a) for a in sellers]
+		uncertain_attribution = any(or_anon_records)
+
 		for seq_no, seller_data in enumerate(sellers):
 			seller = get_crom_object(seller_data)
 			mod = seller_data.get('auth_mod_a', '')
-
-			if mod == 'or':
-				mod_non_auth = seller_data.get('auth_mod')
-				if mod_non_auth:
-					acq.referred_to_by = vocab.Note(ident='', label=f'Seller modifier', content=mod_non_auth)
-				warnings.warn('Handle OR buyer modifier') # TODO: some way to model this uncertainty?
-
+			attrib_assignment_classes = [model.AttributeAssignment]
+			if uncertain_attribution:
+				attrib_assignment_classes.append(vocab.PossibleAssignment)
+			
 			if mod in THROUGH:
 				acq.carried_out_by = seller
 				paym.carried_out_by = seller
 			elif mod in FOR:
 				acq.transferred_title_from = seller
 				paym.paid_to = seller
-			elif mod == 'or anonymous':
+			elif uncertain_attribution: # this is true if ANY of the sellers have an 'or anonymous' modifier
 				acq_assignment = vocab.PossibleAssignment(ident=acq.id + f'-seller-assignment-{seq_no}', label=f'Uncertain seller as previous title holder in acquisition')
 				acq_assignment.assigned_property = 'transferred_title_from'
 				acq_assignment.assigned = seller
@@ -645,6 +649,14 @@ class AddAcquisitionOrBidding(ProvenanceBase):
 			warnings.warn(f'*** No price data found for {parent["transaction"]!r} transaction')
 			yield data
 
+	def add_mod_notes(self, act, all_mods, label):
+		if act and all_mods:
+			# Preserve the seller modifier strings as notes on the acquisition/bidding activity
+			for mod in all_mods:
+				note = vocab.Note(ident='', label=label, content=mod)
+				note.classified_as = vocab.instances['qualifier']
+				act.referred_to_by = note
+
 	def __call__(self, data:dict, non_auctions, event_properties, buy_sell_modifiers, transaction_types):
 		'''Determine if this record has an acquisition or bidding, and add appropriate modeling'''
 		parent = data['parent_data']
@@ -668,6 +680,9 @@ class AddAcquisitionOrBidding(ProvenanceBase):
 			) for i, p in enumerate(parent['buyer'])
 		]
 
+		data.setdefault('_prov_entries', [])
+		data.setdefault('_other_owners', [])
+
 		sellers = [
 			self.add_person(
 				self.helper.copy_source_information(p, parent),
@@ -676,17 +691,32 @@ class AddAcquisitionOrBidding(ProvenanceBase):
 				catalog_number=cno
 			) for i, p in enumerate(parent['seller'])
 		]
+		all_mods = {m.lower().strip() for a in sellers for m in a.get('auth_mod_a', '').split(';')} - {''}
+		seller_group = (all_mods == {'or'}) # the seller is *one* of the named people, model as a group
+		
+		orig_sellers = sellers
+		if seller_group:
+			tx_data = parent['_prov_entry_data']
+			current_tx = get_crom_object(tx_data)
+			group_id = current_tx.id + '-SellerGroup'
+			g_label = f'Group containing the seller of {object_key_string(cno, lno, date)}'
+			g = vocab.UncertainMemberClosedGroup(ident=group_id, label=g_label)
+			for seller_data in sellers:
+				seller = get_crom_object(seller_data)
+				seller.member_of = g
+				data['_other_owners'].append(seller_data)
+			sellers = [add_crom_data({}, g)]
 
 		SOLD = transaction_types['sold']
 		UNSOLD = transaction_types['unsold']
 		UNKNOWN = transaction_types['unknown']
 
-		data.setdefault('_prov_entries', [])
-
 		sale_type = non_auctions.get(cno, 'Auction')
 		data.setdefault('_owner_locations', [])
 		if transaction in SOLD:
 			for data, current_tx in self.add_acquisition(data, buyers, sellers, non_auctions, buy_sell_modifiers, transaction, transaction_types):
+				acq = get_crom_object(data['_acquisition'])
+				self.add_mod_notes(acq, all_mods, label=f'Seller modifier')
 				houses = [self.helper.add_auction_house_data(h) for h in auction_houses_data.get(cno, [])]
 				experts = event_experts.get(cno, [])
 				commissaires = event_commissaires.get(cno, [])
@@ -720,7 +750,10 @@ class AddAcquisitionOrBidding(ProvenanceBase):
 			experts = event_experts.get(cno, [])
 			commissaires = event_commissaires.get(cno, [])
 			custody_recievers = houses + [add_crom_data(data={}, what=r) for r in experts + commissaires]
-			yield from self.add_bidding(data, buyers, sellers, buy_sell_modifiers, sale_type, transaction, transaction_types, custody_recievers)
+			for data in self.add_bidding(data, buyers, sellers, buy_sell_modifiers, sale_type, transaction, transaction_types, custody_recievers):
+				act = get_crom_object(data.get('_bidding'))
+				self.add_mod_notes(act, all_mods, label=f'Seller modifier')
+				yield data
 		elif transaction in UNKNOWN:
 			if sale_type == 'Lottery':
 				yield data
@@ -729,7 +762,10 @@ class AddAcquisitionOrBidding(ProvenanceBase):
 					self.helper.add_auction_house_data(h)
 					for h in auction_houses_data.get(cno, [])
 				]
-				yield from self.add_bidding(data, buyers, sellers, buy_sell_modifiers, sale_type, transaction, transaction_types, houses)
+				for data in self.add_bidding(data, buyers, sellers, buy_sell_modifiers, sale_type, transaction, transaction_types, houses):
+					act = get_crom_object(data.get('_bidding'))
+					self.add_mod_notes(act, all_mods, label=f'Seller modifier')
+					yield data
 		else:
 			prev_procurements = self.add_non_sale_sellers(data, sellers, sale_type, transaction, transaction_types)
 			lot = get_crom_object(parent['_event_causing_prov_entry'])

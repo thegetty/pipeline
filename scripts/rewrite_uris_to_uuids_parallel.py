@@ -35,6 +35,7 @@ class UUIDRewriter:
 			return {k: self.rewrite(v, *args, **kwargs) for k, v in d.items()}
 		elif isinstance(d, str):
 			if d.startswith(self.prefix):
+				uri = d
 				d = d[len(self.prefix):]
 				if d in self.map:
 					b64 = self.map[d]
@@ -42,7 +43,9 @@ class UUIDRewriter:
 					u = uuid.UUID(bytes=bytes)
 					return f'urn:uuid:{u}'
 				else:
-					raise Exception(f'URI does not have an assigned UUID: {d}')
+					# URI does not have an assigned UUID; generate a v3 UUID based on the hash of the URI
+					u = uuid.uuid3(uuid.NAMESPACE_URL, uri)
+					return f'urn:uuid:{u}'
 			return d
 		elif isinstance(d, list):
 			return [self.rewrite(v, *args, **kwargs) for v in d]

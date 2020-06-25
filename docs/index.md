@@ -184,11 +184,13 @@ NOTE: While effort has been put into making these scripts portable and reproduci
 Part of the post-processing that occurs is replacing some URIs in the data with UUID values to support the requirements of data imported to Arches.
 The URIs which are replaced all begin with the prefix `"tag:getty.edu,2019:digital:pipeline:REPLACE-WITH-UUID:"`.
 
-For some projects (the Provenance projects of Sales, Knoedler, and People), we ensure that UUID values are consistent across multiple runs of the pipeline by using a persistent mapping from URIs to UUIDs.
-This mapping is stored in S3; as specified in the `Makefile` it is located at `/provenance_batch/data/uri_to_uuid_map.json`.
-Use of the same mapping file across the provenance projects allows URIs to be shared between projects (e.g. people records that appear in all three projects).
+To ensure consistent UUID values across projects (e.g. when the same resources are referenced in both Provenance Sales and People), by default we make use of Version 3 UUIDs.
+These UUIDv3 values are content-based, generated from an MD5 hash of a namespace and the `tag:` URI value.
 
-NOTE: The persistence of URIs is not automated. The mapping file in S3 is manually uploaded. This means that it persists only previously seen URIs, and to ensure consistent UUIDs of any new data, an updated mapping file must be uploaded to S3 before a new pipeline run starts.
+Beyond this default UUID approach (and partly for historical reasons), we maintain a persistent mapping file to allow assigning specific UUIDs to `tag:` URIs.
+This mapping is stored in S3; as specified in the `Makefile` it is located at `/provenance_batch/data/uri_to_uuid_map.json`.
+
+NOTE: The persistence of URIs is not automated, and must bemanually uploaded to S3 if updated.
 
 ### Format of the URI to UUID Mapping File
 
@@ -198,8 +200,8 @@ The keys of the object, when prepended with the special `tag:` URI, result in th
 For example, `"shared#PERSON,AUTH,SCHOOF"` represents the URI `<tag:getty.edu,2019:digital:pipeline:REPLACE-WITH-UUID:shared#PERSON,AUTH,SCHOOF>`.
 
 The values of the object are UUID values, encoded in Base64.
-This encoded is used to reduce the overall size of the JSON file due to memory pressure and problems that result in Python as the file size approaches 2GB (at the time of writing, May 2020, the size of the mapping file is roughly 1.6GB).
-It was chosen as a reasonable balance of size reduction and portability (being easily decoded in both Python and Swift).
+This encoded form is used to reduce the overall size of the JSON file due to memory pressure and problems that result in Python as the file size approaches 2GB (since adding support for UUIDv3 defaults, this is less of a concern).
+It was chosen as a reasonable balance of size reduction and portability.
 For example, `"mBy40hS4QhqKLb/fqqgPgg=="` represents the UUID `<urn:uuid:981cb8d2-14b8-421a-8a2d-bfdfaaa80f82>`.
 
 ### Performance of URI to UUID Mapping
@@ -209,15 +211,6 @@ The URI to UUID mapping process involves:
 * reading all generated JSON-LD files
 * matching all URIs with the special `tag:` URI prefix
 * determining which matching URIs are not present in the persistent mapping file
-* generating new UUID values for each such URI
+* generating new UUIDv3 values for each such URI
 
-Due to the performance-sensitive nature of this process, we found that a Python implementation was not suitable.
-For this reason, a small Swift program ([`scripts/generate_uri_uuids.swift`](../scripts/generate_uri_uuids.swift)) was written to perform this task.
-Swift was chosen because:
-
-* it could concisely represented the task
-* it was performant both as a compiled language and because it can take full advantage of hardware-based parallelism
-* it was simple to add support in the Docker image
-
-[`scripts/generate_uri_uuids.swift`](../scripts/generate_uri_uuids.swift) updates the URI to UUID mapping file in-place.
-Once updated, the actual rewriting of URIs in the JSON-LD files is an embarrassingly parallel task (modulo the enumeration and partitioning of the JSON-LD files) and suitable for the Python implementation found in [`scripts/rewrite_uris_to_uuids_parallel.py`](../scripts/rewrite_uris_to_uuids_parallel.py).
+This process is implemented by [`scripts/rewrite_uris_to_uuids_parallel.py`](../scripts/rewrite_uris_to_uuids_parallel.py).

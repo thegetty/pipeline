@@ -50,7 +50,7 @@ class PopulateAuctionEvent(Configurable):
 
 		parts = [v for v in (specific_name, city_name, country_name) if v is not None]
 		loc = parse_location(*parts, uri_base=self.helper.uid_tag_prefix, types=('Place', 'City', 'Country'))
-		if place_verbatim != city_name:
+		if place_verbatim and place_verbatim != city_name:
 			city = loc['part_of']
 			city['names'] = [place_verbatim]
 		return loc

@@ -674,7 +674,8 @@ class UtilityHelper:
 		else:
 			warnings.warn(f'Place with missing name on {p.id}')
 		for name in names:
-			p.identified_by = model.Name(ident='', content=name)
+			if name:
+				p.identified_by = model.Name(ident='', content=name)
 		if parent:
 			p.part_of = parent
 			data['part_of'] = parent_data

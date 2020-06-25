@@ -192,29 +192,29 @@ class SalesUtilityHelper(UtilityHelper):
 		uri = self.make_proj_uri('PHYS-CAT', *keys)
 		return uri
 
-	def physical_catalog(self, cno, sale_type, owner=None, copy=None):
+	def physical_catalog(self, cno, sale_type, owner=None, copy=None, add_name=False):
 		uri = self.physical_catalog_uri(cno, owner, copy)
 		labels = []
 		if owner:
 			labels.append(f'owned by “{owner}”')
 		if copy:
 			labels.append(f'copy {copy}')
-		label = ', '.join(labels)
 		catalog_type = self.catalog_type_for_sale_type(sale_type)
 		if sale_type in ('Auction', 'Collection Catalog'):
 			labels = [f'Sale Catalog {cno}'] + labels
-			catalog = catalog_type(ident=uri, label=', '.join(labels))
 		elif sale_type == 'Private Contract Sale':
 			labels = [f'Private Sale Exhibition Catalog {cno}'] + labels
-			catalog = catalog_type(ident=uri, label=', '.join(labels))
 		elif sale_type == 'Stock List':
 			labels = [f'Stock List {cno}'] + labels
-			catalog = catalog_type(ident=uri, label=', '.join(labels))
 		elif sale_type == 'Lottery':
 			labels = [f'Lottery Catalog {cno}'] + labels
-			catalog = catalog_type(ident=uri, label=', '.join(labels))
 		else:
 			warnings.warn(f'*** Unexpected sale type: {sale_type!r}')
+			return None
+		label = ', '.join(labels)
+		catalog = catalog_type(ident=uri, label=label)
+		if add_name:
+			catalog.identified_by = vocab.Name(ident='', content=label)
 		return catalog
 
 	def sale_for_sale_type(self, sale_type, lot_object_key):

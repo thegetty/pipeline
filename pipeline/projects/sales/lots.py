@@ -649,6 +649,14 @@ class AddAcquisitionOrBidding(ProvenanceBase):
 			warnings.warn(f'*** No price data found for {parent["transaction"]!r} transaction')
 			yield data
 
+	def add_mod_notes(self, act, all_mods, label):
+		if act and all_mods:
+			# Preserve the seller modifier strings as notes on the acquisition/bidding activity
+			for mod in all_mods:
+				note = vocab.Note(ident='', label=label, content=mod)
+				note.classified_as = vocab.instances['qualifier']
+				act.referred_to_by = note
+
 	def __call__(self, data:dict, non_auctions, event_properties, buy_sell_modifiers, transaction_types):
 		'''Determine if this record has an acquisition or bidding, and add appropriate modeling'''
 		parent = data['parent_data']
@@ -707,15 +715,8 @@ class AddAcquisitionOrBidding(ProvenanceBase):
 		data.setdefault('_owner_locations', [])
 		if transaction in SOLD:
 			for data, current_tx in self.add_acquisition(data, buyers, sellers, non_auctions, buy_sell_modifiers, transaction, transaction_types):
-				if seller_group:
-					# the sellers are uncertain, and modeled as a group, but we still want
-					# to attach a note about this uncertainty to the acquisition.
-					acq = get_crom_object(data['_acquisition'])
-					for seller_data in orig_sellers:
-						seller = get_crom_object(seller_data)
-						mod_non_auth = seller_data.get('auth_mod')
-						if mod_non_auth:
-							acq.referred_to_by = vocab.Note(ident='', label=f'Seller modifier', content=mod_non_auth)
+				acq = get_crom_object(data['_acquisition'])
+				self.add_mod_notes(acq, all_mods, label=f'Seller modifier')
 				houses = [self.helper.add_auction_house_data(h) for h in auction_houses_data.get(cno, [])]
 				experts = event_experts.get(cno, [])
 				commissaires = event_commissaires.get(cno, [])
@@ -749,7 +750,10 @@ class AddAcquisitionOrBidding(ProvenanceBase):
 			experts = event_experts.get(cno, [])
 			commissaires = event_commissaires.get(cno, [])
 			custody_recievers = houses + [add_crom_data(data={}, what=r) for r in experts + commissaires]
-			yield from self.add_bidding(data, buyers, sellers, buy_sell_modifiers, sale_type, transaction, transaction_types, custody_recievers)
+			for data in self.add_bidding(data, buyers, sellers, buy_sell_modifiers, sale_type, transaction, transaction_types, custody_recievers):
+				act = get_crom_object(data.get('_bidding'))
+				self.add_mod_notes(act, all_mods, label=f'Seller modifier')
+				yield data
 		elif transaction in UNKNOWN:
 			if sale_type == 'Lottery':
 				yield data
@@ -758,7 +762,10 @@ class AddAcquisitionOrBidding(ProvenanceBase):
 					self.helper.add_auction_house_data(h)
 					for h in auction_houses_data.get(cno, [])
 				]
-				yield from self.add_bidding(data, buyers, sellers, buy_sell_modifiers, sale_type, transaction, transaction_types, houses)
+				for data in self.add_bidding(data, buyers, sellers, buy_sell_modifiers, sale_type, transaction, transaction_types, houses):
+					act = get_crom_object(data.get('_bidding'))
+					self.add_mod_notes(act, all_mods, label=f'Seller modifier')
+					yield data
 		else:
 			prev_procurements = self.add_non_sale_sellers(data, sellers, sale_type, transaction, transaction_types)
 			lot = get_crom_object(parent['_event_causing_prov_entry'])

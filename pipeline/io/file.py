@@ -16,12 +16,18 @@ def filename_for(data: dict):
 	if uu:
 		partition = uu[:2]
 	elif 'uri' in data:
-		h = hashlib.md5(data['uri'].encode('utf-8')).hexdigest()
-		partition = h[:2]
-		uu = f'content-{h}'
+		uri = data['uri']
+		uu = str(uuid.uuid3(uuid.NAMESPACE_URL, uri))
+		partition = uu[:2]
 # 		print(f'*** No UUID in top-level resource. Using a hash of top-level URI: {uu}')
 	if not uu:
-		uu = str(uuid.uuid4())
+		o = data.get('_LOD_OBJECT')
+		if o:
+			# take a guess that the eventual filename is going to be based on the UUIDv3 
+			# of the crom object's ident URI
+			uu = str(uuid.uuid3(uuid.NAMESPACE_URL, o.id))
+		else:
+			uu = str(uuid.uuid4())
 		partition = uu[:2]
 # 		print(f'*** No UUID in top-level resource. Using an assigned UUID filename for the content: {uu}')
 	fn = f'{uu}.json'

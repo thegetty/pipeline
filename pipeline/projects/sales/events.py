@@ -45,10 +45,14 @@ class PopulateAuctionEvent(Configurable):
 		'''
 		specific_name = data.get('specific_loc')
 		city_name = data.get('city_of_sale')
+		place_verbatim = data.get('sale_location')
 		country_name = data.get('country_auth')
 
 		parts = [v for v in (specific_name, city_name, country_name) if v is not None]
 		loc = parse_location(*parts, uri_base=self.helper.uid_tag_prefix, types=('Place', 'City', 'Country'))
+		if place_verbatim != city_name:
+			city = loc['part_of']
+			city['names'] = [place_verbatim]
 		return loc
 
 	def __call__(self, data:dict, event_properties):

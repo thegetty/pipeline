@@ -642,6 +642,7 @@ class UtilityHelper:
 		type_name = data.get('type', 'place').lower()
 		
 		name = data.get('name')
+		names = data.get('names', [])
 		label = name
 		parent_data = data.get('part_of')
 
@@ -669,9 +670,11 @@ class UtilityHelper:
 		if place_type:
 			p.classified_as = place_type
 		if name:
-			p.identified_by = model.Name(ident='', content=name)
+			p.identified_by = vocab.PrimaryName(ident='', content=name)
 		else:
 			warnings.warn(f'Place with missing name on {p.id}')
+		for name in names:
+			p.identified_by = model.Name(ident='', content=name)
 		if parent:
 			p.part_of = parent
 			data['part_of'] = parent_data

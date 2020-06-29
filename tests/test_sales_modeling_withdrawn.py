@@ -19,7 +19,8 @@ class PIRModelingTest_Withdrawn(TestSalesPipelineOutput):
 	def test_modeling_for_withdrawn_records(self):
 		'''
 		An object with transaction type "withdrawn" should be modeled, and belong to the
-		auction of lot set of objects, but not be used in any resulting acquisition.
+		auction of lot set of objects. It should also appear in a previous transaction
+		that led to the current seller acquiring it.
 		
 		In this case, there is a lot of two objects, only one of which is withdrawn.
 		We expect the Auction of Lot set to contain two objects, the text record
@@ -36,7 +37,13 @@ class PIRModelingTest_Withdrawn(TestSalesPipelineOutput):
 		self.assertEqual(len(objects), 2)
 		self.assertEqual(len(texts), 2)
 		self.assertEqual(len(auctions), 1)
-		self.assertEqual(len(procurements), 1)
+		self.assertEqual(len(procurements), 2)
+		
+		procurement_labels = {p['_label'] for p in procurements.values()}
+		self.assertEqual(procurement_labels, {
+			'Sale leading to the previous ownership of Br-3039 0082[b] (1827-11-24)',
+	 		'Sale of Br-3039 0082 (1827-11-24)'
+	 	})
 		
 		procurement = procurements['tag:getty.edu,2019:digital:pipeline:REPLACE-WITH-UUID:sales#PROV,Br-3039,1827-11-24,0082']
 		parts = procurement.get('part', [])

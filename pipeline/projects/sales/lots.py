@@ -1,4 +1,5 @@
 import warnings
+import sys
 import pprint
 import traceback
 from contextlib import suppress
@@ -117,7 +118,7 @@ class AddAuctionOfLot(Configurable):
 			lot_object_key = object_key(auction_data)
 		except Exception as e:
 			warnings.warn(f'Failed to compute lot object key from data {auction_data} ({e})')
-			pprint.pprint({k: v for k, v in data.items() if v != ''})
+			pprint.pprint({k: v for k, v in data.items() if v != ''}, stream=sys.stderr)
 			raise
 		cno, lno, date = lot_object_key
 		sale_type = non_auctions.get(cno, 'Auction')
@@ -312,7 +313,7 @@ class AddAcquisitionOrBidding(ProvenanceBase):
 			xfer_label = f'Transfer of Custody {purpose_label}of {cno} {lno} ({date})'
 
 		# TODO: pass in the tx to use instead of getting it from `parent`
-		tx_data = parent['_prov_entry_data']
+		tx_data = parent.get('_prov_entry_data')
 		current_tx = get_crom_object(tx_data)
 
 		xfer_id = hmo.id + f'-CustodyTransfer-{sequence}'
@@ -376,7 +377,7 @@ class AddAcquisitionOrBidding(ProvenanceBase):
 	# 	if not prices:
 	# 		print(f'*** No price data found for {transaction} transaction')
 
-		tx_data = parent['_prov_entry_data']
+		tx_data = parent.get('_prov_entry_data')
 		current_tx = get_crom_object(tx_data)
 		payment_id = current_tx.id + '-Pay'
 
@@ -516,7 +517,7 @@ class AddAcquisitionOrBidding(ProvenanceBase):
 		auction_data = parent['auction_of_lot']
 		lot_object_key = object_key(auction_data)
 		cno, lno, date = lot_object_key
-		lot = get_crom_object(parent['_event_causing_prov_entry'])
+		lot = get_crom_object(parent.get('_event_causing_prov_entry'))
 		ts = getattr(lot, 'timespan', None)
 
 		prev_procurements = []
@@ -700,11 +701,23 @@ class AddAcquisitionOrBidding(ProvenanceBase):
 		
 		orig_sellers = sellers
 		if seller_group:
-			tx_data = parent['_prov_entry_data']
-			current_tx = get_crom_object(tx_data)
-			group_id = current_tx.id + '-SellerGroup'
+			tx_data = parent.get('_prov_entry_data')
+			if tx_data: # if there is a prov entry (e.g. was not withdrawn)
+				current_tx = get_crom_object(tx_data)
+				group_uri = current_tx.id + '-SellerGroup'
+				group_data = {
+					'uri': group_uri,
+				}
+			else:
+				pi_record_no = data['pi_record_no']
+				group_uri_key = ('GROUP', 'PI', pi_record_no, 'SellerGroup')
+				group_uri = self.helper.make_proj_uri(*group_uri_key)
+				group_data = {
+					'uri_keys': group_uri_key,
+					'uri': group_uri,
+				}
 			g_label = f'Group containing the seller of {object_key_string(cno, lno, date)}'
-			g = vocab.UncertainMemberClosedGroup(ident=group_id, label=g_label)
+			g = vocab.UncertainMemberClosedGroup(ident=group_uri, label=g_label)
 			for seller_data in sellers:
 				seller = get_crom_object(seller_data)
 				seller.member_of = g
@@ -754,9 +767,16 @@ class AddAcquisitionOrBidding(ProvenanceBase):
 			experts = event_experts.get(cno, [])
 			commissaires = event_commissaires.get(cno, [])
 			custody_recievers = houses + [add_crom_data(data={}, what=r) for r in experts + commissaires]
+			bid_count = 0
 			for data in self.add_bidding(data, buyers, sellers, buy_sell_modifiers, sale_type, transaction, transaction_types, custody_recievers):
+				bid_count += 1
 				act = get_crom_object(data.get('_bidding'))
 				self.add_mod_notes(act, all_mods, label=f'Seller modifier')
+				yield data
+			if not bid_count:
+				# there was no bidding, but we still want to model the seller(s) as
+				# having previously acquired the object.
+				prev_procurements = self.add_non_sale_sellers(data, sellers, sale_type, transaction, transaction_types)
 				yield data
 		elif transaction in UNKNOWN:
 			if sale_type == 'Lottery':

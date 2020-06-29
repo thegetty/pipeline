@@ -417,12 +417,16 @@ class AddAcquisitionOrBidding(ProvenanceBase):
 				acq.transferred_title_from = seller
 				paym.paid_to = seller
 			elif uncertain_attribution: # this is true if ANY of the sellers have an 'or anonymous' modifier
-				acq_assignment = vocab.PossibleAssignment(ident=acq.id + f'-seller-assignment-{seq_no}', label=f'Uncertain seller as previous title holder in acquisition')
+				acq_assignment_label = f'Uncertain seller as previous title holder in acquisition'
+				acq_assignment = vocab.PossibleAssignment(ident=acq.id + f'-seller-assignment-{seq_no}', label=acq_assignment_label)
+				acq_assignment.referred_to_by = vocab.Note(ident='', content=acq_assignment_label)
 				acq_assignment.assigned_property = 'transferred_title_from'
 				acq_assignment.assigned = seller
 				acq.attributed_by = acq_assignment
 
-				paym_assignment = vocab.PossibleAssignment(ident=paym.id + f'-seller-assignment-{seq_no}', label=f'Uncertain seller as recipient of payment')
+				paym_assignment_label = f'Uncertain seller as recipient of payment'
+				paym_assignment = vocab.PossibleAssignment(ident=paym.id + f'-seller-assignment-{seq_no}', label=paym_assignment_label)
+				paym_assignment.referred_to_by = vocab.Note(ident='', content=paym_assignment_label)
 				paym_assignment.assigned_property = 'paid_to'
 				paym_assignment.assigned = seller
 				paym.attributed_by = paym_assignment

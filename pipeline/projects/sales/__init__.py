@@ -697,7 +697,7 @@ class SalesPipeline(PipelineBase):
 								'prefixes': (
 									'artist_name', 'art_authority',
 									'artist_info', 'nationality', 'artist_ulan',
-									'attrib_mod', 'attrib_mod_auth', 'star_rec_no',
+									'attrib_mod', 'attrib_mod_auth',
 								)
 							},
 							'hand_note': {'prefixes': ('hand_note', 'hand_note_so')},

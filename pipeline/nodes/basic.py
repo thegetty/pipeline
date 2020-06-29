@@ -8,6 +8,7 @@ import pprint
 import difflib
 import functools
 import itertools
+import warnings
 from contextlib import suppress
 from pipeline.util.cleaners import date_cleaner
 from cromulent import model
@@ -59,8 +60,8 @@ class CleanDateToSpan(Configurable):
 				return data
 		else:
 			if not self.optional:
-				print('*** key %r is not in the data object:' % (self.key,))
-				pprint.pprint(data)
+				warnings.warn('*** key %r is not in the data object:' % (self.key,))
+				pprint.pprint(data, stream=sys.stderr)
 		return NOT_MODIFIED
 
 class KeyManagement(Configurable):

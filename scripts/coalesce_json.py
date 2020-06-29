@@ -63,7 +63,7 @@ for id in sorted(counter):
 							try:
 								merger.merge(m, n)
 							except model.DataError as e:
-								print(f'Exception caught while merging data from {newfile} ({str(e)}):')
+								print(f'Exception caught while merging data from {filename} into {canon_file} ({str(e)}):')
 								print(d)
 								print(content)
 								raise

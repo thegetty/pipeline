@@ -562,7 +562,7 @@ class AddAcquisitionOrBidding(ProvenanceBase):
 		lot = get_crom_object(lot_data)
 		if not lot:
 			return
-		ts = lot.timespan
+		ts = getattr(lot, 'timespan', None)
 
 		UNSOLD = transaction_types['unsold']
 		model_custody_return = transaction in UNSOLD

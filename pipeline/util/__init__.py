@@ -117,7 +117,7 @@ def implode_date(data:dict, prefix:str='', clamp:str=None):
 		else:
 			if type(e) not in (TypeError, ValueError):
 				warnings.warn(f'Failed to interpret day value {day!r} in implode_date: {e}')
-				pprint.pprint(data)
+				pprint.pprint(data, stream=sys.stderr)
 
 	try:
 		if year and month and day:

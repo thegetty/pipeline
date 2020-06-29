@@ -1,4 +1,5 @@
 import re
+import sys
 import warnings
 import pprint
 from contextlib import suppress
@@ -498,8 +499,8 @@ class AddArtists(Configurable):
 				elif mods & {'or', 'and'}:
 					pass
 				else:
-					print(f'UNHANDLED attrib_mod_auth VALUE: {mods}')
-					pprint.pprint(a)
+					warnings.warn(f'UNHANDLED attrib_mod_auth VALUE: {mods}')
+					pprint.pprint(a, stream=sys.stderr)
 					continue
 
 			subprod_path = self.helper.make_uri_path(*a["uri_keys"])

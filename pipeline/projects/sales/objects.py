@@ -357,14 +357,44 @@ class AddArtists(Configurable):
 				mods = {m.lower().strip() for m in data.get('attrib_mod_auth', '').split(';')}
 				return 'or' in mods
 			return False
-		or_anon_records = [is_or_anon(a) for a in artists]
-		uncertain_attribution = any(or_anon_records)
+		or_anon_records = any([is_or_anon(a) for a in artists])
+		uncertain_attribution = or_anon_records
+
+		all_mods = {m.lower().strip() for a in artists for m in a.get('attrib_mod_auth', '').split(';')} - {''}
+		artist_group = (not or_anon_records) and (all_mods == {'or'}) # the artist is *one* of the named people, model as a group
+		
+		other_artists = []
+		if artist_group:
+			group_id = event.id + '-ArtistGroup'
+			g_label = f'Group containing the artist of {hmo_label}'
+			g = vocab.UncertainMemberClosedGroup(ident=group_id, label=g_label)
+			for seq_no, a in enumerate(artists):
+				artist = self.helper.add_person(a, record=sales_record, relative_id=f'artist-{seq_no+1}', role='artist')
+				add_crom_data(a, artist)
+				artist.member_of = g
+			other_artists = artists
+
+			pi_record_no = data['pi_record_no']
+			group_uri_key = ('GROUP', 'PI', pi_record_no, 'ArtistGroup')
+			group_uri = self.helper.make_proj_uri(*group_uri_key)
+			group_data = {
+				'uri_keys': group_uri_key,
+				'uri': group_uri,
+				'role_label': 'uncertain artist'
+			}
+			artists = [add_crom_data(group_data, g)]
+		else:
+			for seq_no, a in enumerate(artists):
+				artist = self.helper.add_person(a, record=sales_record, relative_id=f'artist-{seq_no+1}', role='artist')
+				add_crom_data(a, artist)
+
 		for seq_no, a in enumerate(artists):
+			person = get_crom_object(a)
 			attribute_assignment_id = event.id + f'-artist-assignment-{seq_no}'
 			if is_or_anon(a):
 				# do not model the "or anonymous" records; they turn into uncertainty on the other records
 				continue
-			person = self.helper.add_person(a, record=sales_record, relative_id=f'artist-{seq_no+1}', role='artist')
+# 			person = self.helper.add_person(a, record=sales_record, relative_id=f'artist-{seq_no+1}', role='artist')
 			artist_label = a.get('role_label')
 
 			mod = a.get('attrib_mod_auth', '')
@@ -483,5 +513,7 @@ class AddArtists(Configurable):
 				assignment.assigned = subevent
 			else:
 				event.part = subevent
-		data['_artists'] = [a for a in artists if not is_or_anon(a)]
+		
+		all_artists = [a for a in artists if not is_or_anon(a)] + other_artists
+		data['_artists'] = all_artists
 		return data

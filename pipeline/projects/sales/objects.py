@@ -369,6 +369,7 @@ class AddArtists(Configurable):
 			group_id = event.id + '-ArtistGroup'
 			g_label = f'Group containing the artist of {hmo_label}'
 			g = vocab.UncertainMemberClosedGroup(ident=group_id, label=g_label)
+			g.identified_by = model.Name(ident='', content=g_label)
 			for seq_no, a in enumerate(artists):
 				artist = self.helper.add_person(a, record=sales_record, relative_id=f'artist-{seq_no+1}', role='artist')
 				add_crom_data(a, artist)
@@ -438,6 +439,7 @@ class AddArtists(Configurable):
 					group_label = f'{clsname} of {artist_label}'
 					group_id = a['uri'] + f'-{clsname}'
 					group = cls(ident=group_id, label=group_label)
+					group.identified_by = model.Name(ident='', content=group_label)
 					formation = model.Formation(ident='', label=f'Formation of {group_label}')
 					formation.influenced_by = person
 					group.formed_by = formation

@@ -64,8 +64,9 @@ for id in sorted(counter):
 								merger.merge(m, n)
 							except model.DataError as e:
 								print(f'Exception caught while merging data from {filename} into {canon_file} ({str(e)}):')
-								print(d)
+								print(canon_content)
 								print(content)
+								sys.exit(1)
 								raise
 						merged_data = factory.toString(m, False)
 						d = json.loads(merged_data)
@@ -77,6 +78,6 @@ for id in sorted(counter):
 						seen[id] = filename
 				except model.DataError as e:
 					print(f'*** Failed to read CRM data from {filename}: {e}')
-					print(f'{filename}:\n=======\n{content}')
-					print(f'{canon_file}:\n=======\n{canon_content}')
+					print(f'======= {filename}:\n{content}')
+					print(f'======= {canon_file}:\n{canon_content}')
 print(f'Coalesced {coalesce_count} JSON files in {path}')

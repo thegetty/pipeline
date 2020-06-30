@@ -158,7 +158,7 @@ class JSONValueRewriter:
 					if prefixes:
 						k = prefixes[0]
 						replace = self.mapping[k]
-						updated = replace + d[len(replace):]
+						updated = replace + d[len(k):]
 						return updated
 		if isinstance(d, dict):
 			return {k: self.rewrite(v, *args, **kwargs) for k, v in d.items()}

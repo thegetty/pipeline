@@ -47,7 +47,7 @@ class AddAuctionOfLot(Configurable):
 		if place:
 			lot.took_place_at = place.clone()
 		else:
-			print(f'*** No place URI found for lot in catalog {cno}')
+			warnings.warn(f'*** No place URI found for lot in catalog {cno}')
 
 	@staticmethod
 	def set_lot_date(lot, auction_data, event_dates):

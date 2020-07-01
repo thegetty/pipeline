@@ -82,7 +82,7 @@ class PIRModelingTest_PrivateContractSales(TestSalesPipelineOutput):
 		hmo = objects[hmo_key]
 		
 		prov_entry_curr = activities['tag:getty.edu,2019:digital:pipeline:REPLACE-WITH-UUID:sales#PROV,B-267,1817,0001']
-		prov_entry_prev = activities['tag:getty.edu,2019:digital:pipeline:REPLACE-WITH-UUID:sales#OBJ,B-267,0001,1817-seller-0-Prov']
+		prov_entry_prev = activities['tag:getty.edu,2019:digital:pipeline:REPLACE-WITH-UUID:sales#PROV,Seller-0,OBJ,B-267,0001,1817']
 		
 		event_key = 'tag:getty.edu,2019:digital:pipeline:REPLACE-WITH-UUID:sales#PRIVATE_CONTRACT_SALE-EVENT,B-267'
 		sale_event = activities[event_key]

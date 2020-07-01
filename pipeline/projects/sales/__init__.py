@@ -391,6 +391,9 @@ class SalesUtilityHelper(UtilityHelper):
 
 		return add_crom_data(data=a, what=house)
 
+	def prepend_uri_key(self, uri, key):
+		return uri.replace('#', f'#{key},')
+
 def add_crom_price(data, parent, services, add_citations=False):
 	'''
 	Add modeling data for `MonetaryAmount`, `StartingPrice`, or `EstimatedPrice`,

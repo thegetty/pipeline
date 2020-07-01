@@ -78,8 +78,11 @@ class AddAuctionOfLot(Configurable):
 		cno, lno, _ = object_key(auction_data)
 		notes = auction_data.get('lot_notes')
 		if notes:
-			note_id = lot.id + '-Notes'
-			lot.referred_to_by = vocab.Note(ident=note_id, content=notes)
+			# In case the lot is reconciled with another lot, notes should not be merged.
+			# Therefore, the note URI must not share a prefix with the lot URI, otherwise
+			# all notes are liable to be merged during URI reconciliation.
+			note_uri = self.helper.prepend_uri_key(lot.id, 'NOTE')
+			lot.referred_to_by = vocab.Note(ident=note_uri, content=notes)
 		if not lno:
 			warnings.warn(f'Setting empty identifier on {lot.id}')
 		lno = str(lno)
@@ -290,8 +293,13 @@ class AddAcquisitionOrBidding(ProvenanceBase):
 			label += f'; {content}'
 		return label
 
-	def final_owner_procurement(self, tx_label_args, final_owner, current_tx, hmo, current_ts):
-		tx_uri = hmo.id + '-FinalOwnerProv'
+	def final_owner_prov_entry(self, tx_label_args, final_owner, current_tx, hmo, current_ts):
+		# It's conceivable that there could be more than one "present location" for an
+		# object that is reconciled based on prev/post sale rewriting. Therefore, the
+		# provenance entry URI must not share a prefix with the object URI, otherwise all
+		# such provenance entries are liable to be merged during URI reconciliation as
+		# part of the prev/post sale rewriting.
+		tx_uri = self.helper.prepend_uri_key(hmo.id, f'PROV,CURROWN')
 		tx, acq = self.related_procurement(hmo, tx_label_args, current_tx, current_ts, buyer=final_owner, ident=tx_uri, make_label=prov_entry_label)
 		return tx, acq
 
@@ -316,7 +324,11 @@ class AddAcquisitionOrBidding(ProvenanceBase):
 		tx_data = parent.get('_prov_entry_data')
 		current_tx = get_crom_object(tx_data)
 
-		xfer_id = hmo.id + f'-CustodyTransfer-{sequence}'
+		# The custody transfer sequence is specific to a single transaction. Therefore,
+		# the custody transfer URI must not share a prefix with the object URI, otherwise
+		# all such custody transfers are liable to be merged during URI reconciliation as
+		# part of the prev/post sale rewriting.
+		xfer_id = self.helper.prepend_uri_key(hmo.id, f'CustodyTransfer,{sequence}')
 		xfer = model.TransferOfCustody(ident=xfer_id, label=xfer_label)
 		xfer.transferred_custody_of = hmo
 		if purpose in self.custody_xfer_purposes:
@@ -379,8 +391,13 @@ class AddAcquisitionOrBidding(ProvenanceBase):
 
 		tx_data = parent.get('_prov_entry_data')
 		current_tx = get_crom_object(tx_data)
+
+		# The payment URI is just the provenance entry URI with a suffix. In any case
+		# where the provenance entry is merged, the payment should be merged as well.
 		payment_id = current_tx.id + '-Pay'
 
+		# The acquisition URI is just the provenance entry URI with a suffix. In any case
+		# where the provenance entry is merged, the acquisition should be merged as well.
 		acq_id = hmo.id + '-Acq'
 		acq = model.Acquisition(ident=acq_id, label=acq_label)
 		acq.transferred_title_of = hmo
@@ -418,15 +435,21 @@ class AddAcquisitionOrBidding(ProvenanceBase):
 				acq.transferred_title_from = seller
 				paym.paid_to = seller
 			elif uncertain_attribution: # this is true if ANY of the sellers have an 'or anonymous' modifier
+				# The assignment URIs are just the acquisition URI with a suffix.
+				# In any case where the acquisition is merged, the assignments should be
+				# merged as well.
+				acq_assignment_uri = acq.id + f'-seller-assignment-{seq_no}'
+				paym_assignment_uri = paym.id + f'-seller-assignment-{seq_no}'
+				
 				acq_assignment_label = f'Uncertain seller as previous title holder in acquisition'
-				acq_assignment = vocab.PossibleAssignment(ident=acq.id + f'-seller-assignment-{seq_no}', label=acq_assignment_label)
+				acq_assignment = vocab.PossibleAssignment(ident=acq_assignment_uri, label=acq_assignment_label)
 				acq_assignment.referred_to_by = vocab.Note(ident='', content=acq_assignment_label)
 				acq_assignment.assigned_property = 'transferred_title_from'
 				acq_assignment.assigned = seller
 				acq.attributed_by = acq_assignment
 
 				paym_assignment_label = f'Uncertain seller as recipient of payment'
-				paym_assignment = vocab.PossibleAssignment(ident=paym.id + f'-seller-assignment-{seq_no}', label=paym_assignment_label)
+				paym_assignment = vocab.PossibleAssignment(ident=paym_assignment_uri, label=paym_assignment_label)
 				paym_assignment.referred_to_by = vocab.Note(ident='', content=paym_assignment_label)
 				paym_assignment.assigned_property = 'paid_to'
 				paym_assignment.assigned = seller
@@ -484,7 +507,7 @@ class AddAcquisitionOrBidding(ProvenanceBase):
 			data['_organizations'].append(final_owner_data)
 			final_owner = get_crom_object(final_owner_data)
 			tx_label_args = tuple([self.helper, sale_type, 'Sold', 'leading to the currently known location of'] + list(lot_object_key))
-			tx, acq = self.final_owner_procurement(tx_label_args, final_owner, current_tx, hmo, ts)
+			tx, acq = self.final_owner_prov_entry(tx_label_args, final_owner, current_tx, hmo, ts)
 			note = final_owner_data.get('note')
 			if note:
 				acq.referred_to_by = vocab.Note(ident='', content=note)
@@ -524,7 +547,11 @@ class AddAcquisitionOrBidding(ProvenanceBase):
 		tx_label_args = tuple([self.helper, sale_type, 'Sold', rel] + list(lot_object_key))
 		for i, seller_data in enumerate(sellers):
 			seller = get_crom_object(seller_data)
-			tx_uri = hmo.id + f'-seller-{i}-Prov'
+			# The provenance entry for a seller's previous acquisition is specific to a
+			# single transaction. Therefore, the provenance entry URI must not share a
+			# prefix with the object URI, otherwise all such provenance entries are liable
+			# to be merged during URI reconciliation as part of the prev/post sale rewriting.
+			tx_uri = self.helper.prepend_uri_key(hmo.id, f'PROV,Seller-{i}')
 			tx, acq = self.related_procurement(hmo, tx_label_args, current_ts=ts, buyer=seller, previous=True, ident=tx_uri, make_label=prov_entry_label)
 			self.attach_source_catalog(data, acq, [seller_data])
 			if source:
@@ -591,7 +618,11 @@ class AddAcquisitionOrBidding(ProvenanceBase):
 		self.add_prev_post_owners(data, hmo, tx_data, sale_type, lot_object_key, ts)
 
 		if amnts:
-			bidding_id = hmo.id + '-Bidding'
+			# The bidding for an object is specific to a single transaction. Therefore,
+			# the bidding URI must not share a prefix with the object URI, otherwise all
+			# such bidding entries are liable to be merged during URI reconciliation as
+			# part of the prev/post sale rewriting.
+			bidding_id = self.helper.prepend_uri_key(hmo.id, 'BID')
 			all_bids_label = f'Bidding on {cno} {lno} ({date})'
 			all_bids = model.Activity(ident=bidding_id, label=all_bids_label)
 			all_bids.identified_by = model.Name(ident='', content=all_bids_label)
@@ -605,9 +636,12 @@ class AddAcquisitionOrBidding(ProvenanceBase):
 			FOR = set(buy_sell_modifiers['for'])
 
 			for seq_no, amnt in enumerate(amnts):
-				bid_id = hmo.id + f'-Bid-{seq_no}'
+				# The individual bid and promise URIs are just the bidding URI with a suffix.
+				# In any case where the bidding is merged, the bids and promises should be
+				# merged as well.
+				bid_id = bidding_id + f'-Bid-{seq_no}'
 				bid = vocab.Bidding(ident=bid_id)
-				prop_id = hmo.id + f'-Bid-{seq_no}-Promise'
+				prop_id = bidding_id + f'-Bid-{seq_no}-Promise'
 				try:
 					amnt_label = amnt._label
 					bid_label = f'Bid of {amnt_label} on {cno} {lno} ({date})'
@@ -641,7 +675,7 @@ class AddAcquisitionOrBidding(ProvenanceBase):
 				final_owner = get_crom_object(final_owner_data)
 				hmo = get_crom_object(data)
 				tx_label_args = tuple([self.helper, sale_type, 'Sold', 'leading to the currently known location of'] + list(lot_object_key))
-				tx, acq = self.final_owner_procurement(tx_label_args, final_owner, None, hmo, ts)
+				tx, acq = self.final_owner_prov_entry(tx_label_args, final_owner, None, hmo, ts)
 				note = final_owner_data.get('note')
 				if note:
 					acq.referred_to_by = vocab.Note(ident='', content=note)
@@ -704,6 +738,9 @@ class AddAcquisitionOrBidding(ProvenanceBase):
 			tx_data = parent.get('_prov_entry_data')
 			if tx_data: # if there is a prov entry (e.g. was not withdrawn)
 				current_tx = get_crom_object(tx_data)
+				# The seller group URI is just the provenance entry URI with a suffix.
+				# In any case where the provenance entry is merged, the seller group
+				# should be merged as well.
 				group_uri = current_tx.id + '-SellerGroup'
 				group_data = {
 					'uri': group_uri,

@@ -178,7 +178,7 @@ class PopulateSalesObject(Configurable, pipeline.linkedart.PopulateObject):
 					# Therefore, the place URI must not share a prefix with the object URI,
 					# otherwise all such places are liable to be merged during URI
 					# reconciliation as part of the prev/post sale rewriting.
-					base_uri = hmo.id.replace('#', f'#PLACE,')
+					base_uri = self.helper.prepend_uri_key(hmo.id, 'PLACE')
 					place_data = self.helper.make_place(current, base_uri=base_uri)
 					place = get_crom_object(place_data)
 
@@ -421,7 +421,7 @@ class AddArtists(Configurable):
 			# Therefore, the attribution URIs must not share a prefix with the production
 			# event URI, otherwise all such attributions would be liable to be merged
 			# during URI reconciliation.
-			attribute_assignment_id = prod_event.id.replace('#', f'#ASSIGNMENT,Artist-{seq_no},')
+			attribute_assignment_id = self.helper.prepend_uri_key(prod_event.id, f'ASSIGNMENT,Artist-{seq_no}')
 
 			if is_or_anon(a):
 				# do not model the "or anonymous" records; they turn into uncertainty on the other records

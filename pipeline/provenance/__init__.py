@@ -130,7 +130,7 @@ class ProvenanceBase(Configurable):
 		# The Provenance Entry URI must not share a prefix with the object URI, otherwise
 		# we run the rist of provenance entries being accidentally merged during URI
 		# reconciliation as part of the prev/post sale rewriting.
-		tx_uri = hmo.id.replace('#', f'#PROV-{record_id},')
+		tx_uri = self.helper.prepend_uri_key(hmo.id, f'PROV-{record_id}')
 		tx_label_args = tuple([self.helper, sale_type, 'Sold', rel] + list(lot_object_key))
 		tx, _ = self.related_procurement(hmo, tx_label_args, current_tx, ts, buyer=owner, previous=rev, ident=tx_uri, make_label=make_label)
 		if owner_record.get('own_auth_e'):

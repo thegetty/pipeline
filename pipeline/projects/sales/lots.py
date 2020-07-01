@@ -81,7 +81,7 @@ class AddAuctionOfLot(Configurable):
 			# In case the lot is reconciled with another lot, notes should not be merged.
 			# Therefore, the note URI must not share a prefix with the lot URI, otherwise
 			# all notes are liable to be merged during URI reconciliation.
-			note_uri = lot.id.replace('#', f'#NOTE,')
+			note_uri = self.helper.prepend_uri_key(lot.id, 'NOTE')
 			lot.referred_to_by = vocab.Note(ident=note_uri, content=notes)
 		if not lno:
 			warnings.warn(f'Setting empty identifier on {lot.id}')
@@ -299,7 +299,7 @@ class AddAcquisitionOrBidding(ProvenanceBase):
 		# provenance entry URI must not share a prefix with the object URI, otherwise all
 		# such provenance entries are liable to be merged during URI reconciliation as
 		# part of the prev/post sale rewriting.
-		tx_uri = hmo.id.replace('#', f'#PROV,CURROWN,')
+		tx_uri = self.helper.prepend_uri_key(hmo.id, f'PROV,CURROWN')
 		tx, acq = self.related_procurement(hmo, tx_label_args, current_tx, current_ts, buyer=final_owner, ident=tx_uri, make_label=prov_entry_label)
 		return tx, acq
 
@@ -328,7 +328,7 @@ class AddAcquisitionOrBidding(ProvenanceBase):
 		# the custody transfer URI must not share a prefix with the object URI, otherwise
 		# all such custody transfers are liable to be merged during URI reconciliation as
 		# part of the prev/post sale rewriting.
-		xfer_id = hmo.id.replace('#', f'#CustodyTransfer,{sequence},')
+		xfer_id = self.helper.prepend_uri_key(hmo.id, f'CustodyTransfer,{sequence}')
 		xfer = model.TransferOfCustody(ident=xfer_id, label=xfer_label)
 		xfer.transferred_custody_of = hmo
 		if purpose in self.custody_xfer_purposes:
@@ -551,7 +551,7 @@ class AddAcquisitionOrBidding(ProvenanceBase):
 			# single transaction. Therefore, the provenance entry URI must not share a
 			# prefix with the object URI, otherwise all such provenance entries are liable
 			# to be merged during URI reconciliation as part of the prev/post sale rewriting.
-			tx_uri = hmo.id.replace('#', f'#PROV,Seller-{i},')
+			tx_uri = self.helper.prepend_uri_key(hmo.id, f'PROV,Seller-{i}')
 			tx, acq = self.related_procurement(hmo, tx_label_args, current_ts=ts, buyer=seller, previous=True, ident=tx_uri, make_label=prov_entry_label)
 			self.attach_source_catalog(data, acq, [seller_data])
 			if source:
@@ -622,7 +622,7 @@ class AddAcquisitionOrBidding(ProvenanceBase):
 			# the bidding URI must not share a prefix with the object URI, otherwise all
 			# such bidding entries are liable to be merged during URI reconciliation as
 			# part of the prev/post sale rewriting.
-			bidding_id = hmo.id.replace('#', f'#BID,')
+			bidding_id = self.helper.prepend_uri_key(hmo.id, 'BID')
 			all_bids_label = f'Bidding on {cno} {lno} ({date})'
 			all_bids = model.Activity(ident=bidding_id, label=all_bids_label)
 			all_bids.identified_by = model.Name(ident='', content=all_bids_label)

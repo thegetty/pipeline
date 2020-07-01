@@ -434,8 +434,12 @@ class AddArtists(Configurable):
 			hmo_label = f'{hmo._label}'
 		except AttributeError:
 			hmo_label = 'object'
-		event_id = hmo.id + '-Production'
-		event = model.Production(ident=event_id, label=f'Production event for {hmo_label}')
+			
+		# The production event URI is just the object URI with a suffix. When URIs are
+		# reconciled during prev/post sale rewriting, this will allow us to also reconcile
+		# the URIs for the production events (of which there should only be one per object)
+		event_uri = hmo.id + '-Production'
+		event = model.Production(ident=event_uri, label=f'Production event for {hmo_label}')
 		hmo.produced_by = event
 
 		artists = data.get('_artists', [])
@@ -448,8 +452,8 @@ class AddArtists(Configurable):
 			person = get_crom_object(a)
 
 			subprod_path = self.helper.make_uri_path(*a["uri_keys"])
-			subevent_id = event_id + f'-{subprod_path}'
-			subevent = model.Production(ident=subevent_id, label=f'Production sub-event for {artist_label}')
+			subevent_uri = event_uri + f'-{subprod_path}'
+			subevent = model.Production(ident=subevent_uri, label=f'Production sub-event for {artist_label}')
 			subevent.carried_out_by = person
 			event.part = subevent
 # 		data['_artists'] = [a for a in artists]
@@ -467,9 +471,12 @@ class PopulateKnoedlerObject(Configurable, pipeline.linkedart.PopulateObject):
 		hmo = get_crom_object(data)
 		title = truncate_with_ellipsis(title, 100) or title
 
-		vi_id = hmo.id + '-VisItem'
-		vi = model.VisualItem(ident=vi_id)
-		vidata = {'uri': vi_id}
+		# The visual item URI is just the object URI with a suffix. When URIs are
+		# reconciled during prev/post sale rewriting, this will allow us to also reconcile
+		# the URIs for the visual items (of which there should only be one per object)
+		vi_uri = hmo.id + '-VisItem'
+		vi = model.VisualItem(ident=vi_uri)
+		vidata = {'uri': vi_uri}
 		if title:
 			vidata['label'] = f'Visual work of “{title}”'
 			sales_record = get_crom_object(data['_record'])
@@ -927,8 +934,12 @@ class ModelDestruction(TransactionHandler):
 
 		title = self.helper.title_value(data['_object'].get('title'))
 		short_title = truncate_with_ellipsis(title, 100) or title
-		dest_id = hmo.id + '-Destruction'
-		d = model.Destruction(ident=dest_id, label=f'Destruction of “{short_title}”')
+
+		# The destruction URI is just the object URI with a suffix. When URIs are
+		# reconciled during prev/post sale rewriting, this will allow us to also reconcile
+		# the URIs for the destructions (of which there should only be one per object)
+		dest_uri = hmo.id + '-Destruction'
+		d = model.Destruction(ident=dest_uri, label=f'Destruction of “{short_title}”')
 		if rec.get('verbatim_notes'):
 			d.referred_to_by = vocab.Note(ident='', content=rec['verbatim_notes'])
 		hmo.destroyed_by = d
@@ -961,7 +972,12 @@ class ModelTheftOrLoss(TransactionHandler):
 
 		title = self.helper.title_value(data['_object'].get('title'))
 		short_title = truncate_with_ellipsis(title, 100) or title
-		theft_id = hmo.id + f'-{label_type}'
+
+		# It's conceivable that there could be more than one theft of an object (if it was
+		# recovered after the first theft). Therefore, the theft URI must not share a
+		# prefix with the object URI, otherwise all such thefts would be merged during
+		# URI reconciliation as part of the prev/post sale rewriting.
+		theft_uri = hmo.id.replace('#', f'#{label_type.upper()},')
 
 		warnings.warn('TODO: parse Theft/Loss note for date and location')
 		# Examples:
@@ -972,7 +988,7 @@ class ModelTheftOrLoss(TransactionHandler):
 		notes = rec.get('verbatim_notes')
 		if notes and 'Looted' in notes:
 			transfer_class = vocab.Looting
-		t = transfer_class(ident=theft_id, label=f'{label_type} of “{short_title}”')
+		t = transfer_class(ident=theft_uri, label=f'{label_type} of “{short_title}”')
 		t.transferred_custody_from = self.helper.static_instances.get_instance('Group', 'knoedler')
 		t.transferred_custody_of = hmo
 

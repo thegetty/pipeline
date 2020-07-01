@@ -38,8 +38,12 @@ class PopulateSalesObject(Configurable, pipeline.linkedart.PopulateObject):
 		if m:
 			method = m.group(1)
 			year = m.group(2)
-			dest_id = hmo.id + '-Destr'
-			d = model.Destruction(ident=dest_id, label=f'Destruction of “{short_title}”')
+			# The destruction URI is just the object URI with a suffix. When URIs are
+			# reconciled during prev/post sale rewriting, this will allow us to also reconcile
+			# the URIs for the destructions (of which there should only be one per object)
+			dest_uri = hmo.id + '-Destruction'
+
+			d = model.Destruction(ident=dest_uri, label=f'Destruction of “{short_title}”')
 			d.referred_to_by = vocab.Note(ident='', content=note)
 			if year is not None:
 				begin, end = date_cleaner(year)
@@ -58,9 +62,13 @@ class PopulateSalesObject(Configurable, pipeline.linkedart.PopulateObject):
 
 			if location:
 				current = parse_location_name(location, uri_base=self.helper.uid_tag_prefix)
-				base_uri = hmo.id + '-Place,'
+				# The place URI used for destruction events is based on the object URI with
+				# a suffix. When URIs are reconciled during prev/post sale rewriting, this
+				# will allow us to also reconcile the URIs for the places of destruction
+				# (of which there should only be one hierarchy per object)
+				base_uri = hmo.id + '-Destruction-Place,'
 				place_data = self.helper.make_place(current, base_uri=base_uri)
-				place = get_crom_object(place_data)
+				pprint.pprint(place_data)
 				if place:
 					data['_locations'].append(place_data)
 					d.took_place_at = place
@@ -72,9 +80,12 @@ class PopulateSalesObject(Configurable, pipeline.linkedart.PopulateObject):
 		title = data.get('title')
 		title = truncate_with_ellipsis(title, 100) or title
 
-		vi_id = hmo.id + '-VisItem'
-		vi = model.VisualItem(ident=vi_id)
-		vidata = {'uri': vi_id}
+		# The visual item URI is just the object URI with a suffix. When URIs are
+		# reconciled during prev/post sale rewriting, this will allow us to also reconcile
+		# the URIs for the visual items (of which there should only be one per object)
+		vi_uri = hmo.id + '-VisItem'
+		vi = model.VisualItem(ident=vi_uri)
+		vidata = {'uri': vi_uri}
 		if title:
 			vidata['label'] = f'Visual work of “{title}”'
 			sales_record = get_crom_object(data['_record'])
@@ -162,7 +173,12 @@ class PopulateSalesObject(Configurable, pipeline.linkedart.PopulateObject):
 					if note:
 						owner_data['note'] = note
 
-					base_uri = hmo.id + '-Place,'
+					# It's conceivable that there could be more than one "present location"
+					# for an object that is reconciled based on prev/post sale rewriting.
+					# Therefore, the place URI must not share a prefix with the object URI,
+					# otherwise all such places are liable to be merged during URI
+					# reconciliation as part of the prev/post sale rewriting.
+					base_uri = hmo.id.replace('#', f'#PLACE,')
 					place_data = self.helper.make_place(current, base_uri=base_uri)
 					place = get_crom_object(place_data)
 
@@ -330,9 +346,13 @@ class AddArtists(Configurable):
 			hmo_label = f'{hmo._label}'
 		except AttributeError:
 			hmo_label = 'object'
-		event_id = hmo.id + '-Prod'
-		event = model.Production(ident=event_id, label=f'Production event for {hmo_label}')
-		hmo.produced_by = event
+
+		# The production event URI is just the object URI with a suffix. When URIs are
+		# reconciled during prev/post sale rewriting, this will allow us to also reconcile
+		# the URIs for the production events (of which there should only be one per object)
+		event_uri = hmo.id + '-Production'
+		prod_event = model.Production(ident=event_uri, label=f'Production event for {hmo_label}')
+		hmo.produced_by = prod_event
 
 		artists = data.get('_artists', [])
 
@@ -366,9 +386,12 @@ class AddArtists(Configurable):
 		
 		other_artists = []
 		if artist_group:
-			group_id = event.id + '-ArtistGroup'
+			# The artist group URI is just the production event URI with a suffix. When URIs are
+			# reconciled during prev/post sale rewriting, this will allow us to also reconcile
+			# the URIs for the artist groups (of which there should only be one per production/object)
+			group_uri = prod_event.id + '-ArtistGroup'
 			g_label = f'Group containing the artist of {hmo_label}'
-			g = vocab.UncertainMemberClosedGroup(ident=group_id, label=g_label)
+			g = vocab.UncertainMemberClosedGroup(ident=group_uri, label=g_label)
 			g.identified_by = model.Name(ident='', content=g_label)
 			for seq_no, a in enumerate(artists):
 				artist = self.helper.add_person(a, record=sales_record, relative_id=f'artist-{seq_no+1}', role='artist')
@@ -392,7 +415,14 @@ class AddArtists(Configurable):
 
 		for seq_no, a in enumerate(artists):
 			person = get_crom_object(a)
-			attribute_assignment_id = event.id + f'-artist-assignment-{seq_no}'
+
+			# In the case that an object is reconciled as part of prev/post sale rewriting,
+			# it's possible that the two source records have differing artist information.
+			# Therefore, the attribution URIs must not share a prefix with the production
+			# event URI, otherwise all such attributions would be liable to be merged
+			# during URI reconciliation.
+			attribute_assignment_id = prod_event.id.replace('#', f'#ASSIGNMENT,Artist-{seq_no},')
+
 			if is_or_anon(a):
 				# do not model the "or anonymous" records; they turn into uncertainty on the other records
 				continue
@@ -427,7 +457,7 @@ class AddArtists(Configurable):
 					pass
 				elif STYLE_OF.intersects(mods):
 					assignment = vocab.make_multitype_obj(*attrib_assignment_classes, ident=attribute_assignment_id, label=f'In the style of {artist_label}')
-					event.attributed_by = assignment
+					prod_event.attributed_by = assignment
 					assignment.assigned_property = 'influenced_by'
 					assignment.property_classified_as = vocab.instances['style of']
 					assignment.assigned = person
@@ -437,6 +467,10 @@ class AddArtists(Configurable):
 					clsname = attribution_group_types[mod_name]
 					cls = getattr(vocab, clsname)
 					group_label = f'{clsname} of {artist_label}'
+					# The group URI is just the person URI with a suffix. In any case
+					# where the person is merged, the group should be merged as well.
+					# For example, when if "RUBENS" is merged, "School of RUBENS" should
+					# also be merged.
 					group_id = a['uri'] + f'-{clsname}'
 					group = cls(ident=group_id, label=group_label)
 					group.identified_by = model.Name(ident='', content=group_label)
@@ -446,23 +480,23 @@ class AddArtists(Configurable):
 					group_data = add_crom_data({'uri': group_id}, group)
 					data['_organizations'].append(group_data)
 
-					subevent_id = event_id + f'-{seq_no}' # TODO: fix for the case of post-sales merging
+					subevent_id = event_uri + f'-{seq_no}' # TODO: fix for the case of post-sales merging
 					subevent = model.Production(ident=subevent_id, label=f'Production sub-event for {group_label}')
 					subevent.carried_out_by = group
 
 					if uncertain_attribution:
 						assignment = vocab.make_multitype_obj(*attrib_assignment_classes, ident=attribute_assignment_id, label=f'Possibly attributed to {group_label}')
-						event.attributed_by = assignment
+						prod_event.attributed_by = assignment
 						assignment.assigned_property = 'part'
 						assignment.assigned = subevent
 					else:
-						event.part = subevent
+						prod_event.part = subevent
 					continue
 				elif FORMERLY_ATTRIBUTED_TO.intersects(mods):
 					# the {uncertain_attribution} flag does not apply to this branch, because this branch is not making a statement
 					# about a previous attribution. the uncertainty applies only to the current attribution.
 					assignment = vocab.ObsoleteAssignment(ident=attribute_assignment_id, label=f'Formerly attributed to {artist_label}')
-					event.attributed_by = assignment
+					prod_event.attributed_by = assignment
 					assignment.assigned_property = 'carried_out_by'
 					assignment.assigned = person
 					continue
@@ -475,7 +509,7 @@ class AddArtists(Configurable):
 						attrib_assignment_classes.append(vocab.ProbableAssignment)
 						assignment = vocab.make_multitype_obj(*attrib_assignment_classes, ident=attribute_assignment_id, label=f'Probably attributed to {artist_label}')
 						assignment._label = f'Probably by {artist_label}'
-					event.attributed_by = assignment
+					prod_event.attributed_by = assignment
 					assignment.assigned_property = 'carried_out_by'
 					assignment.assigned = person
 					continue
@@ -483,10 +517,15 @@ class AddArtists(Configurable):
 					# the {uncertain_attribution} flag does not apply to this branch, because this branch is not making a statement
 					# about the artist of the work, but about the artist of the original work that this work is a copy of.
 					cls = type(hmo)
-					original_id = hmo.id + '-Orig'
+					# The original object URI is just the object URI with a suffix. When URIs are
+					# reconciled during prev/post sale rewriting, this will allow us to also reconcile
+					# the URIs for the original object (of which there should be at most one per object)
+					original_id = hmo.id + '-Original'
 					original_label = f'Original of {hmo_label}'
 					original_hmo = cls(ident=original_id, label=original_label)
-					original_event_id = original_hmo.id + '-Prod'
+					
+					# Similarly for the production of the original object.
+					original_event_id = original_hmo.id + '-Production'
 					original_event = model.Production(ident=original_event_id, label=f'Production event for {original_label}')
 					original_hmo.produced_by = original_event
 
@@ -495,7 +534,7 @@ class AddArtists(Configurable):
 					original_event.part = original_subevent
 					original_subevent.carried_out_by = person
 
-					event.influenced_by = original_hmo
+					prod_event.influenced_by = original_hmo
 					data['_original_objects'].append(add_crom_data(data={}, what=original_hmo))
 					continue
 				elif mods & {'or', 'and'}:
@@ -506,16 +545,16 @@ class AddArtists(Configurable):
 					continue
 
 			subprod_path = self.helper.make_uri_path(*a["uri_keys"])
-			subevent_id = event_id + f'-{subprod_path}'
+			subevent_id = event_uri + f'-{subprod_path}'
 			subevent = model.Production(ident=subevent_id, label=f'Production sub-event for {artist_label}')
 			subevent.carried_out_by = person
 			if uncertain_attribution or 'or' in mods:
 				assignment = vocab.make_multitype_obj(*attrib_assignment_classes, ident=attribute_assignment_id, label=f'Possibly attributed to {artist_label}')
-				event.attributed_by = assignment
+				prod_event.attributed_by = assignment
 				assignment.assigned_property = 'part'
 				assignment.assigned = subevent
 			else:
-				event.part = subevent
+				prod_event.part = subevent
 		
 		all_artists = [a for a in artists if not is_or_anon(a)] + other_artists
 		data['_artists'] = all_artists

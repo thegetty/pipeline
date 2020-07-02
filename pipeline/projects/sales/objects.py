@@ -68,7 +68,7 @@ class PopulateSalesObject(Configurable, pipeline.linkedart.PopulateObject):
 				# (of which there should only be one hierarchy per object)
 				base_uri = hmo.id + '-Destruction-Place,'
 				place_data = self.helper.make_place(current, base_uri=base_uri)
-				pprint.pprint(place_data)
+				place = get_crom_object(place_data)
 				if place:
 					data['_locations'].append(place_data)
 					d.took_place_at = place

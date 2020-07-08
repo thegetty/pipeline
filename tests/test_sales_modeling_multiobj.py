@@ -25,23 +25,24 @@ class PIRModelingTest_MultiObject(TestSalesPipelineOutput):
 
 		objects = output['model-object']
 		activities = list(output['model-activity'].values())
-		auctions = list(output['model-auction-of-lot'].values())
-		self.assertEqual(len(activities), 2)
-		self.assertEqual(len(auctions), 1)
+		sale_activities = list(output['model-sale-activity'].values())
+
+		self.assertEqual(len(activities), 1)
+		self.assertEqual(len(sale_activities), 2)
 		
-		by_type = {k: list(v) for k,v in groupby(activities, key=lambda a: a['classified_as'][0]['_label'])}
-		self.assertEqual(set(by_type.keys()), {'Auction Event', 'Provenance Entry'})
+		act_by_type = {k: list(v) for k,v in groupby(activities, key=lambda a: a['classified_as'][0]['_label'])}
+		self.assertEqual(set(act_by_type.keys()), {'Provenance Entry'})
+		
+		sale_by_type = {k: list(v) for k,v in groupby(sale_activities, key=lambda a: a['classified_as'][0]['_label'])}
+		self.assertEqual(set(sale_by_type.keys()), {'Auction Event', 'Auction of Lot'})
 		
 		# there is 1 procurement
-		self.assertEqual(len(by_type['Provenance Entry']), 1)
-		procurement = by_type['Provenance Entry'][0]
+		self.assertEqual(len(act_by_type['Provenance Entry']), 1)
+		procurement = act_by_type['Provenance Entry'][0]
 
-		by_type = {k: list(v) for k,v in groupby(auctions, key=lambda a: a['classified_as'][0]['_label'])}
-		self.assertEqual(set(by_type.keys()), {'Auction of Lot'})
-		
 		# there is 1 lot
-		self.assertEqual(len(by_type['Auction of Lot']), 1)
-		lot = by_type['Auction of Lot'][0]
+		self.assertEqual(len(sale_by_type['Auction of Lot']), 1)
+		lot = sale_by_type['Auction of Lot'][0]
 
 		# procurement has 1 payment, 3 acquisitions, and 6 transfers of custody
 		parts = procurement['part']

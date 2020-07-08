@@ -25,7 +25,7 @@ class PIRModelingTest_MultiLot(TestSalesPipelineOutput):
 		output = self.run_pipeline('multilot')
 
 		objects = output['model-object']
-		auctions = list(output['model-auction-of-lot'].values())
+		auctions = list(output['model-sale-activity'].values())
 		activities = list(output['model-activity'].values())
 		self.assertEqual(len(activities), 1)
 		self.assertEqual(len(auctions), 2)

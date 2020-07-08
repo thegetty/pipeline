@@ -6,6 +6,7 @@ arches_models = {
 	'Place': 'place',
 	'ProvenanceEntry': 'provenance_activity',
 	'Series': 'series',
+	'SaleActivity': 'sale_activity',
 	'Activity': 'auction',
 	'AuctionOfLot': 'auction_of_lot',
 	'Bidding': 'bidding',

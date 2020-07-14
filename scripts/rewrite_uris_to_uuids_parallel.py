@@ -55,27 +55,28 @@ class UUIDRewriter:
 			print(f'failed to rewrite JSON value: {d!r}')
 			raise Exception(f'failed to rewrite JSON value ({kwargs}): {d!r}')
 
-if len(sys.argv) < 2:
-	cmd = sys.argv[0]
-	print(f'''
-Usage: {cmd} URI_PREFIX MAP_FILE_NAME
+if __name__ == '__main__':
+	if len(sys.argv) < 2:
+		cmd = sys.argv[0]
+		print(f'''
+	Usage: {cmd} URI_PREFIX MAP_FILE_NAME
 
-Process all json files in the output path (configured with the GETTY_PIPELINE_OUTPUT
-environment variable), rewriting URIs that have the specified URI_PREFIX to urn:uuid:
-URIs that are specified in the MAP_FILE_NAME JSON file.
+	Process all json files in the output path (configured with the GETTY_PIPELINE_OUTPUT
+	environment variable), rewriting URIs that have the specified URI_PREFIX to urn:uuid:
+	URIs that are specified in the MAP_FILE_NAME JSON file.
 
-	'''.lstrip())
-	sys.exit(1)
+		'''.lstrip())
+		sys.exit(1)
 
-prefix = sys.argv[1]
-map_file = sys.argv[2]
+	prefix = sys.argv[1]
+	map_file = sys.argv[2]
 
-print(f'Rewriting URIs to UUIDs ...')
-start_time = time.time()
-r = UUIDRewriter(prefix, map_file)
-rewrite_output_files(r, update_filename=True, verify_uuid=True, parallel=True, ignore_errors=True)
-if map_file:
-	r.persist_map()
-cur = time.time()
-elapsed = cur - start_time
-print(f'Done (%.1fs)' % (elapsed,))
+	print(f'Rewriting URIs to UUIDs ...')
+	start_time = time.time()
+	r = UUIDRewriter(prefix, map_file)
+	rewrite_output_files(r, update_filename=True, verify_uuid=True, parallel=True, ignore_errors=True)
+	if map_file:
+		r.persist_map()
+	cur = time.time()
+	elapsed = cur - start_time
+	print(f'Done (%.1fs)' % (elapsed,))

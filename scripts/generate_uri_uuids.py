@@ -78,43 +78,44 @@ def find_uris(prefix, map_data, path):
 			uris.update(r)
 	return uris
 
-if len(sys.argv) < 2:
-	cmd = sys.argv[0]
-	print(f'''
-Usage: {cmd} URI_PREFIX MAP_FILE_NAME
+if __name__ == '__main__':
+	if len(sys.argv) < 2:
+		cmd = sys.argv[0]
+		print(f'''
+	Usage: {cmd} URI_PREFIX MAP_FILE_NAME
 
-Process all JSON files in the output path (configured with the GETTY_PIPELINE_OUTPUT
-environment variable), and assign URIs that have the specified URI_PREFIX a unique
-urn:uuid URI, persisting the mapping in the MAP_FILE_NAME JSON file (which is updated
-in-place, preserving any existing data).
+	Process all JSON files in the output path (configured with the GETTY_PIPELINE_OUTPUT
+	environment variable), and assign URIs that have the specified URI_PREFIX a unique
+	urn:uuid URI, persisting the mapping in the MAP_FILE_NAME JSON file (which is updated
+	in-place, preserving any existing data).
 
-	'''.lstrip())
-	sys.exit(1)
+		'''.lstrip())
+		sys.exit(1)
 
-prefix = sys.argv[1]
-map_file = sys.argv[2] if len(sys.argv) > 2 else None
-try:
-	with open(map_file) as data_file:
-		map_data = json.load(data_file)
-except FileNotFoundError:
-	map_data = {}
+	prefix = sys.argv[1]
+	map_file = sys.argv[2] if len(sys.argv) > 2 else None
+	try:
+		with open(map_file) as data_file:
+			map_data = json.load(data_file)
+	except FileNotFoundError:
+		map_data = {}
 
-print(f'Generating URI to UUID map ...')
-start_time = time.time()
-uris = find_uris(prefix, map_data, Path(output_file_path))
-uuid_map = {}
-for uri in uris:
-	if uri in map_data:
-		raise Exception(f'URI already has a UUID set: {uri}: {map_data[uri]}')
-	u = uuid.uuid4()
-	bytes = base64.b64encode(u.bytes)
-	b64 = bytes.decode('utf-8')
-	uuid_map[uri] = b64
+	print(f'Generating URI to UUID map ...')
+	start_time = time.time()
+	uris = find_uris(prefix, map_data, Path(output_file_path))
+	uuid_map = {}
+	for uri in uris:
+		if uri in map_data:
+			raise Exception(f'URI already has a UUID set: {uri}: {map_data[uri]}')
+		u = uuid.uuid4()
+		bytes = base64.b64encode(u.bytes)
+		b64 = bytes.decode('utf-8')
+		uuid_map[uri] = b64
 
-map_data.update(uuid_map)
-with open(map_file, 'w') as data_file:
-	json.dump(map_data, data_file)
+	map_data.update(uuid_map)
+	with open(map_file, 'w') as data_file:
+		json.dump(map_data, data_file)
 
-cur = time.time()
-elapsed = cur - start_time
-print(f'Done (%.1fs)' % (elapsed,))
+	cur = time.time()
+	elapsed = cur - start_time
+	print(f'Done (%.1fs)' % (elapsed,))

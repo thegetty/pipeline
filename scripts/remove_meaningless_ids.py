@@ -52,7 +52,8 @@ class JSONIDRemovalRewriter:
 		else:
 			return d
 
-print(f'Removing meaningless `id` properties ...')
-r = JSONIDRemovalRewriter()
-rewrite_output_files(r, parallel=True)
-print('Done')
+if __name__ == '__main__':
+	print(f'Removing meaningless `id` properties ...')
+	r = JSONIDRemovalRewriter()
+	rewrite_output_files(r, parallel=True)
+	print('Done')

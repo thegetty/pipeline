@@ -30,7 +30,7 @@ class PIRModelingTest_Withdrawn(TestSalesPipelineOutput):
 		output = self.run_pipeline('withdrawn')
 		objects = output['model-object']
 		sets = output['model-set']
-		auctions = output['model-auction-of-lot']
+		auctions = output['model-sale-activity']
 		texts = output['model-lo']
 		procurements = output['model-activity']
 		

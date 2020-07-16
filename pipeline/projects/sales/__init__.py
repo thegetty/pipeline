@@ -601,7 +601,7 @@ class SalesPipeline(PipelineBase):
 		)
 		if serialize:
 			# write SALES data
-			self.add_serialization_chain(graph, auction_events.output, model=self.models['Activity'], use_memory_writer=False)
+			self.add_serialization_chain(graph, auction_events.output, model=self.models['SaleActivity'], use_memory_writer=False)
 		return auction_events
 
 	def add_procurement_chain(self, graph, acquisitions, serialize=True):
@@ -660,7 +660,7 @@ class SalesPipeline(PipelineBase):
 			self.add_serialization_chain(graph, notes.output, model=self.models['LinguisticObject'], use_memory_writer=False)
 			self.add_serialization_chain(graph, refs.output, model=self.models['LinguisticObject'], use_memory_writer=False)
 			self.add_serialization_chain(graph, bids.output, model=self.models['Bidding'], use_memory_writer=False)
-			self.add_serialization_chain(graph, drawing.output, model=self.models['Drawing'], use_memory_writer=False)
+			self.add_serialization_chain(graph, drawing.output, model=self.models['SaleActivity'], use_memory_writer=False)
 		return bid_acqs
 
 	def add_sales_chain(self, graph, records, services, serialize=True):
@@ -989,9 +989,9 @@ class SalesPipeline(PipelineBase):
 
 		if serialize:
 			# write SALES data
-			self.add_serialization_chain(graph, auctions_of_lot.output, model=self.models['AuctionOfLot'], limit=1000)
-			self.add_serialization_chain(graph, private_sale_activities.output, model=self.models['AuctionOfLot'], limit=1000)
-			self.add_serialization_chain(graph, lottery_drawings.output, model=self.models['Drawing'], limit=1000)
+			self.add_serialization_chain(graph, auctions_of_lot.output, model=self.models['SaleActivity'], limit=1000)
+			self.add_serialization_chain(graph, private_sale_activities.output, model=self.models['SaleActivity'], limit=1000)
+			self.add_serialization_chain(graph, lottery_drawings.output, model=self.models['SaleActivity'], limit=1000)
 		return sales
 
 	def add_object_chain(self, graph, sales, serialize=True):

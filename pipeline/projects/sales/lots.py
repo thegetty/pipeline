@@ -213,7 +213,7 @@ class AddAuctionOfLot(Configurable):
 			tx_label = prov_entry_label(self.helper, sale_type, transaction, 'of', cno, lots, date)
 			tx._label = tx_label
 			tx.identified_by = model.Name(ident='', content=tx_label)
-			lot.caused = tx
+			tx.caused_by = lot
 			tx_data = {'uri': tx_uri}
 
 			if transaction in SOLD:

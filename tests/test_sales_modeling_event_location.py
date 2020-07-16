@@ -23,14 +23,14 @@ class PIRModelingTest_EventLocation(TestSalesPipelineOutput):
 		'''
 		output = self.run_pipeline('event_location')
 
-		events = output['model-activity']
+		sale_activities = output['model-sale-activity']
 		places = output['model-place']
-		self.assertEqual(len(events), 1)
+		self.assertEqual(len(sale_activities), 1)
 		self.assertEqual(len(places), 3)
 		
 		# The auction event took place at a location which is in a hierarchy of 3 places
 		# (address, city, country)
-		event = next(iter(events.values()))
+		event = next(iter(sale_activities.values()))
 		event_location = event['took_place_at'][0]
 		place = places[event_location['id']]
 

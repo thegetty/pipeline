@@ -74,9 +74,11 @@ func findKeys(in value: Any, from map: [String:String]) -> String? {
             }
         }
     } else if let s = value as? String {
-        if map_keys.contains(s) {
-            return s
-        }
+    	for mk in map_keys {
+    		if s.hasPrefix(mk) {
+    			return s
+    		}
+    	}
     }
     return nil
 }

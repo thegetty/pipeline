@@ -33,6 +33,7 @@ class PIRModelingTest_StockListSales(TestSalesPipelineOutput):
 		'''
 		objects = output['model-object']
 		activities = output['model-activity']
+		sale_activities = output['model-sale-activity']
 		texts = output['model-lo']
 # 		pprint.pprint(output)
 
@@ -40,7 +41,8 @@ class PIRModelingTest_StockListSales(TestSalesPipelineOutput):
 		expected_event_id = 'tag:getty.edu,2019:digital:pipeline:REPLACE-WITH-UUID:sales#STOCK_LIST-EVENT,Br-541'
 		
 		# there is a single non-auction 'Private Contract Sale' event, and it is referred to by the catalog text
-		pvt_sale = activities[expected_event_id]
+		
+		pvt_sale = sale_activities[expected_event_id]
 		self.assertEqual(pvt_sale['_label'], 'Stock List Event for Br-541')
 		self.assertIn(expected_catalog_text_id, {r.get('id') for r in pvt_sale['referred_to_by']})
 		
@@ -71,17 +73,17 @@ class PIRModelingTest_StockListSales(TestSalesPipelineOutput):
 		'''
 		objects = output['model-object']
 		activities = output['model-activity']
-		lotauctions = output['model-auction-of-lot']
+		sale_activities = output['model-sale-activity']
 		sets = output['model-set']
 		texts = output['model-lo']
 
 		hmo_key = 'tag:getty.edu,2019:digital:pipeline:REPLACE-WITH-UUID:sales#OBJ,Br-541,%5B0001%5D,1808'
 		hmo = objects[hmo_key]
 		
-		sale_curr = lotauctions['tag:getty.edu,2019:digital:pipeline:REPLACE-WITH-UUID:sales#AUCTION,Br-541,%5B0001%5D,1808']
+		sale_curr = sale_activities['tag:getty.edu,2019:digital:pipeline:REPLACE-WITH-UUID:sales#AUCTION,Br-541,%5B0001%5D,1808']
 		
 		event_key = 'tag:getty.edu,2019:digital:pipeline:REPLACE-WITH-UUID:sales#STOCK_LIST-EVENT,Br-541'
-		sale_event = activities[event_key]
+		sale_event = sale_activities[event_key]
 		
 		object_set_key = 'tag:getty.edu,2019:digital:pipeline:REPLACE-WITH-UUID:sales#AUCTION,Br-541,%5B0001%5D,1808-Set'
 		object_set = sets[object_set_key]

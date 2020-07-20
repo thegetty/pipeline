@@ -49,6 +49,8 @@ class PersonIdentity:
 		self.anon_nationality_re = re.compile(r'\[(?!ANON|ILLEGIBLE|Unknown)(\w+)\]', re.IGNORECASE)
 
 	def acceptable_person_auth_name(self, auth_name):
+		if not auth_name:
+			return False
 		if not auth_name or auth_name in self.ignore_authnames:
 			return False
 		elif '[UNIDENTIFIED]' in auth_name:

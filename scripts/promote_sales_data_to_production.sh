@@ -15,4 +15,4 @@ DATE=${1-$TODAY}
 SRC="s3://jpgt-or-provenance-01/provenance_batch/data/stardata/exports/make_csv_files_${DATE}/"
 DST=s3://jpgt-or-provenance-01/provenance_batch/data/sales/
 
-aws s3 sync --dryrun --exclude '*' --include 'sales_*' $SRC $DST
+aws s3 sync --exclude '*' --include 'sales_*' $SRC $DST

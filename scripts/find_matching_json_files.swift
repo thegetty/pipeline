@@ -60,27 +60,43 @@ func walk(path pathu: URL, queue: DispatchQueue, _ callback : @escaping (URL) ->
 
 }
 
-func findKeys(in value: Any, from map: [String:String]) -> String? {
+func findKeys(in value: Any, from map: [String:String], matchingPrefix: String = "") -> String? {
     if let d = value as? [String: Any] {
         for v in d.values {
-            if let m = findKeys(in: v, from: map) {
+            if let m = findKeys(in: v, from: map, matchingPrefix: matchingPrefix) {
                 return m
             }
         }
     } else if let a = value as? [Any] {
         for v in a {
-            if let m = findKeys(in: v, from: map) {
+            if let m = findKeys(in: v, from: map, matchingPrefix: matchingPrefix) {
                 return m
             }
         }
     } else if let s = value as? String {
-    	for mk in map_keys {
-    		if s.hasPrefix(mk) {
-    			return s
-    		}
-    	}
+    	if s.hasPrefix(matchingPrefix) {
+			for mk in map_keys {
+				if s.hasPrefix(mk) {
+					return s
+				}
+			}
+		}
     }
     return nil
+}
+
+extension String {
+	func sharedPrefix(with other: String) -> String {
+		var result = ""
+		for (l, r) in zip(self, other) {
+			if l == r {
+				result.append(l)
+			} else {
+				break
+			}
+		}
+		return result
+	}
 }
 
 func process(map: [String:String], path pathu: URL) {
@@ -88,13 +104,23 @@ func process(map: [String:String], path pathu: URL) {
 //	let start = DispatchTime.now()
 	let process_queue = DispatchQueue(label: "edu.getty.digital.2019.pipeline.post-sales-rewriting", attributes: .concurrent)
 	let serial = DispatchQueue(label: "edu.getty.digital.2019.pipeline.post-sales-output")
+
+	let keys = Array(map.keys)
+	var commonPrefix = ""
+	if let first = keys.first {
+		commonPrefix = first
+		for k in keys {
+			commonPrefix = commonPrefix.sharedPrefix(with: k)
+		}
+	}
+
 	walk(path: pathu, queue: process_queue) { (file) in
 		count += 1
 	//   print("\r\(count)             ", separator: "", terminator: "", to: &stderr)
 		do {
 			let d = try Data(contentsOf: file)
 			let j = try JSONSerialization.jsonObject(with: d)
-			if let _ = findKeys(in: j, from: map) {
+			if let _ = findKeys(in: j, from: map, matchingPrefix: commonPrefix) {
 	//            print("\r\(file)\t--> \(m)")
 	//            print("\(m)\t\(file)")
 				if PARALLEL {

@@ -620,6 +620,9 @@ class UtilityHelper:
 			suffix = str(uuid.uuid4())
 			return self.shared_prefix + suffix
 
+	def prepend_uri_key(self, uri, key):
+		return uri.replace('#', f'#{key},')
+
 	def make_place(self, data:dict, base_uri=None):
 		'''
 		Given a dictionary representing data about a place, construct a model.Place object,

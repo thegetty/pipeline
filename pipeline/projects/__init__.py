@@ -594,7 +594,7 @@ class UtilityHelper:
 		constructor instead.
 		'''
 		self.services = services
-		self.unique_locations = CaseFoldingSet(self.services.get('unique_locations', {}).get('place_names', []))
+		self.location_names = {k.casefold(): v for k, v in self.services.get('unique_locations', {}).get('canonical_names', {}).items()}
 
 	def add_static_instances(self, static_instances):
 		self.static_instances = static_instances
@@ -634,7 +634,8 @@ class UtilityHelper:
 		- type (one of: 'City', 'State', 'Province', or 'Country')
 		- part_of (a recursive place dictionary)
 		'''
-		unique_locations = self.unique_locations
+# 		unique_locations = self.unique_locations
+		location_names = self.location_names
 		TYPES = {
 			'city': vocab.instances['city'],
 			'province': vocab.instances['province'],
@@ -664,7 +665,8 @@ class UtilityHelper:
 			placeargs['label'] = label
 		if data.get('uri'):
 			placeargs['ident'] = data['uri']
-		elif label in unique_locations:
+		elif label.casefold() in location_names:
+			label = location_names[label.casefold()]
 			data['uri'] = self.make_proj_uri('PLACE', label)
 			placeargs['ident'] = data['uri']
 		elif base_uri:

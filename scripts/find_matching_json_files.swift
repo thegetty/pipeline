@@ -38,9 +38,9 @@ func walk(path pathu: URL, queue: DispatchQueue, _ callback : @escaping (URL) ->
             guard let resourceValues = try? fileURL.resourceValues(forKeys: resourceKeys),
                 let isDirectory = resourceValues[.isDirectoryKey] as? Bool,
                 let name = resourceValues[.nameKey] as? String
-                else {
-                    continue
-            }
+			else {
+				continue
+			}
             
             if isDirectory {
             	if name == "tmp" {
@@ -60,30 +60,27 @@ func walk(path pathu: URL, queue: DispatchQueue, _ callback : @escaping (URL) ->
 
 }
 
-func findKeys(in value: Any, from map: [String:String], matchingPrefix: String = "") -> String? {
+func findKeys(in value: Any, from map: [String:String], prefixSet: PrefixSet) -> String? {
     if let d = value as? [String: Any] {
         for v in d.values {
-            if let m = findKeys(in: v, from: map, matchingPrefix: matchingPrefix) {
+            if let m = findKeys(in: v, from: map, prefixSet: prefixSet) {
                 return m
             }
         }
     } else if let a = value as? [Any] {
         for v in a {
-            if let m = findKeys(in: v, from: map, matchingPrefix: matchingPrefix) {
+            if let m = findKeys(in: v, from: map, prefixSet: prefixSet) {
                 return m
             }
         }
     } else if let s = value as? String {
-    	if s.hasPrefix(matchingPrefix) {
-			for mk in map_keys {
-				if s.hasPrefix(mk) {
-					return s
-				}
-			}
-		}
+   		if prefixSet.matches(s) {
+			return s
+    	}
     }
     return nil
 }
+
 
 extension String {
 	func sharedPrefix(with other: String) -> String {
@@ -96,6 +93,44 @@ extension String {
 			}
 		}
 		return result
+	}
+}
+
+struct PrefixSet {
+	/**
+	
+	Given a set of strings representing prefixes, provide an optimized API for checking
+	if a given string matches any of the prefixes.
+	
+	**/
+	
+	var prefixes: [Int: Set<String>]
+	var commonPrefix: String
+	init<S: Sequence>(_ map_keys: S) where S.Element == String {
+		self.prefixes = [:]
+		self.commonPrefix = ""
+		for (i, mk) in map_keys.enumerated() {
+			if i == 0 {
+				self.commonPrefix = mk
+			} else {
+				self.commonPrefix = commonPrefix.sharedPrefix(with: mk)
+			}
+			self.prefixes[mk.count, default: []].insert(mk)
+		}
+	}
+
+	func matches(_ s: String) -> Bool {
+		if s.hasPrefix(commonPrefix) {
+			for (l, prefixes) in self.prefixes {
+				if s.count >= l {
+					let p = String(s.prefix(l))
+					if prefixes.contains(p) {
+						return true
+					}
+				}
+			}
+		}
+		return false
 	}
 }
 
@@ -114,13 +149,15 @@ func process(map: [String:String], path pathu: URL) {
 		}
 	}
 
+	let prefixSet = PrefixSet(map.keys)
+	
 	walk(path: pathu, queue: process_queue) { (file) in
 		count += 1
 	//   print("\r\(count)             ", separator: "", terminator: "", to: &stderr)
 		do {
 			let d = try Data(contentsOf: file)
 			let j = try JSONSerialization.jsonObject(with: d)
-			if let _ = findKeys(in: j, from: map, matchingPrefix: commonPrefix) {
+			if let _ = findKeys(in: j, from: map, prefixSet: prefixSet) {
 	//            print("\r\(file)\t--> \(m)")
 	//            print("\(m)\t\(file)")
 				if PARALLEL {

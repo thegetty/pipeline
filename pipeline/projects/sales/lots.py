@@ -456,9 +456,9 @@ class AddAcquisitionOrBidding(ProvenanceBase):
 				paym.attributed_by = paym_assignment
 			else:
 				# covers non-modified
-				acq.carried_out_by = seller
+# 				acq.carried_out_by = seller
 				acq.transferred_title_from = seller
-				paym.carried_out_by = seller
+# 				paym.carried_out_by = seller
 				paym.paid_to = seller
 
 		for buyer_data in buyers:
@@ -477,8 +477,10 @@ class AddAcquisitionOrBidding(ProvenanceBase):
 				paym.carried_out_by = buyer
 			else:
 				# covers FOR modifiers and non-modified
+# 				acq.carried_out_by = buyer
 				acq.transferred_title_to = buyer
 				paym.paid_from = buyer
+# 				paym.carried_out_by = buyer
 
 		if prices:
 			amnt = get_crom_object(prices[0])

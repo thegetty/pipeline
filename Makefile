@@ -81,7 +81,7 @@ nq: jsonlist
 	rm $(GETTY_PIPELINE_TMP_PATH)/json_files.chunk.*
 
 scripts/find_matching_json_files: scripts/find_matching_json_files.swift
-	swiftc scripts/find_matching_json_files.swift -o scripts/find_matching_json_files
+	swiftc -O scripts/find_matching_json_files.swift -o scripts/find_matching_json_files
 
 postprocessing_rewrite_uris:
 	PYTHONPATH=`pwd` $(PYTHON) ./scripts/rewrite_uris_to_uuids_parallel.py 'tag:getty.edu,2019:digital:pipeline:REPLACE-WITH-UUID:' "${GETTY_PIPELINE_TMP_PATH}/uri_to_uuid_map.json"

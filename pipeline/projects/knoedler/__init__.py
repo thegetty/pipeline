@@ -620,7 +620,7 @@ class TransactionHandler(ProvenanceBase):
 			rights = []
 			role = 'shared-buyer' if incoming else 'shared-seller'
 			remaining = Fraction(1, 1)
-			print(f'{1+len(shared_people)}-way split:')
+# 			print(f'{1+len(shared_people)}-way split:')
 			for i, p in enumerate(shared_people):
 				person_dict = self.helper.copy_source_information(p, data)
 				person = self.helper.add_person(
@@ -628,18 +628,23 @@ class TransactionHandler(ProvenanceBase):
 					record=sales_record,
 					relative_id=f'{role}_{i+1}'
 				)
-				name = p['name']
+				name = p.get('name', p.get('auth_name', '(anonymous)'))
 				share = p['share']
-				share_frac = Fraction(share)
-				remaining -= share_frac
+				try:
+					share_frac = Fraction(share)
+					remaining -= share_frac
 
-				right = self.ownership_right(share_frac, person)
+					right = self.ownership_right(share_frac, person)
 
-				rights.append(right)
-				people.append(person_dict)
-				knoedler_group.append(person)
-				print(f'   {share:<10} {name:<50}')
-			print(f'   {str(remaining):<10} {knoedler._label:<50}')
+					rights.append(right)
+					people.append(person_dict)
+					knoedler_group.append(person)
+# 					print(f'   {share:<10} {name:<50}')
+				except ValueError as e:
+					pprint.pprint(p)
+					raise
+					
+# 			print(f'   {str(remaining):<10} {knoedler._label:<50}')
 			k_right = self.ownership_right(remaining, knoedler)
 			rights.insert(0, k_right)
 
@@ -683,7 +688,7 @@ class TransactionHandler(ProvenanceBase):
 					relative_id=f'{role}_{i+1}'
 				)
 				knoedler_group.append(person)
-				name = p['name']
+				name = p.get('name', p.get('auth_name', '(anonymous)'))
 				share = p['share']
 				share_frac = Fraction(share)
 				if price_amount:

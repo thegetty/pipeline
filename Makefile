@@ -46,10 +46,16 @@ fetchsales:
 	mkdir -p $(GETTY_PIPELINE_TMP_PATH)/pipeline
 	mkdir -p $(GETTY_PIPELINE_INPUT)/sales
 	aws s3 sync --exclude '*' --include 'sales*_0.csv' s3://jpgt-or-provenance-01/provenance_batch/data/sales/ $(GETTY_PIPELINE_INPUT)/sales/
-	# This will sync production data:
 	aws s3 sync s3://jpgt-or-provenance-01/provenance_batch/data/sales/ $(GETTY_PIPELINE_INPUT)/sales/
+	aws s3 cp s3://jpgt-or-provenance-01/provenance_batch/data/uri_to_uuid_map.json $(GETTY_PIPELINE_INPUT)/
+	cp $(GETTY_PIPELINE_INPUT)/uri_to_uuid_map.json "${GETTY_PIPELINE_TMP_PATH}/uri_to_uuid_map.json"
+
+fetchsales-staging:
+	mkdir -p $(GETTY_PIPELINE_TMP_PATH)/pipeline
+	mkdir -p $(GETTY_PIPELINE_INPUT)/sales
+	aws s3 sync --exclude '*' --include 'sales*_0.csv' s3://jpgt-or-provenance-01/provenance_batch/data/sales/ $(GETTY_PIPELINE_INPUT)/sales/
 	# To run the pipeline using staging data before it is moved into the production path, replace the above line with the following one (and update the s3 path as appropriate):
-# 	aws s3 sync --exclude '*' --include 'sales_*' s3://jpgt-or-provenance-01/provenance_batch/data/stardata/exports/make_csv_files_2020-07-14/ $(GETTY_PIPELINE_INPUT)/sales/
+	aws s3 sync --exclude '*' --include 'sales_*' s3://jpgt-or-provenance-01/provenance_batch/data/stardata/exports/make_csv_files_2020-07-15/ $(GETTY_PIPELINE_INPUT)/sales/
 	aws s3 cp s3://jpgt-or-provenance-01/provenance_batch/data/uri_to_uuid_map.json $(GETTY_PIPELINE_INPUT)/
 	cp $(GETTY_PIPELINE_INPUT)/uri_to_uuid_map.json "${GETTY_PIPELINE_TMP_PATH}/uri_to_uuid_map.json"
 
@@ -244,7 +250,7 @@ clean:
 	rm -f $(GETTY_PIPELINE_TMP_PATH)/sales-tree.data
 	rm -f "${GETTY_PIPELINE_TMP_PATH}/post_sale_rewrite_map.json"
 
-.PHONY: fetch fetchaata fetchsales fetchknoedler
+.PHONY: fetch fetchaata fetchsales fetchknoedler fetchsales-staging
 .PHONY: aata aatagraph aatadata aatapipeline aatapostprocessing
 .PHONY: knoedler knoedlergraph
 .PHONY: people peoplegraph peopledata peoplepipeline peoplepostprocessing peoplepostsalefilelist

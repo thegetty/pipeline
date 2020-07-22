@@ -8,6 +8,16 @@ GETTY_PIPELINE_OUTPUT?=`pwd`/output
 GETTY_PIPELINE_INPUT?=`pwd`/data
 GETTY_PIPELINE_TMP_PATH?=/tmp
 GETTY_PIPELINE_COMMON_SERVICE_FILES_PATH?=`pwd`/data/common
+UNAME_S := $(shell uname -s)
+
+
+ifeq ($(UNAME_S),Darwin)
+	# This is a more efficient split based on the number of processes we can run concurrently, but it depends on linux-specific arguments to split.
+	SPLIT=split -l 25000
+else
+	# This is slightly less efficient, especially for small datasets, but will work reasonably well in the expected cases and will work on both linux and MacOS.
+	SPLIT=split -n r/$(CONCURRENCY)
+endif
 
 SHELL := /bin/bash
 
@@ -36,10 +46,16 @@ fetchsales:
 	mkdir -p $(GETTY_PIPELINE_TMP_PATH)/pipeline
 	mkdir -p $(GETTY_PIPELINE_INPUT)/sales
 	aws s3 sync --exclude '*' --include 'sales*_0.csv' s3://jpgt-or-provenance-01/provenance_batch/data/sales/ $(GETTY_PIPELINE_INPUT)/sales/
-	# This will sync production data:
 	aws s3 sync s3://jpgt-or-provenance-01/provenance_batch/data/sales/ $(GETTY_PIPELINE_INPUT)/sales/
+	aws s3 cp s3://jpgt-or-provenance-01/provenance_batch/data/uri_to_uuid_map.json $(GETTY_PIPELINE_INPUT)/
+	cp $(GETTY_PIPELINE_INPUT)/uri_to_uuid_map.json "${GETTY_PIPELINE_TMP_PATH}/uri_to_uuid_map.json"
+
+fetchsales-staging:
+	mkdir -p $(GETTY_PIPELINE_TMP_PATH)/pipeline
+	mkdir -p $(GETTY_PIPELINE_INPUT)/sales
+	aws s3 sync --exclude '*' --include 'sales*_0.csv' s3://jpgt-or-provenance-01/provenance_batch/data/sales/ $(GETTY_PIPELINE_INPUT)/sales/
 	# To run the pipeline using staging data before it is moved into the production path, replace the above line with the following one (and update the s3 path as appropriate):
-# 	aws s3 sync --exclude '*' --include 'sales_*' s3://jpgt-or-provenance-01/provenance_batch/data/stardata/exports/make_csv_files_2020-07-14/ $(GETTY_PIPELINE_INPUT)/sales/
+	aws s3 sync --exclude '*' --include 'sales_*' s3://jpgt-or-provenance-01/provenance_batch/data/stardata/exports/make_csv_files_2020-07-15/ $(GETTY_PIPELINE_INPUT)/sales/
 	aws s3 cp s3://jpgt-or-provenance-01/provenance_batch/data/uri_to_uuid_map.json $(GETTY_PIPELINE_INPUT)/
 	cp $(GETTY_PIPELINE_INPUT)/uri_to_uuid_map.json "${GETTY_PIPELINE_TMP_PATH}/uri_to_uuid_map.json"
 
@@ -62,7 +78,7 @@ fetchpeople:
 nt: jsonlist
 	mkdir -p $(GETTY_PIPELINE_TMP_PATH)
 	curl -s 'https://linked.art/ns/v1/linked-art.json' > $(GETTY_PIPELINE_TMP_PATH)/linked-art.json
-	split -n r/$(CONCURRENCY) $(GETTY_PIPELINE_TMP_PATH)/json_files.txt "${GETTY_PIPELINE_TMP_PATH}/json_files.chunk."
+	$(SPLIT) $(GETTY_PIPELINE_TMP_PATH)/json_files.txt "${GETTY_PIPELINE_TMP_PATH}/json_files.chunk."
 	echo 'Transcoding JSON-LD to N-Triples...'
 	ls $(GETTY_PIPELINE_TMP_PATH)/json_files.chunk.* | xargs -n 1 -P $(CONCURRENCY) $(PYTHON) ./scripts/json2nt.py -c $(GETTY_PIPELINE_TMP_PATH)/linked-art.json -l
 	rm $(GETTY_PIPELINE_TMP_PATH)/json_files.chunk.*
@@ -70,10 +86,7 @@ nt: jsonlist
 nq: jsonlist
 	mkdir -p $(GETTY_PIPELINE_TMP_PATH)
 	curl -s 'https://linked.art/ns/v1/linked-art.json' > $(GETTY_PIPELINE_TMP_PATH)/linked-art.json
-# This is a more efficient split based on the number of processes we can run concurrently, but it depends on linux-specific arguments to split.
-# 	split -n r/$(CONCURRENCY) $(GETTY_PIPELINE_TMP_PATH)/json_files.txt "${GETTY_PIPELINE_TMP_PATH}/json_files.chunk."
-# This is slightly less efficient, especially for small datasets, but will work reasonably well in the expected cases and will work on both linux and MacOS.
-	split -l 100000 $(GETTY_PIPELINE_TMP_PATH)/json_files.txt "${GETTY_PIPELINE_TMP_PATH}/json_files.chunk."
+	$(SPLIT) $(GETTY_PIPELINE_TMP_PATH)/json_files.txt "${GETTY_PIPELINE_TMP_PATH}/json_files.chunk."
 	echo 'Transcoding JSON-LD to N-Quads...'
 	ls $(GETTY_PIPELINE_TMP_PATH)/json_files.chunk.* | xargs -n 1 -P $(CONCURRENCY) $(PYTHON) ./scripts/json2nq.py -c $(GETTY_PIPELINE_TMP_PATH)/linked-art.json -l
 	find $(GETTY_PIPELINE_OUTPUT) -name '[0-9a-f][0-9a-f]*.nq' | xargs -n 256 cat | gzip - > $(GETTY_PIPELINE_OUTPUT)/all.nq.gz
@@ -237,7 +250,7 @@ clean:
 	rm -f $(GETTY_PIPELINE_TMP_PATH)/sales-tree.data
 	rm -f "${GETTY_PIPELINE_TMP_PATH}/post_sale_rewrite_map.json"
 
-.PHONY: fetch fetchaata fetchsales fetchknoedler
+.PHONY: fetch fetchaata fetchsales fetchknoedler fetchsales-staging
 .PHONY: aata aatagraph aatadata aatapipeline aatapostprocessing
 .PHONY: knoedler knoedlergraph
 .PHONY: people peoplegraph peopledata peoplepipeline peoplepostprocessing peoplepostsalefilelist

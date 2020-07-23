@@ -395,6 +395,7 @@ class AddAcquisitionOrBidding(ProvenanceBase):
 		parent = data['parent_data']
 	# 	transaction = parent['transaction']
 		prices = parent.get('price')
+		ask_price = parent.get('ask_price')
 		auction_data = parent['auction_of_lot']
 		lot_object_key = object_key(auction_data)
 		cno, lno, date = lot_object_key
@@ -535,6 +536,11 @@ class AddAcquisitionOrBidding(ProvenanceBase):
 					content = self._price_note(price)
 					if content:
 						paym.referred_to_by = vocab.PriceStatement(ident='', content=content)
+		elif ask_price:
+			# for non-auction sales, the ask price is the amount paid for the acquisition
+			for paym in payments.values():
+				paym.paid_amount = get_crom_object(ask_price)
+			
 
 		ts = tx_data.get('_date')
 		if ts:

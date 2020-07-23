@@ -383,7 +383,7 @@ class SalesUtilityHelper(UtilityHelper):
 			a['identifiers'].append(n)
 			a.setdefault('label', name)
 		else:
-			a['label'] = '(Anonymous)'
+			a.setdefault('label', '(Anonymous)')
 
 		make_house = pipeline.linkedart.MakeLinkedArtAuctionHouseOrganization()
 		make_house(a)

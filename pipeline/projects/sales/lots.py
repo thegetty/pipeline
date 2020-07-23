@@ -217,6 +217,17 @@ class AddAuctionOfLot(Configurable):
 			tx_data = {'uri': tx_uri}
 
 			if transaction in SOLD:
+				if sale_type == 'Auction':
+					# the records in this sales catalog represent auction sales, so the
+					# price data for a sale should be asserted as a hammer price.
+					with suppress(KeyError):
+						prices = data['price']
+						if prices:
+							price_data = prices[0]
+							price = get_crom_object(price_data)
+							if price:
+								vocab.add_classification(price, vocab.HammerPrice)
+
 				multi = self.helper.transaction_contains_multiple_lots(auction_data, data)
 				if multi:
 					tx_data['multi_lot_tx'] = lots

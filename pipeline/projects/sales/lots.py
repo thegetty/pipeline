@@ -389,7 +389,7 @@ class AddAcquisitionOrBidding(ProvenanceBase):
 		mods = CaseFoldingSet({m.strip() for m in mod.split(';')} - {''})
 		return mods
 
-	def add_acquisition(self, data, buyers, sellers, non_auctions, buy_sell_modifiers, transaction, transaction_types):
+	def add_acquisition(self, data, buyers, sellers, houses, non_auctions, buy_sell_modifiers, transaction, transaction_types):
 		'''Add modeling of an acquisition as a transfer of title from the seller to the buyer'''
 		hmo = get_crom_object(data)
 		parent = data['parent_data']
@@ -416,9 +416,10 @@ class AddAcquisitionOrBidding(ProvenanceBase):
 		tx_data = parent.get('_prov_entry_data')
 		current_tx = get_crom_object(tx_data)
 
-		# The payment URI is just the provenance entry URI with a suffix. In any case
+		# The payment URIs are just the provenance entry URI with a suffix. In any case
 		# where the provenance entry is merged, the payment should be merged as well.
-		payment_id = current_tx.id + '-Pay'
+		sell_payment_id = current_tx.id + '-Pay-to-Seller'
+		buy_payment_id = current_tx.id + '-Pay-from-Buyer'
 
 		# The acquisition URI is just the provenance entry URI with a suffix. In any case
 		# where the provenance entry is merged, the acquisition should be merged as well.
@@ -430,7 +431,16 @@ class AddAcquisitionOrBidding(ProvenanceBase):
 
 		multi = tx_data.get('multi_lot_tx')
 		paym_label = f'multiple lots {multi}' if multi else object_label
-		paym = model.Payment(ident=payment_id, label=f'Payment for {paym_label}')
+# 		paym = model.Payment(ident=payment_id, label=f'Payment for {paym_label}')
+		payments = {
+			'buy': model.Payment(ident=buy_payment_id, label=f'Payment from buyer for {paym_label}'),
+			'sell': model.Payment(ident=sell_payment_id, label=f'Payment to seller for {paym_label}'),
+		}
+		for house_data in houses:
+			house = get_crom_object(house_data)
+			payments['buy'].paid_to = house
+			payments['sell'].paid_from = house
+		payments_used = set()
 
 		THROUGH = CaseFoldingSet(buy_sell_modifiers['through'])
 		FOR = CaseFoldingSet(buy_sell_modifiers['for'])
@@ -454,16 +464,18 @@ class AddAcquisitionOrBidding(ProvenanceBase):
 			
 			if THROUGH.intersects(mod):
 				acq.carried_out_by = seller
-				paym.carried_out_by = seller
+				payments['sell'].carried_out_by = seller
+				payments_used.add('sell')
 			elif FOR.intersects(mod):
 				acq.transferred_title_from = seller
-				paym.paid_to = seller
+				payments['sell'].paid_to = seller
+				payments_used.add('sell')
 			elif uncertain_attribution: # this is true if ANY of the sellers have an 'or anonymous' modifier
 				# The assignment URIs are just the acquisition URI with a suffix.
 				# In any case where the acquisition is merged, the assignments should be
 				# merged as well.
 				acq_assignment_uri = acq.id + f'-seller-assignment-{seq_no}'
-				paym_assignment_uri = paym.id + f'-seller-assignment-{seq_no}'
+				paym_assignment_uri = payments['sell'].id + f'-seller-assignment-{seq_no}'
 				
 				acq_assignment_label = f'Uncertain seller as previous title holder in acquisition'
 				acq_assignment = vocab.PossibleAssignment(ident=acq_assignment_uri, label=acq_assignment_label)
@@ -477,13 +489,15 @@ class AddAcquisitionOrBidding(ProvenanceBase):
 				paym_assignment.referred_to_by = vocab.Note(ident='', content=paym_assignment_label)
 				paym_assignment.assigned_property = 'paid_to'
 				paym_assignment.assigned = seller
-				paym.attributed_by = paym_assignment
+				payments['sell'].attributed_by = paym_assignment
+				payments_used.add('sell')
 			else:
 				# covers non-modified
 # 				acq.carried_out_by = seller
 				acq.transferred_title_from = seller
-# 				paym.carried_out_by = seller
-				paym.paid_to = seller
+# 				payments['sell'].carried_out_by = seller
+				payments['sell'].paid_to = seller
+				payments_used.add('sell')
 
 		for buyer_data in buyers:
 			buyer = get_crom_object(buyer_data)
@@ -498,32 +512,39 @@ class AddAcquisitionOrBidding(ProvenanceBase):
 
 			if THROUGH.intersects(mod):
 				acq.carried_out_by = buyer
-				paym.carried_out_by = buyer
+				payments['buy'].carried_out_by = buyer
+				payments_used.add('buy')
 			elif FOR.intersects(mod):
 				acq.transferred_title_to = buyer
-				paym.paid_from = buyer
+				payments['buy'].paid_from = buyer
+				payments_used.add('buy')
 			else:
 				# covers FOR modifiers and non-modified
 # 				acq.carried_out_by = buyer
 				acq.transferred_title_to = buyer
-				paym.paid_from = buyer
-# 				paym.carried_out_by = buyer
+				payments['buy'].paid_from = buyer
+# 				payments['buy'].carried_out_by = buyer
+				payments_used.add('buy')
 
 		if prices:
 			amnt = get_crom_object(prices[0])
-			paym.paid_amount = amnt
-			for price in prices[1:]:
-				amnt = get_crom_object(price)
-				content = self._price_note(price)
-				if content:
-					paym.referred_to_by = vocab.PriceStatement(ident='', content=content)
+			for paym in payments.values():
+				paym.paid_amount = amnt
+				for price in prices[1:]:
+					amnt = get_crom_object(price)
+					content = self._price_note(price)
+					if content:
+						paym.referred_to_by = vocab.PriceStatement(ident='', content=content)
 
 		ts = tx_data.get('_date')
 		if ts:
 			acq.timespan = ts
 
 		current_tx.part = acq
-		current_tx.part = paym
+		for pay_key in payments_used:
+			paym = payments[pay_key]
+			current_tx.part = paym
+# 		current_tx.part = paym
 		data['_prov_entries'] += [add_crom_data(data={}, what=current_tx)]
 	# 	lot_uid, lot_uri = helper.shared_lot_number_ids(cno, lno)
 		# TODO: `annotation` here is from add_physical_catalog_objects
@@ -797,10 +818,10 @@ class AddAcquisitionOrBidding(ProvenanceBase):
 		sale_type = non_auctions.get(cno, 'Auction')
 		data.setdefault('_owner_locations', [])
 		if transaction in SOLD:
-			for data, current_tx in self.add_acquisition(data, buyers, sellers, non_auctions, buy_sell_modifiers, transaction, transaction_types):
+			houses = [self.helper.add_auction_house_data(h) for h in auction_houses_data.get(cno, [])]
+			for data, current_tx in self.add_acquisition(data, buyers, sellers, houses, non_auctions, buy_sell_modifiers, transaction, transaction_types):
 				acq = get_crom_object(data['_acquisition'])
 				self.add_mod_notes(acq, all_mods, label=f'Seller modifier')
-				houses = [self.helper.add_auction_house_data(h) for h in auction_houses_data.get(cno, [])]
 				experts = event_experts.get(cno, [])
 				commissaires = event_commissaires.get(cno, [])
 				custody_recievers = houses + [add_crom_data(data={}, what=r) for r in experts + commissaires]

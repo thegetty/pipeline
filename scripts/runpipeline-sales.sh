@@ -2,8 +2,10 @@
 
 set -e
 
-cd /home/gwilliams/pipeline
-git pull
+if [ -d /home/gwilliams/pipeline ]; then
+	cd /home/gwilliams/pipeline
+	git pull
+fi
 
 PROJECT="sales"
 LIMIT=2500000
@@ -12,7 +14,8 @@ DATETIME=`date -u +"%Y-%m-%dT%H:%M:%SZ"`
 TODAY=`date -u +"%Y-%m-%d"`
 DATE=${1-$TODAY}
 LOGFILE="${HOME}/logs/pipeline-${PROJECT}-${DATE}.log"
-OUTPUTPATH=/data/output
+OUTPUTPATH=${OUTPUTPATH:-/data/output}
+INPUTPATH=${INPUTPATH:-/data/input}
 DATANAME="${PROJECT}-${DATE}"
 DATAPATH="${OUTPUTPATH}/${DATANAME}"
 GITREV=`git rev-parse --short HEAD`
@@ -36,7 +39,7 @@ echo '' > $LOGFILE
 echo "Pipeline ${GITREV}; ${DATETIME}" >> $LOGFILE
 date >> $LOGFILE
 echo "==================================== Starting pipeline docker container" | tee -a $LOGFILE
-time docker run --env GETTY_PIPELINE_COMMON_SERVICE_FILES_PATH=/services/common --env GETTY_PIPELINE_SERVICE_FILES_PATH=/services --env GETTY_PIPELINE_INPUT=/data --env GETTY_PIPELINE_OUTPUT=/output --env GETTY_PIPELINE_TMP_PATH=/output/tmp --env AWS_ACCESS_KEY_ID=$AWS_ACCESS_KEY_ID --env AWS_SECRET_ACCESS_KEY=$AWS_SECRET_ACCESS_KEY -v/data/input:/data:Z -v"$DATAPATH":/output:Z -v`pwd`/data:/services:Z -it pipeline make clean "fetch${PROJECT}" $PROJECT nq LIMIT=$LIMIT | tee -a $LOGFILE
+time docker run --env GETTY_PIPELINE_COMMON_SERVICE_FILES_PATH=/services/common --env GETTY_PIPELINE_SERVICE_FILES_PATH=/services --env GETTY_PIPELINE_INPUT=/data --env GETTY_PIPELINE_OUTPUT=/output --env GETTY_PIPELINE_TMP_PATH=/output/tmp --env AWS_ACCESS_KEY_ID=$AWS_ACCESS_KEY_ID --env AWS_SECRET_ACCESS_KEY=$AWS_SECRET_ACCESS_KEY -v"$INPUTPATH":/data:Z -v"$DATAPATH":/output:Z -v`pwd`/data:/services:Z -it pipeline make clean "fetch${PROJECT}" $PROJECT nq LIMIT=$LIMIT | tee -a $LOGFILE
 echo "==================================== Finished pipeline docker container" | tee -a $LOGFILE
 echo '' >> $LOGFILE
 date >> $LOGFILE

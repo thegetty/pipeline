@@ -14,7 +14,8 @@ from pipeline.util import \
 		implode_date, \
 		timespan_from_outer_bounds, \
 		timespan_before, \
-		timespan_after
+		timespan_after, \
+		CaseFoldingSet
 from pipeline.util.cleaners import parse_location_name
 import pipeline.linkedart
 from pipeline.linkedart import add_crom_data, get_crom_object
@@ -314,7 +315,10 @@ class AddAcquisitionOrBidding(ProvenanceBase):
 		tx, acq = self.related_procurement(hmo, tx_label_args, current_tx, current_ts, buyer=final_owner, ident=tx_uri, make_label=prov_entry_label)
 		return tx, acq
 
-	def add_transfer_of_custody(self, data, current_tx, xfer_to, xfer_from, sequence=1, purpose=None):
+	def add_transfer_of_custody(self, data, current_tx, xfer_to, xfer_from, buy_sell_modifiers, sequence=1, purpose=None):
+		THROUGH = CaseFoldingSet(buy_sell_modifiers['through'])
+		FOR = CaseFoldingSet(buy_sell_modifiers['for'])
+
 		buyers = xfer_to
 		sellers = xfer_from
 		hmo = get_crom_object(data)
@@ -347,11 +351,15 @@ class AddAcquisitionOrBidding(ProvenanceBase):
 
 		for seller_data in sellers:
 			seller = get_crom_object(seller_data)
-			xfer.transferred_custody_from = seller
+			mods = self.modifiers(seller_data, 'auth_mod_a')
+			if not THROUGH.intersects(mods):
+				xfer.transferred_custody_from = seller
 
 		for buyer_data in buyers:
 			buyer = get_crom_object(buyer_data)
-			xfer.transferred_custody_to = buyer
+			mods = self.modifiers(buyer_data, 'auth_mod_a')
+			if not THROUGH.intersects(mods):
+				xfer.transferred_custody_to = buyer
 
 		current_tx.part = xfer
 
@@ -375,6 +383,11 @@ class AddAcquisitionOrBidding(ProvenanceBase):
 				acq.referred_to_by = hand_notes
 		data['_phys_catalog_notes'] = [add_crom_data(data={}, what=n) for n in phys_catalog_notes.values()]
 		data['_phys_catalogs'] = [add_crom_data(data={}, what=c) for c in phys_catalogs.values()]
+
+	def modifiers(self, a:dict, key:str):
+		mod = a.get(key, '')
+		mods = CaseFoldingSet({m.strip() for m in mod.split(';')} - {''})
+		return mods
 
 	def add_acquisition(self, data, buyers, sellers, non_auctions, buy_sell_modifiers, transaction, transaction_types):
 		'''Add modeling of an acquisition as a transfer of title from the seller to the buyer'''
@@ -419,30 +432,30 @@ class AddAcquisitionOrBidding(ProvenanceBase):
 		paym_label = f'multiple lots {multi}' if multi else object_label
 		paym = model.Payment(ident=payment_id, label=f'Payment for {paym_label}')
 
-		THROUGH = set(buy_sell_modifiers['through'])
-		FOR = set(buy_sell_modifiers['for'])
+		THROUGH = CaseFoldingSet(buy_sell_modifiers['through'])
+		FOR = CaseFoldingSet(buy_sell_modifiers['for'])
 
 		single_seller = (len(sellers) == 1)
 		single_buyer = (len(buyers) == 1)
 
 		pi = self.helper.person_identity
 		def is_or_anon(data:dict):
-			mods = {m.lower().strip() for m in data.get('auth_mod_a', '').split(';')}
+			mods = self.modifiers(data, 'auth_mod_a')
 			return 'or anonymous' in mods
 		or_anon_records = [is_or_anon(a) for a in sellers]
 		uncertain_attribution = any(or_anon_records)
 
 		for seq_no, seller_data in enumerate(sellers):
 			seller = get_crom_object(seller_data)
-			mod = seller_data.get('auth_mod_a', '')
+			mod = self.modifiers(seller_data, 'auth_mod_a')
 			attrib_assignment_classes = [model.AttributeAssignment]
 			if uncertain_attribution:
 				attrib_assignment_classes.append(vocab.PossibleAssignment)
 			
-			if mod in THROUGH:
+			if THROUGH.intersects(mod):
 				acq.carried_out_by = seller
 				paym.carried_out_by = seller
-			elif mod in FOR:
+			elif FOR.intersects(mod):
 				acq.transferred_title_from = seller
 				paym.paid_to = seller
 			elif uncertain_attribution: # this is true if ANY of the sellers have an 'or anonymous' modifier
@@ -474,18 +487,21 @@ class AddAcquisitionOrBidding(ProvenanceBase):
 
 		for buyer_data in buyers:
 			buyer = get_crom_object(buyer_data)
-			mod = buyer_data.get('auth_mod_a', '')
+			mod = self.modifiers(buyer_data, 'auth_mod_a')
 
-			if mod == 'or':
+			if 'or' in mod:
 				# or/or others/or another
 				mod_non_auth = buyer_data.get('auth_mod')
 				if mod_non_auth:
 					acq.referred_to_by = vocab.Note(ident='', label=f'Buyer modifier', content=mod_non_auth)
 				warnings.warn(f'Handle buyer modifier: {mod}') # TODO: some way to model this uncertainty?
 
-			if mod in THROUGH:
+			if THROUGH.intersects(mod):
 				acq.carried_out_by = buyer
 				paym.carried_out_by = buyer
+			elif FOR.intersects(mod):
+				acq.transferred_title_to = buyer
+				paym.paid_from = buyer
 			else:
 				# covers FOR modifiers and non-modified
 # 				acq.carried_out_by = buyer
@@ -621,9 +637,9 @@ class AddAcquisitionOrBidding(ProvenanceBase):
 		tx_data = parent.get('_prov_entry_data')
 		tx = get_crom_object(tx_data)
 		houses = auction_houses_data
-		self.add_transfer_of_custody(data, tx, xfer_to=houses, xfer_from=sellers, sequence=1, purpose='selling')
+		self.add_transfer_of_custody(data, tx, xfer_to=houses, xfer_from=sellers, buy_sell_modifiers=buy_sell_modifiers, sequence=1, purpose='selling')
 		if model_custody_return:
-			self.add_transfer_of_custody(data, tx, xfer_to=sellers, xfer_from=houses, sequence=2, purpose='returning')
+			self.add_transfer_of_custody(data, tx, xfer_to=sellers, xfer_from=houses, buy_sell_modifiers=buy_sell_modifiers, sequence=2, purpose='returning')
 
 		data.setdefault('_prov_entries', [])
 		data['_prov_entries'].append(tx_data)
@@ -645,8 +661,8 @@ class AddAcquisitionOrBidding(ProvenanceBase):
 
 			all_bids.part_of = lot
 
-			THROUGH = set(buy_sell_modifiers['through'])
-			FOR = set(buy_sell_modifiers['for'])
+			THROUGH = CaseFoldingSet(buy_sell_modifiers['through'])
+			FOR = CaseFoldingSet(buy_sell_modifiers['for'])
 
 			for seq_no, amnt in enumerate(amnts):
 				# The individual bid and promise URIs are just the bidding URI with a suffix.
@@ -672,10 +688,10 @@ class AddAcquisitionOrBidding(ProvenanceBase):
 				#       should we construct an anonymous person to carry out the bid?
 				for buyer_data in buyers:
 					buyer = get_crom_object(buyer_data)
-					mod = buyer_data.get('auth_mod_a', '')
-					if mod in THROUGH:
+					mod = self.modifiers(buyer_data, 'auth_mod_a')
+					if THROUGH.intersects(mod):
 						bid.carried_out_by = buyer
-					elif mod in FOR:
+					elif FOR.intersects(mod):
 						warnings.warn(f'buyer modifier {mod} for non-sale bidding: {cno} {lno} {date}')
 					else:
 						bid.carried_out_by = buyer
@@ -791,8 +807,8 @@ class AddAcquisitionOrBidding(ProvenanceBase):
 
 				if sale_type in ('Auction', 'Collection Catalog'):
 					# 'Collection Catalog' is treated just like an Auction
-					self.add_transfer_of_custody(data, current_tx, xfer_to=custody_recievers, xfer_from=sellers, sequence=1, purpose='selling')
-					self.add_transfer_of_custody(data, current_tx, xfer_to=buyers, xfer_from=custody_recievers, sequence=2, purpose='completing sale')
+					self.add_transfer_of_custody(data, current_tx, xfer_to=custody_recievers, xfer_from=sellers, buy_sell_modifiers=buy_sell_modifiers, sequence=1, purpose='selling')
+					self.add_transfer_of_custody(data, current_tx, xfer_to=buyers, xfer_from=custody_recievers, buy_sell_modifiers=buy_sell_modifiers, sequence=2, purpose='completing sale')
 				elif sale_type in ('Private Contract Sale', 'Stock List'):
 					# 'Stock List' is treated just like a Private Contract Sale, except for the catalogs
 					metadata = {
@@ -807,10 +823,12 @@ class AddAcquisitionOrBidding(ProvenanceBase):
 							house._label = f'Private sale organizer for {cno} {shared_lot_number} ({date})'
 						data['_organizations'].append(h)
 
-					self.add_transfer_of_custody(data, current_tx, xfer_to=custody_recievers, xfer_from=sellers, sequence=1, purpose='selling')
-					self.add_transfer_of_custody(data, current_tx, xfer_to=buyers, xfer_from=custody_recievers, sequence=2, purpose='completing sale')
+					self.add_transfer_of_custody(data, current_tx, xfer_to=custody_recievers, xfer_from=sellers, buy_sell_modifiers=buy_sell_modifiers, sequence=1, purpose='selling')
+					self.add_transfer_of_custody(data, current_tx, xfer_to=buyers, xfer_from=custody_recievers, buy_sell_modifiers=buy_sell_modifiers, sequence=2, purpose='completing sale')
 
 					prev_procurements = self.add_private_sellers(data, sellers, sale_type, transaction, transaction_types)
+				else:
+					warnings.warn(f'*** not modeling transfer of custody for auction type {transaction}')
 				yield data
 		elif transaction in UNSOLD:
 			houses = [self.helper.add_auction_house_data(h) for h in auction_houses_data.get(cno, [])]

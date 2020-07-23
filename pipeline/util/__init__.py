@@ -616,7 +616,7 @@ class CaseFoldingSet(set):
 	def __or__(self, value):
 		s = CaseFoldingSet({})
 		for v in self:
-			super().add(v)
+			s.add(v)
 		for v in value:
 			s.add(v)
 		return s

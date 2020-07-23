@@ -218,6 +218,17 @@ class AddAuctionOfLot(Configurable):
 			tx_data = {'uri': tx_uri}
 
 			if transaction in SOLD:
+				if sale_type == 'Auction':
+					# the records in this sales catalog represent auction sales, so the
+					# price data for a sale should be asserted as a hammer price.
+					with suppress(KeyError):
+						prices = data['price']
+						if prices:
+							price_data = prices[0]
+							price = get_crom_object(price_data)
+							if price:
+								vocab.add_classification(price, vocab.HammerPrice)
+
 				multi = self.helper.transaction_contains_multiple_lots(auction_data, data)
 				if multi:
 					tx_data['multi_lot_tx'] = lots
@@ -469,9 +480,9 @@ class AddAcquisitionOrBidding(ProvenanceBase):
 				paym.attributed_by = paym_assignment
 			else:
 				# covers non-modified
-				acq.carried_out_by = seller
+# 				acq.carried_out_by = seller
 				acq.transferred_title_from = seller
-				paym.carried_out_by = seller
+# 				paym.carried_out_by = seller
 				paym.paid_to = seller
 
 		for buyer_data in buyers:
@@ -493,10 +504,10 @@ class AddAcquisitionOrBidding(ProvenanceBase):
 				paym.paid_from = buyer
 			else:
 				# covers FOR modifiers and non-modified
-				acq.carried_out_by = buyer
+# 				acq.carried_out_by = buyer
 				acq.transferred_title_to = buyer
 				paym.paid_from = buyer
-				paym.carried_out_by = buyer
+# 				paym.carried_out_by = buyer
 
 		if prices:
 			amnt = get_crom_object(prices[0])

@@ -49,6 +49,8 @@ class PersonIdentity:
 		self.anon_nationality_re = re.compile(r'\[(?!ANON|ILLEGIBLE|Unknown)(\w+)\]', re.IGNORECASE)
 
 	def acceptable_person_auth_name(self, auth_name):
+		if not auth_name:
+			return False
 		if not auth_name or auth_name in self.ignore_authnames:
 			return False
 		elif '[UNIDENTIFIED]' in auth_name:
@@ -617,6 +619,9 @@ class UtilityHelper:
 		else:
 			suffix = str(uuid.uuid4())
 			return self.shared_prefix + suffix
+
+	def prepend_uri_key(self, uri, key):
+		return uri.replace('#', f'#{key},')
 
 	def make_place(self, data:dict, base_uri=None):
 		'''

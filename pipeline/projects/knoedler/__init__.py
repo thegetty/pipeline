@@ -128,8 +128,8 @@ class KnoedlerUtilityHelper(UtilityHelper):
 				f_text = vocab.FolioText(ident=f_uri + '-Text', label=f'Knoedler Sales Book {book}, Folio {folio}')
 				f_hmo = vocab.Folio(ident=f_uri, label=f'Knoedler Sales Book {book}, Folio {folio}')
 
-				s_text.carried_by = s_hmo
-				f_text.carried_by = f_hmo
+				s_hmo.carries = s_text
+				f_hmo.carries = f_text
 				f_text.part_of = s_text
 				f_hmo.part_of = s_hmo
 
@@ -319,13 +319,6 @@ class AddBook(Configurable):
 	def __call__(self, data:dict, make_la_lo, make_la_hmo):
 		book = data['book_record']
 		book_id, _, _ = record_id(book)
-		data['_physical_book'] = {
-			'uri': self.helper.make_proj_uri('Book', book_id),
-			'object_type': vocab.Book,
-			'label': f'Knoedler Stock Book {book_id}',
-			'identifiers': [self.helper.knoedler_number_id(book_id)],
-		}
-		make_la_hmo(data['_physical_book'])
 
 		seq = vocab.SequencePosition(ident='', value=book_id)
 		seq.unit = vocab.instances['numbers']
@@ -335,9 +328,18 @@ class AddBook(Configurable):
 			'object_type': vocab.AccountBookText,
 			'label': f'Knoedler Stock Book {book_id}',
 			'identifiers': [self.helper.knoedler_number_id(book_id)],
-			'carried_by': [data['_physical_book']],
 			'dimensions': [seq],
 		}
+
+		data['_physical_book'] = {
+			'uri': self.helper.make_proj_uri('Book', book_id),
+			'object_type': vocab.Book,
+			'label': f'Knoedler Stock Book {book_id}',
+			'identifiers': [self.helper.knoedler_number_id(book_id)],
+			'carries': [data['_text_book']]
+		}
+
+		make_la_hmo(data['_physical_book'])
 		make_la_lo(data['_text_book'])
 
 		return data
@@ -352,15 +354,6 @@ class AddPage(Configurable):
 		book = data['book_record']
 		book_id, page_id, _ = record_id(book)
 
-		data['_physical_page'] = {
-			'uri': self.helper.make_proj_uri('Book', book_id, 'Page', page_id),
-			'object_type': vocab.Page,
-			'label': f'Knoedler Stock Book {book_id}, Page {page_id}',
-			'identifiers': [self.helper.knoedler_number_id(book_id)],
-			'part_of': [data['_physical_book']],
-		}
-		make_la_hmo(data['_physical_page'])
-
 		seq = vocab.SequencePosition(ident='', value=page_id)
 		seq.unit = vocab.instances['numbers']
 
@@ -372,9 +365,18 @@ class AddPage(Configurable):
 			'referred_to_by': [],
 			'part_of': [data['_text_book']],
 			'part': [],
-			'carried_by': [data['_physical_page']],
 			'dimensions': [seq],
 		}
+
+		data['_physical_page'] = {
+			'uri': self.helper.make_proj_uri('Book', book_id, 'Page', page_id),
+			'object_type': vocab.Page,
+			'label': f'Knoedler Stock Book {book_id}, Page {page_id}',
+			'identifiers': [self.helper.knoedler_number_id(book_id)],
+			'part_of': [data['_physical_book']],
+			'carries': [data['_text_page']],
+		}
+
 		if book.get('heading'):
 			# This is a transcription of the heading of the page
 			# Meaning it is part of the page linguistic object
@@ -386,6 +388,8 @@ class AddPage(Configurable):
 			subheading = book['subheading']
 			data['_text_page']['part'].append(add_crom_data(data={}, what=vocab.SubHeading(ident='', content=subheading)))
 			data['_text_page']['subheading'] = subheading # TODO: add subheading handling to MakeLinkedArtLinguisticObject
+
+		make_la_hmo(data['_physical_page'])
 		make_la_lo(data['_text_page'])
 
 		return data
@@ -616,7 +620,7 @@ class TransactionHandler(ProvenanceBase):
 			rights = []
 			role = 'shared-buyer' if incoming else 'shared-seller'
 			remaining = Fraction(1, 1)
-			print(f'{1+len(shared_people)}-way split:')
+# 			print(f'{1+len(shared_people)}-way split:')
 			for i, p in enumerate(shared_people):
 				person_dict = self.helper.copy_source_information(p, data)
 				person = self.helper.add_person(
@@ -624,18 +628,23 @@ class TransactionHandler(ProvenanceBase):
 					record=sales_record,
 					relative_id=f'{role}_{i+1}'
 				)
-				name = p['name']
+				name = p.get('name', p.get('auth_name', '(anonymous)'))
 				share = p['share']
-				share_frac = Fraction(share)
-				remaining -= share_frac
+				try:
+					share_frac = Fraction(share)
+					remaining -= share_frac
 
-				right = self.ownership_right(share_frac, person)
+					right = self.ownership_right(share_frac, person)
 
-				rights.append(right)
-				people.append(person_dict)
-				knoedler_group.append(person)
-				print(f'   {share:<10} {name:<50}')
-			print(f'   {str(remaining):<10} {knoedler._label:<50}')
+					rights.append(right)
+					people.append(person_dict)
+					knoedler_group.append(person)
+# 					print(f'   {share:<10} {name:<50}')
+				except ValueError as e:
+					pprint.pprint(p)
+					raise
+					
+# 			print(f'   {str(remaining):<10} {knoedler._label:<50}')
 			k_right = self.ownership_right(remaining, knoedler)
 			rights.insert(0, k_right)
 
@@ -679,7 +688,7 @@ class TransactionHandler(ProvenanceBase):
 					relative_id=f'{role}_{i+1}'
 				)
 				knoedler_group.append(person)
-				name = p['name']
+				name = p.get('name', p.get('auth_name', '(anonymous)'))
 				share = p['share']
 				share_frac = Fraction(share)
 				if price_amount:

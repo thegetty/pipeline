@@ -400,14 +400,32 @@ def add_crom_price(data, parent, services, add_citations=False):
 	region_currencies = services['region_currencies']
 	cno = parent['catalog_number']
 	region, _ = cno.split('-', 1)
+	c = currencies.copy()
 	if region in region_currencies:
-		c = currencies.copy()
 		c.update(region_currencies[region])
-		amnt = extract_monetary_amount(data, currency_mapping=c, add_citations=add_citations)
-	else:
-		amnt = extract_monetary_amount(data, currency_mapping=currencies, add_citations=add_citations)
+
+	verbatim = []
+	for k in ('price', 'est_price', 'start_price', 'ask_price'):
+		# Each data record can only have one of these. We put the decimalized
+		# value back using the same key, but the verbatim strings are just
+		# associated with the MonetaryAmount object, regardless of the presence
+		# of any classification (estimated/starting/asking)
+		if k in data:
+			price = data.get(k)
+			if '-' in price:
+				parts = price.split('-')
+				warnings.warn(f'TODO: handle decimalization of £sd price: {parts}')
+				# handle decimalization of £sd price, and preserve the original value in verbatim
+				verbatim.append(price)
+				decimalized_value = price
+				data[k] = decimalized_value
+
+	amnt = extract_monetary_amount(data, currency_mapping=c, add_citations=add_citations)
 	if amnt:
+		for v in verbatim:
+			amnt.identified_by = model.Name(ident='', content=v)
 		add_crom_data(data=data, what=amnt)
+
 	return data
 
 
@@ -730,6 +748,9 @@ class SalesPipeline(PipelineBase):
 								)
 							},
 							'price': {
+								'rename_keys': {
+									'price_amount': 'price',
+								},
 								'postprocess': lambda d, p: add_crom_price(d, p, services, add_citations=True),
 								'prefixes': (
 									'price_amount',

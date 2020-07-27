@@ -701,7 +701,13 @@ class TransactionHandler(ProvenanceBase):
 # 					print(f'*** {share_frac} of {price_amount} ({part_amnt._label})')
 					parts.append((person, part_amnt))
 				else:
-					parts.append((person, None))
+					pass
+					# This is commented out, because it wasn't deemed useful to model
+					# the parts of a shared payment where we didn't know the amount
+					# of a share. In this case, the payment part isn't adding any useful
+					# data (but would just be a place where more data could be added in
+					# the future).
+# 					parts.append((person, None))
 
 		paym = None
 		if amnt:
@@ -716,16 +722,17 @@ class TransactionHandler(ProvenanceBase):
 				else:
 					paym.paid_to = kp
 
-			for i, partdata in enumerate(parts):
-				person, part_amnt = partdata
-				shared_payment_id = tx_uri + f'-Payment-{i}-share'
-				shared_paym = model.Payment(ident=shared_payment_id, label=f"{person._label} share of payment for {object_label} ({parenthetical})")
-				shared_paym.paid_amount = part_amnt
-				if incoming:
-					shared_paym.paid_from = person
-				else:
-					shared_paym.paid_to = person
-				paym.part = shared_paym
+			if len(parts) > 1:
+				for i, partdata in enumerate(parts):
+					person, part_amnt = partdata
+					shared_payment_id = tx_uri + f'-Payment-{i}-share'
+					shared_paym = model.Payment(ident=shared_payment_id, label=f"{person._label} share of payment for {object_label} ({parenthetical})")
+					shared_paym.paid_amount = part_amnt
+					if incoming:
+						shared_paym.paid_from = person
+					else:
+						shared_paym.paid_to = person
+					paym.part = shared_paym
 
 		for person in people:
 			if incoming:

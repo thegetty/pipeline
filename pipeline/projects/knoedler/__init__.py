@@ -1112,7 +1112,7 @@ class KnoedlerPipeline(PipelineBase):
 
 		knoedler_ulan = 500304270
 		knoedler_name = 'M. Knoedler & Co.'
-		KNOEDLER_URI = self.helper.make_shared_uri('ORGANIZATION', 'ULAN', str(knoedler_ulan))
+		KNOEDLER_URI = self.helper.make_shared_uri('GROUP', 'AUTH', "Knoedler's")
 		knoedler = model.Group(ident=KNOEDLER_URI, label=knoedler_name)
 		knoedler.identified_by = vocab.PrimaryName(ident='', content=knoedler_name)
 		knoedler.exact_match = model.BaseResource(ident=f'http://vocab.getty.edu/ulan/{knoedler_ulan}')

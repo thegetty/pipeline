@@ -1068,11 +1068,12 @@ class ModelInventorying(TransactionHandler):
 		inv_label = f'Inventorying of {pi_rec} ({parenthetical})'
 		inv = vocab.Inventorying(ident=inv_uri, label=inv_label)
 		inv.identified_by = model.Name(ident='', content=inv_label)
-		inv.carried_out_by = self.helper.static_instances.get_instance('Group', 'knoedler')
 		inv.encountered = hmo
 		self.set_date(inv, data, 'entry_date')
 
 		tx_out.part = inv
+		tx_out.carried_out_by = self.helper.static_instances.get_instance('Group', 'knoedler')
+		self.set_date(tx_out, data, 'entry_date')
 
 		tx_out_data = add_crom_data(data={'uri': tx_out.id, 'label': inv_label}, what=tx_out)
 		data['_prov_entries'].append(tx_out_data)
@@ -1111,7 +1112,7 @@ class KnoedlerPipeline(PipelineBase):
 
 		knoedler_ulan = 500304270
 		knoedler_name = 'M. Knoedler & Co.'
-		KNOEDLER_URI = self.helper.make_shared_uri('ORGANIZATION', 'ULAN', str(knoedler_ulan))
+		KNOEDLER_URI = self.helper.make_shared_uri('GROUP', 'AUTH', "Knoedler's")
 		knoedler = model.Group(ident=KNOEDLER_URI, label=knoedler_name)
 		knoedler.identified_by = vocab.PrimaryName(ident='', content=knoedler_name)
 		knoedler.exact_match = model.BaseResource(ident=f'http://vocab.getty.edu/ulan/{knoedler_ulan}')

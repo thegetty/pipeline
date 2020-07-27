@@ -138,65 +138,68 @@ class PopulateSalesObject(Configurable, pipeline.linkedart.PopulateObject):
 		if location:
 			loc = location.get('geog')
 			note = location.get('note')
+
+			# in these two if blocks, the object was destroyed, so any "present location"
+			# data is actually an indication of the location of destruction.
+			if isinstance(loc, str) and 'destroyed ' in loc.lower():
+				self.populate_destruction_events(data, loc, type_map=destruction_types_map)
+				loc = None
+			elif isinstance(note, str) and 'destroyed ' in note.lower():
+				self.populate_destruction_events(data, note, type_map=destruction_types_map, location=loc)
+				note = None
+
 			if loc:
-				if 'destroyed ' in loc.lower():
-					self.populate_destruction_events(data, loc, type_map=destruction_types_map)
-				elif isinstance(note, str) and 'destroyed ' in note.lower():
-					# the object was destroyed, so any "present location" data is actually
-					# an indication of the location of destruction.
-					self.populate_destruction_events(data, note, type_map=destruction_types_map, location=loc)
-				else:
-					# TODO: if `parse_location_name` fails, still preserve the location string somehow
-					current = parse_location_name(loc, uri_base=self.helper.uid_tag_prefix)
-					inst = location.get('inst')
-					if inst:
-						owner_data = {
-							'label': f'{inst} ({loc})',
-							'identifiers': [
-								model.Name(ident='', content=inst)
-							]
-						}
-						ulan = None
-						with suppress(ValueError, TypeError):
-							ulan = int(location.get('insi'))
-						if ulan:
-							owner_data['ulan'] = ulan
-							owner_data['uri'] = self.helper.make_proj_uri('ORG', 'ULAN', ulan)
-						else:
-							owner_data['uri'] = self.helper.make_proj_uri('ORG', 'NAME', inst, 'PLACE', loc)
+				# TODO: if `parse_location_name` fails, still preserve the location string somehow
+				current = parse_location_name(loc, uri_base=self.helper.uid_tag_prefix)
+				inst = location.get('inst')
+				if inst:
+					owner_data = {
+						'label': f'{inst} ({loc})',
+						'identifiers': [
+							model.Name(ident='', content=inst)
+						]
+					}
+					ulan = None
+					with suppress(ValueError, TypeError):
+						ulan = int(location.get('insi'))
+					if ulan:
+						owner_data['ulan'] = ulan
+						owner_data['uri'] = self.helper.make_proj_uri('ORG', 'ULAN', ulan)
 					else:
-						owner_data = {
-							'label': '(Anonymous organization)',
-							'uri': self.helper.make_proj_uri('ORG', 'CURR-OWN', *now_key),
-						}
+						owner_data['uri'] = self.helper.make_proj_uri('ORG', 'NAME', inst, 'PLACE', loc)
+				else:
+					owner_data = {
+						'label': '(Anonymous organization)',
+						'uri': self.helper.make_proj_uri('ORG', 'CURR-OWN', *now_key),
+					}
 
-					if note:
-						owner_data['note'] = note
+				if note:
+					owner_data['note'] = note
 
-					# It's conceivable that there could be more than one "present location"
-					# for an object that is reconciled based on prev/post sale rewriting.
-					# Therefore, the place URI must not share a prefix with the object URI,
-					# otherwise all such places are liable to be merged during URI
-					# reconciliation as part of the prev/post sale rewriting.
-					base_uri = self.helper.prepend_uri_key(hmo.id, 'PLACE')
-					place_data = self.helper.make_place(current, base_uri=base_uri)
-					place = get_crom_object(place_data)
+				# It's conceivable that there could be more than one "present location"
+				# for an object that is reconciled based on prev/post sale rewriting.
+				# Therefore, the place URI must not share a prefix with the object URI,
+				# otherwise all such places are liable to be merged during URI
+				# reconciliation as part of the prev/post sale rewriting.
+				base_uri = self.helper.prepend_uri_key(hmo.id, 'PLACE')
+				place_data = self.helper.make_place(current, base_uri=base_uri)
+				place = get_crom_object(place_data)
 
-					make_la_org = pipeline.linkedart.MakeLinkedArtOrganization()
-					owner_data = make_la_org(owner_data)
-					owner = get_crom_object(owner_data)
+				make_la_org = pipeline.linkedart.MakeLinkedArtOrganization()
+				owner_data = make_la_org(owner_data)
+				owner = get_crom_object(owner_data)
 
-					acc = location.get('acc')
-					if acc:
-						acc_number = vocab.AccessionNumber(ident='', content=acc)
-						hmo.identified_by = acc_number
-						assignment = model.AttributeAssignment(ident='')
-						assignment.carried_out_by = owner
-						acc_number.assigned_by = assignment
+				acc = location.get('acc')
+				if acc:
+					acc_number = vocab.AccessionNumber(ident='', content=acc)
+					hmo.identified_by = acc_number
+					assignment = model.AttributeAssignment(ident='')
+					assignment.carried_out_by = owner
+					acc_number.assigned_by = assignment
 
-					owner.residence = place
-					data['_locations'].append(place_data)
-					data['_final_org'] = owner_data
+				owner.residence = place
+				data['_locations'].append(place_data)
+				data['_final_org'] = owner_data
 			else:
 				pass # there is no present location place string
 

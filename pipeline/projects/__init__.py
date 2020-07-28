@@ -414,8 +414,14 @@ class StaticInstanceHolder:
 		self.used = set()
 
 	def get_instance(self, model, name):
-		self.used.add((model, name))
-		return self.instances[model][name]
+		m = self.instances.get(model)
+		if not m:
+			return None
+		i = m.get(name)
+		if i:
+			self.used.add((model, name))
+			return i
+		return None
 
 	def used_instances(self):
 		used = defaultdict(dict)
@@ -428,9 +434,9 @@ class PipelineBase:
 		self.project_name = project_name
 		self.parallel = parallel
 		self.helper = helper
-		self.static_instances = StaticInstanceHolder(self.setup_static_instances())
 		self.services = self.setup_services()
 		helper.add_services(self.services)
+		self.static_instances = StaticInstanceHolder(self.setup_static_instances())
 		helper.add_static_instances(self.static_instances)
 
 	def setup_services(self):
@@ -467,9 +473,11 @@ class PipelineBase:
 		lugt_ulan = 500321736
 		gri_ulan = 500115990
 		gci_ulan = 500115991
+		knoedler_ulan = 500304270
 		GETTY_GRI_URI = self.helper.make_proj_uri('ORGANIZATION', 'LOCATION-CODE', 'JPGM')
 		GETTY_GCI_URI = self.helper.make_shared_uri('STATIC', 'ORGANIZATION', 'Getty Conservation Institute')
 		LUGT_URI = self.helper.make_proj_uri('PERSON', 'ULAN', lugt_ulan)
+		KNOEDLER_URI = self.helper.make_shared_uri('ORGANIZATION', 'ULAN', str(knoedler_ulan))
 
 		gci = model.Group(ident=GETTY_GCI_URI, label='Getty Conservation Institute')
 		gci.identified_by = vocab.PrimaryName(ident='', content='Getty Conservation Institute')
@@ -483,16 +491,52 @@ class PipelineBase:
 		lugt.identified_by = vocab.PrimaryName(ident='', content='Frits Lugt')
 		lugt.exact_match = model.BaseResource(ident=f'http://vocab.getty.edu/ulan/{lugt_ulan}')
 
+		knoedler_name = 'M. Knoedler & Co.'
+		knoedler = model.Group(ident=KNOEDLER_URI, label=knoedler_name)
+		knoedler.identified_by = vocab.PrimaryName(ident='', content=knoedler_name)
+		knoedler.exact_match = model.BaseResource(ident=f'http://vocab.getty.edu/ulan/{knoedler_ulan}')
+
 		instances = defaultdict(dict)
 		instances.update({
 			'Group': {
 				'gci': gci,
-				'gri': gri
+				'gri': gri,
+				'knoedler': knoedler
 			},
 			'Person': {
 				'lugt': lugt
-			}
+			},
+			'Place': self._static_place_instances()
 		})
+		
+		return instances
+
+	def _static_place_instances(self):
+		'''
+		Create static instances for every place mentioned in the unique_locations service data.
+		'''
+		places = self.helper.services.get('unique_locations', {}).get('places', {})
+		instances = {}
+		for name, data in places.items():
+			place_data = None
+			place = None
+			components = []
+			for k in ('Sovereign', 'Country', 'Province', 'State', 'City'):
+				component_name = data.get(k.lower())
+				if component_name:
+					components = [component_name] + components
+					place_data = {
+						'name': component_name,
+						'type': k,
+						'part_of': place_data
+					}
+					parent = place
+					place_data = self.helper.make_place(place_data)
+					place = get_crom_object(place_data)
+					place.part_of = parent
+					instances[', '.join(components)] = place
+			if place:
+				instances[name] = place
 		return instances
 
 	def _service_from_path(self, file):
@@ -595,7 +639,8 @@ class UtilityHelper:
 		constructor instead.
 		'''
 		self.services = services
-		self.unique_locations = CaseFoldingSet(self.services.get('unique_locations', {}).get('place_names', []))
+		self.static_instances = None
+		self.canonical_location_names = {k.casefold(): v for k, v in self.services.get('unique_locations', {}).get('canonical_names', {}).items()}
 
 	def add_static_instances(self, static_instances):
 		self.static_instances = static_instances
@@ -632,15 +677,21 @@ class UtilityHelper:
 		The dictionary keys used to construct the place object are:
 
 		- name
-		- type (one of: 'City', 'State', 'Province', or 'Country')
+		- type (one of: 'City', 'State', 'Province', 'Country', or 'Sovereign')
 		- part_of (a recursive place dictionary)
+		
+		If the name matches a known unique location (derived from the unique_locations
+		service data), the normal recursive handling of part_of data is bypassed, using
+		the 
 		'''
-		unique_locations = self.unique_locations
+# 		unique_locations = self.unique_locations
+		canonical_location_names = self.canonical_location_names
 		TYPES = {
 			'city': vocab.instances['city'],
 			'province': vocab.instances['province'],
 			'state': vocab.instances['province'],
 			'country': vocab.instances['nation'],
+			'sovereign': vocab.instances['sovereign'],
 		}
 
 		if data is None:
@@ -648,43 +699,70 @@ class UtilityHelper:
 		type_name = data.get('type', 'place').lower()
 		
 		name = data.get('name')
+		si = self.static_instances
+
 		names = data.get('names', [])
 		label = name
 		parent_data = data.get('part_of')
 
 		place_type = TYPES.get(type_name)
 		parent = None
-		if parent_data:
+		
+		if name.casefold() in canonical_location_names:
+			name = canonical_location_names.get(name.casefold(), name)
+			label = name
+		elif parent_data:
 			parent_data = self.make_place(parent_data, base_uri=base_uri)
 			parent = get_crom_object(parent_data)
 			if label:
 				label = f'{label}, {parent._label}'
 
 		placeargs = {}
+		p = None
+		if si:
+			# this is a static instance. we need to re-thread the part_of relationship
+			# in the data dictionary, because the serialization depends on the dictionary
+			# data, not the properties of the modeled object
+			p = si.get_instance('Place', name)
+			queue = [(p, data)]
+			while queue:
+				place, place_data = queue.pop(0)
+				parents = getattr(place, 'part_of', []) or []
+				for parent in parents:
+					if parent:
+						print(f'PARENT: {parent._label}')
+					if parent and 'part_of' not in place_data:
+						parent_data = add_crom_data({}, parent)
+						place_data['part_of'] = parent_data
+						queue.append((parent, parent_data))
+		if p:
+			data = add_crom_data(data=data, what=p)
 		if label:
 			placeargs['label'] = label
 		if data.get('uri'):
 			placeargs['ident'] = data['uri']
-		elif label in unique_locations:
-			data['uri'] = self.make_proj_uri('PLACE', label)
+		elif label.casefold() in canonical_location_names:
+			label = canonical_location_names[label.casefold()]
+			data['uri'] = self.make_shared_uri('PLACE', label)
 			placeargs['ident'] = data['uri']
 		elif base_uri:
 			data['uri'] = base_uri + urllib.parse.quote(label)
 			placeargs['ident'] = data['uri']
 
-		p = model.Place(**placeargs)
-		if place_type:
-			p.classified_as = place_type
-		if name:
-			p.identified_by = vocab.PrimaryName(ident='', content=name)
-		else:
-			warnings.warn(f'Place with missing name on {p.id}')
-		for name in names:
+		if not p:
+			p = model.Place(**placeargs)
+			if place_type:
+				p.classified_as = place_type
 			if name:
-				p.identified_by = model.Name(ident='', content=name)
-		if parent:
-			p.part_of = parent
-			data['part_of'] = parent_data
+				p.identified_by = vocab.PrimaryName(ident='', content=name)
+			else:
+				warnings.warn(f'Place with missing name on {p.id}')
+			for name in names:
+				if name:
+					p.identified_by = model.Name(ident='', content=name)
+			if parent:
+				p.part_of = parent
+				data['part_of'] = parent_data
 		return add_crom_data(data=data, what=p)
 
 	def gci_number_id(self, content, id_class=None):
@@ -704,6 +782,13 @@ class UtilityHelper:
 		assignment.carried_out_by = self.static_instances.get_instance('Group', 'gri')
 		catalog_id.assigned_by = assignment
 		return catalog_id
+
+	def knoedler_number_id(self, content):
+		k_id = vocab.LocalNumber(ident='', content=content)
+		assignment = model.AttributeAssignment(ident='')
+		assignment.carried_out_by = self.static_instances.get_instance('Group', 'knoedler')
+		k_id.assigned_by = assignment
+		return k_id
 
 	def add_group(self, data, **kwargs):
 		return self.person_identity.add_group(data, **kwargs)

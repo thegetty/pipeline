@@ -105,7 +105,7 @@ class PIRModelingTest_PrivateContractSales(TestSalesPipelineOutput):
 
 		self.assertIn(object_set_key, {s['id'] for s in hmo['member_of']})
 		
-		self.assertEqual(sorted([p['type'] for p in prov_entry_curr['part']]), ['Acquisition', 'Payment', 'TransferOfCustody', 'TransferOfCustody'])
+		self.assertEqual(sorted([p['type'] for p in prov_entry_curr['part']]), ['Acquisition', 'Payment', 'Payment', 'TransferOfCustody', 'TransferOfCustody'])
 		acq = [p for p in prov_entry_curr['part'] if p['type'] == 'Acquisition'][0]
 		xfers = [p for p in prov_entry_curr['part'] if p['type'] == 'TransferOfCustody']
 

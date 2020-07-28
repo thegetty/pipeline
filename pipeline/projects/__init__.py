@@ -288,8 +288,9 @@ class PersonIdentity:
 		for key in ('notes', 'brief_notes', 'working_notes'):
 			if key in data:
 				for content in [n.strip() for n in data[key].split(';')]:
-					note = vocab.Note(ident='', content=content)
-					data['referred_to_by'].append(note)
+					if content:
+						note = vocab.Note(ident='', content=content)
+						data['referred_to_by'].append(note)
 
 		for key in ('name_cite', 'bibliography'):
 			if data.get(key):

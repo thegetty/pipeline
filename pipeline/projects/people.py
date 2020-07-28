@@ -42,8 +42,10 @@ from pipeline.util import \
 			MatchingFiles, \
 			identity, \
 			replace_key_pattern, \
-			strip_key_prefix
-from pipeline.util.cleaners import date_cleaner, parse_location_name
+			strip_key_prefix, \
+			label_for_timespan_range, \
+			timespan_from_outer_bounds
+from pipeline.util.cleaners import date_parse, date_cleaner, parse_location_name
 from pipeline.io.file import MergingFileWriter
 from pipeline.io.memory import MergingMemoryWriter
 import pipeline.linkedart
@@ -138,43 +140,39 @@ class AddPerson(Configurable):
 			data['referred_to_by'].append(cite)
 
 	def handle_places(self, data):
-		locations = []
-		location = data.get('location', '')
-		if location:
-			for l in {loc.strip() for loc in location.split(';')}:
-				if not l:
-					continue
-				year_range = self.year_range.search(l)
-				single_year = self.single_year.search(l)
-				bound_year = self.bound_year.search(l)
-				c_year = self.c_year.search(l)
-				m = None
-				if year_range:
-					m = year_range
-				elif single_year:
-					m = single_year
-				elif bound_year:
-					m = bound_year
-				elif c_year:
-					m = c_year
-				if m:
-					all = m.group(0)
-					note = m.group(1)
-					l = l.replace(all, '')
-					note = vocab.BibliographyStatement(ident='', content=f'Residence in {l} ({note})')
-					data['referred_to_by'].append(note)
-				locations.append(l)
 		base_uri = self.helper.make_proj_uri('PLACE', '')
-		for l in locations:
-			current = parse_location_name(l, uri_base=self.helper.proj_prefix)
-			place_data = self.helper.make_place(current, base_uri=base_uri)
-			data['places'].append(place_data)
+		for loc in data.get('locations', []):
+			l = loc.get('location')
+			if l:
+				current = parse_location_name(l, uri_base=self.helper.proj_prefix)
+				place_data = self.helper.make_place(current, base_uri=base_uri)
+				data['places'].append(place_data)
+				note = loc.get('location_note')
+				if note:
+					note = vocab.Note(ident='', content=note)
+					data['referred_to_by'].append(note)
+				date = loc.get('location_date')
+				if date:
+					note = vocab.BibliographyStatement(ident='', content=f'Residence in {l} ({date})')
+					data['referred_to_by'].append(note)
 
-		addresses = {l.strip() for l in data.get('address', '').split(';')} - {''}
-		for address in addresses:
-			contact = model.Identifier(ident='', content=address)
-			contact_data = add_crom_data(data={}, what=contact)
-			data['contact_point'].append(contact_data)
+			address = loc.get('address')
+			if address:
+				contact = model.Identifier(ident='', content=address)
+				contact_data = add_crom_data(data={}, what=contact)
+				data['contact_point'].append(contact_data)
+				note = loc.get('address_note')
+				if note:
+					note = vocab.Note(ident='', content=note)
+					data['referred_to_by'].append(note)
+				date = loc.get('address_date')
+				if date:
+					note = vocab.BibliographyStatement(ident='', content=f'Address at {l} ({date})')
+					data['referred_to_by'].append(note)
+				knoed = loc.get('address_knoed')
+				if knoed:
+					note = vocab.SourceStatement(ident='', content=f'Referred to by a Knoedler record with stock number {knoed}')
+					data['referred_to_by'].append(note)
 
 	def model_person_or_group(self, data):
 		name = data['auth_name']
@@ -277,6 +275,21 @@ class PeoplePipeline(PipelineBase):
 			KeyManagement(
 				operations=[
 					{
+						'group_repeating': {
+							'locations': {
+								'prefixes': (
+									'location',
+									'location_date',
+									'location_note',
+									'address',
+									'address_date',
+									'address_note',
+									'address_knoed',
+								)
+							}
+						}
+					},
+					{
 						'group': {
 							'person': {
 								'rename_keys': {
@@ -300,8 +313,7 @@ class PeoplePipeline(PipelineBase):
 									'century_active',
 									'active_city_date',
 									'nationality',
-									'location',
-									'address',
+									'locations',
 									'subjects_painted',
 									'source',
 									'medal_received',

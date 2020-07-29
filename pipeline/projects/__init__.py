@@ -525,11 +525,13 @@ class PipelineBase:
 				component_name = data.get(k.lower())
 				if component_name:
 					components = [component_name] + components
+					rev = components
+					rev.reverse()
 					place_data = {
 						'name': component_name,
 						'type': k,
 						'part_of': place_data,
-						'uri': self.helper.make_shared_uri('PLACE', *components)
+						'uri': self.helper.make_shared_uri('PLACE', *rev)
 					}
 					parent = place
 					place_data = self.helper.make_place(place_data)
@@ -738,15 +740,18 @@ class UtilityHelper:
 					place_data = queue.pop(0)
 					place = get_crom_object(place_data)
 					parents = getattr(place, 'part_of', []) or []
-					for parent in parents:
-						if parent:
-							if 'part_of' not in place_data:
-								parent_data = add_crom_data(data={}, what=parent)
-								place_data['part_of'] = parent_data
-							else:
-								parent_data = place_data['part_of']
-								add_crom_data(data=parent_data, what=parent)
-							queue.append(parent_data)
+					if parents:
+						for parent in parents:
+							if parent:
+								if 'part_of' not in place_data:
+									parent_data = add_crom_data(data={}, what=parent)
+									place_data['part_of'] = parent_data
+								else:
+									parent_data = add_crom_data(data=place_data['part_of'], what=parent)
+								queue.append(parent_data)
+					elif 'part_of' in place_data:
+						parent_data = self.make_place(place_data['part_of'], base_uri=base_uri)
+						queue.append(parent_data)
 		if p:
 			return data
 

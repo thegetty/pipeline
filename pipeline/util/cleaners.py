@@ -59,6 +59,7 @@ _COUNTRY_NAMES = {
 	'Liechtenstein': 'Liechtenstein',
 	'Luxembourg': 'Luxembourg',
 	'México': 'Mexico',
+	'Mexico': 'Mexico',
 	'Netherlands': 'Netherlands',
 	'Nederland': 'Netherlands',
 	'New Zealand': 'New Zealand',
@@ -275,11 +276,11 @@ def parse_location(*parts, uri_base=None, types=None):
 		# not a recognized place name format; assert a generic Place with the associated value as a name
 		return {'name': value}
 
-	if country_name in _COUNTRY_HANDLERS:
-		_parts = list(parts[:-1]) + [country_name]
-		loc = _COUNTRY_HANDLERS[country_name](_parts, uri_base=uri_base)
-		if loc:
-			return loc
+# 	if country_name in _COUNTRY_HANDLERS:
+# 		_parts = list(parts[:-1]) + [country_name]
+# 		loc = _COUNTRY_HANDLERS[country_name](_parts, uri_base=uri_base)
+# 		if loc:
+# 			return loc
 
 	current = {
 		'type': country_type,

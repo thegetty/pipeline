@@ -52,4 +52,4 @@ if __name__ == '__main__':
 			if place:
 				places[authname] = place
 	data = {'places': places, 'canonical_names': names}
-	print(json.dumps(data))
+	print(json.dumps(data, indent=4, sort_keys=True))

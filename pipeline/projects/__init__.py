@@ -521,7 +521,7 @@ class PipelineBase:
 			place_data = None
 			place = None
 			components = []
-			for k in ('Sovereign', 'Country', 'Province', 'State', 'City'):
+			for k in ('Sovereign', 'Country', 'Province', 'State', 'County', 'City'):
 				component_name = data.get(k.lower())
 				if component_name:
 					components = [component_name] + components
@@ -709,6 +709,7 @@ class UtilityHelper:
 		parent_data = data.get('part_of')
 
 		place_type = TYPES.get(type_name)
+		
 		parent = None
 		
 		if name.casefold() in canonical_location_names:

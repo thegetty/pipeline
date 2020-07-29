@@ -528,12 +528,12 @@ class PipelineBase:
 					place_data = {
 						'name': component_name,
 						'type': k,
-						'part_of': place_data
+						'part_of': place_data,
+						'uri': self.helper.make_shared_uri('PLACE', *components)
 					}
 					parent = place
 					place_data = self.helper.make_place(place_data)
 					place = get_crom_object(place_data)
-					place.part_of = parent
 					instances[', '.join(components)] = place
 			if place:
 				instances[name] = place
@@ -688,6 +688,7 @@ class UtilityHelper:
 		canonical_location_names = self.canonical_location_names
 		TYPES = {
 			'city': vocab.instances['city'],
+			'county': vocab.instances['county'],
 			'province': vocab.instances['province'],
 			'state': vocab.instances['province'],
 			'country': vocab.instances['nation'],
@@ -717,39 +718,54 @@ class UtilityHelper:
 			if label:
 				label = f'{label}, {parent._label}'
 
+
 		placeargs = {}
 		p = None
 		if si:
-			# this is a static instance. we need to re-thread the part_of relationship
-			# in the data dictionary, because the serialization depends on the dictionary
-			# data, not the properties of the modeled object
 			p = si.get_instance('Place', name)
-			queue = [(p, data)]
-			while queue:
-				place, place_data = queue.pop(0)
-				parents = getattr(place, 'part_of', []) or []
-				for parent in parents:
-					if parent:
-						print(f'PARENT: {parent._label}')
-					if parent and 'part_of' not in place_data:
-						parent_data = add_crom_data({}, parent)
-						place_data['part_of'] = parent_data
-						queue.append((parent, parent_data))
+			if not p:
+				p = si.get_instance('Place', label)
+				
+			if p:
+				# this is a static instance. we need to re-thread the part_of relationship
+				# in the data dictionary, because the serialization depends on the dictionary
+				# data, not the properties of the modeled object
+# 				from cromulent.model import factory
+# 				print(f'PLACE: {name} => {factory.toString(p, False)}')
+				add_crom_data(data=data, what=p)
+				queue = [data]
+				while queue:
+					place_data = queue.pop(0)
+					place = get_crom_object(place_data)
+					parents = getattr(place, 'part_of', []) or []
+					for parent in parents:
+						if parent:
+							if 'part_of' not in place_data:
+								parent_data = add_crom_data(data={}, what=parent)
+								place_data['part_of'] = parent_data
+							else:
+								parent_data = place_data['part_of']
+								add_crom_data(data=parent_data, what=parent)
+							queue.append(parent_data)
 		if p:
-			data = add_crom_data(data=data, what=p)
+			return data
+
 		if label:
 			placeargs['label'] = label
+
 		if data.get('uri'):
 			placeargs['ident'] = data['uri']
-		elif label.casefold() in canonical_location_names:
-			label = canonical_location_names[label.casefold()]
-			data['uri'] = self.make_shared_uri('PLACE', label)
-			placeargs['ident'] = data['uri']
+# 		elif label.casefold() in canonical_location_names:
+# 			label = canonical_location_names[label.casefold()]
+# 			data['uri'] = self.make_shared_uri('PLACE', label)
+# 			placeargs['ident'] = data['uri']
 		elif base_uri:
 			data['uri'] = base_uri + urllib.parse.quote(label)
 			placeargs['ident'] = data['uri']
 
 		if not p:
+			if si:
+				print(f'NON-AUTH PLACE: {label}')
 			p = model.Place(**placeargs)
 			if place_type:
 				p.classified_as = place_type

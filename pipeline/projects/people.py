@@ -169,10 +169,6 @@ class AddPerson(Configurable):
 				if date:
 					note = vocab.BibliographyStatement(ident='', content=f'Address at {l} ({date})')
 					data['referred_to_by'].append(note)
-				knoed = loc.get('address_knoed')
-				if knoed:
-					note = vocab.SourceStatement(ident='', content=f'Referred to by a Knoedler record with stock number {knoed}')
-					data['referred_to_by'].append(note)
 
 	def model_person_or_group(self, data):
 		name = data['auth_name']
@@ -284,7 +280,6 @@ class PeoplePipeline(PipelineBase):
 									'address',
 									'address_date',
 									'address_note',
-									'address_knoed',
 								)
 							}
 						}

@@ -201,13 +201,6 @@ class KnoedlerUtilityHelper(UtilityHelper):
 				dst[k] = src[k]
 		return dst
 
-	def knoedler_number_id(self, content):
-		k_id = vocab.LocalNumber(ident='', content=content)
-		assignment = model.AttributeAssignment(ident='')
-		assignment.carried_out_by = self.static_instances.get_instance('Group', 'knoedler')
-		k_id.assigned_by = assignment
-		return k_id
-
 	def make_object_uri(self, pi_rec_no, *uri_key):
 		uri_key = list(uri_key)
 		same_objects = self.services['same_objects_map']
@@ -1113,21 +1106,6 @@ class KnoedlerPipeline(PipelineBase):
 		with fs.open(self.header_file, newline='') as csvfile:
 			r = csv.reader(csvfile)
 			self.headers = [v.lower() for v in next(r)]
-
-	def setup_static_instances(self):
-		instances = super().setup_static_instances()
-
-		knoedler_ulan = 500304270
-		knoedler_name = 'M. Knoedler & Co.'
-		KNOEDLER_URI = self.helper.make_shared_uri('GROUP', 'AUTH', "Knoedler's")
-		knoedler = model.Group(ident=KNOEDLER_URI, label=knoedler_name)
-		knoedler.identified_by = vocab.PrimaryName(ident='', content=knoedler_name)
-		knoedler.exact_match = model.BaseResource(ident=f'http://vocab.getty.edu/ulan/{knoedler_ulan}')
-
-		instances['Group'].update({
-			'knoedler': knoedler
-		})
-		return instances
 
 	def _construct_same_object_map(self, same_objects):
 		'''

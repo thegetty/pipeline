@@ -3,11 +3,16 @@
         "Abbot's Langley, Herts., England": "Abbotts Langley, Hertfordshire, England, UK",
         "Abbotts, Langley, Hertford, England": "Abbotts Langley, Hertfordshire, England, UK",
         "Aberdour Castle, co. Fife, Scotland": "Aberdour Castle, Fife, Scotland",
+        "Ajaccio, Corse, France": "Ajaccio, Corsica, France",
         "Almelo, Holland": "Almelo, Netherlands",
+        "Amsterdam": "Amsterdam, Netherlands",
         "Anterwerpen, Belgium": "Antwerp, Belgium",
         "Antwerpen [?], Belgium": "Antwerp, Belgium",
         "Athboy Lodge, County Meath, Ireland": "Athboy Lodge, Meath, Ireland",
         "Ballinakill, Ireland": "Ballinakill, Laois, Ireland",
+        "Bath, England, UK": "Bath, Somerset, England, UK",
+        "Berlin W 9, Bellevuestr. 7, Berlin, Germany": "Berlin, Germany",
+        "Birmingham, England, UK": "Birmingham, Warwickshire, England, UK",
         "Bourg-les-valence, France": "Bourg-l\u00e8s-Valence, France",
         "Brugge": "Bruges, Belgium",
         "Brugge [?], Belgium": "Bruges, Belgium",
@@ -17,6 +22,9 @@
         "Brussels, Belgique [?]": "Brussels, Belgium",
         "Bruxelles": "Brussels, Belgium",
         "Bruxells": "Brussels, Belgium",
+        "B\u00f6rsensaal, Hamburg, Germany": "Hamburg, Germany",
+        "B\u00f6rsensaale, Hamburg, Germany": "Hamburg, Germany",
+        "Cambridge, England, UK": "Cambridge, Cambridgeshire, England, UK",
         "Chateau Biron, France": "Ch\u00e2teau Biron, France",
         "Chateau de Crecy France": "Ch\u00e2teau de Cr\u00e9cy, France",
         "Chateau de Fontainebleau, France": "Ch\u00e2teau de Fontainebleau, France",
@@ -24,40 +32,113 @@
         "Chateau de la Barre, France": "Ch\u00e2teau de la Barre, France",
         "Ch\u00e2teau Biron (near Montpazier), France": "Ch\u00e2teau Biron, France",
         "Delfshaven": "Rotterdam, Netherlands",
+        "Den Haag, Netherlands": "The Hague, Netherlands",
+        "Derby, England, UK": "Derbyshire, England, UK",
         "Dunkerque, France": "Dunkirk, France",
+        "Dusseldorf, Germany": "D\u00fcsseldorf, Germany",
         "D\u00fcsseldorf, Allemagne": "D\u00fcsseldorf, Germany",
+        "Edinburgh, Scotland": "Edinburgh, Scotland, UK",
         "Eekloo, Belgium": "Eeklo, Belgium",
+        "El Escorial": "El Escorial, Spain",
+        "Firenze, Italy": "Florence, Italy",
         "Frankfurt au Main, Germany": "Frankfurt am Main, Germany",
+        "Frankfurt, Germany": "Frankfurt am Main, Germany",
+        "Franz-Josef-Saal, Vienna, Austria": "Vienna, Austria",
+        "Franz-Saal, Vienna, Austria": "Vienna, Austria",
+        "Freiburg, Germany": "Freiburg im Breisgau, Germany",
+        "Gebouw Leesmuseum, Rokin 102, Amsterdam, Netherlands": "Amsterdam, Netherlands",
+        "Genova, Italy": "Genoa, Italy",
         "Gent": "Ghent, Belgium",
         "Gent [?], Belgium": "Ghent, Belgium",
+        "Gen\u00e8ve, Switzerland": "Geneva, Switzerland",
         "Ghent, Belqique": "Ghent, Belgium",
+        "Greenwich, England, UK": "Greenwich, London, England, UK",
+        "Hague, Netherlands": "The Hague, Netherlands",
         "Hamburg (Altona), Germany": "Hamburg, Germany",
         "Hamburg, Deutchland": "Hamburg, Germany",
         "Hannover, Germany": "Hanover, Germany",
+        "Haugh Hall, Norton, Suffolk, England, UK": "Norton, Suffolk, England, UK",
+        "Hindenburgstrasse 49, Aachen, Germany": "Aachen, Germany",
+        "Hotel Drouot, Salle N\u00ba 1, Paris, France": "Paris, France",
+        "Hotel Drouot, Salle N\u00ba 10, Paris, France": "Paris, France",
+        "Hotel Drouot, Salle N\u00ba 6, Paris, France": "Paris, France",
+        "Hotel National (Ostfl\u00fcgel), Luzern, Switzerland": "Lucerne, Switzerland",
+        "Huize Roos, het Huis met de Hoofden, Keizersgracht, tussen de Heerenstraat en de Leliegracht, Amsterdam, Netherlands": "Amsterdam, Netherlands",
+        "H\u00f4tel de Bullion, rue J.J. Rousseau, Paris, France": "Paris, France",
+        "Im rothen Collegio, Leipzig, Germany": "Leipzig, Germany",
+        "Ipswich, England, UK": "Ipswich, Suffolk, England, UK",
+        "Krakow, Poland": "Krak\u00f3w, Poland",
+        "Kunstabteilung, Vienna, Austria": "Vienna, Austria",
+        "Kurf\u00fcrstenstr. 79 (Ecke Keithstr.), Berlin, Germany": "Berlin, Germany",
         "K\u00f6ln, Germany": "Cologne, Germany",
+        "La Salle ordinaire de Vente dans la Mairie, Bruges, Belgium": "Bruges, Belgium",
         "Lichtenthal, near Baden-Baden, Germany": "Lichtenthal, Germany",
+        "Liverpool, England, UK": "Liverpool, Merseyside, England, UK",
         "London, UK": "London, England, UK",
+        "Luzern, Switzerland": "Lucerne, Switzerland",
+        "Manchester, England, UK": "Manchester, Greater Manchester, England, UK",
+        "Maria-Theresia-Saal, Vienna, Austria": "Vienna, Austria",
+        "Maria-Theresien-Saal, Vienna, Austria": "Vienna, Austria",
         "Mechelen (Belgique)": "Mechelen, Belgium",
         "Mexico": "M\u00e9xico",
         "Mexico City, Mexico": "M\u00e9xico City, M\u00e9xico",
         "M\u00e9xico City, Mexico": "M\u00e9xico City, M\u00e9xico",
         "M\u00fanchen, Germany": "Munich, Germany",
         "M\u00fcnchen, Germany": "Munich, Germany",
+        "Napoli, Italy": "Naples, Italy",
         "Neuchatel, Switzerland": "Neuch\u00e2tel, Switzerland",
         "Neuilly sur Seine, France": "Neuilly-sur-Seine, France",
         "Neuilly, France": "Neuilly-sur-Seine, France",
+        "Neumarkt 3, Cologne, Germany": "Cologne, Germany",
         "Niagara Falls, Canada": "Niagara Falls, Ontario, Canada",
+        "Nicht bekannt, Hamburg[?], Germany": "Hamburg, Germany",
+        "Niedenau 55, Frankfurt, Germany": "Frankfurt am Main, Germany",
         "Nieuport, Belqique": "Nieuport, Belgium",
-        "Roma": "Rome, Italy",
+        "Nimes, France": "N\u00eemes, France",
+        "No.14 Greek St., London, England, UK": "London, England, UK",
+        "No.14 Greek St., Soho Square, London, England, UK": "London, England, UK",
+        "No.4 Prince's St., Edinburgh, Scotland": "Edinburgh, Scotland, UK",
+        "No.54 Pall Mall, London, England, UK": "London, England, UK",
+        "No.6 Eustace St., Dublin, Ireland": "Dublin, Ireland",
+        "No.8 King St., St. James's Square, London, England, UK": "London, England, UK",
+        "Norwich, England, UK": "Norwich, Norfolk, England, UK",
+        "Nottingham, England, UK": "Nottingham, Nottinghamshire, England, UK",
+        "N\u00fcrnberg, Germany": "Nuremberg, Germany",
+        "Oudezijds Herenlogement, Amsterdam, Netherlands": "Amsterdam, Netherlands",
+        "Oxford, England, UK": "Oxford, Oxfordshire, England, UK",
+        "Paris": "Paris, France",
+        "Quebec": "Qu\u00e9bec, Canada",
+        "Quebec, Canada": "Qu\u00e9bec, Canada",
+        "Roma, Italy": "Rome, Italy",
+        "Rotterdam": "Rotterdam, Netherlands",
+        "R\u00e9fectoire des ci-devant Dominicains, Ghent, Belgium": "Ghent, Belgium",
+        "Salle N\u00ba 1, Paris, France": "Paris, France",
         "Sanlucar, Spain": "Sanl\u00facar, Spain",
+        "Savoy-Hotel, Zurich, Switzerland": "Z\u00fcrich, Switzerland",
         "Schloss Wallerstein, Germany": "Wallerstein, Germany",
         "Schoningen, Germany": "Sch\u00f6ningen, Germany",
         "Scotland": "Scotland, UK",
+        "Southampton, England, UK": "Southampton, Hampshire, England, UK",
+        "Speersort 22, Hamburg, Germany": "Hamburg, Germany",
+        "St. Boswells, Scotland, UK": "Mertoun House, St. Boswells, Scotland, UK",
         "Tijuana, Mexico": "Tijuana, M\u00e9xico",
-        "Tournay, Belgium": "Tournai, Belgium  CHANGE TO ENGLISH >>",
+        "Tournai, Belgium": "Tournay, Belgium  ",
         "United Kingdom": "UK",
+        "Universit\u00e4tsstrasse 26 I, Leipzig, Germany": "Leipzig, Germany",
+        "Unter den Linden 19, Berlin, Germany": "Berlin, Germany",
+        "Venezia, Italy": "Venice, Italy",
+        "Vortragssaal des Leipziger Museums der Bildenden K\u00fcnste am Augustplatz, Leipzig, Germany": "Leipzig, Germany",
+        "W 9, Bellevuestrasse 3 (ehemaliges K\u00fcnstlerhaus), Berlin, Germany": "Berlin, Germany",
+        "Wagm\u00fcllerstr. 15, Munich, Germany": "Munich, Germany",
+        "Wagm\u00fcllerstrasse 15, Munich, Germany": "Munich, Germany",
         "Wardamme, Belgium": "Waardamme, Belgium CHANGE TO ENGLISH >>",
         "Wervicq, Belgium": "Wervik, Belgium",
+        "Wien, Austria": "Vienna, Austria",
+        "Yarmouth, England, UK": "Yarmouth, Norfolk, England, UK",
+        "York, England, UK": "York, North Yorkshire, England, UK",
+        "Zunfthaus zur Meise, Zurich, Switzerland": "Z\u00fcrich, Switzerland",
+        "Zurich, Switzerland": "Z\u00fcrich, Switzerland",
+        "[No.125] Pall Mall, London, England, UK": "London, England, UK",
         "`": "Stoke Hall, Nottinghamshire, England, UK"
     },
     "places": {
@@ -90,6 +171,11 @@
         },
         "Aberdeen, Aberdeenshire, Scotland, UK": {
             "city": "Aberdeen",
+            "country": "Scotland",
+            "county": "Aberdeenshire",
+            "sovereign": "UK"
+        },
+        "Aberdeenshire, Scotland, UK": {
             "country": "Scotland",
             "county": "Aberdeenshire",
             "sovereign": "UK"
@@ -147,10 +233,10 @@
             "city": "Aix-en-Provence",
             "country": "France"
         },
-        "Ajaccio, Corse, France": {
+        "Ajaccio, Corsica, France": {
             "city": "Ajaccio",
             "country": "France",
-            "state": "Corse"
+            "state": "Corsica"
         },
         "Akron, OH, USA": {
             "city": "Akron",
@@ -229,11 +315,6 @@
             "city": "Althorp",
             "country": "England",
             "county": "Northamptonshire",
-            "sovereign": "UK"
-        },
-        "Althorp, Northamptonshire, UK": {
-            "city": "Althorp",
-            "country": "Northamptonshire",
             "sovereign": "UK"
         },
         "Alton Towers, Staffordshire, England, UK": {
@@ -646,7 +727,7 @@
             "country": "Ireland",
             "county": "Laois"
         },
-        "Ballymena Castle, Antrim, Northern IrelandUK": {
+        "Ballymena Castle, Antrim, Northern Ireland, UK": {
             "city": "Ballymena Castle",
             "country": "Northern Ireland",
             "county": "Antrim",
@@ -694,7 +775,7 @@
             "country": "Ireland",
             "county": "Wexford"
         },
-        "Baronscourt, Tyrone, Northern IrelandUK": {
+        "Baronscourt, Tyrone, Northern Ireland, UK": {
             "city": "Baronscourt",
             "country": "Northern Ireland",
             "county": "Tyrone",
@@ -828,6 +909,11 @@
             "country": "USA",
             "state": "NY"
         },
+        "Bedfordshire, England, UK": {
+            "country": "England",
+            "county": "Bedfordshire",
+            "sovereign": "UK"
+        },
         "Beechwood Park, Hertfordshire, England, UK": {
             "city": "Beechwood Park",
             "country": "England",
@@ -843,7 +929,7 @@
             "country": "USA",
             "state": "CA"
         },
-        "Belfast, Northern IrelandUK": {
+        "Belfast, Northern Ireland, UK": {
             "city": "Belfast",
             "country": "Northern Ireland",
             "sovereign": "UK"
@@ -1768,8 +1854,8 @@
             "country": "Venezuela"
         },
         "Cardiff, Wales, UK": {
-            "city": "Cardiff",
             "country": "Wales",
+            "county": "Cardiff",
             "sovereign": "UK"
         },
         "Carmel, CA, USA": {
@@ -1809,7 +1895,7 @@
             "country": "Ireland",
             "county": "Galway"
         },
-        "Castle Caledon, Tyrone, Northern IrelandUK": {
+        "Castle Caledon, Tyrone, Northern Ireland, UK": {
             "city": "Castle Caledon",
             "country": "Northern Ireland",
             "county": "Tyrone",
@@ -1845,7 +1931,7 @@
             "county": "Cardigan",
             "sovereign": "UK"
         },
-        "Castle Ward, Down, Northern IrelandUK": {
+        "Castle Ward, Down, Northern Ireland, UK": {
             "city": "Castle Ward",
             "country": "Northern Ireland",
             "county": "Down",
@@ -2044,6 +2130,11 @@
             "city": "Cherr\u00e9",
             "country": "France"
         },
+        "Cheshire, England, UK": {
+            "country": "England",
+            "county": "Cheshire",
+            "sovereign": "UK"
+        },
         "Cheshunt, Hertfordshire, England, UK": {
             "city": "Cheshunt",
             "country": "England",
@@ -2195,7 +2286,7 @@
             "city": "Ciudad de M\u00e9xico",
             "country": "M\u00e9xico"
         },
-        "Clandeboye, Down, Northern IrelandUK": {
+        "Clandeboye, Down, Northern Ireland, UK": {
             "city": "Clandeboye",
             "country": "Northern Ireland",
             "county": "Down",
@@ -2798,6 +2889,11 @@
             "county": "Derbyshire",
             "sovereign": "UK"
         },
+        "Derbyshire, England, UK": {
+            "country": "England",
+            "county": "Derbyshire",
+            "sovereign": "UK"
+        },
         "Dereham Abbey, Norfolk, England, UK": {
             "city": "Dereham Abbey",
             "country": "England",
@@ -2947,7 +3043,7 @@
             "country": "USA",
             "state": "MA"
         },
-        "Downhill, Londonderry, Northern IrelandUK": {
+        "Downhill, Londonderry, Northern Ireland, UK": {
             "city": "Downhill",
             "country": "Northern Ireland",
             "county": "Londonderry",
@@ -3229,6 +3325,10 @@
             "city": "Eindhoven",
             "country": "Netherlands"
         },
+        "El Escorial, Spain": {
+            "city": "El Escorial",
+            "country": "Spain"
+        },
         "El Paso, TX, USA": {
             "city": "El Paso",
             "country": "USA",
@@ -3279,12 +3379,6 @@
             "city": "Elton Hall",
             "country": "England",
             "county": "Northamptonshire",
-            "sovereign": "UK"
-        },
-        "Elton Hall, Peterborough, England, UK": {
-            "city": "Elton Hall",
-            "country": "England",
-            "county": "Peterborough",
             "sovereign": "UK"
         },
         "Elvaston Castle, Derbyshire, England, UK": {
@@ -3858,7 +3952,7 @@
             "country": "Scotland",
             "sovereign": "UK"
         },
-        "Glaslough House, Monaghan, Northern IrelandUK": {
+        "Glaslough House, Monaghan, Northern Ireland, UK": {
             "city": "Glaslough House",
             "country": "Northern Ireland",
             "county": "Monaghan",
@@ -3916,7 +4010,7 @@
             "country": "USA",
             "state": "OH"
         },
-        "Glenmoyle, Londonderry, Northern IrelandUK": {
+        "Glenmoyle, Londonderry, Northern Ireland, UK": {
             "city": "Glenmoyle",
             "country": "Northern Ireland",
             "county": "Londonderry",
@@ -4523,6 +4617,10 @@
             "country": "England",
             "county": "Lancashire",
             "sovereign": "UK"
+        },
+        "Heidelberg, Germany": {
+            "city": "Heidelberg",
+            "country": "Germany"
         },
         "Heilbronn, Germany": {
             "city": "Heilbronn",
@@ -5899,6 +5997,10 @@
             "country": "USA",
             "state": "TX"
         },
+        "Lucca, Italy": {
+            "city": "Lucca",
+            "country": "Italy"
+        },
         "Lucerne, Switzerland": {
             "city": "Lucerne",
             "country": "Switzerland"
@@ -5967,6 +6069,10 @@
         "Lyssons, Jamaica": {
             "city": "Lyssons",
             "country": "Jamaica"
+        },
+        "L\u00fcbeck, Germany": {
+            "city": "L\u00fcbeck",
+            "country": "Germany"
         },
         "L\u00fcdinghausen, Germany": {
             "city": "L\u00fcdinghausen",
@@ -6370,10 +6476,10 @@
             "county": "Middlesex",
             "sovereign": "UK"
         },
-        "Middleton Hall, Caermarthenshire, Wales, UK": {
+        "Middleton Hall, Carmarthenshire, Wales, UK": {
             "city": "Middleton Hall",
             "country": "Wales",
-            "county": "Caermarthenshire",
+            "county": "Carmarthenshire",
             "sovereign": "UK"
         },
         "Middletown, OH, USA": {
@@ -6465,6 +6571,10 @@
             "country": "England",
             "county": "Herefordshire",
             "sovereign": "UK"
+        },
+        "Modena, Italy": {
+            "city": "Modena",
+            "country": "Italy"
         },
         "Modesto, CA, USA": {
             "city": "Modesto",
@@ -6961,7 +7071,7 @@
             "country": "Ireland",
             "county": "Barry"
         },
-        "Newtownstewart, Ulster, Northern IrelandUK": {
+        "Newtownstewart, Ulster, Northern Ireland, UK": {
             "city": "Newtownstewart",
             "country": "Northern Ireland",
             "county": "Ulster",
@@ -7096,6 +7206,12 @@
             "county": "Northamptonshire",
             "sovereign": "UK"
         },
+        "Northamptonshire, England, UK": {
+            "city": "Northamptonshire",
+            "country": "England",
+            "county": "Northamptonshire",
+            "sovereign": "UK"
+        },
         "Northaw, Hertfordshire, England, UK": {
             "city": "Northaw",
             "country": "England",
@@ -7139,6 +7255,12 @@
             "city": "Norton Priory",
             "country": "England",
             "county": "Cheshire",
+            "sovereign": "UK"
+        },
+        "Norton, Suffolk, England, UK": {
+            "city": "Norton",
+            "country": "England",
+            "county": "Suffolk",
             "sovereign": "UK"
         },
         "Norwalk, CT, USA": {
@@ -7350,6 +7472,10 @@
             "country": "England",
             "county": "Worcestershire",
             "sovereign": "UK"
+        },
+        "Ontario, Canada": {
+            "country": "Canada",
+            "state": "Ontario"
         },
         "Ontario, Ontario, Canada": {
             "city": "Ontario",
@@ -7607,6 +7733,10 @@
         "Paris, France": {
             "city": "Paris",
             "country": "France"
+        },
+        "Parma, Italy": {
+            "city": "Parma",
+            "country": "Italy"
         },
         "Pasadena, CA, USA": {
             "city": "Pasadena",
@@ -8066,15 +8196,14 @@
             "country": "Canada",
             "state": "Qu\u00e9bec"
         },
+        "Qu\u00e9bec, Canada": {
+            "city": "Qu\u00e9bec",
+            "country": "Canada",
+            "state": "Qu\u00e9bec"
+        },
         "RI, USA": {
             "country": "USA",
             "state": "RI"
-        },
-        "Raby Castle, Darlington, England, UK": {
-            "city": "Raby Castle",
-            "country": "England",
-            "county": "Darlington",
-            "sovereign": "UK"
         },
         "Racine, WI, USA": {
             "city": "Racine",
@@ -8411,6 +8540,10 @@
             "country": "Scotland",
             "county": "Perthshire",
             "sovereign": "UK"
+        },
+        "Rostock, Germany": {
+            "city": "Rostock",
+            "country": "Germany"
         },
         "Roswell, NM, USA": {
             "city": "Roswell",
@@ -9519,12 +9652,17 @@
             "country": "USA",
             "state": "NY"
         },
+        "Suffolk, England, UK": {
+            "country": "England",
+            "county": "Suffolk",
+            "sovereign": "UK"
+        },
         "Summit, NJ, USA": {
             "city": "Summit",
             "country": "USA",
             "state": "NJ"
         },
-        "Sunderland, Tyne And Wear, England, UK": {
+        "Sunderland, Tyne and Wear, England, UK": {
             "city": "Sunderland",
             "country": "England",
             "county": "Tyne and Wear",
@@ -9987,8 +10125,8 @@
             "city": "Toulouse",
             "country": "France"
         },
-        "Tournai, Belgium  CHANGE TO ENGLISH >>": {
-            "city": "Tournai",
+        "Tournay, Belgium  ": {
+            "city": "Tournay",
             "country": "Belgium"
         },
         "Tours, France": {
@@ -10075,7 +10213,7 @@
             "country": "USA",
             "state": "AZ"
         },
-        "Tullymore Park, Down, Northern IrelandUK": {
+        "Tullymore Park, Down, Northern Ireland, UK": {
             "city": "Tullymore Park",
             "country": "Northern Ireland",
             "county": "Down",
@@ -10478,6 +10616,11 @@
             "county": "Warwickshire",
             "sovereign": "UK"
         },
+        "Warwickshire, England, UK": {
+            "country": "England",
+            "county": "Warwickshire",
+            "sovereign": "UK"
+        },
         "Washington Crossing, PA, USA": {
             "city": "Washington Crossing",
             "country": "USA",
@@ -10681,6 +10824,11 @@
             "country": "USA",
             "state": "NY"
         },
+        "West Sussex, England, UK": {
+            "country": "England",
+            "county": "West Sussex",
+            "sovereign": "UK"
+        },
         "Westbury, NY, USA": {
             "city": "Westbury",
             "country": "USA",
@@ -10806,6 +10954,10 @@
         "Wiener Neustadt, Austria ": {
             "city": "Wiener Neustadt",
             "country": "Austria"
+        },
+        "Wiesbaden, Germany": {
+            "city": "Wiesbaden",
+            "country": "Germany"
         },
         "Wigan, Greater Manchester, England, UK": {
             "city": "Wigan",

@@ -145,3 +145,15 @@ class ProvenanceBase(Configurable):
 		ptx_data = tx_data.copy()
 		data['_prov_entries'].append(add_crom_data(data=ptx_data, what=tx))
 
+	def set_possible_attribute(self, obj, prop, data):
+		value = get_crom_object(data)
+		if not value:
+			return
+		uncertain = data.get('uncertain', False)
+		if uncertain:
+			assignment = vocab.PossibleAssignment(ident='')
+			assignment.assigned_property = prop
+			assignment.assigned = value
+			obj.attributed_by = assignment
+		else:
+			setattr(obj, prop, value)

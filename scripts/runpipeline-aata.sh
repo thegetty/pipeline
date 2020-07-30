@@ -2,8 +2,10 @@
 
 set -e
 
-cd /home/gwilliams/pipeline
-git pull
+if [ -d /home/gwilliams/pipeline ]; then
+	cd /home/gwilliams/pipeline
+	git pull
+fi
 
 PROJECT="aata"
 LIMIT=2500000

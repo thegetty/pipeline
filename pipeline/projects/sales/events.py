@@ -40,8 +40,8 @@ class PopulateAuctionEvent(Configurable):
 		Based on location data in the supplied `data` dict, construct a data structure
 		representing a hierarchy of places (e.g. location->city->country), and return it.
 
-		This structure will be suitable for passing to `pipeline.linkedart.make_la_place`
-		to construct a Place model object.
+		This structure will be suitable for passing to
+		`pipeline.projects.UtilityHelper.make_place` to construct a Place model object.
 		'''
 		specific_name = data.get('specific_loc')
 		city_name = data.get('city_of_sale')
@@ -49,7 +49,19 @@ class PopulateAuctionEvent(Configurable):
 		country_name = data.get('country_auth')
 
 		parts = [v for v in (specific_name, city_name, country_name) if v is not None]
-		loc = parse_location(*parts, uri_base=self.helper.uid_tag_prefix, types=('Place', 'City', 'Country'))
+		loc = None
+		with suppress(IndexError, ValueError):
+			if country_name in ('England',):
+				# British records sometimes include the county name in the city field
+				# attempt to split those here so that the counties can be properly modeled
+				city, county = city_name.split(', ', 1)
+				if ' ' not in county:
+					print(f'COUNTY: {county}')
+					parts = (specific_name, city, county, country_name)
+					types = ('Place', 'City', 'County', 'Country')
+					loc = parse_location(*parts, uri_base=self.helper.uid_tag_prefix, types=types)
+		if not loc:
+			loc = parse_location(*parts, uri_base=self.helper.uid_tag_prefix, types=('Place', 'City', 'Country'))
 		if place_verbatim and place_verbatim != city_name:
 			city = loc['part_of']
 			city['names'] = [place_verbatim]

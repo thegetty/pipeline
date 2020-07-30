@@ -14,6 +14,7 @@ import csv
 import sys
 import json
 import pprint
+from contextlib import suppress
 
 place_keys = {
 	'CITY/TOWN': 'city',
@@ -49,7 +50,12 @@ if __name__ == '__main__':
 					value = d[k]
 					if value:
 						place[key] = value
+			if place.get('sovereign') == 'UK' or place.get('country') == 'Ireland':
+				with suppress(KeyError):
+					county = place['state']
+					del place['state']
+					place['county'] = county
 			if place:
 				places[authname] = place
 	data = {'places': places, 'canonical_names': names}
-	print(json.dumps(data))
+	print(json.dumps(data, indent=4, sort_keys=True))

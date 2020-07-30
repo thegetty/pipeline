@@ -237,6 +237,10 @@ class PopulateSalesObject(Configurable, pipeline.linkedart.PopulateObject):
 						desc = f'Also sold in an unidentified sale: {plno} ({pdate})'
 						note = vocab.Note(ident='', content=desc)
 						hmo.referred_to_by = note
+					elif 'or' in plno.lower():
+						desc = f'Also sold in an uncertain lot: {pcno} {plno} ({pdate})'
+						note = vocab.Note(ident='', content=desc)
+						hmo.referred_to_by = note
 					else:
 						that_key = (pcno, plno, pdate)
 						if rev:

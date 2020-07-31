@@ -282,7 +282,7 @@ class SalesUtilityHelper(UtilityHelper):
 		cno, lno, date = object_key(data)
 		shared_lot_number = self.shared_lot_number_from_lno(lno)
 		for p in prices:
-			n = p.get('price_note')
+			n = p.get('note')
 			if n and n.startswith('for lots '):
 				lot_list = n[9:].split(' & ')
 				return self.make_proj_uri('PROV-MULTI', cno, date, *lot_list)
@@ -297,7 +297,7 @@ class SalesUtilityHelper(UtilityHelper):
 		_, lno, _ = object_key(data)
 		shared_lot_number = self.shared_lot_number_from_lno(lno)
 		for p in prices:
-			n = p.get('price_note')
+			n = p.get('note')
 			if n and n.startswith('for lots '):
 				return n[9:]
 		return shared_lot_number
@@ -320,7 +320,7 @@ class SalesUtilityHelper(UtilityHelper):
 		'''
 		prices = metadata.get('price', [])
 		for p in prices:
-			n = p.get('price_note')
+			n = p.get('note')
 			if n and n.startswith('for lots '):
 				return True
 		return False
@@ -750,10 +750,16 @@ class SalesPipeline(PipelineBase):
 							'price': {
 								'rename_keys': {
 									'price_amount': 'price',
+									'price_amount_q': 'uncertain',
+									'price_currency': 'currency',
+									'price_note': 'note',
+									'price_source': 'source',
+									'price_citation': 'citation',
 								},
 								'postprocess': lambda d, p: add_crom_price(d, p, services, add_citations=True),
 								'prefixes': (
 									'price_amount',
+									'price_amount_q',
 									'price_currency',
 									'price_note',
 									'price_source',
@@ -959,23 +965,44 @@ class SalesPipeline(PipelineBase):
 									'post_owner',
 									'portal')},
 							'estimated_price': {
+								'rename_keys': {
+									'est_price_q': 'uncertain',
+									'est_price_curr': 'currency',
+									'est_price_desc': 'note',
+									'est_price_so': 'source',
+								},
 								'postprocess': lambda d, p: add_crom_price(d, p, services, add_citations=True),
 								'properties': (
 									'est_price',
+									'est_price_q',
 									'est_price_curr',
 									'est_price_desc',
 									'est_price_so')},
 							'start_price': {
+								'rename_keys': {
+									'start_price_q': 'uncertain',
+									'start_price_curr': 'currency',
+									'start_price_desc': 'note',
+									'start_price_so': 'source',
+								},
 								'postprocess': lambda d, p: add_crom_price(d, p, services, add_citations=True),
 								'properties': (
 									'start_price',
+									'start_price_q',
 									'start_price_curr',
 									'start_price_desc',
 									'start_price_so')},
 							'ask_price': {
+								'rename_keys': {
+									'ask_price_q': 'uncertain',
+									'ask_price_curr': 'currency',
+									'ask_price_desc': 'note',
+									'ask_price_so': 'source',
+								},
 								'postprocess': lambda d, p: add_crom_price(d, p, services, add_citations=True),
 								'properties': (
 									'ask_price',
+									'ask_price_q',
 									'ask_price_curr',
 									'ask_price_desc',
 									'ask_price_so')},

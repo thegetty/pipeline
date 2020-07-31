@@ -23,10 +23,9 @@ from pipeline.provenance import ProvenanceBase
 
 #mark - Auction of Lot
 
-class AddAuctionOfLot(Configurable):
+class AddAuctionOfLot(ProvenanceBase):
 	'''Add modeling data for the auction of a lot of objects.'''
 
-	helper = Option(required=True)
 	problematic_records = Service('problematic_records')
 	event_properties = Service('event_properties')
 	non_auctions = Service('non_auctions')
@@ -98,14 +97,14 @@ class AddAuctionOfLot(Configurable):
 		coll.identified_by = model.Name(ident='', content=coll_label)
 		est_price = data.get('estimated_price')
 		if est_price:
-			coll.dimension = get_crom_object(est_price)
+			self.set_possible_attribute(coll, 'dimension', est_price)
 		start_price = data.get('start_price')
 		if start_price:
-			coll.dimension = get_crom_object(start_price)
+			self.set_possible_attribute(coll, 'dimension', start_price)
 
 		ask_price = data.get('ask_price')
 		if ask_price:
-			coll.dimension = get_crom_object(ask_price)
+			self.set_possible_attribute(coll, 'dimension', ask_price)
 
 		lot.used_specific_object = coll
 		data['_lot_object_set'] = add_crom_data(data={}, what=coll)
@@ -530,7 +529,7 @@ class AddAcquisitionOrBidding(ProvenanceBase):
 		if prices:
 			amnt = get_crom_object(prices[0])
 			for paym in payments.values():
-				paym.paid_amount = amnt
+				self.set_possible_attribute(paym, 'paid_amount', prices[0])
 				for price in prices[1:]:
 					amnt = get_crom_object(price)
 					content = self._price_note(price)
@@ -539,7 +538,7 @@ class AddAcquisitionOrBidding(ProvenanceBase):
 		elif ask_price:
 			# for non-auction sales, the ask price is the amount paid for the acquisition
 			for paym in payments.values():
-				paym.paid_amount = get_crom_object(ask_price)
+				self.set_possible_attribute(paym, 'paid_amount', ask_price)
 			
 
 		ts = tx_data.get('_date')
@@ -659,7 +658,7 @@ class AddAcquisitionOrBidding(ProvenanceBase):
 		prices = parent.get('price', [])
 		if not prices:
 			yield data
-		amnts = [get_crom_object(p) for p in prices]
+# 		amnts = [get_crom_object(p) for p in prices]
 
 		tx_data = parent.get('_prov_entry_data')
 		tx = get_crom_object(tx_data)
@@ -673,7 +672,7 @@ class AddAcquisitionOrBidding(ProvenanceBase):
 
 		self.add_prev_post_owners(data, hmo, tx_data, sale_type, lot_object_key, ts)
 
-		if amnts:
+		if prices:
 			# The bidding for an object is specific to a single transaction. Therefore,
 			# the bidding URI must not share a prefix with the object URI, otherwise all
 			# such bidding entries are liable to be merged during URI reconciliation as
@@ -691,7 +690,8 @@ class AddAcquisitionOrBidding(ProvenanceBase):
 			THROUGH = CaseFoldingSet(buy_sell_modifiers['through'])
 			FOR = CaseFoldingSet(buy_sell_modifiers['for'])
 
-			for seq_no, amnt in enumerate(amnts):
+			for seq_no, amnt_data in enumerate(prices):
+				amnt = get_crom_object(amnt_data)
 				# The individual bid and promise URIs are just the bidding URI with a suffix.
 				# In any case where the bidding is merged, the bids and promises should be
 				# merged as well.
@@ -708,6 +708,7 @@ class AddAcquisitionOrBidding(ProvenanceBase):
 
 				bid._label = bid_label
 				bid.identified_by = model.Name(ident='', content=bid_label)
+				self.set_possible_attribute(prop, 'refers_to', amnt_data)
 				prop.refers_to = amnt
 				bid.created = prop
 

@@ -18,6 +18,7 @@ from contextlib import suppress
 
 place_keys = {
 	'CITY/TOWN': 'city',
+	'COUNTY': 'county',
 	'COUNTRY': 'country',
 	'SOVERIGN': 'sovereign',
 	'STATE/PROVINCE': 'state'
@@ -50,11 +51,6 @@ if __name__ == '__main__':
 					value = d[k]
 					if value:
 						place[key] = value
-			if place.get('sovereign') == 'UK' or place.get('country') == 'Ireland':
-				with suppress(KeyError):
-					county = place['state']
-					del place['state']
-					place['county'] = county
 			if place:
 				places[authname] = place
 	data = {'places': places, 'canonical_names': names}

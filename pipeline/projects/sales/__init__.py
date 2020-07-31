@@ -21,6 +21,7 @@ import datetime
 from collections import Counter, defaultdict, namedtuple
 from contextlib import suppress
 import inspect
+from fractions import Fraction
 
 import time
 import timeit
@@ -397,6 +398,7 @@ def add_crom_price(data, parent, services, add_citations=False):
 	based on properties of the supplied `data` dict.
 	'''
 	currencies = services['currencies']
+	decimalization = services['currencies_decimalization']
 	region_currencies = services['region_currencies']
 	cno = parent['catalog_number']
 	region, _ = cno.split('-', 1)
@@ -413,11 +415,28 @@ def add_crom_price(data, parent, services, add_citations=False):
 		if k in data:
 			price = data.get(k)
 			if '-' in price:
-				parts = price.split('-')
-				warnings.warn(f'TODO: handle decimalization of £sd price: {parts}')
+				currency = data['currency']
+				currency = c.get(currency.lower(), currency)
+				parts = [int(v) for v in price.split('-')]
+				if currency in decimalization:
+					decimalization_data = decimalization[currency]
+					primary_unit = decimalization_data['primary_unit']
+					primary_value = int(parts.pop(0))
+					total_price = Fraction(primary_value)
+					part_names = [f'{primary_value} {primary_unit}']
+					for value, unit in zip(parts, decimalization_data['subunits']):
+						if value:
+							name, denom = unit
+							frac = Fraction(value, denom)
+							total_price += frac
+							part_names.append(f'{value} {name}')
+					decimalized_value = str(float(total_price))
+					verbatim.append(', '.join(part_names))
+				else:
+					decimalized_value = price
+					warnings.warn(f'No decimalization rules for currency {currency!r}')
+					verbatim.append(price)
 				# handle decimalization of £sd price, and preserve the original value in verbatim
-				verbatim.append(price)
-				decimalized_value = price
 				data[k] = decimalized_value
 
 	amnt = extract_monetary_amount(data, currency_mapping=c, add_citations=add_citations)

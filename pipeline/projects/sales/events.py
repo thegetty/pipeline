@@ -48,20 +48,32 @@ class PopulateAuctionEvent(Configurable):
 		place_verbatim = data.get('sale_location')
 		country_name = data.get('country_auth')
 
-		parts = [v for v in (specific_name, city_name, country_name) if v is not None]
 		loc = None
-		with suppress(IndexError, ValueError):
+		with suppress(IndexError, ValueError, AttributeError):
 			if country_name in ('England',):
 				# British records sometimes include the county name in the city field
 				# attempt to split those here so that the counties can be properly modeled
 				city, county = city_name.split(', ', 1)
 				if ' ' not in county:
-					print(f'COUNTY: {county}')
-					parts = (specific_name, city, county, country_name)
-					types = ('Place', 'City', 'County', 'Country')
-					loc = parse_location(*parts, uri_base=self.helper.uid_tag_prefix, types=types)
+					_values = []
+					_types = []
+					allvalues = (specific_name, city, county, country_name)
+					alltypes = ('Place', 'City', 'County', 'Country')
+					for v, t in zip(allvalues, alltypes):
+						if v is not None:
+							_values.append(v)
+							_types.append(t)
+					loc = parse_location(*_values, uri_base=self.helper.uid_tag_prefix, types=_types)
 		if not loc:
-			loc = parse_location(*parts, uri_base=self.helper.uid_tag_prefix, types=('Place', 'City', 'Country'))
+			allvalues = (specific_name, city_name, country_name)
+			alltypes = ('Place', 'City', 'Country')
+			parts = []
+			types = []
+			for v, t in zip(allvalues, alltypes):
+				if v is not None:
+					parts.append(v)
+					types.append(t)
+			loc = parse_location(*parts, uri_base=self.helper.uid_tag_prefix, types=types)
 		if place_verbatim and place_verbatim != city_name:
 			city = loc['part_of']
 			city['names'] = [place_verbatim]

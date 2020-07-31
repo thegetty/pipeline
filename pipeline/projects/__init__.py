@@ -770,8 +770,6 @@ class UtilityHelper:
 			placeargs['ident'] = data['uri']
 
 		if not p:
-			if si:
-				print(f'NON-AUTH PLACE: {label}')
 			p = model.Place(**placeargs)
 			if place_type:
 				p.classified_as = place_type

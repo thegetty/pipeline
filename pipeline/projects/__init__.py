@@ -461,6 +461,19 @@ class PipelineBase:
 					warnings.warn(f'*** Project is overloading a shared service file: {file}')
 				services[file.stem] = service
 
+		# re-arrange the materials map service data to use a tuple as the dictionary key
+		mm = {}
+		for v in services['materials_map']:
+			otype = v['object_type']
+			m = v['materials']
+			if ';' in m:
+				m = frozenset([m.strip() for m in m.split(';')])
+			else:
+				m = frozenset([m])
+			key = (otype, m)
+			mm[key] = v
+		services['materials_map'] = mm
+		
 		return services
 
 	def setup_static_instances(self):
@@ -496,6 +509,10 @@ class PipelineBase:
 		knoedler.identified_by = vocab.PrimaryName(ident='', content=knoedler_name)
 		knoedler.exact_match = model.BaseResource(ident=f'http://vocab.getty.edu/ulan/{knoedler_ulan}')
 
+		materials = {
+			aat: model.Material(ident=f'http://vocab.getty.edu/aat/{aat}', label=label) for aat, label in self.services['materials'].items()
+		}
+
 		instances = defaultdict(dict)
 		instances.update({
 			'Group': {
@@ -506,6 +523,7 @@ class PipelineBase:
 			'Person': {
 				'lugt': lugt
 			},
+			'Material': materials,
 			'Place': self._static_place_instances()
 		})
 		

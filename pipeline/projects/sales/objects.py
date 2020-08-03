@@ -268,10 +268,9 @@ class PopulateSalesObject(Configurable, pipeline.linkedart.PopulateObject):
 				aat = int(m)
 				sm = self.helper.static_instances.get_instance('Material', m)
 				if sm:
-					print(f'*** GOT MATERIAL: {sm}')
 					hmo.made_of = sm
 				else:
-					warnings.warn(f'No material instance found for {aat}')
+					warnings.warn(f'No static material instance found for AAT value {aat} ibn the materials.json service data')
 			classification = set([mdata[k] for k in ('classified_as (object type) (primary)', 'classified_as (object type) (secondary)')])
 			technique = mdata['technique']
 

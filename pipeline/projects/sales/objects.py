@@ -26,6 +26,7 @@ class PopulateSalesObject(Configurable, pipeline.linkedart.PopulateObject):
 	unique_catalogs = Service('unique_catalogs')
 	subject_genre = Service('subject_genre')
 	destruction_types_map = Service('destruction_types_map')
+	materials_map = Service('materials_map')
 
 	def populate_destruction_events(self, data:dict, note, *, type_map, location=None):
 		destruction_types_map = type_map
@@ -250,7 +251,30 @@ class PopulateSalesObject(Configurable, pipeline.linkedart.PopulateObject):
 							# `that_key` is for a later sale for this object
 							post_sale_map[that_key] = this_key
 
-	def __call__(self, data:dict, post_sale_map, unique_catalogs, subject_genre, destruction_types_map):
+	def _populate_object_materials(self, data:dict, materials_map):
+		hmo = get_crom_object(data)
+
+		otype = data.get('object_type')
+		materials = data.get('materials', '')
+		if ';' in materials:
+			m = frozenset([m.strip() for m in materials.split(';')])
+		else:
+			m = frozenset([materials])
+		material_key = (otype, m)
+		if material_key in materials_map:
+			mdata = materials_map[material_key]
+			materials = set([m for k in ('made_of (primary)', 'made_of (support)') for m in mdata[k].split(';')]) - {''}
+			for m in materials:
+				aat = int(m)
+				sm = self.helper.static_instances.get_instance('Material', m)
+				if sm:
+					hmo.made_of = sm
+				else:
+					warnings.warn(f'No static material instance found for AAT value {aat} ibn the materials.json service data')
+			classification = set([mdata[k] for k in ('classified_as (object type) (primary)', 'classified_as (object type) (secondary)')])
+			technique = mdata['technique']
+
+	def __call__(self, data:dict, post_sale_map, unique_catalogs, subject_genre, destruction_types_map, materials_map):
 		'''Add modeling for an object described by a sales record'''
 		hmo = get_crom_object(data)
 		parent = data['parent_data']
@@ -277,6 +301,7 @@ class PopulateSalesObject(Configurable, pipeline.linkedart.PopulateObject):
 		self._populate_object_visual_item(data, subject_genre)
 		self._populate_object_destruction(data, parent, destruction_types_map)
 		self.populate_object_statements(data)
+		self._populate_object_materials(data, materials_map)
 		self._populate_object_present_location(data, now_key, destruction_types_map)
 		self._populate_object_notes(data, parent, unique_catalogs)
 		self._populate_object_prev_post_sales(data, now_key, post_sale_map)

@@ -504,6 +504,8 @@ class SalesPipeline(PipelineBase):
 	# Set up environment
 		'''Return a `dict` of named services available to the bonobo pipeline.'''
 		services = super().setup_services()
+
+		# make these case-insensitive by wrapping the value lists in CaseFoldingSet
 		for name in ('transaction_types', 'attribution_modifiers'):
 			services[name] = {k: CaseFoldingSet(v) for k, v in services[name].items()}
 
@@ -1268,11 +1270,12 @@ class SalesPipeline(PipelineBase):
 		print('Serializing static instances...', file=sys.stderr)
 		for model, instances in self.static_instances.used_instances().items():
 			g = bonobo.Graph()
-			nodes = self.serializer_nodes_for_model(model=self.models[model], use_memory_writer=False)
-			values = instances.values()
-			source = g.add_chain(GraphListSource(values))
-			self.add_serialization_chain(g, source.output, model=self.models[model], use_memory_writer=False)
-			self.run_graph(g, services={})
+			with suppress(KeyError):
+				nodes = self.serializer_nodes_for_model(model=self.models[model], use_memory_writer=False)
+				values = instances.values()
+				source = g.add_chain(GraphListSource(values))
+				self.add_serialization_chain(g, source.output, model=self.models[model], use_memory_writer=False)
+				self.run_graph(g, services={})
 
 	def generate_prev_post_sales_data(self, post_map):
 		total = 0

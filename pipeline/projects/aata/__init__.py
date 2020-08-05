@@ -45,6 +45,7 @@ from pipeline.linkedart import \
 			add_crom_data
 from pipeline.io.xml import CurriedXMLReader
 from pipeline.nodes.basic import \
+			RecordCounter, \
 			AddArchesModel, \
 			CleanDateToSpan, \
 			Serializer, \
@@ -619,6 +620,7 @@ class AATAPipeline(PipelineBase):
 		abstract_records = graph.add_chain(
 			MatchingFiles(path='/', pattern=self.abstracts_pattern, fs='fs.data.aata'),
 			CurriedXMLReader(xpath='/AATA_XML/record', fs='fs.data.aata', limit=self.limit),
+			RecordCounter(name='abstracts', verbose=self.debug),
 			_xml_element_to_dict,
 		)
 		articles = self.add_articles_chain(graph, abstract_records)
@@ -628,6 +630,7 @@ class AATAPipeline(PipelineBase):
 		records = graph.add_chain(
 			MatchingFiles(path='/', pattern=self.people_pattern, fs='fs.data.aata'),
 			CurriedXMLReader(xpath='/auth_person_XML/record', fs='fs.data.aata', limit=self.limit),
+			RecordCounter(name='people', verbose=self.debug),
 			_xml_element_to_dict,
 		)
 		people = self.add_people_chain(graph, records)
@@ -637,6 +640,7 @@ class AATAPipeline(PipelineBase):
 		records = graph.add_chain(
 			MatchingFiles(path='/', pattern=self.journals_pattern, fs='fs.data.aata'),
 			CurriedXMLReader(xpath='/journal_XML/record', fs='fs.data.aata', limit=self.limit),
+			RecordCounter(name='journals', verbose=self.debug),
 			_xml_element_to_dict,
 		)
 		journals = self.add_journals_chain(graph, records)
@@ -646,6 +650,7 @@ class AATAPipeline(PipelineBase):
 		records = graph.add_chain(
 			MatchingFiles(path='/', pattern=self.series_pattern, fs='fs.data.aata'),
 			CurriedXMLReader(xpath='/series_XML/record', fs='fs.data.aata', limit=self.limit),
+			RecordCounter(name='series', verbose=self.debug),
 			_xml_element_to_dict,
 		)
 		series = self.add_series_chain(graph, records)
@@ -655,6 +660,7 @@ class AATAPipeline(PipelineBase):
 		records = graph.add_chain(
 			MatchingFiles(path='/', pattern=self.corp_pattern, fs='fs.data.aata'),
 			CurriedXMLReader(xpath='/auth_corp_XML/record', fs='fs.data.aata', limit=self.limit),
+			RecordCounter(name='corp', verbose=self.debug),
 			_xml_element_to_dict,
 		)
 		corps = self.add_corp_chain(graph, records)
@@ -664,6 +670,7 @@ class AATAPipeline(PipelineBase):
 		records = graph.add_chain(
 			MatchingFiles(path='/', pattern=self.geog_pattern, fs='fs.data.aata'),
 			CurriedXMLReader(xpath='/auth_geog_XML/record', fs='fs.data.aata', limit=self.limit),
+			RecordCounter(name='geog', verbose=self.debug),
 			_xml_element_to_dict,
 		)
 		geog = self.add_geog_chain(graph, records)
@@ -673,6 +680,7 @@ class AATAPipeline(PipelineBase):
 		records = graph.add_chain(
 			MatchingFiles(path='/', pattern=self.tal_pattern, fs='fs.data.aata'),
 			CurriedXMLReader(xpath='/auth_TAL_XML/record', fs='fs.data.aata', limit=self.limit),
+			RecordCounter(name='tal', verbose=self.debug),
 			_xml_element_to_dict,
 		)
 		tal = self.add_tal_chain(graph, records)
@@ -682,6 +690,7 @@ class AATAPipeline(PipelineBase):
 # 		records = graph.add_chain(
 # 			MatchingFiles(path='/', pattern=self.subject_pattern, fs='fs.data.aata'),
 # 			CurriedXMLReader(xpath='/auth_subject_XML/record', fs='fs.data.aata', limit=self.limit),
+# 			RecordCounter(name='subject', verbose=self.debug),
 # 			_xml_element_to_dict,
 # 		)
 # 		subject = self.add_subject_chain(graph, records)

@@ -1,4 +1,4 @@
-FROM python:3
+FROM python:3.8
 WORKDIR /usr/src/app
 
 RUN pip install --no-cache-dir awscli
@@ -30,7 +30,7 @@ COPY Makefile ./
 COPY scripts/find_matching_json_files.swift ./scripts/
 RUN make scripts/find_matching_json_files
 
-FROM python:3
+FROM python:3.8
 WORKDIR /usr/src/app
 
 RUN pip install --no-cache-dir awscli

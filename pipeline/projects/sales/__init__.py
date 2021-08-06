@@ -507,12 +507,14 @@ class SalesPipeline(PipelineBase):
 
 		# make these case-insensitive by wrapping the value lists in CaseFoldingSet
 		for name in ('transaction_types', 'attribution_modifiers'):
-			services[name] = {k: CaseFoldingSet(v) for k, v in services[name].items()}
+			if name in services:
+				services[name] = {k: CaseFoldingSet(v) for k, v in services[name].items()}
 
-		attribution_modifiers = services['attribution_modifiers']
-		PROBABLY = attribution_modifiers['probably by']
-		POSSIBLY = attribution_modifiers['possibly by']
-		attribution_modifiers['uncertain'] = PROBABLY | POSSIBLY
+		if 'attribution_modifiers' in services:
+			attribution_modifiers = services['attribution_modifiers']
+			PROBABLY = attribution_modifiers['probably by']
+			POSSIBLY = attribution_modifiers['possibly by']
+			attribution_modifiers['uncertain'] = PROBABLY | POSSIBLY
 
 		services.update({
 			# to avoid constructing new MakeLinkedArtPerson objects millions of times, this
@@ -1245,29 +1247,34 @@ class SalesPipeline(PipelineBase):
 
 	def run(self, services=None, **options):
 		'''Run the Sales bonobo pipeline.'''
-		print(f'- Limiting to {self.limit} records per file', file=sys.stderr)
+		if self.verbose:
+			print(f'- Limiting to {self.limit} records per file', file=sys.stderr)
 		if not services:
 			services = self.get_services(**options)
 
-		print('Running graph component 1...', file=sys.stderr)
+		if self.verbose:
+			print('Running graph component 1...', file=sys.stderr)
 		graph1 = self.get_graph_1(**options, services=services)
 		self.run_graph(graph1, services=services)
 
 		self.checkpoint()
 
-		print('Running graph component 2...', file=sys.stderr)
+		if self.verbose:
+			print('Running graph component 2...', file=sys.stderr)
 		graph2 = self.get_graph_2(**options, services=services)
 		self.run_graph(graph2, services=services)
 
 		self.checkpoint()
 
-		print('Running graph component 3...', file=sys.stderr)
+		if self.verbose:
+			print('Running graph component 3...', file=sys.stderr)
 		graph3 = self.get_graph_3(**options, services=services)
 		self.run_graph(graph3, services=services)
 
 		self.checkpoint()
 
-		print('Serializing static instances...', file=sys.stderr)
+		if self.verbose:
+			print('Serializing static instances...', file=sys.stderr)
 		for model, instances in self.static_instances.used_instances().items():
 			g = bonobo.Graph()
 			with suppress(KeyError):

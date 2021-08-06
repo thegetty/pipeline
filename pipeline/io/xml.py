@@ -44,6 +44,10 @@ class CurriedXMLReader(Configurable):
 		int,
 		__doc__='''Limit the number of rows read (to allow early pipeline termination).''',
 	)
+	verbose = Option(
+		bool,
+		default=False
+	)
 
 	def __init__(self, *args, **kwargs):
 		super().__init__(*args, **kwargs)
@@ -53,7 +57,8 @@ class CurriedXMLReader(Configurable):
 		limit = self.limit
 		count = self.count
 		if not(limit) or (limit and count < limit):
-			sys.stderr.write('============================== %s\n' % (path,))
+			if self.verbose:
+				sys.stderr.write('============================== %s\n' % (path,))
 			file = fs.open(path, self.mode, encoding=self.encoding)
 			root = lxml.etree.parse(file)
 			for e in root.xpath(self.xpath):

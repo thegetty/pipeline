@@ -7,11 +7,14 @@ import pprint
 import unittest
 from pathlib import Path
 from collections import defaultdict
+import settings
+import pathlib
 
 from cromulent import model, vocab, reader
 from cromulent.model import factory
 from pipeline.util import CromObjectMerger
 from pipeline.projects.sales import SalesPipeline
+from pipeline.projects.knoedler import KnoedlerPipeline
 from pipeline.projects.aata import AATAPipeline
 from pipeline.projects.sales.util import SalesTree
 from pipeline.nodes.basic import Serializer, AddArchesModel
@@ -30,7 +33,8 @@ MODELS = {
 	'ProvenanceEntry': 'model-activity',
 	'Production': 'model-production',
 	'Set': 'model-set',
-	'VisualItem': 'model-visual-item'
+	'VisualItem': 'model-visual-item',
+	'Inventorying': 'model-inventorying'
 }
 
 class TestWriter():
@@ -94,6 +98,7 @@ class TestWriter():
 	def processed_output(self):
 		return self.process_output(self.output)
 
+##########################################################################################
 
 class SalesTestPipeline(SalesPipeline):
 	'''
@@ -149,6 +154,8 @@ class TestSalesPipelineOutput(unittest.TestCase):
 	Then verify that the serializations in the TestWriter object are what was expected.
 	'''
 	def setUp(self):
+		settings.pipeline_common_service_files_path = str(pathlib.Path('data/common'))
+		os.environ['GETTY_PIPELINE_SERVICE_FILES_PATH'] = str(pathlib.Path('data/sales'))
 		self.catalogs = {
 			'header_file': 'tests/data/sales/sales_catalogs_info_0.csv',
 			'files_pattern': 'tests/data/sales/empty.csv',
@@ -239,6 +246,8 @@ class TestAATAPipelineOutput(unittest.TestCase):
 	Then verify that the serializations in the TestWriter object are what was expected.
 	'''
 	def setUp(self):
+		settings.pipeline_common_service_files_path = str(pathlib.Path('data/common'))
+		os.environ['GETTY_PIPELINE_SERVICE_FILES_PATH'] = str(pathlib.Path('data/aata'))
 		self.patterns = {
 			'abstracts_pattern': 'tests/data/aata/empty.xml',
 			'journals_pattern': 'tests/data/aata/empty.xml',
@@ -343,4 +352,79 @@ class TestAATAPipelineOutput(unittest.TestCase):
 				i = place[0]['id']
 				place = places.get(i)
 		self.assertEqual(len(expected_names), 0)
+
+##########################################################################################
+
+class KnoedlerTestPipeline(KnoedlerPipeline):
+	'''
+	Test Provenance pipeline subclass that allows using a custom Writer.
+	'''
+	def __init__(self, writer, input_path, data, **kwargs):
+		self.uid_tag_prefix	= 'tag:getty.edu,2019:digital:pipeline:TESTS:REPLACE-WITH-UUID#'
+		super().__init__(input_path, data, **kwargs)
+		self.writer = writer
+
+	def serializer_nodes_for_model(self, *args, model=None, **kwargs):
+		nodes = []
+		if model:
+			nodes.append(AddArchesModel(model=model))
+		nodes.append(Serializer(compact=False))
+		nodes.append(self.writer)
+		return nodes
+
+	def get_services(self):
+		services = super().get_services()
+		services.update({
+			'problematic_records': {},
+			'location_codes': {},
+		})
+		return services
+
+	def run(self, **options):
+		vocab.add_linked_art_boundary_check()
+		vocab.add_attribute_assignment_check()
+		services = self.get_services(**options)
+		super().run(services=services, **options)
+
+
+class TestKnoedlerPipelineOutput(unittest.TestCase):
+	'''
+	Parse test CSV data and run the Provenance pipeline with the in-memory TestWriter.
+	Then verify that the serializations in the TestWriter object are what was expected.
+	'''
+	def setUp(self):
+		settings.pipeline_common_service_files_path = str(pathlib.Path('data/common'))
+		os.environ['GETTY_PIPELINE_SERVICE_FILES_PATH'] = str(pathlib.Path('data/knoedler'))
+
+		# os.environ['GETTY_PIPELINE_COMMON_SERVICE_FILES_PATH'] = 'data/common'
+		self.data = {
+			'header_file': 'tests/data/knoedler/knoedler_0.csv',
+			'files_pattern': 'knoedler.csv',
+		}
+		os.environ['QUIET'] = '1'
+
+	def tearDown(self):
+		pass
+
+	def run_pipeline(self, test_name):
+		input_path = os.getcwd()
+		data = self.data.copy()
+		
+		tests_path = Path(f'tests/data/knoedler/{test_name}')
+		files = list(tests_path.rglob('knoedler*'))
+		
+		if files:
+			data['files_pattern'] = str(tests_path / 'knoedler*')
+
+		writer = TestWriter()
+		pipeline = KnoedlerTestPipeline(
+				writer,
+				input_path,
+				data=data,
+				models=MODELS,
+				limit=100,
+				debug=True
+		)
+		pipeline.run()
+		return writer.processed_output()
 

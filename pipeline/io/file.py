@@ -2,6 +2,7 @@ import os
 import os.path
 import hashlib
 import uuid
+from os.path import getsize
 
 from pipeline.util import CromObjectMerger
 
@@ -47,6 +48,8 @@ class FileWriter(Configurable):
 		fh = open(fn, 'w')
 		fh.write(d)
 		fh.close()
+		if getsize(fn) == 0:
+			warnings.warn(f'*** Wrote empty file: {fn}')
 		return data
 
 class MultiFileWriter(Configurable):
@@ -100,6 +103,10 @@ class MergingFileWriter(Configurable):
 	def merge(self, model_object, fn):
 		r = reader.Reader()
 		merger = self.merger
+
+		if getsize(fn) == 0:
+			return model_object
+
 		with open(fn, 'r') as fh:
 			content = fh.read()
 			try:
@@ -138,4 +145,6 @@ class MergingFileWriter(Configurable):
 			if d:
 				with open(fn, 'w', encoding='utf-8') as fh:
 					fh.write(d)
+				if getsize(fn) == 0:
+					warnings.warn(f'*** Wrote empty file: {fn}')
 			return NOT_MODIFIED

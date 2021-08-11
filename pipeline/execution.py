@@ -137,7 +137,7 @@ class GraphExecutor(object):
 				for j in g.outputs_of(i):
 					self.run_node(j, result, level=level+1)
 		except Exception as e:
-			print(f'**** ERROR: {e!r}')
+			print(f'**** ERROR running {node}: {e!r}')
 			traceback.print_exc()
 # 			raise
 

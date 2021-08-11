@@ -428,3 +428,14 @@ class TestKnoedlerPipelineOutput(unittest.TestCase):
 		pipeline.run()
 		return writer.processed_output()
 
+def classified_identifiers(data):
+	classified_identifiers = {}
+	identifiers = [(i['content'], i.get('classified_as', [])) for i in data.get('identified_by', [])]
+	for (content, classification) in identifiers:
+		if len(classification):
+			for cl in classification:
+				label = cl['_label']
+				classified_identifiers[label] = content
+		else:
+			classified_identifiers[None] = content
+	return classified_identifiers

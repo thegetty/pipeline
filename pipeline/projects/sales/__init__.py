@@ -931,26 +931,24 @@ class SalesPipeline(PipelineBase):
 								)
 							},
 							'portal': {'prefixes': ('portal_url',)},
-						},
-						'group': {
 							'present_location': {
 								'rename_keys': {
-									'present_loc_geog': 'geog',
-									'present_loc_inst': 'inst',
-									'present_loc_insq': 'insq',
-									'present_loc_insi': 'insi',
-									'present_loc_acc': 'acc',
-									'present_loc_accq': 'accq',
-									'present_loc_note': 'note',
+									'pres_loc_geog': 'geog',
+									'pres_loc_inst': 'inst',
+									'pres_loc_insq': 'insq',
+									'pres_loc_insi': 'insi',
+									'pres_loc_acc': 'acc',
+									'pres_loc_accq': 'accq',
+									'pres_loc_note': 'note',
 								},
-								'properties': (
-									'present_loc_geog',
-									'present_loc_inst',
-									'present_loc_insq',
-									'present_loc_insi',
-									'present_loc_acc',
-									'present_loc_accq',
-									'present_loc_note',
+								'prefixes': (
+									'pres_loc_geog',
+									'pres_loc_inst',
+									'pres_loc_insq',
+									'pres_loc_insi',
+									'pres_loc_acc',
+									'pres_loc_accq',
+									'pres_loc_note',
 								)
 							}
 						}

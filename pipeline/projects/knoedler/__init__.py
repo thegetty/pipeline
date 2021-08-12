@@ -1157,11 +1157,11 @@ class KnoedlerPipeline(PipelineBase):
 					people_groups.add(tuple(key))
 		services['people_groups'] = people_groups
 
-		same_objects = services['objects_same']['objects']
+		same_objects = services.get('objects_same', {}).get('objects', [])
 		same_object_id_map = self._construct_same_object_map(same_objects)
 		services['same_objects_map'] = same_object_id_map
 
-		different_objects = set(services['objects_different']['knoedler_numbers'])
+		different_objects = services.get('objects_different', {}).get('knoedler_numbers', [])
 		services['different_objects'] = different_objects
 
 		services.update({
@@ -1553,15 +1553,18 @@ class KnoedlerPipeline(PipelineBase):
 
 	def run(self, services=None, **options):
 		'''Run the Knoedler bonobo pipeline.'''
-		print(f'- Limiting to {self.limit} records per file', file=sys.stderr)
+		if self.verbose:
+			print(f'- Limiting to {self.limit} records per file', file=sys.stderr)
 		if not services:
 			services = self.get_services(**options)
 
-		print('Running graph...', file=sys.stderr)
+		if self.verbose:
+			print('Running graph...', file=sys.stderr)
 		graph = self.get_graph(services=services, **options)
 		self.run_graph(graph, services=services)
 
-		print('Serializing static instances...', file=sys.stderr)
+		if self.verbose:
+			print('Serializing static instances...', file=sys.stderr)
 		for model, instances in self.static_instances.used_instances().items():
 			g = bonobo.Graph()
 			nodes = self.serializer_nodes_for_model(model=self.models[model], use_memory_writer=False)

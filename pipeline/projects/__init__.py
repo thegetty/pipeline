@@ -430,10 +430,11 @@ class StaticInstanceHolder:
 		return used
 
 class PipelineBase:
-	def __init__(self, project_name, *, helper, parallel=False):
+	def __init__(self, project_name, *, helper, parallel=False, verbose=False, **kwargs):
 		self.project_name = project_name
 		self.parallel = parallel
 		self.helper = helper
+		self.verbose = verbose
 		self.services = self.setup_services()
 		helper.add_services(self.services)
 		self.static_instances = StaticInstanceHolder(self.setup_static_instances())
@@ -446,14 +447,16 @@ class PipelineBase:
 		}
 
 		common_path = pathlib.Path(settings.pipeline_common_service_files_path)
-		print(f'Common path: {common_path}', file=sys.stderr)
+		if self.verbose:
+			print(f'Common path: {common_path}', file=sys.stderr)
 		for file in common_path.rglob('*'):
 			service = self._service_from_path(file)
 			if service:
 				services[file.stem] = service
 
 		proj_path = pathlib.Path(settings.pipeline_project_service_files_path(self.project_name))
-		print(f'Project path: {proj_path}', file=sys.stderr)
+		if self.verbose:
+			print(f'Project path: {proj_path}', file=sys.stderr)
 		for file in proj_path.rglob('*'):
 			service = self._service_from_path(file)
 			if service:
@@ -463,7 +466,7 @@ class PipelineBase:
 
 		# re-arrange the materials map service data to use a tuple as the dictionary key
 		mm = {}
-		for v in services['materials_map']:
+		for v in services.get('materials_map', []):
 			otype = v['object_type']
 			m = v['materials']
 			if ';' in m:
@@ -509,9 +512,11 @@ class PipelineBase:
 		knoedler.identified_by = vocab.PrimaryName(ident='', content=knoedler_name)
 		knoedler.exact_match = model.BaseResource(ident=f'http://vocab.getty.edu/ulan/{knoedler_ulan}')
 
-		materials = {
-			aat: model.Material(ident=f'http://vocab.getty.edu/aat/{aat}', label=label) for aat, label in self.services['materials'].items()
-		}
+		materials = {}
+		if 'materials' in self.services:
+			materials.update({
+				aat: model.Material(ident=f'http://vocab.getty.edu/aat/{aat}', label=label) for aat, label in self.services['materials'].items()
+			})
 
 		instances = defaultdict(dict)
 		instances.update({
@@ -635,10 +640,12 @@ class PipelineBase:
 
 	def run_graph(self, graph, *, services):
 		if self.parallel:
-			print('Running with PARALLEL bonobo executor')
+			if self.verbose:
+				print('Running with PARALLEL bonobo executor')
 			bonobo.run(graph, services=services)
 		else:
-			print('Running with SERIAL custom executor')
+			if self.verbose:
+				print('Running with SERIAL custom executor')
 			e = pipeline.execution.GraphExecutor(graph, services)
 			e.run()
 

@@ -31,14 +31,14 @@ class PIRModelingTest_MultiObject(TestSalesPipelineOutput):
 		self.assertEqual(len(sale_activities), 2)
 		
 		act_by_type = {k: list(v) for k,v in groupby(activities, key=lambda a: a['classified_as'][0]['_label'])}
-		self.assertEqual(set(act_by_type.keys()), {'Provenance Entry'})
+		self.assertEqual(set(act_by_type.keys()), {'Provenance Activity'})
 		
 		sale_by_type = {k: list(v) for k,v in groupby(sale_activities, key=lambda a: a['classified_as'][0]['_label'])}
 		self.assertEqual(set(sale_by_type.keys()), {'Auction Event', 'Auction of Lot'})
 		
 		# there is 1 procurement
-		self.assertEqual(len(act_by_type['Provenance Entry']), 1)
-		procurement = act_by_type['Provenance Entry'][0]
+		self.assertEqual(len(act_by_type['Provenance Activity']), 1)
+		procurement = act_by_type['Provenance Activity'][0]
 
 		# there is 1 lot
 		self.assertEqual(len(sale_by_type['Auction of Lot']), 1)

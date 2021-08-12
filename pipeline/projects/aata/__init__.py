@@ -463,7 +463,7 @@ class AATAPipeline(PipelineBase):
 
 		helper = AATAUtilityHelper(project_name)
 
-		super().__init__(project_name, helper=helper)
+		super().__init__(project_name, helper=helper, **kwargs)
 
 		vocab.register_vocab_class('InternalNote', {'parent': model.LinguisticObject, 'id': 'XXXXXXXX', 'label': 'Internal Note', 'metatype': 'brief text'})
 		vocab.register_vocab_class('IllustruationStatement', {'parent': model.LinguisticObject, 'id': '300015578', 'label': 'Illustruation Statement', 'metatype': 'brief text'})
@@ -736,15 +736,18 @@ class AATAPipeline(PipelineBase):
 
 	def run(self, services=None, **options):
 		'''Run the AATA bonobo pipeline.'''
-		print(f"- Limiting to {self.limit} records per file", file=sys.stderr)
+		if self.verbose:
+			print(f"- Limiting to {self.limit} records per file", file=sys.stderr)
 		if not services:
 			services = self.get_services(**options)
 		graphs = self.get_graphs(**options, services=services)
 		for i, graph in enumerate(graphs):
-			print(f'Running graph component {i+1}', file=sys.stderr)
+			if self.verbose:
+				print(f'Running graph component {i+1}', file=sys.stderr)
 			self.run_graph(graph, services=services)
 
-		print('Serializing static instances...', file=sys.stderr)
+		if self.verbose:
+			print('Serializing static instances...', file=sys.stderr)
 		for model_name, instances in self.static_instances.used_instances().items():
 			g = bonobo.Graph()
 			values = instances.values()

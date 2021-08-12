@@ -135,8 +135,8 @@ class PopulateSalesObject(Configurable, pipeline.linkedart.PopulateObject):
 
 	def _populate_object_present_location(self, data:dict, now_key, destruction_types_map):
 		hmo = get_crom_object(data)
-		location = data.get('present_location')
-		if location:
+		locations = data.get('present_location', [])
+		for location in locations:
 			loc = location.get('geog')
 			note = location.get('note')
 
@@ -200,7 +200,7 @@ class PopulateSalesObject(Configurable, pipeline.linkedart.PopulateObject):
 
 				owner.residence = place
 				data['_locations'].append(place_data)
-				data['_final_org'] = owner_data
+				data['_final_org'].append(owner_data)
 			else:
 				pass # there is no present location place string
 
@@ -296,6 +296,7 @@ class PopulateSalesObject(Configurable, pipeline.linkedart.PopulateObject):
 		now_key = (cno, lno, date)
 
 		data['_locations'] = []
+		data['_final_org'] = []
 		data['_events'] = []
 		record = self._populate_object_catalog_record(data, parent, lot, cno, parent['pi_record_no'])
 		self._populate_object_visual_item(data, subject_genre)

@@ -557,8 +557,8 @@ class AddAcquisitionOrBidding(ProvenanceBase):
 
 		data['_acquisition'] = add_crom_data(data={'uri': acq_id}, what=acq)
 
-		final_owner_data = data.get('_final_org', [])
-		if final_owner_data:
+		final_owners_data = data.get('_final_org', [])
+		for final_owner_data in final_owners_data:
 			data['_organizations'].append(final_owner_data)
 			final_owner = get_crom_object(final_owner_data)
 			tx_label_args = tuple([self.helper, sale_type, 'Sold', 'leading to the currently known location of'] + list(lot_object_key))
@@ -726,8 +726,8 @@ class AddAcquisitionOrBidding(ProvenanceBase):
 
 				all_bids.part = bid
 
-			final_owner_data = data.get('_final_org')
-			if final_owner_data:
+			final_owners_data = data.get('_final_org', [])
+			for final_owner_data in final_owners_data:
 				data['_organizations'].append(final_owner_data)
 				final_owner = get_crom_object(final_owner_data)
 				hmo = get_crom_object(data)

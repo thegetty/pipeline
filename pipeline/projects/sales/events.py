@@ -73,10 +73,12 @@ class PopulateAuctionEvent(Configurable):
 				if v is not None:
 					parts.append(v)
 					types.append(t)
-			loc = parse_location(*parts, uri_base=self.helper.uid_tag_prefix, types=types)
-		if place_verbatim and place_verbatim != city_name:
-			city = loc['part_of']
-			city['names'] = [place_verbatim]
+			if parts:
+				loc = parse_location(*parts, uri_base=self.helper.uid_tag_prefix, types=types)
+		if loc and place_verbatim and place_verbatim != city_name:
+			if 'part_of' in loc:
+				city = loc['part_of']
+				city['names'] = [place_verbatim]
 		return loc
 
 	def __call__(self, data:dict, event_properties):
@@ -91,6 +93,9 @@ class PopulateAuctionEvent(Configurable):
 
 		location_data = data['location']
 		current = self.auction_event_location(location_data)
+		if not current:
+			print(f'*** Empty location data: {pprint.pformat(location_data)}')
+			pprint.pprint(data)
 
 		# helper.make_place is called here instead of using make_la_place as a separate graph node because the Place object
 		# gets stored in the `auction_locations` object to be used in the second graph component

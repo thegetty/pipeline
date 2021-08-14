@@ -828,8 +828,10 @@ class UtilityHelper:
 		catalog_id.assigned_by = assignment
 		return catalog_id
 
-	def knoedler_number_id(self, content):
-		k_id = vocab.LocalNumber(ident='', content=content)
+	def knoedler_number_id(self, content, idclass=None):
+		if idclass is None:
+			idclass = vocab.LocalNumber
+		k_id = idclass(ident='', content=content)
 		assignment = model.AttributeAssignment(ident='')
 		assignment.carried_out_by = self.static_instances.get_instance('Group', 'knoedler')
 		k_id.assigned_by = assignment

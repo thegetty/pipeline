@@ -1,5 +1,6 @@
 import os
 import os.path
+from os.path import exists
 import hashlib
 import json
 import uuid
@@ -183,15 +184,21 @@ class TestSalesPipelineOutput(unittest.TestCase):
 		catalog_files = list(tests_path.rglob('sales_catalogs_info*'))
 		event_files = list(tests_path.rglob('sales_descriptions*'))
 		content_files = list(tests_path.rglob('sales_contents*'))
-		
+
 		if catalog_files:
-			catalogs['files_pattern'] = str(tests_path / 'sales_catalogs_info*')
+			if exists(str(tests_path / 'sales_catalogs_info_0.csv')):
+				catalogs['header_file'] = str(tests_path / 'sales_catalogs_info_0.csv')
+			catalogs['files_pattern'] = str(tests_path / 'sales_catalogs_info_[!0]*')
 
 		if event_files:
-			events['files_pattern'] = str(tests_path / 'sales_descriptions*')
+			if exists(str(tests_path / 'sales_descriptions_0.csv')):
+				events['header_file'] = str(tests_path / 'sales_descriptions_0.csv')
+			events['files_pattern'] = str(tests_path / 'sales_descriptions_[!0]*')
 
 		if content_files:
-			contents['files_pattern'] = str(tests_path / 'sales_contents*')
+			if exists(str(tests_path / 'sales_contents_0.csv')):
+				contents['header_file'] = str(tests_path / 'sales_contents_0.csv')
+			contents['files_pattern'] = str(tests_path / 'sales_contents_[!0]*')
 		
 		writer = TestWriter()
 		pipeline = SalesTestPipeline(

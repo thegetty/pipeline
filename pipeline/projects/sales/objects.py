@@ -609,6 +609,9 @@ class AddArtists(Configurable):
 				original_label = f'Original of {hmo_label}'
 				original_hmo = cls(ident=original_id, label=original_label)
 				
+				# original title
+				original_hmo.identified_by = model.Name(ident='', content=f'Unidentified by {artist_label}')
+				
 				# Similarly for the production of the original object.
 				original_event_id = original_hmo.id + '-Production'
 				original_event = model.Production(ident=original_event_id, label=f'Production event for {original_label}')

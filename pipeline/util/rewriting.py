@@ -42,6 +42,8 @@ def chunks(l, size):
 
 def rewrite_output_files(r, update_filename=False, parallel=False, concurrency=4, path=None, files=None, **kwargs):
 	print(f'Rewriting JSON output files')
+	if update_filename and parallel:
+		raise Exception('rewrite_output_files cannot be called with both "update_filename" and "parallel" arguments')
 	vocab.add_linked_art_boundary_check()
 	vocab.add_attribute_assignment_check()
 	if not files:

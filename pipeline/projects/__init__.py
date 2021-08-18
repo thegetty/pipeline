@@ -271,7 +271,7 @@ class PersonIdentity:
 		if 'nationality' in data:
 			nationality = data['nationality']
 			if isinstance(nationality, str):
-				nationalities.append(nationality.lower())
+				nationalities += [n.lower().strip() for n in nationality.split(';')]
 			elif isinstance(nationality, list):
 				nationalities += [n.lower() for n in nationality]
 

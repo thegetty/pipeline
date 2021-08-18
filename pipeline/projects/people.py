@@ -215,7 +215,7 @@ class AddPerson(Configurable):
 		data.setdefault('events', [])
 		data.setdefault('places', [])
 		data.setdefault('contact_point', [])
-		data.setdefault('identifiers', [self.helper.gri_number_id(star_id)])
+		data.setdefault('identifiers', [self.helper.gpi_number_id(star_id)])
 
 		self.handle_dates(data)
 		self.handle_statements(data)

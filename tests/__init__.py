@@ -15,6 +15,7 @@ from cromulent import model, vocab, reader
 from cromulent.model import factory
 from pipeline.util import CromObjectMerger
 from pipeline.projects.sales import SalesPipeline
+from pipeline.projects.people import PeoplePipeline
 from pipeline.projects.knoedler import KnoedlerPipeline
 from pipeline.projects.aata import AATAPipeline
 from pipeline.projects.sales.util import SalesTree
@@ -434,6 +435,83 @@ class TestKnoedlerPipelineOutput(unittest.TestCase):
 		)
 		pipeline.run()
 		return writer.processed_output()
+
+##########################################################################################
+
+class PeopleTestPipeline(PeoplePipeline):
+	'''
+	Test Provenance pipeline subclass that allows using a custom Writer.
+	'''
+	def __init__(self, writer, input_path, data, **kwargs):
+		self.uid_tag_prefix	= 'tag:getty.edu,2019:digital:pipeline:TESTS:REPLACE-WITH-UUID#'
+		super().__init__(input_path, data, **kwargs)
+		self.writer = writer
+
+	def serializer_nodes_for_model(self, *args, model=None, **kwargs):
+		nodes = []
+		if model:
+			nodes.append(AddArchesModel(model=model))
+		nodes.append(Serializer(compact=False))
+		nodes.append(self.writer)
+		return nodes
+
+	def get_services(self):
+		services = super().get_services()
+		services.update({
+			'problematic_records': {},
+			'location_codes': {},
+		})
+		return services
+
+	def run(self, **options):
+		vocab.add_linked_art_boundary_check()
+		vocab.add_attribute_assignment_check()
+		services = self.get_services(**options)
+		super().run(services=services, **options)
+
+
+class TestPeoplePipelineOutput(unittest.TestCase):
+	'''
+	Parse test CSV data and run the Provenance pipeline with the in-memory TestWriter.
+	Then verify that the serializations in the TestWriter object are what was expected.
+	'''
+	def setUp(self):
+		settings.pipeline_common_service_files_path = str(pathlib.Path('data/common'))
+		os.environ['GETTY_PIPELINE_SERVICE_FILES_PATH'] = str(pathlib.Path('data/people'))
+
+		# os.environ['GETTY_PIPELINE_COMMON_SERVICE_FILES_PATH'] = 'data/common'
+		self.data = {
+			'header_file': 'tests/data/people/people_authority_0.csv',
+			'files_pattern': 'people_authority.csv',
+		}
+		os.environ['QUIET'] = '1'
+
+	def tearDown(self):
+		pass
+
+	def run_pipeline(self, test_name):
+		input_path = os.getcwd()
+		data = self.data.copy()
+		
+		tests_path = Path(f'tests/data/people/{test_name}')
+		files = list(tests_path.rglob('people*'))
+		
+		if files:
+			data['files_pattern'] = str(tests_path / 'people*')
+
+		writer = TestWriter()
+		pipeline = PeopleTestPipeline(
+				writer,
+				input_path,
+				data=data,
+				models=MODELS,
+				limit=100,
+				debug=True
+		)
+		pipeline.run()
+		return writer.processed_output()
+
+##########################################################################################
 
 def classified_identifiers(data):
 	classified_identifiers = {}

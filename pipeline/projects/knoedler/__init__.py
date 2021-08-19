@@ -652,13 +652,13 @@ class TransactionHandler(ProvenanceBase):
 
 			data['_people'].extend(people)
 
-	def _add_prov_entry_payment(self, data:dict, tx, knoedler_price_part, price_info, people, shared_people ,parenthetical, incoming):
+	def _add_prov_entry_payment(self, data:dict, tx, knoedler_price_part, price_info, people, shared_people, date, incoming):
 		knoedler = self.helper.static_instances.get_instance('Group', 'knoedler')
 		knoedler_group = [knoedler]
 
 		sales_record = get_crom_object(data['_text_row'])
 		hmo = get_crom_object(data['_object'])
-		object_label = f'“{hmo._label}”'
+		object_number = data['_object']['knoedler_number']
 		
 		price_data = {}
 		if 'currency' in price_info:
@@ -706,7 +706,7 @@ class TransactionHandler(ProvenanceBase):
 		if amnt:
 			tx_uri = tx.id
 			payment_id = tx_uri + '-Payment'
-			paym = model.Payment(ident=payment_id, label=f'Payment for {object_label} ({parenthetical})')
+			paym = model.Payment(ident=payment_id, label=f'Payment for Stock Number {object_number} ({date})')
 			paym.paid_amount = amnt
 			tx.part = paym
 			for kp in knoedler_group:
@@ -719,7 +719,7 @@ class TransactionHandler(ProvenanceBase):
 				for i, partdata in enumerate(parts):
 					person, part_amnt = partdata
 					shared_payment_id = tx_uri + f'-Payment-{i}-share'
-					shared_paym = model.Payment(ident=shared_payment_id, label=f"{person._label} share of payment for {object_label} ({parenthetical})")
+					shared_paym = model.Payment(ident=shared_payment_id, label=f"{person._label} share of payment for {object_number}")
 					shared_paym.paid_amount = part_amnt
 					if incoming:
 						shared_paym.paid_from = person
@@ -739,26 +739,31 @@ class TransactionHandler(ProvenanceBase):
 					for kp in knoedler_group:
 						paym.carried_out_by = kp
 
-	def _add_prov_entry_acquisition(self, data:dict, tx, from_people, to_people, parenthetical, incoming, purpose=None):
+	def _add_prov_entry_acquisition(self, data:dict, tx, from_people, to_people, date, incoming, purpose=None):
 		rec = data['book_record']
-		pi_rec = data['pi_record_no']
 		book_id, page_id, row_id = record_id(rec)
 
 		hmo = get_crom_object(data['_object'])
+		object_number = data['_object']['knoedler_number']
 
 		dir = 'In' if incoming else 'Out'
 		if purpose == 'returning':
 			dir_label = 'Knoedler return'
 		else:
-			dir_label = 'Knoedler purchase' if incoming else 'Knoedler sale'
+			dir_label = 'Knoedler Purchase' if incoming else 'Knoedler Sale'
 		acq_id = self.helper.make_proj_uri('ACQ', dir, book_id, page_id, row_id)
 		acq = model.Acquisition(ident=acq_id)
 		if self.helper.transaction_contains_multiple_objects(data, incoming):
 			multi_label = self.helper.transaction_multiple_object_label(data, incoming)
-			tx._label = f'{dir_label} of multiple objects {multi_label} ({parenthetical})'
-			acq._label = f'{dir_label} of {pi_rec} ({parenthetical})'
+			tx._label = f'{dir_label} of Stock Numbers {multi_label} ({date})'
+			name = f'{dir_label} of Stock Number {object_number} ({date})'
+			acq._label = name
 		else:
-			tx._label = f'{dir_label} of {pi_rec} ({parenthetical})'
+			name = f'{dir_label} of Stock Number {object_number} ({date})'
+			tx.identified_by = model.Name(ident='', content=name)
+			tx._label = name
+			acq._label = name
+		acq.identified_by = model.Name(ident='', content=name)
 		acq.transferred_title_of = hmo
 		
 		for p in from_people:
@@ -778,12 +783,6 @@ class TransactionHandler(ProvenanceBase):
 		date = implode_date(data[date_key])
 		odata = data['_object']
 		sales_record = get_crom_object(data['_text_row'])
-
-		knum = odata.get('knoedler_number')
-		if knum:
-			parenthetical = f'{date}; {knum}'
-		else:
-			parenthetical = f'{date}'
 
 		tx = self._empty_tx(data, incoming, purpose=purpose)
 		tx_uri = tx.id
@@ -829,8 +828,8 @@ class TransactionHandler(ProvenanceBase):
 
 		if incoming:
 			self._add_prov_entry_rights(data, tx, shared_people, incoming)
-		self._add_prov_entry_payment(data, tx, knoedler_price_part, price_info, people, shared_people, parenthetical, incoming)
-		self._add_prov_entry_acquisition(data, tx, from_people, to_people, parenthetical, incoming, purpose=purpose)
+		self._add_prov_entry_payment(data, tx, knoedler_price_part, price_info, people, shared_people, date, incoming)
+		self._add_prov_entry_acquisition(data, tx, from_people, to_people, date, incoming, purpose=purpose)
 
 # 		print('People:')
 # 		for p in people:
@@ -846,7 +845,6 @@ class TransactionHandler(ProvenanceBase):
 
 	def add_return_tx(self, data):
 		rec = data['book_record']
-		pi_rec = data['pi_record_no']
 		book_id, page_id, row_id = record_id(rec)
 
 		purch_info = data.get('purchase')
@@ -964,6 +962,7 @@ class ModelTheftOrLoss(TransactionHandler):
 		rec = data['book_record']
 		pi_rec = data['pi_record_no']
 		hmo = get_crom_object(data['_object'])
+		object_number = data['_object']['knoedler_number']
 		self.add_incoming_tx(data)
 		tx_out = self._empty_tx(data, incoming=False)
 
@@ -976,7 +975,7 @@ class ModelTheftOrLoss(TransactionHandler):
 			label_type = 'Theft'
 			transfer_class = vocab.Theft
 
-		tx_out._label = f'{label_type} of {pi_rec}'
+		tx_out._label = f'{label_type} of {object_number}'
 		tx_out_data = add_crom_data(data={'uri': tx_out.id, 'label': tx_out._label}, what=tx_out)
 
 		title = self.helper.title_value(data['_object'].get('title'))
@@ -1053,19 +1052,14 @@ class ModelInventorying(TransactionHandler):
 		object_label = f'“{hmo._label}”'
 
 		knum = odata.get('knoedler_number')
-		if knum:
-			parenthetical = f'{date}; {knum}'
-		else:
-			parenthetical = f'{date}'
 
 		in_tx = self.add_incoming_tx(data)
 		tx_out = self._empty_tx(data, incoming=False)
-		tx_out_label = f'Inventorying of {pi_rec} ({parenthetical})' # TODO: improve label here so that it's not duplicating the label of the actual inventorying (below)
-		tx_out._label = tx_out_label
-		tx_out.identified_by = model.Name(ident='', content=tx_out_label)
+		inv_label = f'Knoedler Inventorying of Stock Number {knum} ({date})'
+		tx_out._label = inv_label
+		tx_out.identified_by = model.Name(ident='', content=inv_label)
 
 		inv_uri = self.helper.make_proj_uri('INV', book_id, page_id, row_id)
-		inv_label = f'Inventorying of {pi_rec} ({parenthetical})'
 		inv = vocab.Inventorying(ident=inv_uri, label=inv_label)
 		inv.identified_by = model.Name(ident='', content=inv_label)
 		inv.encountered = hmo

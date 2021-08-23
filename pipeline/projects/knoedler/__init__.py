@@ -521,7 +521,7 @@ class PopulateKnoedlerObject(Configurable, pipeline.linkedart.PopulateObject):
 		try:
 			knum = odata['knoedler_number']
 			uri_key	= ('Object', knum)
-			identifiers.append(self.helper.knoedler_number_id(knum))
+			identifiers.append(self.helper.knoedler_number_id(knum, vocab.StockNumber))
 		except:
 			uri_key = ('Object', 'Internal', data['pi_record_no'])
 		uri = self.helper.make_object_uri(data['pi_record_no'], *uri_key)

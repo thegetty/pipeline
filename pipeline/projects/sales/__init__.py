@@ -163,16 +163,22 @@ class SalesUtilityHelper(UtilityHelper):
 
 	def catalog_text(self, cno, sale_type='Auction'):
 		uri = self.make_proj_uri('CATALOG', cno)
-		if sale_type in ('Auction', 'Collection Catalog'):
-			catalog = vocab.AuctionCatalogText(ident=uri, label=f'Sale Catalog {cno}')
-		elif sale_type == 'Private Contract Sale':
-			catalog = vocab.ExhibitionCatalogText(ident=uri, label=f'Private Sale Exhibition Catalog {cno}')
-		elif sale_type == 'Stock List':
-			catalog = vocab.AccessionCatalogText(ident=uri, label=f'Accession Catalog {cno}')
-		elif sale_type == 'Lottery':
-			catalog = vocab.LotteryCatalogText(ident=uri, label=f'Lottery Catalog {cno}')
+		label = f'Sale Catalog {cno}'
+
+		if sale_type in ('Auction', 'Collection Catalog'): # Sale Catalog
+			cl = vocab.AuctionCatalogText
+		elif sale_type == 'Private Contract Sale': # Private Sale Exhibition Catalog
+			cl = vocab.ExhibitionCatalogText
+		elif sale_type == 'Stock List': # Accession Catalog
+			cl = vocab.AccessionCatalogText
+		elif sale_type == 'Lottery': # Lottery Catalog
+			cl = vocab.LotteryCatalogText
 		else:
-			catalog = vocab.SalesCatalogText(ident=uri, label=f'Sale Catalog {cno}')
+			cl = vocab.SalesCatalogText # Sale Catalog
+
+		catalog = cl(ident=uri, label=label)
+		catalog.identified_by = model.Name(ident='', content=label)
+
 		return catalog
 
 	def physical_catalog_notes(self, cno, owner, copy):

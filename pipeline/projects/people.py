@@ -173,12 +173,21 @@ class AddPerson(Configurable):
 	def model_person_or_group(self, data):
 		name = data['auth_name']
 		type = {t.strip() for t in data.get('type', '').lower().split(';')} - {''}
+
+		data.setdefault('occupation', [])
+		data.setdefault('object_type', [])
+		if 'object_type' in data and not isinstance(data['object_type'], list):
+			data['object_type'] = [data['object_type']]
+
 		if type & {'institution', 'museum'}:
 			# This is an Organization
 			with suppress(KeyError):
 				del data['nationality']
 			if 'museum' in type:
-				data['object_type'] = vocab.MuseumOrg
+				data['object_type'].append(vocab.MuseumOrg)
+			if 'institution' in type:
+				data['object_type'].append(vocab.Institution)
+			
 			if self.helper.add_group(data):
 				yield data
 		else:
@@ -186,10 +195,13 @@ class AddPerson(Configurable):
 			types = []
 			if 'collector' in type:
 				types.append(vocab.Collecting)
+				data['occupation'].append(vocab.instances.get('collector occupation'))
 			if 'artist' in type:
 				types.append(vocab.Creating)
+				data['occupation'].append(vocab.instances.get('artist occupation'))
 			if 'dealer' in type:
 				types.append(vocab.Dealing)
+				data['occupation'].append(vocab.instances.get('dealer occupation'))
 			if 'owner' in type:
 				types.append(vocab.Owning)
 

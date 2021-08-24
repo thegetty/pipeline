@@ -153,12 +153,15 @@ class MakeLinkedArtRecord:
 			thing = data['_LOD_OBJECT']
 		else:
 			otype = data['object_type']
+			otypes = otype if isinstance(otype, list) else [otype]
+			kwargs = {}
 			if 'uri' in data:
-				thing = otype(ident=data['uri'])
+				kwargs['ident'] = data['uri']
 			elif 'uuid' in data:
-				thing = otype(ident="urn:uuid:%s" % data['uuid'])
+				kwargs['ident'] = "urn:uuid:%s" % data['uuid']
 			else:
 				raise Exception('MakeLinkedArtRecord called with a dictionary with neither uuid or uri member')
+			thing = vocab.make_multitype_obj(*otypes, **kwargs)
 
 		self.set_properties(data, thing)
 
@@ -287,7 +290,7 @@ class MakeLinkedArtLinguisticObject(MakeLinkedArtRecord):
 			thing.dimension = dimension
 
 	def __call__(self, data: dict):
-		if 'object_type' not in data:
+		if 'object_type' not in data or data['object_type'] == []:
 			data['object_type'] = model.LinguisticObject
 		return super().__call__(data)
 
@@ -389,13 +392,13 @@ class MakeLinkedArtOrganization(MakeLinkedArtAgent):
 			thing.classified_as = n
 
 	def __call__(self, data: dict):
-		if 'object_type' not in data:
+		if 'object_type' not in data or data['object_type'] == []:
 			data['object_type'] = model.Group
 		return super().__call__(data)
 
 class MakeLinkedArtAuctionHouseOrganization(MakeLinkedArtOrganization):
 	def __call__(self, data: dict):
-		if 'object_type' not in data:
+		if 'object_type' not in data or data['object_type'] == []:
 			data['object_type'] = vocab.AuctionHouseOrg
 		return super().__call__(data)
 
@@ -466,6 +469,10 @@ class MakeLinkedArtPerson(MakeLinkedArtAgent):
 			if isinstance(n, model.BaseResource):
 				who.classified_as = n
 
+		for n in data.get('occupation', []):
+			if isinstance(n, model.BaseResource):
+				who.classified_as = n
+
 		# nationality field can contain other information, but not useful.
 		# XXX Intentionally ignored but validate with GRI
 
@@ -522,7 +529,7 @@ class MakeLinkedArtPerson(MakeLinkedArtAgent):
 				who.contact_point = pl
 
 	def __call__(self, data: dict):
-		if 'object_type' not in data:
+		if 'object_type' not in data or data['object_type'] == []:
 			data['object_type'] = model.Person
 		return super().__call__(data)
 
@@ -573,7 +580,7 @@ class MakeLinkedArtPlace(MakeLinkedArtRecord):
 			thing.part_of = parent
 
 	def __call__(self, data: dict):
-		if 'object_type' not in data:
+		if 'object_type' not in data or data['object_type'] == []:
 			data['object_type'] = model.Place
 		if self.base_uri and not data.get('uri'):
 			data['uri'] = self.base_uri + urllib.parse.quote(data['name'])

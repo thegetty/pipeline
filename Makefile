@@ -28,7 +28,10 @@ cleandocker: dockerimage
 	docker run -t --env AWS_ACCESS_KEY_ID=$(AWS_ACCESS_KEY_ID) --env AWS_SECRET_ACCESS_KEY=$(AWS_SECRET_ACCESS_KEY) -v$(GETTY_PIPELINE_OUTPUT):/output pipeline make fetch aata nt
 
 dockertest: dockerimage
-	docker run -t -v$(GETTY_PIPELINE_INPUT):/data -v$(GETTY_PIPELINE_OUTPUT):/output pipeline make test
+	docker run -t --env GETTY_PIPELINE_LIMIT=$(LIMIT) --env GETTY_PIPELINE_COMMON_SERVICE_FILES_PATH=/services/common --env GETTY_PIPELINE_SERVICE_FILES_PATH=/services --env GETTY_PIPELINE_INPUT=/data --env GETTY_PIPELINE_OUTPUT=/output --env GETTY_PIPELINE_TMP_PATH=/output/tmp -v$(GETTY_PIPELINE_INPUT):/data:Z -v$(GETTY_PIPELINE_OUTPUT):/output:Z -v$(GETTY_PIPELINE_INPUT):/services:Z --env GETTY_PIPELINE_COMMON_SERVICE_FILES_PATH=/services/common pipeline make test
+
+dockersh: dockerimage
+	docker run -it --env GETTY_PIPELINE_LIMIT=$(LIMIT) --env GETTY_PIPELINE_COMMON_SERVICE_FILES_PATH=/services/common --env GETTY_PIPELINE_SERVICE_FILES_PATH=/services --env GETTY_PIPELINE_INPUT=/data --env GETTY_PIPELINE_OUTPUT=/output --env GETTY_PIPELINE_TMP_PATH=/output/tmp -v$(GETTY_PIPELINE_INPUT):/data:Z -v$(GETTY_PIPELINE_OUTPUT):/output:Z -v$(GETTY_PIPELINE_INPUT):/services:Z --env GETTY_PIPELINE_COMMON_SERVICE_FILES_PATH=/services/common pipeline /bin/bash
 
 dockerimage: Dockerfile
 	docker build -t pipeline .
@@ -235,7 +238,7 @@ upload:
 
 test:
 	mkdir -p $(GETTY_PIPELINE_TMP_PATH)/pipeline_tests
-	python3 -B setup.py test
+	PYTHONPATH=`pwd` python3 -B setup.py test
 
 clean:
 	rm -rf $(GETTY_PIPELINE_OUTPUT)/*

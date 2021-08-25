@@ -566,7 +566,7 @@ class PipelineBase:
 
 	def _service_from_path(self, file):
 		if file.suffix == '.json':
-			with open(file, 'r') as f:
+			with open(file, 'r', encoding='utf-8') as f:
 				try:
 					return json.load(f)
 				except Exception as e:

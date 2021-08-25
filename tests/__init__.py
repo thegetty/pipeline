@@ -156,8 +156,9 @@ class TestSalesPipelineOutput(unittest.TestCase):
 	Then verify that the serializations in the TestWriter object are what was expected.
 	'''
 	def setUp(self):
-		settings.pipeline_common_service_files_path = str(pathlib.Path('data/common'))
-		os.environ['GETTY_PIPELINE_SERVICE_FILES_PATH'] = str(pathlib.Path('data/sales'))
+		settings.pipeline_common_service_files_path = os.environ.get('GETTY_PIPELINE_COMMON_SERVICE_FILES_PATH', str(pathlib.Path('data/common')))
+		settings.pipeline_service_files_base_path = os.environ.get('GETTY_PIPELINE_SERVICE_FILES_PATH', str(pathlib.Path('data')))
+# 		os.environ['GETTY_PIPELINE_SERVICE_FILES_PATH'] = str(pathlib.Path('data/sales'))
 		self.catalogs = {
 			'header_file': 'tests/data/sales/sales_catalogs_info_0.csv',
 			'files_pattern': 'tests/data/sales/empty.csv',
@@ -254,8 +255,9 @@ class TestAATAPipelineOutput(unittest.TestCase):
 	Then verify that the serializations in the TestWriter object are what was expected.
 	'''
 	def setUp(self):
-		settings.pipeline_common_service_files_path = str(pathlib.Path('data/common'))
-		os.environ['GETTY_PIPELINE_SERVICE_FILES_PATH'] = str(pathlib.Path('data/aata'))
+		settings.pipeline_common_service_files_path = os.environ.get('GETTY_PIPELINE_COMMON_SERVICE_FILES_PATH', str(pathlib.Path('data/common')))
+		settings.pipeline_service_files_base_path = os.environ.get('GETTY_PIPELINE_SERVICE_FILES_PATH', str(pathlib.Path('data')))
+# 		os.environ['GETTY_PIPELINE_SERVICE_FILES_PATH'] = str(pathlib.Path('data/aata'))
 		self.patterns = {
 			'abstracts_pattern': 'tests/data/aata/empty.xml',
 			'journals_pattern': 'tests/data/aata/empty.xml',
@@ -401,8 +403,9 @@ class TestKnoedlerPipelineOutput(unittest.TestCase):
 	Then verify that the serializations in the TestWriter object are what was expected.
 	'''
 	def setUp(self):
-		settings.pipeline_common_service_files_path = str(pathlib.Path('data/common'))
-		os.environ['GETTY_PIPELINE_SERVICE_FILES_PATH'] = str(pathlib.Path('data/knoedler'))
+		settings.pipeline_common_service_files_path = os.environ.get('GETTY_PIPELINE_COMMON_SERVICE_FILES_PATH', str(pathlib.Path('data/common')))
+		settings.pipeline_service_files_base_path = os.environ.get('GETTY_PIPELINE_SERVICE_FILES_PATH', str(pathlib.Path('data')))
+# 		os.environ['GETTY_PIPELINE_SERVICE_FILES_PATH'] = str(pathlib.Path('data/knoedler'))
 
 		# os.environ['GETTY_PIPELINE_COMMON_SERVICE_FILES_PATH'] = 'data/common'
 		self.data = {
@@ -476,8 +479,9 @@ class TestPeoplePipelineOutput(unittest.TestCase):
 	Then verify that the serializations in the TestWriter object are what was expected.
 	'''
 	def setUp(self):
-		settings.pipeline_common_service_files_path = str(pathlib.Path('data/common'))
-		os.environ['GETTY_PIPELINE_SERVICE_FILES_PATH'] = str(pathlib.Path('data/people'))
+		settings.pipeline_common_service_files_path = os.environ.get('GETTY_PIPELINE_COMMON_SERVICE_FILES_PATH', str(pathlib.Path('data/common')))
+		settings.pipeline_service_files_base_path = os.environ.get('GETTY_PIPELINE_SERVICE_FILES_PATH', str(pathlib.Path('data')))
+# 		os.environ['GETTY_PIPELINE_SERVICE_FILES_PATH'] = str(pathlib.Path('data/people'))
 
 		# os.environ['GETTY_PIPELINE_COMMON_SERVICE_FILES_PATH'] = 'data/common'
 		self.data = {

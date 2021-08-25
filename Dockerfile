@@ -1,6 +1,10 @@
 FROM python:3.8
 WORKDIR /usr/src/app
 
+RUN apt-get update && \
+    apt-get install -y locales && \
+    dpkg-reconfigure --frontend=noninteractive locales
+
 RUN pip install --no-cache-dir awscli
 
 COPY requirements.txt ./
@@ -41,6 +45,9 @@ RUN pip install --no-cache-dir -r requirements.txt
 COPY --from=0 /usr/src/app ./
 COPY --from=1 /usr/src/swift/scripts/find_matching_json_files scripts/
 COPY --from=1 /usr/lib/swift /usr/lib/swift
+
+ENV LC_ALL="C"
+ENV LC_CTYPE="C"
 
 EXPOSE 8080
 VOLUME ["/data"]

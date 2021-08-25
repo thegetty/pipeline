@@ -9,7 +9,8 @@ from cromulent.model import factory
 
 class MergingFileWriterTests(unittest.TestCase):
 	def setUp(self):
-		self.path = '/tmp/pipeline_tests'
+		base_path = os.environ.get('GETTY_PIPELINE_TMP_PATH', '/tmp')
+		self.path = f'{base_path}/pipeline_tests'
 		self.writer = MergingFileWriter(directory=self.path, model='test-model')
 		if not os.path.exists(self.path):
 			os.mkdir(self.path)

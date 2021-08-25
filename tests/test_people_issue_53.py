@@ -18,7 +18,7 @@ class PIRModelingTest_AR53(TestPeoplePipelineOutput):
         people = output['model-person']
         person = people['tag:getty.edu,2019:digital:pipeline:REPLACE-WITH-UUID:shared#PERSON,AUTH,LAEREBEKE%2C%20JOSEPH%20VAN']
         classification = {c['_label'] for c in person.get('classified_as', [])}
-        self.assertEqual(classification, {'Flemish', 'Belgian'})
+        self.assertTrue({'Flemish', 'Belgian'}.issubset(classification))
 
 if __name__ == '__main__':
     unittest.main()

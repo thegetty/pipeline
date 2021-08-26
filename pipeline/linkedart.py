@@ -391,6 +391,32 @@ class MakeLinkedArtOrganization(MakeLinkedArtAgent):
 		for n in data.get('nationality', []):
 			thing.classified_as = n
 
+		if data.get('formation'):
+			b = model.Formation()
+			ts = model.TimeSpan(ident='')
+			if 'formation_clean' in data and data['formation_clean']:
+				if data['formation_clean'][0]:
+					ts.begin_of_the_begin = data['formation_clean'][0].strftime("%Y-%m-%dT%H:%M:%SZ")
+				if data['formation_clean'][1]:
+					ts.end_of_the_end = data['formation_clean'][1].strftime("%Y-%m-%dT%H:%M:%SZ")
+			ts._label = data['formation']
+			b.timespan = ts
+			b._label = "Formation of %s" % thing._label
+			thing.formed_by = b
+
+		if data.get('dissolution'):
+			d = model.Dissolution()
+			ts = model.TimeSpan(ident='')
+			if 'dissolution_clean' in data and data['dissolution_clean']:
+				if data['dissolution_clean'][0]:
+					ts.begin_of_the_begin = data['dissolution_clean'][0].strftime("%Y-%m-%dT%H:%M:%SZ")
+				if data['dissolution_clean'][1]:
+					ts.end_of_the_end = data['dissolution_clean'][1].strftime("%Y-%m-%dT%H:%M:%SZ")
+			ts._label = data['dissolution']
+			d.timespan = ts
+			d._label = "Dissolution of %s" % thing._label
+			thing.dissolved_by = d
+
 	def __call__(self, data: dict):
 		if 'object_type' not in data or data['object_type'] == []:
 			data['object_type'] = model.Group

@@ -113,11 +113,19 @@ class AddPerson(Configurable):
 		self.c_year = re.compile(r'[ ]?\((c \d{4}[^)]*)\)')
 	
 	def handle_dates(self, data):
+		cb = data.get('corporate_body', False)
+		birth_key = 'formation' if cb else 'birth'
+		death_key = 'dissolution' if cb else 'death'
+
+		if cb:
+			data[birth_key] = data.get('birth')
+			data[death_key] = data.get('death')
+
 		if 'birth' in data:
-			data['birth_clean'] = date_cleaner(data['birth'])
+			data[f'{birth_key}_clean'] = date_cleaner(data[birth_key])
 
 		if 'death' in data:
-			data['death_clean'] = date_cleaner(data['death'])
+			data[f'{death_key}_clean'] = date_cleaner(data[death_key])
 
 	def handle_statements(self, data):
 		text_content = data.get('text')
@@ -179,7 +187,8 @@ class AddPerson(Configurable):
 		if 'object_type' in data and not isinstance(data['object_type'], list):
 			data['object_type'] = [data['object_type']]
 
-		if type & {'institution', 'museum'}:
+		cb = data.get('corporate_body')
+		if cb:
 			# This is an Organization
 			with suppress(KeyError):
 				del data['nationality']
@@ -331,6 +340,7 @@ class PeoplePipeline(PipelineBase):
 									'bibliography',
 									'ulan_id',
 									'segment',
+									'corporate_body'
 								)
 							}
 						}

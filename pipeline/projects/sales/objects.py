@@ -401,12 +401,12 @@ class AddArtists(Configurable):
 		if get_crom_object(a):
 			return a
 
-		person = get_crom_object(a)
-		artist_label = a.get('role_label')
-
 		mods = a['modifiers']
 			
 		artist = self.helper.add_person(a, record=sales_record, relative_id=f'artist-{seq_no+1}', role=role)
+		artist_label = a['role_label']
+		person = get_crom_object(a)
+
 		if mods:
 			GROUP_TYPES = set(attribution_group_types.values())
 			GROUP_MODS = {k for k, v in attribution_group_types.items() if v in GROUP_TYPES}

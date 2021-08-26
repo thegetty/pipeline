@@ -439,6 +439,7 @@ class PipelineBase:
 		helper.add_services(self.services)
 		self.static_instances = StaticInstanceHolder(self.setup_static_instances())
 		helper.add_static_instances(self.static_instances)
+		vocab.register_vocab_class('StarNumber', {'parent': vocab.LocalNumber, 'id': 'http://ns.getty.edu/pipeline-star-number', 'label': 'STAR-assigned Number'})
 
 	def setup_services(self):
 		services = {
@@ -490,6 +491,8 @@ class PipelineBase:
 		gri_ulan = 500115990
 		gci_ulan = 500115991
 		knoedler_ulan = 500304270
+		GETTY_PSCP_URI = self.helper.make_shared_uri('STATIC', 'ORGANIZATION', 'Project for the Study of Collecting and Provenance')
+		GETTY_GPI_URI = self.helper.make_shared_uri('STATIC', 'ORGANIZATION', 'Getty Provenance Index')
 		GETTY_GRI_URI = self.helper.make_proj_uri('ORGANIZATION', 'LOCATION-CODE', 'JPGM')
 		GETTY_GCI_URI = self.helper.make_shared_uri('STATIC', 'ORGANIZATION', 'Getty Conservation Institute')
 		LUGT_URI = self.helper.make_proj_uri('PERSON', 'ULAN', lugt_ulan)
@@ -502,6 +505,12 @@ class PipelineBase:
 		gri = model.Group(ident=GETTY_GRI_URI, label='Getty Research Institute')
 		gri.identified_by = vocab.PrimaryName(ident='', content='Getty Research Institute')
 		gri.exact_match = model.BaseResource(ident=f'http://vocab.getty.edu/ulan/{gri_ulan}')
+
+		gpi = model.Group(ident=GETTY_GPI_URI, label='Getty Provenance Index')
+		gpi.identified_by = vocab.PrimaryName(ident='', content='Getty Provenance Index')
+
+		pscp = model.Group(ident=GETTY_PSCP_URI, label='Project for the Study of Collecting and Provenance')
+		pscp.identified_by = vocab.PrimaryName(ident='', content='Project for the Study of Collecting and Provenance')
 
 		lugt = model.Person(ident=LUGT_URI, label='Frits Lugt')
 		lugt.identified_by = vocab.PrimaryName(ident='', content='Frits Lugt')
@@ -522,7 +531,9 @@ class PipelineBase:
 		instances.update({
 			'Group': {
 				'gci': gci,
+				'pscp': pscp,
 				'gri': gri,
+				'gpi': gpi,
 				'knoedler': knoedler
 			},
 			'Person': {
@@ -825,6 +836,24 @@ class UtilityHelper:
 		catalog_id = id_class(ident='', content=content)
 		assignment = model.AttributeAssignment(ident=self.make_shared_uri('__gri_attribute_assignment'))
 		assignment.carried_out_by = self.static_instances.get_instance('Group', 'gri')
+		catalog_id.assigned_by = assignment
+		return catalog_id
+
+	def gpi_number_id(self, content, id_class=None):
+		if id_class is None:
+			id_class = vocab.StarNumber
+		catalog_id = id_class(ident='', content=content)
+		assignment = model.AttributeAssignment(ident=self.make_shared_uri('__gpi_attribute_assignment'))
+		assignment.carried_out_by = self.static_instances.get_instance('Group', 'gpi')
+		catalog_id.assigned_by = assignment
+		return catalog_id
+
+	def pscp_number_id(self, content, id_class=None):
+		if id_class is None:
+			id_class = vocab.StarNumber
+		catalog_id = id_class(ident='', content=content)
+		assignment = model.AttributeAssignment(ident=self.make_shared_uri('__pscp_attribute_assignment'))
+		assignment.carried_out_by = self.static_instances.get_instance('Group', 'pscp')
 		catalog_id.assigned_by = assignment
 		return catalog_id
 

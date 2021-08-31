@@ -43,12 +43,22 @@ def identity(d):
 	'''
 	yield d
 
-def implode_date(data:dict, prefix:str='', clamp:str=None):
+def extract_date_tuple(data:dict, prefix:str=''):
 	'''
 	Given a dict `data` and a string `prefix`, extract year, month, and day elements
 	from `data` (e.g. '{prefix}year', '{prefix}month', and '{prefix}day'), and return
-	an ISO 8601 date string ('YYYY-MM-DD'). If the day, or day and month elements are
-	missing, may also return a year-month ('YYYY-MM') or year ('YYYY') string.
+	them as a tuple.
+	'''
+	year = data.get(f'{prefix}year')
+	month = data.get(f'{prefix}month', data.get(f'{prefix}mo'))
+	day = data.get(f'{prefix}day')
+	return (year, month, day)
+
+def implode_date_tuple(date_tuple, clamp):
+	'''
+	Given a date string tuple `(year, month, day)`, return an ISO 8601 date
+	string ('YYYY-MM-DD'). If the day, or day and month elements are missing,
+	may also return a year-month ('YYYY-MM') or year ('YYYY') string.
 
 	If `clamp='begin'` and a year value is found, the resulting date string will use
 	the earliest valid value for any field (month or day) that is not present or false.
@@ -61,13 +71,11 @@ def implode_date(data:dict, prefix:str='', clamp:str=None):
 	*not* valid. That is, the returned value may be used as an exclusive endpoint for a
 	date range. For example, '1800-02' would become '1800-03-01'.
 	'''
-	year = data.get(f'{prefix}year')
+	year, month, day = date_tuple
 	try:
 		year = int(year)
 	except:
 		return None
-	month = data.get(f'{prefix}month', data.get(f'{prefix}mo'))
-	day = data.get(f'{prefix}day')
 
 	try:
 		month = int(month)
@@ -129,6 +137,98 @@ def implode_date(data:dict, prefix:str='', clamp:str=None):
 	except TypeError as e:
 		warnings.warn(f'*** {e}: {pprint.pformat([int(year), month, day])}')
 	return None
+
+def implode_uncertain_date_tuple(date_tuple, clamp):
+	'''
+	Similar to `implode_date_tuple`, returns an ISO 8601 date string based
+	on the supplied date tuple. However, this method will handle date tuples
+	with zero-valued day or month fields.
+	'''
+	year, month, day = date_tuple
+	try:
+		year = int(year)
+	except:
+		warnings.warn('year is not numeric')
+		return None
+
+	try:
+		month = int(month)
+		if month < 0 or month > 12:
+			raise ValueError(f'Month value is not valid: {month}')
+	except Exception as e:
+		if clamp == 'begin':
+			day = day if month == 0 else 1 # keep the day value if there's month uncertainty
+			month = 1
+		elif clamp in ('end', 'eoe'):
+			day = day if month == 0 else 31 # keep the day value if there's month uncertainty
+			month = 12
+		else:
+			warnings.warn('month is not valid numeric')
+			return None
+
+	if month == 0:
+		max_day = 31
+		if clamp in ('end', 'eoe'):
+			month = 12
+		else:
+			month = 1
+	else:
+		max_day = calendar.monthrange(year, month)[1]
+
+	try:
+		day = int(day)
+		if day == 0:
+			if clamp in ('end', 'eoe'):
+				day = max_day
+			else:
+				day = 1
+		elif day < 1 or day > 31:
+			raise ValueError(f'Day value is not valid: {day}')
+
+		if clamp == 'eoe':
+			day += 1
+			if day > max_day:
+				day = 1
+				month += 1
+				if month > 12:
+					month = 1
+					year += 1
+	except Exception as e:
+		if clamp == 'begin':
+			day = 1
+		elif clamp == 'end':
+			day = max_day
+		elif clamp == 'eoe':
+			day = 1
+			month += 1
+			if month > 12:
+				month = 1
+				year += 1
+		else:
+			if type(e) not in (TypeError, ValueError):
+				warnings.warn(f'Failed to interpret day value {day!r} in implode_date: {e}')
+				pprint.pprint(data, stream=sys.stderr)
+
+	try:
+		if day:
+			return '%04d-%02d-%02d' % (int(year), month, day)
+		elif month:
+			return '%04d-%02d' % (int(year), month)
+		elif year:
+			return '%04d' % (int(year),)
+	except TypeError as e:
+		warnings.warn(f'*** {e}: {pprint.pformat([int(year), month, day])}')
+	warnings.warn('fallthrough')
+	return None
+
+def implode_date(data:dict, prefix:str='', clamp:str=None):
+	'''
+	Given a dict `data` and a string `prefix`, extract year, month, and day elements
+	from `data` (with `extract_date_tuple`), and return an ISO 8601 date string
+	('YYYY-MM-DD') using `implode_date_tuple`.
+	'''
+	date_tuple = extract_date_tuple(data, prefix)
+	return implode_date_tuple(date_tuple, clamp)
 
 class ExclusiveValue(ContextDecorator):
 	_locks = {}
@@ -510,6 +610,13 @@ def label_for_timespan_range(begin, end, inclusive=False):
 	human-readable string. For example, if the upper bound was '2019-12-01', exclusive,
 	the human-readable label should indicate the timespan ending at the end of November.
 	'''
+	if begin and end:
+		pass
+	elif begin:
+		return f'{begin} onwards'
+	elif end:
+		return f'up to {end}'
+
 	if begin == end:
 		return begin
 	
@@ -517,7 +624,6 @@ def label_for_timespan_range(begin, end, inclusive=False):
 		begin = begin.strftime("%Y-%m-%d")
 	if isinstance(end, datetime.datetime):
 		end = end.strftime("%Y-%m-%d")
-
 
 	orig_begin = begin
 	orig_end = end
@@ -567,6 +673,69 @@ def label_for_timespan_range(begin, end, inclusive=False):
 			return f'{begin} to {end}'
 
 
+def exploded_date_has_uncertainty(date_tuple):
+	year, month, day = date_tuple
+	try:
+		year = int(year)
+		month = int(month)
+		day = int(day)
+		if month == 0 or day == 0:
+			return True
+	except:
+		pass
+	return False
+
+def timespan_from_bound_components(data:dict, begin_prefix:str='', begin_clamp:str=None, end_prefix:str='', end_clamp:str=None):
+	begin_tuple = extract_date_tuple(data, begin_prefix)
+	end_tuple = extract_date_tuple(data, end_prefix)
+	
+	uncertain_dates = [exploded_date_has_uncertainty(t) for t in (begin_tuple, end_tuple)]
+	uncertain_date = any(uncertain_dates)
+	uncertain_tuple = begin_tuple if uncertain_dates[0] else end_tuple
+	
+	if uncertain_date:
+		begin = implode_uncertain_date_tuple(uncertain_tuple, clamp=begin_clamp)
+		end = implode_uncertain_date_tuple(uncertain_tuple, clamp=end_clamp)
+		
+		# # for dates with a '00' for month, the end day will already be
+		# incremented by implode_uncertain_date_tuple with end_clamp='eoe'
+		inclusive = end_clamp != 'eoe'
+		ts = timespan_from_outer_bounds(
+			begin=begin,
+			end=end,
+			inclusive=inclusive
+		)
+	else:
+		begin = implode_date_tuple(begin_tuple, clamp=begin_clamp)
+		end = implode_date_tuple(end_tuple, clamp=end_clamp)
+		ts = timespan_from_outer_bounds(
+			begin=begin,
+			end=end,
+			inclusive=True
+		)
+
+	if uncertain_date:
+		# attach an Identifier to the timespan that includes the original
+		# verbatim string values that include the '00' field values
+		ident_parts = []
+		begin_str = '-'.join([c for c in begin_tuple if len(c)])
+		end_str = '-'.join([c for c in end_tuple if len(c)])
+		uncertain_str = begin_str if uncertain_dates[0] else end_str
+
+		# Note: This will use the verbatim string from the uncertain date
+		# (either begin or end).
+		ts.identified_by = model.Name(ident='', content=f'{uncertain_str}')
+	else:
+		if begin and end:
+			ts.identified_by = model.Name(ident='', content=f'{begin} to {end}')
+		elif begin:
+			ts.identified_by = model.Name(ident='', content=f'{begin} onwards')
+		elif end:
+			ts.identified_by = model.Name(ident='', content=f'up to {end}')
+
+
+	return ts, begin, end
+
 def timespan_from_outer_bounds(begin=None, end=None, inclusive=False):
 	'''
 	Return a `TimeSpan` based on the (optional) `begin` and `end` date strings.
@@ -575,12 +744,7 @@ def timespan_from_outer_bounds(begin=None, end=None, inclusive=False):
 	'''
 	if begin or end:
 		ts = model.TimeSpan(ident='')
-		if begin and end:
-			ts._label = label_for_timespan_range(begin, end, inclusive=inclusive)
-		elif begin:
-			ts._label = f'{begin} onwards'
-		elif end:
-			ts._label = f'up to {end}'
+		ts._label = label_for_timespan_range(begin, end, inclusive=inclusive)
 
 		if begin is not None:
 			try:

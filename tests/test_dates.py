@@ -1,7 +1,7 @@
 import unittest
 from datetime import datetime
 import pipeline.util.cleaners
-from pipeline.util import implode_date, label_for_timespan_range
+from pipeline.util import implode_date, label_for_timespan_range, implode_uncertain_date_tuple, extract_date_tuple
 
 class TestDateCleaners(unittest.TestCase):
 	'''
@@ -81,6 +81,22 @@ class TestDateCleaners(unittest.TestCase):
 		self.assertEqual('1781-09-01', implode_date(bad_day_data, prefix='', clamp='begin'))
 		self.assertEqual('1781-09-30', implode_date(bad_day_data, prefix='', clamp='end'))
 		self.assertEqual('1781-10-01', implode_date(bad_day_data, prefix='', clamp='eoe'))
+
+	def test_implode_uncertain_date(self):
+		year_month = ('1850', '06', '00')
+		self.assertEqual('1850-06-01', implode_uncertain_date_tuple(year_month, clamp='begin'))
+		self.assertEqual('1850-06-30', implode_uncertain_date_tuple(year_month, clamp='end'))
+		self.assertEqual('1850-07-01', implode_uncertain_date_tuple(year_month, clamp='eoe'))
+
+		year_day = ('1880', '00', '14')
+		self.assertEqual('1880-01-14', implode_uncertain_date_tuple(year_day, clamp='begin'))
+		self.assertEqual('1880-12-14', implode_uncertain_date_tuple(year_day, clamp='end'))
+		self.assertEqual('1880-12-15', implode_uncertain_date_tuple(year_day, clamp='eoe'))
+
+		only_year = ('1950', '00', '00')
+		self.assertEqual('1950-01-01', implode_uncertain_date_tuple(only_year, clamp='begin'))
+		self.assertEqual('1950-12-31', implode_uncertain_date_tuple(only_year, clamp='end'))
+		self.assertEqual('1951-01-01', implode_uncertain_date_tuple(only_year, clamp='eoe'))
 
 	def test_label_for_timespan_range(self):
 		# single year

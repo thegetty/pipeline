@@ -7,7 +7,7 @@ from bonobo.config import Option, Service, Configurable
 from cromulent import model, vocab
 
 import pipeline.execution
-from pipeline.util import implode_date, timespan_from_outer_bounds
+from pipeline.util import implode_date, timespan_from_outer_bounds, timespan_from_bound_components
 from pipeline.util.cleaners import parse_location
 import pipeline.linkedart
 from pipeline.linkedart import add_crom_data, get_crom_object, remove_crom_object
@@ -108,12 +108,10 @@ class PopulateAuctionEvent(Configurable):
 			auction.took_place_at = place
 			auction_locations[cno] = place.clone(minimal=True)
 
-		begin = implode_date(data, 'sale_begin_', clamp='begin')
-		end = implode_date(data, 'sale_end_', clamp='eoe')
-		ts = timespan_from_outer_bounds(
-			begin=begin,
-			end=end,
-			inclusive=True
+		ts, begin, end = timespan_from_bound_components(
+			data,
+			'sale_begin_', 'begin',
+			'sale_end_', 'eoe'
 		)
 		
 		event_properties['auction_dates'][cno] = (begin, end)
@@ -151,13 +149,6 @@ class PopulateAuctionEvent(Configurable):
 		notes = data.get('notes')
 		if notes:
 			auction.referred_to_by = vocab.Note(ident='', content=notes)
-
-		if begin and end:
-			ts.identified_by = model.Name(ident='', content=f'{begin} to {end}')
-		elif begin:
-			ts.identified_by = model.Name(ident='', content=f'{begin} onwards')
-		elif end:
-			ts.identified_by = model.Name(ident='', content=f'up to {end}')
 
 		for p in data.get('portal', []):
 			url = p['portal_url']

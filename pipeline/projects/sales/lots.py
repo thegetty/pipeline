@@ -557,17 +557,7 @@ class AddAcquisitionOrBidding(ProvenanceBase):
 
 		data['_acquisition'] = add_crom_data(data={'uri': acq_id}, what=acq)
 
-		final_owners_data = data.get('_final_org', [])
-		for final_owner_data in final_owners_data:
-			data['_organizations'].append(final_owner_data)
-			final_owner = get_crom_object(final_owner_data)
-			tx_label_args = tuple([self.helper, sale_type, 'Sold', 'leading to the currently known location of'] + list(lot_object_key))
-			tx, acq = self.final_owner_prov_entry(tx_label_args, final_owner, current_tx, hmo, ts)
-			note = final_owner_data.get('note')
-			if note:
-				acq.referred_to_by = vocab.Note(ident='', content=note)
-			data['_prov_entries'].append(add_crom_data(data={}, what=tx))
-
+		self.add_final_owner_orgs(data, lot_object_key, sale_type, ts, current_tx=current_tx)
 		self.add_prev_post_owners(data, hmo, tx_data, sale_type, lot_object_key, ts)
 		yield data, current_tx
 
@@ -644,12 +634,14 @@ class AddAcquisitionOrBidding(ProvenanceBase):
 		lot_object_key = object_key(auction_data)
 		cno, lno, date = lot_object_key
 		lot_data = parent.get('_event_causing_prov_entry')
+
 		if not lot_data:
 			return
 		lot = get_crom_object(lot_data)
 		if not lot:
 			return
 		ts = getattr(lot, 'timespan', None)
+		self.add_final_owner_orgs(data, lot_object_key, sale_type, ts)
 
 		UNSOLD = transaction_types['unsold']
 		model_custody_return = transaction in UNSOLD
@@ -726,24 +718,24 @@ class AddAcquisitionOrBidding(ProvenanceBase):
 
 				all_bids.part = bid
 
-			final_owners_data = data.get('_final_org', [])
-			for final_owner_data in final_owners_data:
-				data['_organizations'].append(final_owner_data)
-				final_owner = get_crom_object(final_owner_data)
-				hmo = get_crom_object(data)
-				tx_label_args = tuple([self.helper, sale_type, 'Sold', 'leading to the currently known location of'] + list(lot_object_key))
-				tx, acq = self.final_owner_prov_entry(tx_label_args, final_owner, None, hmo, ts)
-				note = final_owner_data.get('note')
-				if note:
-					acq.referred_to_by = vocab.Note(ident='', content=note)
-				data['_prov_entries'].append(add_crom_data(data={}, what=tx))
-
 			data['_bidding'] = {'uri': bidding_id}
 			add_crom_data(data=data['_bidding'], what=all_bids)
 			yield data
 		else:
 			warnings.warn(f'*** No price data found for {parent["transaction"]!r} transaction')
 			yield data
+
+	def add_final_owner_orgs(self, data, lot_object_key, sale_type, ts, current_tx=None):
+		final_owners_data = data.get('_final_org', [])
+		for final_owner_data in final_owners_data:
+			final_owner = get_crom_object(final_owner_data)
+			hmo = get_crom_object(data)
+			tx_label_args = tuple([self.helper, sale_type, 'Sold', 'leading to the currently known location of'] + list(lot_object_key))
+			tx, acq = self.final_owner_prov_entry(tx_label_args, final_owner, current_tx, hmo, ts)
+			note = final_owner_data.get('note')
+			if note:
+				acq.referred_to_by = vocab.Note(ident='', content=note)
+			data['_prov_entries'].append(add_crom_data(data={}, what=tx))
 
 	def add_mod_notes(self, act, all_mods, label):
 		if act and all_mods:
@@ -765,7 +757,8 @@ class AddAcquisitionOrBidding(ProvenanceBase):
 		transaction = parent['transaction']
 		transaction = transaction.replace('[?]', '').rstrip()
 		auction_data = parent['auction_of_lot']
-		cno, lno, date = object_key(auction_data)
+		lot_object_key = object_key(auction_data)
+		cno, lno, date = lot_object_key
 		shared_lot_number = self.helper.shared_lot_number_from_lno(lno)
 		buyers = [
 			self.add_person(
@@ -824,6 +817,7 @@ class AddAcquisitionOrBidding(ProvenanceBase):
 
 		sale_type = non_auctions.get(cno, 'Auction')
 		data.setdefault('_owner_locations', [])
+		data.setdefault('_organizations', [])
 		if transaction in SOLD:
 			houses = [self.helper.add_auction_house_data(h) for h in auction_houses_data.get(cno, [])]
 			for data, current_tx in self.add_acquisition(data, buyers, sellers, houses, non_auctions, buy_sell_modifiers, transaction, transaction_types):
@@ -876,6 +870,9 @@ class AddAcquisitionOrBidding(ProvenanceBase):
 				yield data
 		elif transaction in UNKNOWN:
 			if sale_type == 'Lottery':
+				self.add_final_owner_orgs(data, lot_object_key, sale_type, None)
+				for o in data.get('_final_org', []):
+					data['_organizations'].append(o)
 				yield data
 			else:
 				houses = [

@@ -174,9 +174,6 @@ class PopulateSalesObject(Configurable, pipeline.linkedart.PopulateObject):
 						'uri': self.helper.make_proj_uri('ORG', 'CURR-OWN', *now_key),
 					}
 
-				if note:
-					owner_data['note'] = note
-
 				# It's conceivable that there could be more than one "present location"
 				# for an object that is reconciled based on prev/post sale rewriting.
 				# Therefore, the place URI must not share a prefix with the object URI,
@@ -185,10 +182,23 @@ class PopulateSalesObject(Configurable, pipeline.linkedart.PopulateObject):
 				base_uri = self.helper.prepend_uri_key(hmo.id, 'PLACE')
 				place_data = self.helper.make_place(current, base_uri=base_uri)
 				place = get_crom_object(place_data)
+				hmo.current_location = place
 
 				make_la_org = pipeline.linkedart.MakeLinkedArtOrganization()
 				owner_data = make_la_org(owner_data)
 				owner = get_crom_object(owner_data)
+				if owner:
+					hmo.current_owner = owner
+					owner.residence = place
+
+				if note:
+					owner_data['note'] = note
+					desc = vocab.Description(ident='', content=note)
+					if owner:
+						assignment = model.AttributeAssignment(ident='')
+						assignment.carried_out_by = owner
+						desc.assigned_by = assignment
+					hmo.referred_to_by = desc
 
 				acc = location.get('acc')
 				if acc:
@@ -198,7 +208,6 @@ class PopulateSalesObject(Configurable, pipeline.linkedart.PopulateObject):
 					assignment.carried_out_by = owner
 					acc_number.assigned_by = assignment
 
-				owner.residence = place
 				data['_locations'].append(place_data)
 				data['_final_org'].append(owner_data)
 			else:

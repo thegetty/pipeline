@@ -31,7 +31,8 @@ from pipeline.linkedart import add_crom_data, get_crom_object
 from pipeline.nodes.basic import \
 			OnlyRecordsOfType, \
 			AddArchesModel, \
-			Serializer
+			Serializer, \
+			Trace
 
 class PersonIdentity:
 	'''
@@ -610,12 +611,12 @@ class PipelineBase:
 		else:
 			sys.stderr.write('*** No serialization chain defined\n')
 
-	def add_places_chain(self, graph, auction_events, key='_locations', serialize=True):
+	def add_places_chain(self, graph, auction_events, key='_locations', serialize=True, **kwargs):
 		'''Add extraction and serialization of locations.'''
 		nodes = []
 		if key:
 			nodes.append(ExtractKeyedValues(key=key))
-		nodes.append(RecursiveExtractKeyedValue(key='part_of'))
+		nodes.append(RecursiveExtractKeyedValue(key='part_of', **kwargs))
 		places = graph.add_chain(
 			*nodes,
 			_input=auction_events.output

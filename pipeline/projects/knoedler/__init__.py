@@ -44,6 +44,9 @@ from pipeline.util import \
 			MatchingFiles, \
 			strip_key_prefix, \
 			rename_keys
+from pipeline.util.cleaners import \
+			parse_location_name, \
+			date_cleaner
 from pipeline.io.file import MergingFileWriter
 from pipeline.io.memory import MergingMemoryWriter
 # from pipeline.io.arches import ArchesWriter
@@ -83,6 +86,7 @@ class KnoedlerUtilityHelper(UtilityHelper):
 		self.make_la_person = MakeLinkedArtPerson()
 		self.title_re = re.compile(r'\["(.*)" (title )?(info )?from ([^]]+)\]')
 		self.title_ref_re = re.compile(r'Sales Book (\d+), (\d+-\d+), f.(\d+)')
+		self.uid_tag_prefix = self.proj_prefix
 
 	def add_person(self, data, record, relative_id, **kwargs):
 		self.person_identity.add_uri(data, record_id=relative_id)
@@ -154,6 +158,7 @@ class KnoedlerUtilityHelper(UtilityHelper):
 		row_id = rec['row_number']
 
 		dir = 'In' if incoming else 'Out'
+		
 		price = data.get('purchase_knoedler_share') if incoming else data.get('sale_knoedler_share')
 		if price:
 			n = price.get('note')
@@ -515,8 +520,11 @@ class PopulateKnoedlerObject(Configurable, pipeline.linkedart.PopulateObject):
 			'title': title,
 			'identifiers': identifiers,
 			'_record': data['_text_row'],
+			'_locations': [],
+			'_organizations': [],
 		}
-		data['_object'].update({k:v for k,v in odata.items() if k in ('materials', 'dimensions', 'knoedler_number')})
+		self.helper.copy_source_information(data['_object'], data)
+		data['_object'].update({k:v for k,v in odata.items() if k in ('materials', 'dimensions', 'knoedler_number', 'present_location')})
 
 		try:
 			knum = odata['knoedler_number']
@@ -549,10 +557,88 @@ class PopulateKnoedlerObject(Configurable, pipeline.linkedart.PopulateObject):
 		mlao = MakeLinkedArtHumanMadeObject()
 		mlao(data['_object'])
 
+		self._populate_object_present_location(data['_object'])
 		self._populate_object_visual_item(data['_object'], label)
 		self.populate_object_statements(data['_object'], default_unit='inches')
 		data['_physical_objects'].append(data['_object'])
 		return data
+
+	def _populate_object_present_location(self, data:dict):
+		hmo = get_crom_object(data)
+		location = data.get('present_location')
+		if location:
+			loc = location.get('geog')
+			note = location.get('note')
+
+			if loc:
+				# TODO: if `parse_location_name` fails, still preserve the location string somehow
+				current = parse_location_name(loc, uri_base=self.helper.uid_tag_prefix)
+				inst = location.get('inst')
+				if inst:
+					owner_data = {
+						'label': f'{inst} ({loc})',
+						'identifiers': [
+							model.Name(ident='', content=inst)
+						]
+					}
+					ulan = None
+					with suppress(ValueError, TypeError):
+						ulan = int(location.get('insi'))
+					if ulan:
+						owner_data['ulan'] = ulan
+						owner_data['uri'] = self.helper.make_proj_uri('ORG', 'ULAN', ulan)
+					else:
+						owner_data['uri'] = self.helper.make_proj_uri('ORG', 'NAME', inst, 'PLACE', loc)
+				else:
+					warnings.warn(f'*** what is the object key?')
+					pprint.pprint(data)
+					owner_data = {
+						'label': '(Anonymous organization)',
+						'uri': self.helper.make_proj_uri('ORG', 'CURR-OWN', *now_key),
+					}
+
+				# It's conceivable that there could be more than one "present location"
+				# for an object that is reconciled based on prev/post sale rewriting.
+				# Therefore, the place URI must not share a prefix with the object URI,
+				# otherwise all such places are liable to be merged during URI
+				# reconciliation as part of the prev/post sale rewriting.
+				base_uri = self.helper.prepend_uri_key(hmo.id, 'PLACE')
+				place_data = self.helper.make_place(current, base_uri=base_uri)
+				place = get_crom_object(place_data)
+				hmo.current_location = place
+
+				owner = None
+				if owner_data:
+					make_la_org = pipeline.linkedart.MakeLinkedArtOrganization()
+					owner_data = make_la_org(owner_data)
+					owner = get_crom_object(owner_data)
+					hmo.current_owner = owner
+					owner.residence = place
+
+				if note:
+					owner_data['note'] = note
+					desc = vocab.Description(ident='', content=note)
+					if owner:
+						assignment = model.AttributeAssignment(ident='')
+						assignment.carried_out_by = owner
+						desc.assigned_by = assignment
+					hmo.referred_to_by = desc
+
+				acc = location.get('acc')
+				if acc:
+					acc_number = vocab.AccessionNumber(ident='', content=acc)
+					hmo.identified_by = acc_number
+					assignment = model.AttributeAssignment(ident='')
+					if owner:
+						assignment.carried_out_by = owner
+					acc_number.assigned_by = assignment
+
+				data['_locations'].append(place_data)
+				
+				data['_organizations'].append(owner_data)
+				data['_final_org'] = owner_data
+			else:
+				pass # there is no present location place string
 
 class TransactionSwitch:
 	'''
@@ -622,7 +708,7 @@ class TransactionHandler(ProvenanceBase):
 					relative_id=f'{role}_{i+1}'
 				)
 				name = p.get('name', p.get('auth_name', '(anonymous)'))
-				share = p['share']
+				share = p.get('share', '1/1')
 				try:
 					share_frac = Fraction(share)
 					remaining -= share_frac
@@ -661,7 +747,7 @@ class TransactionHandler(ProvenanceBase):
 		object_number = data['_object']['knoedler_number']
 		
 		price_data = {}
-		if 'currency' in price_info:
+		if price_info and 'currency' in price_info:
 			price_data['currency'] = price_info['currency']
 		
 		amnt = get_crom_object(price_info)
@@ -682,7 +768,7 @@ class TransactionHandler(ProvenanceBase):
 				)
 				knoedler_group.append(person)
 				name = p.get('name', p.get('auth_name', '(anonymous)'))
-				share = p['share']
+				share = p.get('share', '1/1')
 				share_frac = Fraction(share)
 				if price_amount:
 					price = share_frac * price_amount
@@ -780,7 +866,11 @@ class TransactionHandler(ProvenanceBase):
 		for k in ('_prov_entries', '_people'):
 			data.setdefault(k, [])
 
-		date = implode_date(data[date_key])
+		parenthetical_parts = []
+		date = implode_date(data[date_key]) if date_key in data else None
+		if date:
+			parenthetical_parts.append(date)
+		
 		odata = data['_object']
 		sales_record = get_crom_object(data['_text_row'])
 
@@ -788,7 +878,8 @@ class TransactionHandler(ProvenanceBase):
 		tx_uri = tx.id
 
 		tx_data = add_crom_data(data={'uri': tx_uri}, what=tx)
-		self.set_date(tx, data, date_key)
+		if date_key:
+			self.set_date(tx, data, date_key)
 
 		role = 'seller' if incoming else 'buyer'
 		people_data = [
@@ -1008,6 +1099,51 @@ class ModelTheftOrLoss(TransactionHandler):
 		data['_prov_entries'].append(tx_out_data)
 		return data
 
+class ModelFinalSale(TransactionHandler):
+	'''
+	Add ProvenanceEntry/Acquisition modeling for the sale leading to the final
+	known location (owner) of an object.
+	'''
+	helper = Option(required=True)
+	make_la_person = Service('make_la_person')
+
+	def __call__(self, data:dict, make_la_person):
+		data = data.copy()
+		
+		# reset prov entries and people because we're only interested in those
+		# related to the final sale on this branch of the graph
+		odata = data['_object'].copy()
+		self.helper.copy_source_information(data, odata)
+
+		odata['_prov_entries'] = []
+		odata['_people'] = []
+		hmo = get_crom_object(odata)
+		org = odata.get('_final_org')
+		if org:
+			data['_record'] = data['_text_row']
+			rec = data['book_record']
+			book_id = rec['stock_book_no']
+			page_id = rec['page_number']
+			row_id = rec['row_number']
+
+			price_info = None
+			knoedler_price_part = None
+			shared_people = [org]
+			sellers = []
+			date_key = None
+			tx = self._prov_entry(data, date_key, sellers, price_info, knoedler_price_part, shared_people, incoming=True)
+		
+			current_tx = self.add_outgoing_tx(data)
+			current_tx_data = add_crom_data(data={}, what=current_tx)
+		
+			lot_object_key = list(self.helper.transaction_key_for_record(data, incoming=True))
+			tx_data = {'uri': tx.id, 'label': f'Sale leading to the currently known location of {hmo._label}'}
+			add_crom_data(data=tx_data, what=tx)
+			
+			self.handle_prev_post_owner(odata, hmo, current_tx_data, 'Sold', lot_object_key, org, f'final-owner-1', False, None, make_label=prov_entry_label)
+			odata = {k: v for k, v in odata.items() if k in ('_prov_entries', '_people')}
+			yield odata
+
 class ModelSale(TransactionHandler):
 	'''
 	Add ProvenanceEntry/Acquisition modeling for a sold object. This includes an acquisition
@@ -1178,6 +1314,19 @@ class KnoedlerPipeline(PipelineBase):
 				drop_empty=True,
 				operations=[
 					{
+						'group': {
+							'present_location': {
+								'postprocess': lambda x, _: strip_key_prefix('present_loc_', x),
+								'properties': (
+									"present_loc_geog",
+									"present_loc_inst",
+									"present_loc_acc",
+									"present_loc_note",
+								)
+							},
+						}
+					},
+					{
 						'group_repeating': {
 							'_artists': {
 								'rename_keys': {
@@ -1250,15 +1399,6 @@ class KnoedlerPipeline(PipelineBase):
 							}
 						},
 						'group': {
-							'present_location': {
-								'postprocess': lambda x, _: strip_key_prefix('present_loc_', x),
-								'properties': (
-									"present_loc_geog",
-									"present_loc_inst",
-									"present_loc_acc",
-									"present_loc_note",
-								)
-							},
 							'consigner': {
 								'postprocess': lambda x, _: strip_key_prefix('consign_', x),
 								'properties': (
@@ -1277,6 +1417,7 @@ class KnoedlerPipeline(PipelineBase):
 									"object_type",
 									"materials",
 									"dimensions",
+									"present_location",
 								)
 							},
 							'sale_date': {
@@ -1440,7 +1581,7 @@ class KnoedlerPipeline(PipelineBase):
 
 			if serialize:
 				self.add_serialization_chain(graph, prov_entry.output, model=self.models['ProvenanceEntry'])
-				self.add_serialization_chain(graph, people.output, model=self.models['Person'])
+				self.add_person_or_group_chain(graph, people)
 
 	def add_book_chain(self, graph, sales_records, serialize=True):
 		books = graph.add_chain(
@@ -1498,10 +1639,26 @@ class KnoedlerPipeline(PipelineBase):
 			AddArtists(helper=self.helper),
 			_input=rows.output
 		)
-		
+
 		people = graph.add_chain( ExtractKeyedValues(key='_people'), _input=objects.output )
 		hmos = graph.add_chain( ExtractKeyedValues(key='_physical_objects'), _input=objects.output )
 		texts = graph.add_chain( ExtractKeyedValues(key='_linguistic_objects'), _input=objects.output )
+		groups = graph.add_chain( ExtractKeyedValues(key='_organizations'), _input=hmos.output )
+		odata = graph.add_chain(
+			ExtractKeyedValue(key='_object'),
+			_input=objects.output
+		)
+		final_sale = graph.add_chain(
+			ModelFinalSale(helper=self.helper),
+			_input=objects.output
+		)
+		prov_entry = graph.add_chain(
+			ExtractKeyedValues(key='_prov_entries'),
+			_input=final_sale.output
+		)
+		people2 = graph.add_chain( ExtractKeyedValues(key='_people'), _input=final_sale.output )
+		owners = self.add_person_or_group_chain(graph, hmos, key='_other_owners', serialize=serialize)
+
 		items = graph.add_chain(
 			ExtractKeyedValue(key='_visual_item'),
 			pipeline.linkedart.MakeLinkedArtRecord(),
@@ -1513,13 +1670,20 @@ class KnoedlerPipeline(PipelineBase):
 			ExtractKeyedValues(key='_artists'),
 			_input=objects.output
 		)
+		
 		if serialize:
 			self.add_serialization_chain(graph, items.output, model=self.models['VisualItem'])
-			self.add_serialization_chain(graph, people.output, model=self.models['Person'])
 			self.add_serialization_chain(graph, hmos.output, model=self.models['HumanMadeObject'])
 			self.add_serialization_chain(graph, texts.output, model=self.models['LinguisticObject'])
 # 			self.add_serialization_chain(graph, consigners.output, model=self.models['Group'])
-			self.add_serialization_chain(graph, artists.output, model=self.models['Person'])
+			self.add_person_or_group_chain(graph, groups)
+			self.add_person_or_group_chain(graph, artists)
+			self.add_person_or_group_chain(graph, people)
+			self.add_person_or_group_chain(graph, people2)
+			self.add_person_or_group_chain(graph, owners)
+			self.add_person_or_group_chain(graph, odata, key='_organizations')
+			self.add_serialization_chain(graph, prov_entry.output, model=self.models['ProvenanceEntry'])
+			_ = self.add_places_chain(graph, odata, key='_locations', serialize=serialize, include_self=True)
 		return objects
 
 	def _construct_graph(self, services=None):

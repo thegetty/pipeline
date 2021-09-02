@@ -391,6 +391,7 @@ class KnoedlerTestPipeline(KnoedlerPipeline):
 		return services
 
 	def run(self, **options):
+		vocab.conceptual_only_parts()
 		vocab.add_linked_art_boundary_check()
 		vocab.add_attribute_assignment_check()
 		services = self.get_services(**options)

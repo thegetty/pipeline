@@ -517,9 +517,9 @@ class TestPeoplePipelineOutput(unittest.TestCase):
 
 ##########################################################################################
 
-def classified_identifiers(data):
+def classified_identifiers(data, key='identified_by'):
 	classified_identifiers = {}
-	identifiers = [(i['content'], i.get('classified_as', [])) for i in data.get('identified_by', [])]
+	identifiers = [(i['content'], i.get('classified_as', [])) for i in data.get(key, [])]
 	for (content, classification) in identifiers:
 		if len(classification):
 			for cl in classification:
@@ -530,13 +530,13 @@ def classified_identifiers(data):
 	return classified_identifiers
 
 def classified_identifier_sets(data, key='identified_by'):
-    classified_identifiers = defaultdict(set)
-    identifiers = [(i['content'], i.get('classified_as', [])) for i in data.get(key, [])]
-    for (content, classification) in identifiers:
-        if len(classification):
-            for cl in classification:
-                label = cl['_label']
-                classified_identifiers[label].add(content)
-        else:
-            classified_identifiers[None].add(content)
-    return classified_identifiers
+	classified_identifiers = defaultdict(set)
+	identifiers = [(i['content'], i.get('classified_as', [])) for i in data.get(key, [])]
+	for (content, classification) in identifiers:
+		if len(classification):
+			for cl in classification:
+				label = cl['_label']
+				classified_identifiers[label].add(content)
+		else:
+			classified_identifiers[None].add(content)
+	return classified_identifiers

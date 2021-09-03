@@ -285,12 +285,17 @@ class PersonIdentity:
 			a = self.professional_activity(name, ident=pact_uri, **active)
 			data['events'].append(a)
 
-		for key in ('notes', 'brief_notes', 'working_notes'):
+		notes_field_classification = {
+			'brief_notes': (vocab.BiographyStatement, vocab.External),
+			'text': (vocab.BiographyStatement, vocab.Internal),
+			'internal_notes': (vocab.BiographyStatement, vocab.Internal),
+			'working_notes': (vocab.ResearchStatement, vocab.Internal),
+		}
+		for key, note_classification in notes_field_classification.items():
 			if key in data:
 				for content in [n.strip() for n in data[key].split(';')]:
-					if content:
-						note = vocab.Note(ident='', content=content)
-						data['referred_to_by'].append(note)
+					cite = vocab.make_multitype_obj(*note_classification, ident='', content=content)
+					data['referred_to_by'].append(cite)
 
 		for key in ('name_cite', 'bibliography'):
 			if data.get(key):
@@ -440,6 +445,10 @@ class PipelineBase:
 		self.static_instances = StaticInstanceHolder(self.setup_static_instances())
 		helper.add_static_instances(self.static_instances)
 		vocab.register_vocab_class('StarNumber', {'parent': vocab.LocalNumber, 'id': 'http://ns.getty.edu/pipeline-star-number', 'label': 'STAR-assigned Number'})
+		vocab.register_instance('function', {'parent': model.Type, 'id': '300444971', 'label': 'Function (general concept)'})
+		vocab.register_vocab_class('Internal', {"parent": model.LinguisticObject, "id":"300444972", "label": "private (general concept)", "metatype": "function"})
+		vocab.register_vocab_class('External', {"parent": model.LinguisticObject, "id":"300444973", "label": "public (general concept)", "metatype": "function"})
+
 
 	def setup_services(self):
 		services = {

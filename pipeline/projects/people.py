@@ -128,11 +128,6 @@ class AddPerson(Configurable):
 			data[f'{death_key}_clean'] = date_cleaner(data[death_key])
 
 	def handle_statements(self, data):
-		text_content = data.get('text')
-		if text_content:
-			cite = vocab.BiographyStatement(ident='', content=text_content)
-			data['referred_to_by'].append(cite)
-
 		source_content = data.get('source')
 		if source_content:
 			cite = vocab.BibliographyStatement(ident='', content=source_content)

@@ -27,6 +27,7 @@ class PopulateSalesObject(Configurable, pipeline.linkedart.PopulateObject):
 	subject_genre = Service('subject_genre')
 	destruction_types_map = Service('destruction_types_map')
 	materials_map = Service('materials_map')
+	non_auctions = Service('non_auctions')
 
 	def populate_destruction_events(self, data:dict, note, *, type_map, location=None):
 		destruction_types_map = type_map
@@ -283,24 +284,28 @@ class PopulateSalesObject(Configurable, pipeline.linkedart.PopulateObject):
 			classification = set([mdata[k] for k in ('classified_as (object type) (primary)', 'classified_as (object type) (secondary)')])
 			technique = mdata['technique']
 
-	def __call__(self, data:dict, post_sale_map, unique_catalogs, subject_genre, destruction_types_map, materials_map):
+	def __call__(self, data:dict, post_sale_map, unique_catalogs, subject_genre, destruction_types_map, materials_map, non_auctions):
 		'''Add modeling for an object described by a sales record'''
 		hmo = get_crom_object(data)
 		parent = data['parent_data']
 		auction_data = parent.get('auction_of_lot')
+		cno = auction_data['catalog_number']
+		lno = auction_data['lot_number']
+		date = implode_date(auction_data, 'lot_sale_')
+
 		if auction_data:
 			lno = str(auction_data['lot_number'])
 			data.setdefault('identifiers', [])
 			if not lno:
 				warnings.warn(f'Setting empty identifier on {hmo.id}')
-			data['identifiers'].append(vocab.LotNumber(ident='', content=lno))
+
+			sale_type = non_auctions.get(cno, 'Auction')
+			lot_number = self.helper.lot_number_identifier(lno, cno, non_auctions, sale_type)
+			data['identifiers'].append(lot_number)
 		else:
 			warnings.warn(f'***** NO AUCTION DATA FOUND IN populate_object')
 
 
-		cno = auction_data['catalog_number']
-		lno = auction_data['lot_number']
-		date = implode_date(auction_data, 'lot_sale_')
 		lot = self.helper.shared_lot_number_from_lno(lno) # the current key for this object; may be associated later with prev and post object keys
 		now_key = (cno, lno, date)
 

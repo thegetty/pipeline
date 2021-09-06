@@ -398,6 +398,20 @@ class SalesUtilityHelper(UtilityHelper):
 
 		return add_crom_data(data=a, what=house)
 
+	def lot_number_identifier(self, lno, cno, non_auctions, sale_type):
+		'''
+		Return an Identifier for the lot number that is classified as a LotNumber,
+		and whose assignment has the specific purpose of the auction event.
+		'''
+		sale_type = non_auctions.get(cno, 'Auction')
+		auction, _, _ = self.sale_event_for_catalog_number(cno, sale_type)
+		lot_number = vocab.LotNumber(ident='', content=lno)
+		assignment = model.AttributeAssignment(ident='', label=f'Assignment of lot number {lno} from {cno}')
+		assignment.specific_purpose = auction
+		lot_number.assigned_by = assignment
+		return lot_number
+
+
 def add_crom_price(data, parent, services, add_citations=False):
 	'''
 	Add modeling data for `MonetaryAmount`, `StartingPrice`, or `EstimatedPrice`,

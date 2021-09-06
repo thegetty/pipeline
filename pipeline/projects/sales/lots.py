@@ -73,7 +73,7 @@ class AddAuctionOfLot(ProvenanceBase):
 			ts.identified_by = model.Name(ident='', content=date)
 			lot.timespan = ts
 
-	def set_lot_notes(self, lot, auction_data, sale_type):
+	def set_lot_notes(self, lot, auction_data, sale_type, non_auctions):
 		'''Associate notes with the auction lot.'''
 		cno, lno, _ = object_key(auction_data)
 		notes = auction_data.get('lot_notes')
@@ -86,15 +86,18 @@ class AddAuctionOfLot(ProvenanceBase):
 		if not lno:
 			warnings.warn(f'Setting empty identifier on {lot.id}')
 		lno = str(lno)
-		lot.identified_by = vocab.LotNumber(ident='', content=lno)
 
-	def set_lot_objects(self, lot, cno, lno, auction_of_lot_uri, data, sale_type):
+		lot.identified_by = self.helper.lot_number_identifier(lno, cno, non_auctions, sale_type)
+
+	def set_lot_objects(self, lot, cno, lno, auction_of_lot_uri, data, sale_type, non_auctions):
 		'''Associate the set of objects with the auction lot.'''
 		shared_lot_number = self.helper.shared_lot_number_from_lno(lno)
 		set_type = vocab.AuctionLotSet if sale_type == 'Auction' else vocab.CollectionSet
 		coll_label = f'Object Set for Lot {cno} {shared_lot_number}'
 		coll = set_type(ident=f'{auction_of_lot_uri}-Set', label=coll_label)
 		coll.identified_by = model.Name(ident='', content=coll_label)
+		coll.identified_by = self.helper.lot_number_identifier(lno, cno, non_auctions, sale_type)
+		
 		est_price = data.get('estimated_price')
 		if est_price:
 			self.set_possible_attribute(coll, 'dimension', est_price)
@@ -191,7 +194,7 @@ class AddAuctionOfLot(ProvenanceBase):
 		transaction = data.get('transaction')
 		SOLD = transaction_types['sold']
 		WITHDRAWN = transaction_types['withdrawn']
-		self.set_lot_objects(lot, cno, lno, sale_data['uri'], data, sale_type)
+		self.set_lot_objects(lot, cno, lno, sale_data['uri'], data, sale_type, non_auctions)
 		auction, _, _ = self.helper.sale_event_for_catalog_number(cno, sale_type)
 		if transaction not in WITHDRAWN:
 			lot.part_of = auction
@@ -205,7 +208,7 @@ class AddAuctionOfLot(ProvenanceBase):
 			self.set_lot_auction_houses(lot, cno, auction_houses)
 			self.set_lot_location(lot, cno, auction_locations)
 			self.set_lot_date(lot, auction_data, event_dates)
-			self.set_lot_notes(lot, auction_data, sale_type)
+			self.set_lot_notes(lot, auction_data, sale_type, non_auctions)
 
 			tx_uri = self.helper.transaction_uri_for_lot(auction_data, data)
 			lots = self.helper.lots_in_transaction(auction_data, data)

@@ -188,6 +188,8 @@ class PersonIdentity:
 		a = vocab.make_multitype_obj(*classified_as, **args)
 
 		ts = self.active_timespan(century=century, date_range=date_range, **kwargs)
+		if 'verbatim_active_period' in kwargs:
+			ts.identified_by = model.Name(ident='', content=kwargs['verbatim_active_period'])
 		if ts:
 			a.timespan = ts
 		return a
@@ -252,14 +254,22 @@ class PersonIdentity:
 		'''
 		period_active = data.get('period_active')
 		century_active = data.get('century_active')
-		if period_active:
+		cb = data.get('corporate_body')
+		if period_active and not cb:
 			date_range = date_cleaner(period_active)
 			if date_range:
-				return {'date_range': date_range}
+				return {'date_range': date_range, 'verbatim_active_period': period_active}
 		elif century_active:
 			if len(century_active) == 4 and century_active.endswith('th'):
 				century = int(century_active[0:2])
-				return {'century': century}
+				return {'century': century, 'verbatim_active_period': century_active}
+			elif len(century_active) == 9 and century_active.endswith('th'):
+				parts = century_active.split('-')
+				begin_century = int(parts[0][:2])
+				end_century = int(parts[1][:2])
+				begin = date_cleaner(f'{begin_century-1}00-99')
+				end = date_cleaner(f'{end_century-1}00-99')
+				return {'date_range': (begin[0], end[1]), 'verbatim_active_period': century_active}
 			else:
 				warnings.warn(f'TODO: better handling for century ranges: {century_active}')
 		return {}
@@ -281,6 +291,7 @@ class PersonIdentity:
 		
 		name = data['label']
 		active = self.clamped_timespan_args(data, name)
+		cb = data.get('corporate_body')
 		if active:
 			pact_uri = data['uri'] + '-ProfAct-active'
 			a = self.professional_activity(name, ident=pact_uri, **active)

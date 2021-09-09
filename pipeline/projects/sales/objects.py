@@ -382,6 +382,7 @@ class AddArtists(Configurable):
 	helper = Option(required=True)
 	attribution_modifiers = Service('attribution_modifiers')
 	attribution_group_types = Service('attribution_group_types')
+	attribution_group_names = Service('attribution_group_names')
 
 	def add_properties(self, data:dict, a:dict):
 		a.setdefault('referred_to_by', [])
@@ -411,14 +412,14 @@ class AddArtists(Configurable):
 			return 'or' in mods
 		return False
 
-	def model_person_or_group(self, data:dict, a:dict, attribution_group_types, role='artist', seq_no=0, sales_record=None):
+	def model_person_or_group(self, data:dict, a:dict, attribution_group_types, attribution_group_names, role='artist', seq_no=0, sales_record=None):
 		if get_crom_object(a):
 			return a
 
 		mods = a['modifiers']
 			
 		artist = self.helper.add_person(a, record=sales_record, relative_id=f'artist-{seq_no+1}', role=role)
-		artist_label = a['role_label']
+		artist_label = a['label']
 		person = get_crom_object(a)
 
 		if mods:
@@ -429,7 +430,8 @@ class AddArtists(Configurable):
 				mod_name = list(GROUP_MODS & mods)[0] # TODO: use all matching types?
 				clsname = attribution_group_types[mod_name]
 				cls = getattr(vocab, clsname)
-				group_label = f'{clsname} of {artist_label}'
+				group_name = attribution_group_names[clsname]
+				group_label = f'{group_name} {artist_label}'
 				# The group URI is just the person URI with a suffix. In any case
 				# where the person is merged, the group should be merged as well.
 				# For example, when if "RUBENS" is merged, "School of RUBENS" should
@@ -459,7 +461,7 @@ class AddArtists(Configurable):
 		mods = CaseFoldingSet({m.strip() for m in mod.split(';')} - {''})
 		return mods
 
-	def model_object_artists(self, data, people, hmo, prod_event, attribution_modifiers, attribution_group_types, all_uncertain=False):
+	def model_object_artists(self, data, people, hmo, prod_event, attribution_modifiers, attribution_group_types, attribution_group_names, all_uncertain=False):
 		FORMERLY_ATTRIBUTED_TO = attribution_modifiers['formerly attributed to']
 		POSSIBLY = attribution_modifiers['possibly by']
 		UNCERTAIN = attribution_modifiers['uncertain']
@@ -502,7 +504,7 @@ class AddArtists(Configurable):
 		if artist_group_flag:
 			for seq_no, a_data in enumerate(artists):
 				artist_label = a_data.get('label') # TODO: this may not be right for groups
-				a_data = self.model_person_or_group(data, a_data, attribution_group_types, seq_no=seq_no, role='Artist', sales_record=sales_record)
+				a_data = self.model_person_or_group(data, a_data, attribution_group_types, attribution_group_names, seq_no=seq_no, role='Artist', sales_record=sales_record)
 				person = get_crom_object(a_data)
 				person.member_of = artist_group
 
@@ -516,7 +518,7 @@ class AddArtists(Configurable):
 				uncertain = all_uncertain
 				attribute_assignment_id = self.helper.prepend_uri_key(prod_event.id, f'ASSIGNMENT,Artist-{seq_no}')
 				artist_label = a_data.get('label') # TODO: this may not be right for groups
-				a_data = self.model_person_or_group(data, a_data, attribution_group_types, seq_no=seq_no, role='Artist', sales_record=sales_record)
+				a_data = self.model_person_or_group(data, a_data, attribution_group_types, attribution_group_names, seq_no=seq_no, role='Artist', sales_record=sales_record)
 				person = get_crom_object(a_data)
 				mods = a_data['modifiers']
 				attrib_assignment_classes = [model.AttributeAssignment]
@@ -557,7 +559,7 @@ class AddArtists(Configurable):
 					else:
 						prod_event.part = subevent
 
-	def model_object_influence(self, data, people, hmo, prod_event, attribution_modifiers, attribution_group_types, all_uncertain=False):
+	def model_object_influence(self, data, people, hmo, prod_event, attribution_modifiers, attribution_group_types, attribution_group_names, all_uncertain=False):
 		STYLE_OF = attribution_modifiers['style of']
 		COPY_AFTER = attribution_modifiers['copy after']
 		NON_ARTIST_MODS = COPY_AFTER | STYLE_OF
@@ -594,7 +596,7 @@ class AddArtists(Configurable):
 		# 3. Model all the non-artist records as an appropriate property/relationship of the object or production event:
 		for seq_no, a_data in enumerate(non_artist_assertions):
 			artist_label = a_data.get('label')
-			a_data = self.model_person_or_group(data, a_data, attribution_group_types, seq_no=seq_no, role='NonArtist', sales_record=sales_record)
+			a_data = self.model_person_or_group(data, a_data, attribution_group_types, attribution_group_names, seq_no=seq_no, role='NonArtist', sales_record=sales_record)
 			person = get_crom_object(a_data)
 
 			mods = a_data['modifiers']
@@ -662,7 +664,7 @@ class AddArtists(Configurable):
 		expected = {frozenset({'or'}), frozenset({'manner of', 'style of', 'or'})}
 		return mods == expected
 
-	def __call__(self, data:dict, *, attribution_modifiers, attribution_group_types):
+	def __call__(self, data:dict, *, attribution_modifiers, attribution_group_types, attribution_group_names):
 		'''Add modeling for artists as people involved in the production of an object'''
 		hmo = get_crom_object(data)
 		data.setdefault('_organizations', [])
@@ -743,10 +745,10 @@ class AddArtists(Configurable):
 			hmo.referred_to_by = vocab.Note(ident='', content=note)
 
 		# 2--3
-		self.model_object_influence(data, non_artist_assertions, hmo, prod_event, attribution_modifiers, attribution_group_types, all_uncertain=uncertain)
+		self.model_object_influence(data, non_artist_assertions, hmo, prod_event, attribution_modifiers, attribution_group_types, attribution_group_names, all_uncertain=uncertain)
 		
 		# 5
-		self.model_object_artists(data, artist_assertions, hmo, prod_event, attribution_modifiers, attribution_group_types, all_uncertain=uncertain)
+		self.model_object_artists(data, artist_assertions, hmo, prod_event, attribution_modifiers, attribution_group_types, attribution_group_names, all_uncertain=uncertain)
 		
 		# data['_artists'] is what's pulled out by the serializers
 		data['_artists'] = [a for a in artists if not self.is_or_anon(a)]

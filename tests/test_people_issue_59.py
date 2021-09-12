@@ -29,7 +29,7 @@ class PIRModelingTest_AR59(TestPeoplePipelineOutput):
 				'Union League Phila',
 				'art assn phila'
 			},
-			'STAR-assigned Number': {'46175'}
+			'STAR Identifier': {'46175'}
 		})
 
 

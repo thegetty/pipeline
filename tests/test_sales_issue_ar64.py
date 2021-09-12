@@ -26,11 +26,11 @@ class PIRModelingTest_AR64(TestSalesPipelineOutput):
         obj4 = objects['tag:getty.edu,2019:digital:pipeline:REPLACE-WITH-UUID:sales#OBJ,D-2748,0119,1942-06-02']
         obj5 = objects['tag:getty.edu,2019:digital:pipeline:REPLACE-WITH-UUID:sales#OBJ,Br-A52,0210,1690-09-04']
 
-        self.verifyGroup(groups, obj1, 'School', 'VENNE, ADRIAEN PIETERSZ. VAN DE')
-        self.verifyGroup(groups, obj2, 'PupilGroup', 'VALENCIENNES, PIERRE HENRI DE')
-        self.verifyGroup(groups, obj3, 'Workshop', 'BASSANO, JACOPO (JACOPO DA PONTE)')
-        self.verifyGroup(groups, obj4, 'Circle', 'MEULEN, ADAM FRANS VAN DER')
-        self.verifyGroup(groups, obj5, 'FollowerGroup', 'Clyne')
+        self.verifyGroup(groups, obj1, 'School of', 'VENNE, ADRIAEN PIETERSZ. VAN DE')
+        self.verifyGroup(groups, obj2, 'Pupil(s) of', 'VALENCIENNES, PIERRE HENRI DE')
+        self.verifyGroup(groups, obj3, 'Workshop of', 'BASSANO, JACOPO (JACOPO DA PONTE)')
+        self.verifyGroup(groups, obj4, 'Circle of', 'MEULEN, ADAM FRANS VAN DER')
+        self.verifyGroup(groups, obj5, 'Follower(s) of', 'Clyne')
 
     def verifyGroup(self, groups, obj, groupType, name):
         prod = obj['produced_by']
@@ -41,7 +41,7 @@ class PIRModelingTest_AR64(TestSalesPipelineOutput):
         artists = part['carried_out_by']
         self.assertEqual(len(artists), 1)
         artist = artists[0]
-        self.assertEqual(artist['_label'], f'{groupType} of Artist “{name}”')
+        self.assertEqual(artist['_label'], f'{groupType} {name}')
         
         group_id = artist['id']
         group = groups[group_id]

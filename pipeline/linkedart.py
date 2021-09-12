@@ -399,7 +399,9 @@ class MakeLinkedArtOrganization(MakeLinkedArtAgent):
 					ts.begin_of_the_begin = data['formation_clean'][0].strftime("%Y-%m-%dT%H:%M:%SZ")
 				if data['formation_clean'][1]:
 					ts.end_of_the_end = data['formation_clean'][1].strftime("%Y-%m-%dT%H:%M:%SZ")
-			ts._label = data['formation']
+			verbatim = data['formation']
+			ts._label = verbatim
+			ts.identified_by = model.Name(ident='', content=verbatim)
 			b.timespan = ts
 			b._label = "Formation of %s" % thing._label
 			thing.formed_by = b
@@ -412,7 +414,9 @@ class MakeLinkedArtOrganization(MakeLinkedArtAgent):
 					ts.begin_of_the_begin = data['dissolution_clean'][0].strftime("%Y-%m-%dT%H:%M:%SZ")
 				if data['dissolution_clean'][1]:
 					ts.end_of_the_end = data['dissolution_clean'][1].strftime("%Y-%m-%dT%H:%M:%SZ")
-			ts._label = data['dissolution']
+			verbatim = data['dissolution']
+			ts._label = verbatim
+			ts.identified_by = model.Name(ident='', content=verbatim)
 			d.timespan = ts
 			d._label = "Dissolution of %s" % thing._label
 			thing.dissolved_by = d
@@ -526,7 +530,9 @@ class MakeLinkedArtPerson(MakeLinkedArtAgent):
 					ts.begin_of_the_begin = data['birth_clean'][0].strftime("%Y-%m-%dT%H:%M:%SZ")
 				if data['birth_clean'][1]:
 					ts.end_of_the_end = data['birth_clean'][1].strftime("%Y-%m-%dT%H:%M:%SZ")
-			ts._label = data['birth']
+			verbatim = data['birth']
+			ts._label = verbatim
+			ts.identified_by = model.Name(ident='', content=verbatim)
 			b.timespan = ts
 			b._label = "Birth of %s" % who._label
 			who.born = b
@@ -539,7 +545,9 @@ class MakeLinkedArtPerson(MakeLinkedArtAgent):
 					ts.begin_of_the_begin = data['death_clean'][0].strftime("%Y-%m-%dT%H:%M:%SZ")
 				if data['death_clean'][1]:
 					ts.end_of_the_end = data['death_clean'][1].strftime("%Y-%m-%dT%H:%M:%SZ")
-			ts._label = data['death']
+			verbatim = data['death']
+			ts._label = verbatim
+			ts.identified_by = model.Name(ident='', content=verbatim)
 			d.timespan = ts
 			d._label = "Death of %s" % who._label
 			who.died = d

@@ -511,11 +511,11 @@ class PopulateKnoedlerObject(Configurable, pipeline.linkedart.PopulateObject):
 			)
 			mlap(a)
 
+		title_refs = [sales_record]
 		if title_ref:
+			title_refs.append(title_ref)
 # 			warnings.warn(f'TODO: parse out citation information from title reference: {title_ref}')
-			title = [label, {'referred_to_by': [title_ref]}]
-		else:
-			title = label
+		title = [label, {'referred_to_by': title_refs}]
 		data['_object'] = {
 			'title': title,
 			'identifiers': identifiers,

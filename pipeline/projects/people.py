@@ -213,10 +213,12 @@ class AddPerson(Configurable):
 			if remaining:
 				warnings.warn(f'UNHANDLED PEOPLE TYPES: {remaining}')
 
-			active_args = self.helper.person_identity.clamped_timespan_args(data, name)
-			for t in types:
-				a = self.helper.person_identity.professional_activity(name, classified_as=[t], **active_args)
-				data['events'].append(a)
+			# model professional activity, but not if this record is a generic group.
+			if not self.helper.person_identity.is_anonymous_group(name):
+				active_args = self.helper.person_identity.clamped_timespan_args(data, name)
+				for t in types:
+					a = self.helper.person_identity.professional_activity(name, classified_as=[t], **active_args)
+					data['events'].append(a)
 
 			for k in ('century_active', 'period_active'):
 				with suppress(KeyError):

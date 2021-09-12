@@ -177,10 +177,8 @@ class PersonIdentity:
 		If a `classified_as` list is supplied, it is used to further classify
 		the `vocab.Active` object.
 		'''
-		if classified_as:
-			classified_as.append(vocab.Active)
-		else:
-			classified_as = [vocab.Active]
+		if not classified_as:
+			classified_as = [model.Activity]
 		
 		args = {'ident': '', 'label': f'Professional activity of {name}'}
 		if 'ident' in kwargs:

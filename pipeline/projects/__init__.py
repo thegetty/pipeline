@@ -454,7 +454,7 @@ class PipelineBase:
 		helper.add_services(self.services)
 		self.static_instances = StaticInstanceHolder(self.setup_static_instances())
 		helper.add_static_instances(self.static_instances)
-		vocab.register_vocab_class('StarNumber', {'parent': vocab.LocalNumber, 'id': 'http://ns.getty.edu/pipeline-star-number', 'label': 'STAR-assigned Number'})
+		vocab.register_vocab_class('StarNumber', {'parent': vocab.LocalNumber, 'id': 'https://data.getty.edu/local/thesaurus/star-identifier', 'label': 'STAR Identifier'})
 		vocab.register_instance('function', {'parent': model.Type, 'id': '300444971', 'label': 'Function (general concept)'})
 		vocab.register_vocab_class('Internal', {"parent": model.LinguisticObject, "id":"300444972", "label": "private (general concept)", "metatype": "function"})
 		vocab.register_vocab_class('External', {"parent": model.LinguisticObject, "id":"300444973", "label": "public (general concept)", "metatype": "function"})

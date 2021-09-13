@@ -17,7 +17,7 @@ class PIRModelingTest_AR54(TestPeoplePipelineOutput):
         people = output['model-person']
         person = people['tag:getty.edu,2019:digital:pipeline:REPLACE-WITH-UUID:shared#PERSON,AUTH,Parsons%2C%20Charles%20H.']
         self.assertEqual(classified_identifiers(person), {
-        	'STAR-assigned Number': '46035',
+        	'STAR Identifier': '46035',
         	'Personal Name': 'Parsons, Chs.',
         	'Primary Name': 'Parsons, Charles H.',
         })

@@ -88,6 +88,17 @@ class KnoedlerUtilityHelper(UtilityHelper):
 		self.title_ref_re = re.compile(r'Sales Book (\d+), (\d+-\d+), f.(\d+)')
 		self.uid_tag_prefix = self.proj_prefix
 
+	def stock_number_identifier(self, data, date):
+		stock_number = data.get('knoedler_number')
+		if stock_number:
+			ident = f'Stock Number {stock_number}'
+			if date:
+				ident += f' ({date})'
+			return ident
+		else:
+			pi_num = data['pi_record_no']
+			return f'[GRI Number {pi_num}]'
+
 	def add_person(self, data, record, relative_id, **kwargs):
 		self.person_identity.add_uri(data, record_id=relative_id)
 		key = data['uri_keys']
@@ -527,9 +538,9 @@ class PopulateKnoedlerObject(Configurable, pipeline.linkedart.PopulateObject):
 		data['_object'].update({k:v for k,v in odata.items() if k in ('materials', 'dimensions', 'knoedler_number', 'present_location')})
 
 		try:
-			knum = odata['knoedler_number']
-			uri_key	= ('Object', knum)
-			identifiers.append(self.helper.knoedler_number_id(knum, vocab.StockNumber))
+			stock_number = odata['knoedler_number']
+			uri_key	= ('Object', stock_number)
+			identifiers.append(self.helper.knoedler_number_id(stock_number, vocab.StockNumber))
 		except:
 			uri_key = ('Object', 'Internal', data['pi_record_no'])
 		uri = self.helper.make_object_uri(data['pi_record_no'], *uri_key)
@@ -590,8 +601,7 @@ class PopulateKnoedlerObject(Configurable, pipeline.linkedart.PopulateObject):
 					else:
 						owner_data['uri'] = self.helper.make_proj_uri('ORG', 'NAME', inst, 'PLACE', loc)
 				else:
-					warnings.warn(f'*** what is the object key?')
-					pprint.pprint(data)
+					warnings.warn(f'*** Object present location data has a location, but not an institution: {pprint.pformat(data)}')
 					owner_data = {
 						'label': '(Anonymous organization)',
 						'uri': self.helper.make_proj_uri('ORG', 'CURR-OWN', *now_key),
@@ -720,7 +730,7 @@ class TransactionHandler(ProvenanceBase):
 					knoedler_group.append(person)
 # 					print(f'   {share:<10} {name:<50}')
 				except ValueError as e:
-					pprint.pprint(p)
+					warnings.warn(f'ValueError while handling shared rights ({e}): {pprint.pformat(p)}')
 					raise
 					
 # 			print(f'   {str(remaining):<10} {knoedler._label:<50}')
@@ -744,7 +754,7 @@ class TransactionHandler(ProvenanceBase):
 
 		sales_record = get_crom_object(data['_text_row'])
 		hmo = get_crom_object(data['_object'])
-		object_number = data['_object']['knoedler_number']
+		sn_ident = self.helper.stock_number_identifier(data['_object'], date)
 		
 		price_data = {}
 		if price_info and 'currency' in price_info:
@@ -792,7 +802,7 @@ class TransactionHandler(ProvenanceBase):
 		if amnt:
 			tx_uri = tx.id
 			payment_id = tx_uri + '-Payment'
-			paym = model.Payment(ident=payment_id, label=f'Payment for Stock Number {object_number} ({date})')
+			paym = model.Payment(ident=payment_id, label=f'Payment for {sn_ident}')
 			paym.paid_amount = amnt
 			tx.part = paym
 			for kp in knoedler_group:
@@ -805,7 +815,7 @@ class TransactionHandler(ProvenanceBase):
 				for i, partdata in enumerate(parts):
 					person, part_amnt = partdata
 					shared_payment_id = tx_uri + f'-Payment-{i}-share'
-					shared_paym = model.Payment(ident=shared_payment_id, label=f"{person._label} share of payment for {object_number}")
+					shared_paym = model.Payment(ident=shared_payment_id, label=f"{person._label} share of payment for {sn_ident}")
 					shared_paym.paid_amount = part_amnt
 					if incoming:
 						shared_paym.paid_from = person
@@ -830,7 +840,7 @@ class TransactionHandler(ProvenanceBase):
 		book_id, page_id, row_id = record_id(rec)
 
 		hmo = get_crom_object(data['_object'])
-		object_number = data['_object']['knoedler_number']
+		sn_ident = self.helper.stock_number_identifier(data['_object'], date)
 
 		dir = 'In' if incoming else 'Out'
 		if purpose == 'returning':
@@ -842,10 +852,11 @@ class TransactionHandler(ProvenanceBase):
 		if self.helper.transaction_contains_multiple_objects(data, incoming):
 			multi_label = self.helper.transaction_multiple_object_label(data, incoming)
 			tx._label = f'{dir_label} of Stock Numbers {multi_label} ({date})'
-			name = f'{dir_label} of Stock Number {object_number} ({date})'
+			name = f'{dir_label} of {sn_ident}'
 			acq._label = name
 		else:
-			name = f'{dir_label} of Stock Number {object_number} ({date})'
+			sn_ident = self.helper.stock_number_identifier(data['_object'], date)
+			name = f'{dir_label} of {sn_ident}'
 			tx.identified_by = model.Name(ident='', content=name)
 			tx._label = name
 			acq._label = name
@@ -876,6 +887,8 @@ class TransactionHandler(ProvenanceBase):
 
 		tx = self._empty_tx(data, incoming, purpose=purpose)
 		tx_uri = tx.id
+		if 'knoedler_number' not in data:
+			tx.referred_to_by = vocab.Note(ident='', content='No Knoedler stock number was assigned to the object that is the subject of this provenance activity.')
 
 		tx_data = add_crom_data(data={'uri': tx_uri}, what=tx)
 		if date_key:
@@ -1053,7 +1066,8 @@ class ModelTheftOrLoss(TransactionHandler):
 		rec = data['book_record']
 		pi_rec = data['pi_record_no']
 		hmo = get_crom_object(data['_object'])
-		object_number = data['_object']['knoedler_number']
+		sn_ident = self.helper.stock_number_identifier(data['_object'], None)
+		
 		self.add_incoming_tx(data)
 		tx_out = self._empty_tx(data, incoming=False)
 
@@ -1066,7 +1080,7 @@ class ModelTheftOrLoss(TransactionHandler):
 			label_type = 'Theft'
 			transfer_class = vocab.Theft
 
-		tx_out._label = f'{label_type} of {object_number}'
+		tx_out._label = f'{label_type} of {sn_ident}'
 		tx_out_data = add_crom_data(data={'uri': tx_out.id, 'label': tx_out._label}, what=tx_out)
 
 		title = self.helper.title_value(data['_object'].get('title'))
@@ -1187,11 +1201,11 @@ class ModelInventorying(TransactionHandler):
 		hmo = get_crom_object(odata)
 		object_label = f'“{hmo._label}”'
 
-		knum = odata.get('knoedler_number')
+		sn_ident = self.helper.stock_number_identifier(odata, date)
 
 		in_tx = self.add_incoming_tx(data)
 		tx_out = self._empty_tx(data, incoming=False)
-		inv_label = f'Knoedler Inventorying of Stock Number {knum} ({date})'
+		inv_label = f'Knoedler Inventorying of {sn_ident}'
 		tx_out._label = inv_label
 		tx_out.identified_by = model.Name(ident='', content=inv_label)
 

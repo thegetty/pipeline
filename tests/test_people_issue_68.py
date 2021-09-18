@@ -15,9 +15,15 @@ class PIRModelingTest_AR68(TestPeoplePipelineOutput):
         output = self.run_pipeline('ar68')
         groups = output['model-groups']
         
-        # This is a corporate_body Group, and so should not have any professional activities carried out
+        # This is a corporate_body Group, and so should not have any professional activities carried out.
+        # However, it *should* have a sojourn carried out (and since this is a corporate body, the sojourn is an Establishment activity)
         group1 = groups['tag:getty.edu,2019:digital:pipeline:REPLACE-WITH-UUID:shared#PERSON,AUTH,Nebraska%20Art%20Association']
-        self.assertNotIn('carried_out', group1)
+        activities = group1['carried_out']
+        self.assertEqual(len(activities), 1)
+        cls = activities[0]['classified_as']
+        self.assertEqual(len(cls), 1)
+        cl = cls[0]
+        self.assertEqual(cl['_label'], 'Establishment')
         
         # This is a generic group that should have professional activity modeled based on the century active
         group2 = groups['tag:getty.edu,2019:digital:pipeline:REPLACE-WITH-UUID:shared#GROUP,AUTH,%5BFRENCH%20-%2015TH%20C.%5D']

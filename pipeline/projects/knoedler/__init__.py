@@ -104,7 +104,22 @@ class KnoedlerUtilityHelper(UtilityHelper):
 		key = data['uri_keys']
 		if key in self.services['people_groups']:
 			warnings.warn(f'*** TODO: model person record as a GROUP: {pprint.pformat(key)}')
-		return super().add_person(data, record=record, relative_id=relative_id, **kwargs)
+		person = super().add_person(data, record=record, relative_id=relative_id, **kwargs)
+		if record:
+			person.referred_to_by = record
+		return person
+
+	def make_place(self, *args, sales_record=None, **kwargs):
+		'''
+		Add a reference to the sales record in places that are modeled.
+		This will only add references to the most-specific place being modeled,
+		leaving the 'part_of' hierarchy remain un-referenced.
+		'''
+		data = super().make_place(*args, **kwargs)
+		if sales_record:
+			p = get_crom_object(data)
+			p.referred_to_by = sales_record
+		return data
 
 	def title_value(self, title):
 		if not isinstance(title, str):
@@ -368,7 +383,7 @@ class AddPage(Configurable):
 
 		data['_text_page'] = {
 			'uri': self.helper.make_proj_uri('Text', 'Book', book_id, 'Page', page_id),
-			'object_type': vocab.AccountBookText,
+			'object_type': vocab.PageText,
 			'label': f'Knoedler Stock Book {book_id}, Page {page_id}',
 			'identifiers': [(page_id, vocab.LocalNumber(ident=''))],
 			'referred_to_by': [],
@@ -457,12 +472,12 @@ class AddArtists(Configurable):
 
 		artists = data.get('_artists', [])
 
-		sales_record = get_crom_object(data['_text_row'])
 		pi = self.helper.person_identity
 
 		for seq_no, a in enumerate(artists):
 			artist_label = a.get('role_label')
 			person = get_crom_object(a)
+			person.referred_to_by = sales_record
 
 			subprod_path = self.helper.make_uri_path(*a["uri_keys"])
 			subevent_uri = event_uri + f'-{subprod_path}'
@@ -530,9 +545,11 @@ class PopulateKnoedlerObject(Configurable, pipeline.linkedart.PopulateObject):
 		data['_object'] = {
 			'title': title,
 			'identifiers': identifiers,
+			'referred_to_by': [sales_record],
 			'_record': data['_text_row'],
 			'_locations': [],
 			'_organizations': [],
+			'_text_row': data['_text_row'],
 		}
 		self.helper.copy_source_information(data['_object'], data)
 		data['_object'].update({k:v for k,v in odata.items() if k in ('materials', 'dimensions', 'knoedler_number', 'present_location')})
@@ -575,6 +592,7 @@ class PopulateKnoedlerObject(Configurable, pipeline.linkedart.PopulateObject):
 		return data
 
 	def _populate_object_present_location(self, data:dict):
+		sales_record = get_crom_object(data['_text_row'])
 		hmo = get_crom_object(data)
 		location = data.get('present_location')
 		if location:
@@ -613,7 +631,7 @@ class PopulateKnoedlerObject(Configurable, pipeline.linkedart.PopulateObject):
 				# otherwise all such places are liable to be merged during URI
 				# reconciliation as part of the prev/post sale rewriting.
 				base_uri = self.helper.prepend_uri_key(hmo.id, 'PLACE')
-				place_data = self.helper.make_place(current, base_uri=base_uri)
+				place_data = self.helper.make_place(current, base_uri=base_uri, sales_record=sales_record)
 				place = get_crom_object(place_data)
 				hmo.current_location = place
 
@@ -679,6 +697,10 @@ class TransactionHandler(ProvenanceBase):
 			tx = vocab.make_multitype_obj(vocab.SaleAsReturn, vocab.ProvenanceEntry, ident=tx_uri)
 		else:
 			tx = vocab.ProvenanceEntry(ident=tx_uri)
+		
+		sales_record = get_crom_object(data['_text_row'])
+		tx.referred_to_by = sales_record
+		
 		return tx
 
 	def ownership_right(self, frac, person=None):
@@ -1127,6 +1149,7 @@ class ModelFinalSale(TransactionHandler):
 		# reset prov entries and people because we're only interested in those
 		# related to the final sale on this branch of the graph
 		odata = data['_object'].copy()
+		sales_record = get_crom_object(data['_text_row'])
 		self.helper.copy_source_information(data, odata)
 
 		odata['_prov_entries'] = []
@@ -1135,6 +1158,7 @@ class ModelFinalSale(TransactionHandler):
 		org = odata.get('_final_org')
 		if org:
 			data['_record'] = data['_text_row']
+			odata['_record'] = data['_record']
 			rec = data['book_record']
 			book_id = rec['stock_book_no']
 			page_id = rec['page_number']

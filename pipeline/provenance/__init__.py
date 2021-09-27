@@ -32,7 +32,7 @@ class ProvenanceBase(Configurable):
 		self.helper.add_person(data, record=record, relative_id=relative_id, **kwargs)
 		return data
 
-	def related_procurement(self, hmo, tx_label_args, current_tx=None, current_ts=None, buyer=None, seller=None, previous=False, ident=None, make_label=None):
+	def related_procurement(self, hmo, tx_label_args, current_tx=None, current_ts=None, buyer=None, seller=None, previous=False, ident=None, make_label=None, sales_record=None):
 		'''
 		Returns a new `vocab.ProvenanceEntry` object (and related acquisition) that is temporally
 		related to the supplied procurement and associated data. The new procurement is for
@@ -60,6 +60,8 @@ class ProvenanceBase(Configurable):
 			make_label = _make_label_default
 
 		tx = vocab.ProvenanceEntry(ident=ident)
+		if sales_record:
+			tx.referred_to_by = sales_record
 		tx_label = make_label(*tx_label_args)
 		tx._label = tx_label
 		tx.identified_by = model.Name(ident='', content=tx_label)
@@ -96,7 +98,7 @@ class ProvenanceBase(Configurable):
 
 	def handle_prev_post_owner(self, data, hmo, tx_data, sale_type, lot_object_key, owner_record, record_id, rev, ts=None, make_label=None):
 		current_tx = get_crom_object(tx_data)
-		sales_record = get_crom_object(data['_record'])
+		sales_record = get_crom_object(data.get('_record', data.get('_text_row')))
 		if rev:
 			rel = f'leading to the previous ownership of'
 			source_label = 'Source of information on history of the object prior to the current sale.'
@@ -132,7 +134,7 @@ class ProvenanceBase(Configurable):
 		# reconciliation as part of the prev/post sale rewriting.
 		tx_uri = self.helper.prepend_uri_key(hmo.id, f'PROV-{record_id}')
 		tx_label_args = tuple([self.helper, sale_type, 'Sold', rel] + list(lot_object_key))
-		tx, _ = self.related_procurement(hmo, tx_label_args, current_tx, ts, buyer=owner, previous=rev, ident=tx_uri, make_label=make_label)
+		tx, _ = self.related_procurement(hmo, tx_label_args, current_tx, ts, buyer=owner, previous=rev, ident=tx_uri, make_label=make_label, sales_record=sales_record)
 		if owner_record.get('own_auth_e'):
 			content = owner_record['own_auth_e']
 			tx.referred_to_by = vocab.Note(ident='', content=content)

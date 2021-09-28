@@ -750,6 +750,7 @@ class UtilityHelper:
 			'state': vocab.instances['province'],
 			'country': vocab.instances['nation'],
 			'sovereign': vocab.instances['sovereign'],
+			'address': vocab.instances['address'],
 		}
 
 		if data is None:

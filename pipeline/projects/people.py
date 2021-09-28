@@ -142,36 +142,52 @@ class AddPerson(Configurable):
 			cite = vocab.Note(ident='', content=award) # TODO: add proper classification for an Awards Statement
 			data['referred_to_by'].append(cite)
 
-	def handle_places(self, data):
+	def model_sojourn(self, data, loc):
 		base_uri = self.helper.make_proj_uri('PLACE', '')
-		for loc in data.get('locations', []):
-			l = loc.get('location')
-			if l:
-				current = parse_location_name(l, uri_base=self.helper.proj_prefix)
-				place_data = self.helper.make_place(current, base_uri=base_uri)
-				data['places'].append(place_data)
-				note = loc.get('location_note')
-				if note:
-					note = vocab.Note(ident='', content=note)
-					data['referred_to_by'].append(note)
-				date = loc.get('location_date')
-				if date:
-					note = vocab.BibliographyStatement(ident='', content=f'Residence in {l} ({date})')
-					data['referred_to_by'].append(note)
+		cb = data.get('corporate_body', False)
+		sojourn_type = vocab.Establishment if cb else vocab.Residing
+		sdata = {
+			'type': sojourn_type,
+			'referred_to_by': [],
+		}
+		
+		verbatim_date = loc.get('address_date')
+		if verbatim_date:
+			date_range = date_cleaner(verbatim_date)
+			if date_range:
+				begin, end = date_range
+				ts = timespan_from_outer_bounds(*date_range)
+				ts.identified_by = model.Name(ident='', content=verbatim_date)
+				sdata['timespan'] = add_crom_data({'address_date': verbatim_date, 'begin': begin, 'end': end}, ts)
+		
+		current = None
+		l = loc.get('location')
+		if l:
+			current = parse_location_name(l, uri_base=self.helper.proj_prefix)
+		address = loc.get('address')
+		if address:
+			current = {
+				'name': address,
+				'part_of': current,
+				'type': 'address',
+			}
 
-			address = loc.get('address')
-			if address:
-				contact = model.Identifier(ident='', content=address)
-				contact_data = add_crom_data(data={}, what=contact)
-				data['contact_point'].append(contact_data)
-				note = loc.get('address_note')
-				if note:
-					note = vocab.Note(ident='', content=note)
-					data['referred_to_by'].append(note)
-				date = loc.get('address_date')
-				if date:
-					note = vocab.BibliographyStatement(ident='', content=f'Address at {l} ({date})')
-					data['referred_to_by'].append(note)
+		for k in ('address_note', 'location_note'):
+			note = loc.get(k)
+			if note:
+				sdata['referred_to_by'].append(vocab.Note(ident='', content=note))
+
+		if current:
+			place_data = self.helper.make_place(current, base_uri=base_uri)
+			data['_places'].append(place_data)
+			sdata['place'] = place_data
+		return sdata
+
+	def handle_places(self, data):
+		data.setdefault('sojourns', [])
+		for i, loc in enumerate(data.get('locations', [])):
+			sdata = self.model_sojourn(data, loc)
+			data['sojourns'].append(sdata)
 
 	def model_person_or_group(self, data):
 		name = data['auth_name']
@@ -231,8 +247,7 @@ class AddPerson(Configurable):
 		star_id = data.get('star_record_no')
 		data.setdefault('referred_to_by', [])
 		data.setdefault('events', [])
-		data.setdefault('places', [])
-		data.setdefault('contact_point', [])
+		data.setdefault('_places', [])
 		data.setdefault('identifiers', [self.helper.gpi_number_id(star_id)])
 
 		self.handle_dates(data)
@@ -248,6 +263,13 @@ class PeoplePipeline(PipelineBase):
 		project_name = 'people'
 		self.input_path = input_path
 		self.services = None
+
+		vocab.register_vocab_class('Residing', {"parent": model.Activity, "id":"300393179", "label": "Residing"})
+		vocab.register_vocab_class('Establishment', {"parent": model.Activity, "id":"300393212", "label": "Establishment"})
+		vocab.register_vocab_class('StreetAddress', {"parent": model.Identifier, "id":"300386983", "label": "Street Address"})
+
+		vocab.register_instance('address', {'parent': model.Type, 'id': '300386983', 'label': 'Street Address'})
+
 
 		helper = PeopleUtilityHelper(project_name)
 
@@ -293,7 +315,6 @@ class PeoplePipeline(PipelineBase):
 							'locations': {
 								'prefixes': (
 									'location',
-									'location_date',
 									'location_note',
 									'address',
 									'address_date',
@@ -350,7 +371,7 @@ class PeoplePipeline(PipelineBase):
 		)
 
 		_ = self.add_person_or_group_chain(g, contents_records, serialize=True)
-		_ = self.add_places_chain(g, contents_records, key='places', serialize=True)
+		_ = self.add_places_chain(g, contents_records, key='_places', serialize=True)
 		
 
 		self.graph = g

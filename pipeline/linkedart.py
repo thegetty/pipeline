@@ -28,6 +28,27 @@ def remove_crom_object(data: dict):
 	return data
 
 class MakeLinkedArtRecord:
+	def set_referred_to_by(self, data, thing):
+		for notedata in data.get('referred_to_by', []):
+			if isinstance(notedata, tuple):
+				content, itype = notedata
+				if itype is not None:
+					if isinstance(itype, type):
+						note = itype(content=content)
+					elif isinstance(itype, object):
+						note = itype
+						note.content = content
+					else:
+						note = vocab.Note(content=content)
+						note.classified_as = itype
+			elif isinstance(notedata, model.BaseResource):
+				note = notedata
+			elif isinstance(notedata, str):
+				note = vocab.Note(content=notedata)
+			else:
+				note = notedata
+			thing.referred_to_by = note
+
 	def set_properties(self, data, thing):
 		'''
 		The following keys in `data` are handled to set properties on `thing`:
@@ -65,25 +86,7 @@ class MakeLinkedArtRecord:
 			]
 		}
 		'''
-		for notedata in data.get('referred_to_by', []):
-			if isinstance(notedata, tuple):
-				content, itype = notedata
-				if itype is not None:
-					if isinstance(itype, type):
-						note = itype(content=content)
-					elif isinstance(itype, object):
-						note = itype
-						note.content = content
-					else:
-						note = vocab.Note(content=content)
-						note.classified_as = itype
-			elif isinstance(notedata, model.BaseResource):
-				note = notedata
-			elif isinstance(notedata, str):
-				note = vocab.Note(content=notedata)
-			else:
-				note = notedata
-			thing.referred_to_by = note
+		self.set_referred_to_by(data, thing)
 
 		for identifier in data.get('identifiers', []):
 			if isinstance(identifier, tuple):
@@ -358,6 +361,17 @@ class MakeLinkedArtAgent(MakeLinkedArtRecord):
 		for uri in data.get('exact_match', []):
 			thing.exact_match = uri
 
+		for sdata in data.get('sojourns', []):
+			label = sdata.get('label', 'Sojourn activity')
+			stype = sdata.get('type', model.Activity)
+			act = stype(ident='', label=label)
+			ts = get_crom_object(sdata.get('timespan'))
+			place = get_crom_object(sdata.get('place'))
+			act.timespan = ts
+			act.took_place_at = place
+			thing.carried_out = act
+			self.set_referred_to_by(sdata, act)
+
 		# Locations are names of residence places (P74 -> E53)
 		# XXX FIXME: Places are their own model
 		if 'places' in data:
@@ -573,6 +587,7 @@ class MakeLinkedArtPlace(MakeLinkedArtRecord):
 		'province': vocab.instances['province'],
 		'state': vocab.instances['province'],
 		'country': vocab.instances['nation'],
+		'address': vocab.instances['address']
 	}
 
 	def __init__(self, base_uri=None, *args, **kwargs):
@@ -636,6 +651,7 @@ def make_la_place(data:dict, base_uri=None):
 		'province': vocab.instances['province'],
 		'state': vocab.instances['province'],
 		'country': vocab.instances['nation'],
+		'address': vocab.instances['address']
 	}
 
 	if data is None:

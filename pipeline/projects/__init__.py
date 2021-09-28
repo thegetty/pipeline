@@ -603,7 +603,7 @@ class PipelineBase:
 					warnings.warn(f'*** Failed to load service JSON: {file}: {e}')
 					return None
 		elif file.suffix == '.sqlite':
-			s = URL(drivername='sqlite', database=file.absolute())
+			s = URL.create(drivername='sqlite', database=str(file.absolute()))
 			e = create_engine(s)
 			return e
 

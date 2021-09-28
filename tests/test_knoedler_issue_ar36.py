@@ -28,13 +28,13 @@ class PIRModelingTest_AR36(TestKnoedlerPipelineOutput):
 
         # test the link from the activities to the row record
         for data in activities.values():
-            refs = {r['_label'] for r in data['referred_to_by']}
+            refs = {r.get('_label') for r in data['referred_to_by']}
             self.assertIn(row_name, refs)
 
         # test the link from the people to the row record
         for person in people.values():
             self.assertIn('referred_to_by', person)
-            refs = {r['_label'] for r in person['referred_to_by']}
+            refs = {r.get('_label') for r in person['referred_to_by']}
             self.assertIn(row_name, refs)
 
 

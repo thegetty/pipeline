@@ -532,12 +532,13 @@ def classified_identifiers(data, key='identified_by'):
 
 def classified_identifier_sets(data, key='identified_by'):
 	classified_identifiers = defaultdict(set)
-	identifiers = [(i['content'], i.get('classified_as', [])) for i in data.get(key, [])]
+	identifiers = [(i.get('content'), i.get('classified_as', [])) for i in data.get(key, [])]
 	for (content, classification) in identifiers:
-		if len(classification):
-			for cl in classification:
-				label = cl['_label']
-				classified_identifiers[label].add(content)
-		else:
-			classified_identifiers[None].add(content)
+		if content:
+			if len(classification):
+				for cl in classification:
+					label = cl['_label']
+					classified_identifiers[label].add(content)
+			else:
+				classified_identifiers[None].add(content)
 	return classified_identifiers

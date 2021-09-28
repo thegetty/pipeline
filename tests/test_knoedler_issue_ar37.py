@@ -17,33 +17,33 @@ class PIRModelingTest_AR37(TestKnoedlerPipelineOutput):
         
         # Purchase
         purchase = activities['tag:getty.edu,2019:digital:pipeline:REPLACE-WITH-UUID:knoedler#TX,In,3,110,38']
-        self.assertEqual(classified_identifier_sets(purchase), {
+        self.assertDictContainsSubset({
             None: {'Knoedler Purchase of Stock Number 2391 (1880)'}
-        })
+        }, classified_identifier_sets(purchase))
         self.assertNotIn('K-1966', purchase['_label'])
 
         # Sale
         sale = activities['tag:getty.edu,2019:digital:pipeline:REPLACE-WITH-UUID:knoedler#TX,Out,3,110,38']
-        self.assertEqual(classified_identifier_sets(sale), {
+        self.assertDictContainsSubset({
             None: {'Knoedler Sale of Stock Number 2391 (1880-05-14)'}
-        })
+        }, classified_identifier_sets(sale))
         self.assertNotIn('K-1966', sale['_label'])
 
         # Inventorying
         inv = activities['tag:getty.edu,2019:digital:pipeline:REPLACE-WITH-UUID:knoedler#TX,Out,3,53,2']
-        self.assertEqual(classified_identifier_sets(inv), {
+        self.assertDictContainsSubset({
             None: {'Knoedler Inventorying of Stock Number 1228 (1878-08-14)'}
-        })
+        }, classified_identifier_sets(inv))
         self.assertNotIn('K-547', inv['_label'])
 
         # Record without a stock number
         missing_sn_act = activities['tag:getty.edu,2019:digital:pipeline:REPLACE-WITH-UUID:knoedler#TX,Out,1,75,7']
-        self.assertEqual(classified_identifier_sets(missing_sn_act), {
+        self.assertDictContainsSubset({
             None: {'Knoedler Sale of [GRI Number K-56]'}
-        })
-        self.assertEqual(classified_identifier_sets(missing_sn_act, 'referred_to_by'), {
+        }, classified_identifier_sets(missing_sn_act))
+        self.assertDictContainsSubset({
             'Note': {'No Knoedler stock number was assigned to the object that is the subject of this provenance activity.'}
-        })
+        }, classified_identifier_sets(missing_sn_act, 'referred_to_by'))
 
 
 if __name__ == '__main__':

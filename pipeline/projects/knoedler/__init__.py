@@ -344,22 +344,18 @@ class AddBook(Configurable):
 		book = data['book_record']
 		book_id, _, _ = record_id(book)
 
-		seq = vocab.SequencePosition(ident='', value=book_id)
-		seq.unit = vocab.instances['numbers']
-
 		data['_text_book'] = {
 			'uri': self.helper.make_proj_uri('Text', 'Book', book_id),
 			'object_type': vocab.AccountBookText,
 			'label': f'Knoedler Stock Book {book_id}',
-			'identifiers': [self.helper.knoedler_number_id(book_id)],
-			'dimensions': [seq],
+			'identifiers': [self.helper.knoedler_number_id(book_id, id_class=vocab.BookNumber)],
 		}
 
 		data['_physical_book'] = {
 			'uri': self.helper.make_proj_uri('Book', book_id),
 			'object_type': vocab.Book,
 			'label': f'Knoedler Stock Book {book_id}',
-			'identifiers': [self.helper.knoedler_number_id(book_id)],
+			'identifiers': [self.helper.knoedler_number_id(book_id, id_class=vocab.BookNumber)],
 			'carries': [data['_text_book']]
 		}
 
@@ -378,25 +374,21 @@ class AddPage(Configurable):
 		book = data['book_record']
 		book_id, page_id, _ = record_id(book)
 
-		seq = vocab.SequencePosition(ident='', value=page_id)
-		seq.unit = vocab.instances['numbers']
-
 		data['_text_page'] = {
 			'uri': self.helper.make_proj_uri('Text', 'Book', book_id, 'Page', page_id),
 			'object_type': vocab.PageText,
 			'label': f'Knoedler Stock Book {book_id}, Page {page_id}',
-			'identifiers': [(page_id, vocab.LocalNumber(ident=''))],
+			'identifiers': [self.helper.knoedler_number_id(page_id, id_class=vocab.PageNumber)],
 			'referred_to_by': [],
 			'part_of': [data['_text_book']],
 			'part': [],
-			'dimensions': [seq],
 		}
 
 		data['_physical_page'] = {
 			'uri': self.helper.make_proj_uri('Book', book_id, 'Page', page_id),
 			'object_type': vocab.Page,
 			'label': f'Knoedler Stock Book {book_id}, Page {page_id}',
-			'identifiers': [self.helper.knoedler_number_id(book_id)],
+			'identifiers': [self.helper.knoedler_number_id(page_id, id_class=vocab.PageNumber)],
 			'part_of': [data['_physical_book']],
 			'carries': [data['_text_page']],
 		}
@@ -427,8 +419,6 @@ class AddRow(Configurable):
 		book = data['book_record']
 		book_id, page_id, row_id = record_id(book)
 		rec_num = data["star_record_no"]
-		seq = vocab.SequencePosition(ident='', value=row_id)
-		seq.unit = vocab.instances['numbers']
 
 		notes = []
 		# TODO: add attributed star record number to row as a LocalNumber
@@ -440,10 +430,9 @@ class AddRow(Configurable):
 		data['_text_row'] = {
 			'uri': self.helper.make_proj_uri('Text', 'Book', book_id, 'Page', page_id, 'Row', row_id),
 			'label': f'Knoedler Stock Book {book_id}, Page {page_id}, Row {row_id}',
-			'identifiers': [vocab.LocalNumber(ident='', content=row_id), star_id],
+			'identifiers': [self.helper.knoedler_number_id(row_id, id_class=vocab.EntryNumber), star_id],
 			'part_of': [data['_text_page']],
 			'referred_to_by': notes,
-			'dimensions': [seq],
 		}
 		make_la_lo(data['_text_row'])
 
@@ -1262,6 +1251,12 @@ class KnoedlerPipeline(PipelineBase):
 		helper.static_instances = self.static_instances
 
 		vocab.register_vocab_class('SaleAsReturn', {"parent": model.Activity, "id":"XXXXXX005", "label": "Sale (Return to Original Owner)"})
+
+		vocab.register_vocab_class('EntryNumber', {"parent": model.Identifier, "id":"300445023", "label": "Entry Number"})
+		vocab.register_vocab_class('PageNumber', {"parent": model.Identifier, "id":"300445022", "label": "Page Number"})
+		vocab.register_vocab_class('BookNumber', {"parent": model.Identifier, "id":"300445021", "label": "Book Number"})
+
+
 
 		self.graph = None
 		self.models = kwargs.get('models', settings.arches_models)

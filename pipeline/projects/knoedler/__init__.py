@@ -92,12 +92,13 @@ class KnoedlerUtilityHelper(UtilityHelper):
 		stock_number = data.get('knoedler_number')
 		if stock_number:
 			ident = f'Stock Number {stock_number}'
-			if date:
-				ident += f' ({date})'
-			return ident
 		else:
 			pi_num = data['pi_record_no']
-			return f'[GRI Number {pi_num}]'
+			ident = f'[GRI Number {pi_num}]'
+	
+		if date:
+			ident += f' ({date})'
+		return ident
 
 	def add_person(self, data, record, relative_id, **kwargs):
 		self.person_identity.add_uri(data, record_id=relative_id)

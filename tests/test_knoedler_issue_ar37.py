@@ -39,7 +39,7 @@ class PIRModelingTest_AR37(TestKnoedlerPipelineOutput):
         # Record without a stock number
         missing_sn_act = activities['tag:getty.edu,2019:digital:pipeline:REPLACE-WITH-UUID:knoedler#TX,Out,1,75,7']
         self.assertDictContainsSubset({
-            None: {'Knoedler Sale of [GRI Number K-56]'}
+            None: {'Knoedler Sale of [GRI Number K-56] (1883-05-28)'}
         }, classified_identifier_sets(missing_sn_act))
         self.assertDictContainsSubset({
             'Note': {'No Knoedler stock number was assigned to the object that is the subject of this provenance activity.'}

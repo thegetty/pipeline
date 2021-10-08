@@ -22,13 +22,6 @@ class PIRModelingTest_AR47(TestSalesPipelineOutput):
         # Verify that the object is identified with the lot number, and the lot number was assigned with the purpose of the auction
         self.verifyAuctionAssignment(obj, 'Br-A1895')
 
-        # Similarly, verify that the auction of lot is identified with the lot number, and the lot number was assigned with the purpose of the auction
-        self.assertIn('caused_by', sale)
-        causes = sale['caused_by']
-        self.assertEqual(len(causes), 1)
-        auction_of_lot = causes[0]
-        self.verifyAuctionAssignment(auction_of_lot, 'Br-A1895')
-
         # Finally, verify that the set of objects comprising the lot is identified with the lot number, and the lot number was assigned with the purpose of the auction
         objset = sets['tag:getty.edu,2019:digital:pipeline:REPLACE-WITH-UUID:sales#AUCTION,Br-A1895,0002,1792-03-31-Set']
         self.verifyAuctionAssignment(objset, 'Br-A1895')

@@ -38,6 +38,9 @@ for filename in files:
 	correct_path = p.parent.parent.joinpath(correct_partition)
 	correct_filename = correct_path.joinpath(p.name)
 	if p != correct_filename:
+		parent = correct_filename.parents[0]
+		if not parent.exists():
+			parent.mkdir()
 		p.replace(correct_filename)
 # 		print(f'mv {p} {correct_filename}')
 	else:

@@ -264,12 +264,12 @@ class PeoplePipeline(PipelineBase):
 		self.input_path = input_path
 		self.services = None
 
-		vocab.register_vocab_class('Residing', {"parent": model.Activity, "id":"300393179", "label": "Residing"})
-		vocab.register_vocab_class('Establishment', {"parent": model.Activity, "id":"300393212", "label": "Establishment"})
-		vocab.register_vocab_class('StreetAddress', {"parent": model.Identifier, "id":"300386983", "label": "Street Address"})
-
 		vocab.register_instance('address', {'parent': model.Type, 'id': '300386983', 'label': 'Street Address'})
+		vocab.register_instance('location', {'parent': model.Type, 'id': '300393211', 'label': 'Location'})
 
+		vocab.register_vocab_class('Residing', {"parent": model.Activity, "id":"300393179", "label": "Residing", "metatype": "location"})
+		vocab.register_vocab_class('Establishment', {"parent": model.Activity, "id":"300393212", "label": "Establishment", "metatype": "location"})
+		vocab.register_vocab_class('StreetAddress', {"parent": model.Identifier, "id":"300386983", "label": "Street Address"})
 
 		helper = PeopleUtilityHelper(project_name)
 

@@ -19,7 +19,7 @@ class PIRModelingTest_AR58(TestPeoplePipelineOutput):
         
         # A Group should have sojourns modeled as Establishment
 
-		# This is a group with a single sojourn with no date range
+        # This is a group with a single sojourn with no date range
         group1 = groups['tag:getty.edu,2019:digital:pipeline:REPLACE-WITH-UUID:shared#PERSON,AUTH,Z%C3%BCrich%2C%20Switzerland.%20%20Foundation%20E.G.%20B%C3%BChrle']
         self.verify_group_sojourn(group1, [{'place': 'Zollikerstrasse 172, 8008, Zürich, Switzerland'}])
         
@@ -59,7 +59,11 @@ class PIRModelingTest_AR58(TestPeoplePipelineOutput):
         self.assertIn('carried_out', person)
         activities = [c for c in person['carried_out'] if 'Residing' in {l['_label'] for l in c['classified_as']}]
         self.assertEqual(len(activities), len(expected_sojourns))
-        
+
+		# assert that the Residing type has a metatype of Location
+        metatypes = set([c['id'] for a in activities for cl in a.get('classified_as', []) for c in cl.get('classified_as', [])])
+        self.assertEqual(metatypes, {'http://vocab.getty.edu/aat/300393211'})
+
         for a in activities:
             places = a['took_place_at']
             self.assertEqual(len(places), 1)
@@ -82,6 +86,10 @@ class PIRModelingTest_AR58(TestPeoplePipelineOutput):
         self.assertIn('carried_out', group)
         activities = [c for c in group['carried_out'] if 'Establishment' in {l['_label'] for l in c['classified_as']}]
         self.assertEqual(len(activities), len(sojourns))
+
+		# assert that the Establishment type has a metatype of Location
+        metatypes = set([c['id'] for a in activities for cl in a.get('classified_as', []) for c in cl.get('classified_as', [])])
+        self.assertEqual(metatypes, {'http://vocab.getty.edu/aat/300393211'})
         
         for a in activities:
             places = a['took_place_at']

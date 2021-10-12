@@ -485,6 +485,7 @@ class PopulateKnoedlerObject(Configurable, pipeline.linkedart.PopulateObject):
 		super().__init__(*args, **kwargs)
 
 	def _populate_object_visual_item(self, data:dict, title):
+		sales_record = get_crom_object(data['_text_row'])
 		hmo = get_crom_object(data)
 		title = truncate_with_ellipsis(title, 100) or title
 
@@ -493,7 +494,10 @@ class PopulateKnoedlerObject(Configurable, pipeline.linkedart.PopulateObject):
 		# the URIs for the visual items (of which there should only be one per object)
 		vi_uri = hmo.id + '-VisItem'
 		vi = model.VisualItem(ident=vi_uri)
-		vidata = {'uri': vi_uri}
+		vidata = {
+			'uri': vi_uri,
+			'referred_to_by': [sales_record],
+		}
 		if title:
 			vidata['label'] = f'Visual work of “{title}”'
 			sales_record = get_crom_object(data['_record'])

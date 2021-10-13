@@ -214,16 +214,16 @@ class AddPerson(Configurable):
 			# This is a Person
 			types = []
 			if 'collector' in type:
-				types.append(vocab.Collecting)
+				types.append(vocab.CollectingOccupation)
 				data['occupation'].append(vocab.instances.get('collector occupation'))
 			if 'artist' in type:
-				types.append(vocab.Creating)
+				types.append(vocab.CreatingOccupation)
 				data['occupation'].append(vocab.instances.get('artist occupation'))
 			if 'dealer' in type:
-				types.append(vocab.Dealing)
+				types.append(vocab.DealingOccupation)
 				data['occupation'].append(vocab.instances.get('dealer occupation'))
 			if 'owner' in type:
-				types.append(vocab.Owning)
+				types.append(vocab.OwningOccupation)
 
 			remaining = type - {'collector', 'artist', 'dealer', 'owner'}
 			if remaining:
@@ -266,10 +266,16 @@ class PeoplePipeline(PipelineBase):
 
 		vocab.register_instance('address', {'parent': model.Type, 'id': '300386983', 'label': 'Street Address'})
 		vocab.register_instance('location', {'parent': model.Type, 'id': '300393211', 'label': 'Location'})
+		vocab.register_instance('occupation', {'parent': model.Type, 'id': '300263369', 'label': 'Occupation'})
 
 		vocab.register_vocab_class('Residing', {"parent": model.Activity, "id":"300393179", "label": "Residing", "metatype": "location"})
 		vocab.register_vocab_class('Establishment', {"parent": model.Activity, "id":"300393212", "label": "Establishment", "metatype": "location"})
 		vocab.register_vocab_class('StreetAddress', {"parent": model.Identifier, "id":"300386983", "label": "Street Address"})
+
+		vocab.register_vocab_class("CreatingOccupation", {"parent": model.Activity, "id":"300404387", "label": "Creating Artwork", "metatype": "occupation"})
+		vocab.register_vocab_class("CollectingOccupation", {"parent": model.Activity, "id":"300077121", "label": "Collecting", "metatype": "occupation"})
+		vocab.register_vocab_class("DealingOccupation", {"parent": model.Activity, "id":"300055675", "label": "Commercial Dealing in Artwork", "metatype": "occupation"})
+		vocab.register_vocab_class("OwningOccupation", {"parent": model.Activity, "id":"300055603", "label": "Owning", "metatype": "occupation"})
 
 		helper = PeopleUtilityHelper(project_name)
 

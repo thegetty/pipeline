@@ -899,7 +899,7 @@ class TransactionHandler(ProvenanceBase):
 
 		tx = self._empty_tx(data, incoming, purpose=purpose)
 		tx_uri = tx.id
-		if 'knoedler_number' not in data:
+		if 'knoedler_number' not in odata:
 			tx.referred_to_by = vocab.Note(ident='', content='No Knoedler stock number was assigned to the object that is the subject of this provenance activity.')
 
 		tx_data = add_crom_data(data={'uri': tx_uri}, what=tx)

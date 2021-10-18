@@ -15,6 +15,7 @@ class PIRModelingTest_AR36(TestKnoedlerPipelineOutput):
         activities = output['model-activity']
         people = output['model-person']
         los = output['model-lo']
+        vi = output['model-visual-item']
         
         row_record = los['tag:getty.edu,2019:digital:pipeline:REPLACE-WITH-UUID:knoedler#Text,Book,4,Page,29,Row,14']
         
@@ -33,6 +34,12 @@ class PIRModelingTest_AR36(TestKnoedlerPipelineOutput):
 
         # test the link from the people to the row record
         for person in people.values():
+            self.assertIn('referred_to_by', person)
+            refs = {r.get('_label') for r in person['referred_to_by']}
+            self.assertIn(row_name, refs)
+
+        # test the link from the visual items to the row record
+        for person in vi.values():
             self.assertIn('referred_to_by', person)
             refs = {r.get('_label') for r in person['referred_to_by']}
             self.assertIn(row_name, refs)

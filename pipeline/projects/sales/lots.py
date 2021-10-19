@@ -86,8 +86,7 @@ class AddAuctionOfLot(ProvenanceBase):
 		if not lno:
 			warnings.warn(f'Setting empty identifier on {lot.id}')
 		lno = str(lno)
-
-		lot.identified_by = self.helper.lot_number_identifier(lno, cno, non_auctions, sale_type)
+		lot.identified_by = vocab.LotNumber(ident='', content=lno)
 
 	def set_lot_objects(self, lot, cno, lno, auction_of_lot_uri, data, sale_type, non_auctions):
 		'''Associate the set of objects with the auction lot.'''

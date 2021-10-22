@@ -92,12 +92,13 @@ class KnoedlerUtilityHelper(UtilityHelper):
 		stock_number = data.get('knoedler_number')
 		if stock_number:
 			ident = f'Stock Number {stock_number}'
-			if date:
-				ident += f' ({date})'
-			return ident
 		else:
 			pi_num = data['pi_record_no']
-			return f'[GRI Number {pi_num}]'
+			ident = f'[GRI Number {pi_num}]'
+	
+		if date:
+			ident += f' ({date})'
+		return ident
 
 	def add_person(self, data, record, relative_id, **kwargs):
 		self.person_identity.add_uri(data, record_id=relative_id)
@@ -902,7 +903,7 @@ class TransactionHandler(ProvenanceBase):
 
 		tx = self._empty_tx(data, incoming, purpose=purpose)
 		tx_uri = tx.id
-		if 'knoedler_number' not in data:
+		if 'knoedler_number' not in odata:
 			tx.referred_to_by = vocab.Note(ident='', content='No Knoedler stock number was assigned to the object that is the subject of this provenance activity.')
 
 		tx_data = add_crom_data(data={'uri': tx_uri}, what=tx)

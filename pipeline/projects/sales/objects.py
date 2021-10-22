@@ -28,6 +28,7 @@ class PopulateSalesObject(Configurable, pipeline.linkedart.PopulateObject):
 	destruction_types_map = Service('destruction_types_map')
 	materials_map = Service('materials_map')
 	non_auctions = Service('non_auctions')
+	title_modifiers = Service('title_modifiers')
 
 	def populate_destruction_events(self, data:dict, note, *, type_map, location=None):
 		destruction_types_map = type_map
@@ -284,7 +285,40 @@ class PopulateSalesObject(Configurable, pipeline.linkedart.PopulateObject):
 			classification = set([mdata[k] for k in ('classified_as (object type) (primary)', 'classified_as (object type) (secondary)')])
 			technique = mdata['technique']
 
-	def __call__(self, data:dict, post_sale_map, unique_catalogs, subject_genre, destruction_types_map, materials_map, non_auctions):
+	def _populate_title_modifier(self, data, title_modifiers, record):
+		'''
+		If the title_modifier field indicates a value that identifies which of
+		the multiple objects in the current lot the current record is about
+		(based on the presence of a known prefix string), assert that value
+		as an additional title.
+		
+		Otherwise, assert any title_modifier value as a TitleStatment referring
+		to the object.
+		
+		Returns True if a new title was asserted, False otherwise.
+		'''
+		hmo = get_crom_object(data)
+		this_lot_prefixes = title_modifiers['this lot']
+		handled = False
+		if 'title_modifier' in data:
+			mod = data['title_modifier']
+			for prefix in this_lot_prefixes:
+				r = re.compile(f'({prefix})\s*:\s*(.*)', re.IGNORECASE)
+				m = r.match(mod)
+				if m:
+					p, mod = m.groups()
+					t = vocab.PrimaryName(ident='', content=mod)
+					t.classified_as = model.Type(ident='http://vocab.getty.edu/aat/300417193', label='Title')
+					t.referred_to_by = record
+					data['identifiers'].append(t)
+					handled = True
+					break
+			if not handled:
+				hmo.referred_to_by = vocab.Note(ident='', content=mod)
+		return handled
+
+
+	def __call__(self, data:dict, post_sale_map, unique_catalogs, subject_genre, destruction_types_map, materials_map, non_auctions, title_modifiers):
 		'''Add modeling for an object described by a sales record'''
 		hmo = get_crom_object(data)
 		parent = data['parent_data']
@@ -324,6 +358,7 @@ class PopulateSalesObject(Configurable, pipeline.linkedart.PopulateObject):
 			url = p['portal_url']
 			hmo.referred_to_by = vocab.WebPage(ident=url, label=url)
 
+		has_title = self._populate_title_modifier(data, title_modifiers, record)
 		if 'title' in data:
 			title = data['title']
 			if not hasattr(hmo, '_label'):
@@ -336,10 +371,12 @@ class PopulateSalesObject(Configurable, pipeline.linkedart.PopulateObject):
 				description.referred_to_by = record
 				hmo.referred_to_by = description
 				title = shorter
-			t = vocab.PrimaryName(ident='', content=title)
+			title_class = vocab.Name if has_title else vocab.PrimaryName
+			t = title_class(ident='', content=title)
 			t.classified_as = model.Type(ident='http://vocab.getty.edu/aat/300417193', label='Title')
 			t.referred_to_by = record
 			data['identifiers'].append(t)
+		
 
 		for d in data.get('other_titles', []):
 			title = d['title']

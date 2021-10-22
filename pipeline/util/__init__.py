@@ -708,11 +708,19 @@ def timespan_from_bound_components(data:dict, begin_prefix:str='', begin_clamp:s
 	else:
 		begin = implode_date_tuple(begin_tuple, clamp=begin_clamp)
 		end = implode_date_tuple(end_tuple, clamp=end_clamp)
+		# we use inclusive=False here, because clamping in the implode_date_tuple
+		# call will have already handled adjusting the date to handle the 'eoe'
+		# case (unlike the if case above, where we have to base inclusivity on
+		# the clamp value)
 		ts = timespan_from_outer_bounds(
 			begin=begin,
 			end=end,
-			inclusive=True
+			inclusive=False
 		)
+		if end_clamp == 'eoe':
+			end_label = implode_date_tuple(end_tuple, clamp='end')
+		else:
+			end_label = end
 
 	if uncertain_date:
 		# attach an Identifier to the timespan that includes the original
@@ -727,12 +735,11 @@ def timespan_from_bound_components(data:dict, begin_prefix:str='', begin_clamp:s
 		ts.identified_by = model.Name(ident='', content=f'{uncertain_str}')
 	else:
 		if begin and end:
-			ts.identified_by = model.Name(ident='', content=f'{begin} to {end}')
+			ts.identified_by = model.Name(ident='', content=f'{begin} to {end_label}')
 		elif begin:
 			ts.identified_by = model.Name(ident='', content=f'{begin} onwards')
 		elif end:
-			ts.identified_by = model.Name(ident='', content=f'up to {end}')
-
+			ts.identified_by = model.Name(ident='', content=f'up to {end_label}')
 
 	return ts, begin, end
 

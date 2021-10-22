@@ -13,6 +13,7 @@ from pipeline.projects.sales.util import object_key, object_key_string
 from pipeline.util import \
 		implode_date, \
 		timespan_from_outer_bounds, \
+		label_for_timespan_range, \
 		timespan_before, \
 		timespan_after, \
 		CaseFoldingSet
@@ -58,7 +59,9 @@ class AddAuctionOfLot(ProvenanceBase):
 			end = implode_date(auction_data, 'lot_sale_', clamp='eoe')
 			bounds = [begin, end]
 		else:
-			bounds = []
+			begin = None
+			end = None
+			bounds = [None, None]
 
 		if bounds:
 			if auction_data.get('lot_sale_mod'):
@@ -70,7 +73,8 @@ class AddAuctionOfLot(ProvenanceBase):
 				else:
 					bounds[1] = None
 			ts = timespan_from_outer_bounds(*bounds)
-			ts.identified_by = model.Name(ident='', content=date)
+			label = label_for_timespan_range(*bounds)
+			ts.identified_by = model.Name(ident='', content=label)
 			lot.timespan = ts
 
 	def set_lot_notes(self, lot, auction_data, sale_type, non_auctions):

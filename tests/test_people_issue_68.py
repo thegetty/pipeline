@@ -40,7 +40,7 @@ class PIRModelingTest_AR68(TestPeoplePipelineOutput):
         activities = group3['carried_out']
         self.assertEqual(len(activities), 1)
         activity = activities[0]
-        self.assertEqual(activity['_label'], 'Professional activity of Wesleyan College')
+        self.assertEqual(activity['_label'], 'Professional activity of Macon, GA, USA.  Wesleyan College')
         # the timespan has a Name which holds the verbatim century_active value
         self.assertEqual(classified_identifier_sets(activity['timespan']), {
         	None: {'19th-20th'}

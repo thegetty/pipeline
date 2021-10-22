@@ -373,6 +373,7 @@ class PersonIdentity:
 		if disp_name:
 			if auth_name:
 				data['identifiers'].append(vocab.PrimaryName(ident='', content=auth_name))
+				data['label'] = auth_name
 			auth_name = disp_name
 			name_type = vocab.Name
 
@@ -380,7 +381,7 @@ class PersonIdentity:
 		if self.acceptable_person_auth_name(auth_name):
 			if role:
 				role_label = f'{role} “{auth_name}”'
-			data['label'] = auth_name
+			data.setdefault('label', auth_name)
 			pname = name_type(ident='', content=auth_name) # NOTE: most of these are also vocab.SortName, but not 100%, so witholding that assertion for now
 			if referrer:
 				pname.referred_to_by = referrer

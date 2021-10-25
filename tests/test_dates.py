@@ -15,8 +15,8 @@ class TestDateCleaners(unittest.TestCase):
 
 	def test_date_cleaner(self):
 		'''
-		Test the documented formats that `pipeline.util.cleaners.date_cleaner` can parse
-		and ensure that it returns the expected data.
+		Test the documented formats that `pipeline.util.cleaners.date_cleaner`
+		can parse and ensure that it returns the expected data.
 		'''
 		tests = {
 			'1801': [datetime(1801,1,1), datetime(1802,1,1)],				# YYYY[?]
@@ -24,10 +24,13 @@ class TestDateCleaners(unittest.TestCase):
 			'1803/02/03': [datetime(1803,2,3), datetime(1803,2,4)],			# YYYY/MM/DD
 			'04/02/1804': [datetime(1804,2,4), datetime(1804,2,5)],			# DD/MM/YYYY
 			'ca. 1806': [datetime(1801,1,1), datetime(1811,1,1)],			# ca. YYYY
+			'ca.1806': [datetime(1801,1,1), datetime(1811,1,1)],			# ca. YYYY
 			'aft. 1807': [datetime(1807,1,1), None],						# aft[er|.] YYYY
+			'aft.1807': [datetime(1807,1,1), None],							# aft[er|.] YYYY
 			'after 1808': [datetime(1808,1,1), None],						# aft[er|.] YYYY
-			'bef. 1810': [None, datetime(1810,1,1)],						# bef[ore|.] YYYY
-			'before 1811': [None, datetime(1811,1,1)],						# bef[ore|.] YYYY
+			'bef. 1810': [None, datetime(1809,12,31)],						# bef[ore|.] YYYY
+			'bef.1810': [None, datetime(1809,12,31)],						# bef[ore|.] YYYY
+			'before 1811': [None, datetime(1810,12,31)],					# bef[ore|.] YYYY
 			'1812.02.05': [datetime(1812,2,5), datetime(1812,2,6)],			# YYYY.MM.DD
 			'1813/4': [datetime(1813,1,1), datetime(1815,1,1)],				# YYYY/(Y|YY|YYYY)
 			'1814/21': [datetime(1814,1,1), datetime(1822,1,1)],			# YYYY/(Y|YY|YYYY)
@@ -37,12 +40,21 @@ class TestDateCleaners(unittest.TestCase):
 			'1841-': [datetime(1841,1,1), None],							# YYYY-
 			'1850 Mar': [datetime(1850,3,1), datetime(1850,4,1)],			# YYYY Mon
 			'1851 April 02': [datetime(1851,4,2), datetime(1851,4,3)],		# YYYY Month DD
+			'18th': [datetime(1700,1,1), datetime(1800,1,1)],				# CCth
+			'1st': [datetime(1,1,1), datetime(100,1,1)],					# CCst
+			'3rd': [datetime(200,1,1), datetime(300,1,1)],					# CCrd
+# TODO: datetime doesn't handle BC years
+# 			'1st BC': [datetime(-100,1,1), datetime(1,1,1)],				# CCst BC
 		}
 
 		for value, expected in tests.items():
 			date_range = pipeline.util.cleaners.date_cleaner(value)
 			self.assertIsInstance(date_range, list)
 			if expected is not None:
+				if date_range != expected:
+					print(f'*** not equal:')
+					print(f'got     : {date_range}')
+					print(f'expected: {expected}')
 				self.assertEqual(date_range, expected, msg=f'date string: {value!r}')
 
 	def test_implode_date(self):

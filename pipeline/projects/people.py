@@ -168,8 +168,6 @@ class AddPerson(Configurable):
 			if ts:
 				# TODO: should handle multiple timespans in clean_ts
 				data['period_active_clean'] = ts
-		
-		warnings.warn(f'*** TODO: implement AddPerson.clean_dates')
 
 	def handle_statements(self, data):
 		source_content = data.get('source')

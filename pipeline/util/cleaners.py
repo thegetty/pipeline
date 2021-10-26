@@ -413,6 +413,7 @@ def date_cleaner(value):
 
 	# FORMATS:
 
+	# CCth
 	# YYYY[?]
 	# YYYY/MM/DD
 	# DD/MM/YYYY
@@ -506,7 +507,21 @@ def date_cleaner(value):
 		value = value.replace('before ', '')
 		value = value.strip()
 		y = int(value)
-		return [None, datetime(y,1,1)]
+		return [None, datetime(y-1,12,31)]
+
+	elif len(value) <= 4 and (value.endswith('st') or value.endswith('nd') or value.endswith('rd') or value.endswith('th')):
+		century = value[:len(value)-2]
+		try:
+			c = int(century)
+		except:
+			warnings.warn("Bad century value: %s" % century)
+			print(f'{value!r}')
+			return None
+		year = (c-1) * 100
+		start, end = year, year + 100
+		if start == 0:
+			start = 1
+		return [datetime(start,1,1), datetime(end,1,1)]
 
 	elif value.find('/') > -1:
 		# year/year or year/month/date

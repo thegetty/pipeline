@@ -186,9 +186,9 @@ class PersonIdentity:
 		a = vocab.make_multitype_obj(*classified_as, **args)
 
 		ts = self.active_timespan(century=century, date_range=date_range, **kwargs)
-		if 'verbatim_active_period' in kwargs:
-			ts.identified_by = model.Name(ident='', content=kwargs['verbatim_active_period'])
 		if ts:
+			if 'verbatim_active_period' in kwargs:
+				ts.identified_by = model.Name(ident='', content=kwargs['verbatim_active_period'])
 			a.timespan = ts
 		return a
 
@@ -226,22 +226,38 @@ class PersonIdentity:
 		except with the bounds of the timespan narrowed to encompass only
 		the person's lifespan (if known).
 		'''
+		period = data.get('period_active_clean')
+		century = data.get('century_active_clean')
 		birth_pair = data.get('birth_clean')
 		death_pair = data.get('death_clean')
-		if birth_pair and death_pair:
+		
+		if period:
+			pass
+		else:
+			pass
+		
+		if birth_pair:
 			birth = birth_pair[0]
-			death = death_pair[1]
 			if 'date_range' in args:
 				a_begin, a_end = args['date_range']
 				begin = max([d for d in (a_begin, birth) if d is not None])
-				end = min([d for d in (a_end, death) if d is not None])
-				args['date_range'] = (begin, end)
+				args['date_range'] = (begin, a_end)
 			elif 'century' in args:
 				a_begin, a_end = dates_for_century(args['century'])
 				del args['century']
 				begin = max([d for d in (a_begin, birth) if d is not None])
+				args['date_range'] = (begin, a_end)
+		if death_pair:
+			death = death_pair[1]
+			if 'date_range' in args:
+				a_begin, a_end = args['date_range']
 				end = min([d for d in (a_end, death) if d is not None])
-				args['date_range'] = (begin, end)
+				args['date_range'] = (a_begin, end)
+			elif 'century' in args:
+				a_begin, a_end = dates_for_century(args['century'])
+				del args['century']
+				end = min([d for d in (a_end, death) if d is not None])
+				args['date_range'] = (a_begin, end)
 		return args
 
 	def active_args(self, data:dict, name:str):
@@ -250,26 +266,17 @@ class PersonIdentity:
 		`professional_activity` to indicate the time period during
 		which a person was active in their professional activities.
 		'''
-		period_active = data.get('period_active')
-		century_active = data.get('century_active')
+		period_active = data.get('period_active_clean')
+		century_active = data.get('century_active_clean')
 		cb = data.get('corporate_body')
 		if period_active and not cb:
-			date_range = date_cleaner(period_active)
+			date_range = period_active
 			if date_range:
-				return {'date_range': date_range, 'verbatim_active_period': period_active}
+				return {'date_range': date_range, 'verbatim_active_period': data.get('period_active')}
 		elif century_active:
-			if len(century_active) == 4 and century_active.endswith('th'):
-				century = int(century_active[0:2])
-				return {'century': century, 'verbatim_active_period': century_active}
-			elif len(century_active) == 9 and century_active.endswith('th'):
-				parts = century_active.split('-')
-				begin_century = int(parts[0][:2])
-				end_century = int(parts[1][:2])
-				begin = date_cleaner(f'{begin_century-1}00-99')
-				end = date_cleaner(f'{end_century-1}00-99')
-				return {'date_range': (begin[0], end[1]), 'verbatim_active_period': century_active}
-			else:
-				warnings.warn(f'TODO: better handling for century ranges: {century_active}')
+			date_range = century_active
+			if date_range:
+				return {'date_range': date_range, 'verbatim_active_period': data.get('century_active')}
 		return {}
 
 	def add_props(self, data:dict, role=None, **kwargs):
@@ -286,15 +293,16 @@ class PersonIdentity:
 
 		data['nationality'] = []
 		data.setdefault('referred_to_by', [])
-		
-		name = data['label']
-		active = self.clamped_timespan_args(data, name)
-		cb = data.get('corporate_body')
-		if active:
-			pact_uri = data['uri'] + '-ProfAct-active'
-			a = self.professional_activity(name, ident=pact_uri, **active)
-			data['events'].append(a)
 
+# 		name = data['label']
+# 		active = self.clamped_timespan_args(data, name)
+# 		cb = data.get('corporate_body')
+# 		if active:
+# 			pact_uri = data['uri'] + '-ProfAct-active'
+# 			a = self.professional_activity(name, ident=pact_uri, **active)
+# 			data['events'].append(a)
+
+		
 		notes_field_classification = {
 			'brief_notes': (vocab.BiographyStatement, vocab.External),
 			'text': (vocab.BiographyStatement, vocab.Internal),

@@ -112,7 +112,7 @@ class AddPerson(Configurable):
 		self.bound_year = re.compile(r'[ ]?\(((until|from|after) \d{4}[^)]*)\)')
 		self.c_year = re.compile(r'[ ]?\((c \d{4}[^)]*)\)')
 	
-	def handle_dates(self, data):
+	def clean_dates(self, data):
 		cb = data.get('corporate_body', False)
 		birth_key = 'formation' if cb else 'birth'
 		death_key = 'dissolution' if cb else 'death'
@@ -126,6 +126,48 @@ class AddPerson(Configurable):
 
 		if 'death' in data:
 			data[f'{death_key}_clean'] = date_cleaner(data[death_key])
+		
+		birth = data.get('birth')
+		death = data.get('death')
+		period = data.get('period_active')
+		century = data.get('century_active')
+		active_city = data.get('active_city_active')
+		
+		if century:
+			if '-' in century:
+				begin, end = century.split('-')
+			else:
+				begin, end = century, century
+			begin_ts = date_cleaner(begin)
+			end_ts = date_cleaner(end)
+			range_ts = [None, None]
+			with suppress(TypeError):
+				range_ts[0] = begin_ts[0]
+			with suppress(TypeError):
+				range_ts[1] = end_ts[1]
+			data['century_active_clean'] = range_ts
+		
+		if period:
+			clean_ts = []
+			components = [p.strip() for p in period.split(';')]
+			ts = None
+			for p in components:
+				if '-' in p:
+					begin, end = p.split('-')
+					begin_ts = date_cleaner(begin)
+					end_ts = date_cleaner(end)
+					ts = [None, None]
+					with suppress(TypeError):
+						ts[0] = begin_ts[0]
+					with suppress(TypeError):
+						ts[1] = end_ts[1]
+				else:
+					ts = date_cleaner(p)
+				if ts:
+					clean_ts.append(ts)
+			if ts:
+				# TODO: should handle multiple timespans in clean_ts
+				data['period_active_clean'] = ts
 
 	def handle_statements(self, data):
 		source_content = data.get('source')
@@ -199,6 +241,7 @@ class AddPerson(Configurable):
 			data['object_type'] = [data['object_type']]
 
 		cb = data.get('corporate_body')
+		active_args = self.helper.person_identity.clamped_timespan_args(data, name)
 		if cb:
 			# This is an Organization
 			with suppress(KeyError):
@@ -207,6 +250,10 @@ class AddPerson(Configurable):
 				data['object_type'].append(vocab.MuseumOrg)
 			if 'institution' in type:
 				data['object_type'].append(vocab.Institution)
+			if active_args:
+				a = self.helper.person_identity.professional_activity(name, **active_args)
+				data['events'].append(a)
+				
 			
 			if self.helper.add_group(data):
 				yield data
@@ -231,14 +278,10 @@ class AddPerson(Configurable):
 
 			# model professional activity, but not if this record is a generic group.
 			if not self.helper.person_identity.is_anonymous_group(name):
-				active_args = self.helper.person_identity.clamped_timespan_args(data, name)
 				for t in types:
+					# XXXXXXXXXXXX
 					a = self.helper.person_identity.professional_activity(name, classified_as=[t], **active_args)
 					data['events'].append(a)
-
-			for k in ('century_active', 'period_active'):
-				with suppress(KeyError):
-					del data[k]
 
 			if self.helper.add_person(data):
 				yield data
@@ -250,7 +293,7 @@ class AddPerson(Configurable):
 		data.setdefault('_places', [])
 		data.setdefault('identifiers', [self.helper.gpi_number_id(star_id)])
 
-		self.handle_dates(data)
+		self.clean_dates(data)
 		self.handle_statements(data)
 		self.handle_places(data)
 		yield from self.model_person_or_group(data)

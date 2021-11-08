@@ -2,6 +2,7 @@ import os
 import sys
 import csv
 import fnmatch
+import warnings
 
 from bonobo.constants import NOT_MODIFIED
 from bonobo.nodes.io.file import FileReader
@@ -44,12 +45,17 @@ class CurriedCSVReader(Configurable):
 		limit = self.limit
 		count = self.count
 		names = self.field_names
+		error_emitted = False
 		if not(limit) or (limit and count < limit):
 			if self.verbose:
 				sys.stderr.write('============================== %s\n' % (path,))
 			with fs.open(path, newline='') as csvfile:
 				r = csv.reader(csvfile)
-				for row in r:
+				for line, row in enumerate(r):
+					if not error_emitted:
+						if len(row) != len(names):
+							error_emitted = True
+							warnings.warn(f'Column counts for header and content do not match ({len(names)} != {len(row)}) in {path}:{line+1}')
 					if limit and count >= limit:
 						break
 					count += 1

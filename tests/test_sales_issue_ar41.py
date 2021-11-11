@@ -17,7 +17,7 @@ class PIRModelingTest_AR41(TestSalesPipelineOutput):
 
         obj = objects['tag:getty.edu,2019:digital:pipeline:REPLACE-WITH-UUID:sales#OBJ,B-213,0005,1813-02-22-Original']
         self.assertEquals(classified_identifiers(obj), {
-        	None: 'Unidentified by RUBENS, PETER PAUL'
+        	'Constructed Title': '[Work] by RUBENS, PETER PAUL'
         })
         
         production = obj['produced_by']

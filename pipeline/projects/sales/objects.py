@@ -672,7 +672,7 @@ class AddArtists(Configurable):
 				original_hmo = cls(ident=original_id, label=original_label)
 				
 				# original title
-				original_hmo.identified_by = model.Name(ident='', content=f'Unidentified by {artist_label}')
+				original_hmo.identified_by = vocab.ConstructedTitle(ident='', content=f'[Work] by {artist_label}')
 				
 				# Similarly for the production of the original object.
 				original_event_id = original_hmo.id + '-Production'

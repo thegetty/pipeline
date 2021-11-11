@@ -42,42 +42,42 @@ class PIRModelingTest_AR57(TestPeoplePipelineOutput):
             '1000': {
                 # only period_active=1910
                 'key': f'{self.PREFIX}AUGLAY%2C%20AUGUSTE',
-                'expected': {('1910-01-01T00:00:00Z', '1911-01-02T00:00:00Z', '1910')},
+                'expected': {('1910-01-01T00:00:00Z', '1911-01-01T00:00:00Z', '1910')},
             },
             '1001': {
                 # period_active=1765 with an irrelevant death_date
                 'key': f'{self.PREFIX}Lebrun%2C%20Pierre',
-                'expected': {('1765-01-01T00:00:00Z', '1766-01-02T00:00:00Z', '1765')},
+                'expected': {('1765-01-01T00:00:00Z', '1766-01-01T00:00:00Z', '1765')},
             },
             '1010': {
                 # period_active=1858-1890 with an irrelevant birth_date
                 'key': f'{self.PREFIX}Escribe%2C%20Eug%C3%A8ne%20Jean%20Louis',
-                'expected': {('1858-01-01T00:00:00Z', '1891-01-02T00:00:00Z', '1858-1890')},
+                'expected': {('1858-01-01T00:00:00Z', '1891-01-01T00:00:00Z', '1858-1890')},
             },
             '1011': {
                 # period_active=18th-19th with birth_date=1743, death_date=1820
                 'key': f'{self.PREFIX}Chandelle%2C%20Andreas%20Joseph',
-                'expected': {('1743-01-01T00:00:00Z', '1821-01-02T00:00:00Z', '18th-19th')},
+                'expected': {('1743-01-01T00:00:00Z', '1821-01-01T00:00:00Z', '18th-19th')},
             },
             '1100': {
                 # period_active=1850 with irrelevant century_active=19th
                 'key': f'{self.PREFIX}CIULI%2C%20GIULIO%20%5BUNIDENTIFIED%5D',
-                'expected': {('1850-01-01T00:00:00Z', '1851-01-02T00:00:00Z', '1850')},
+                'expected': {('1850-01-01T00:00:00Z', '1851-01-01T00:00:00Z', '1850')},
             },
             '1101': {
                 # period_active=bef.1888, century_active=19th-20th, death_date=1938
                 'key': f'{self.PREFIX}D%C3%96RING%2C%20ADOLF%20GUSTAV',
-                'expected': {(None, '1888-01-01T00:00:00Z', 'bef.1888')},
+                'expected': {('1883-01-01T00:00:00Z', '1889-01-01T00:00:00Z', 'bef.1888')},
             },
             '1110': {
                 # period_active=1876, century_active=19th, death_date=1849
                 'key': f'{self.PREFIX}LIECK%2C%20JOSEPH',
-                'expected': {('1876-01-01T00:00:00Z', '1877-01-02T00:00:00Z', '1876')},
+                'expected': {('1876-01-01T00:00:00Z', '1877-01-01T00:00:00Z', '1876')},
             },
             '1111': {
                 # period_active=1945, century_active=20th, birth_date=1907, death_date=1967
                 'key': f'{self.PREFIX}Bilbo%2C%20Jack',
-                'expected': {('1945-01-01T00:00:00Z', '1946-01-02T00:00:00Z', '1945')},
+                'expected': {('1945-01-01T00:00:00Z', '1946-01-01T00:00:00Z', '1945')},
             },
             '0000': {
                 # no date data
@@ -102,22 +102,22 @@ class PIRModelingTest_AR57(TestPeoplePipelineOutput):
             '0100': {
                 # century_active=17th
                 'key': f'{self.PREFIX}BRAIN%20%5BUNIDENTIFIED%5D',
-                'expected': {('1600-01-01T00:00:00Z', '1700-01-02T00:00:00Z', '17th')},
+                'expected': {('1600-01-01T00:00:00Z', '1700-01-01T00:00:00Z', '17th')},
             },
             '0101': {
                 # century_active=18th, death_date=1731
                 'key': f'{self.PREFIX}NIGHTINGALE%2C%20ELIZABETH',
-                'expected': {('1700-01-01T00:00:00Z', '1732-01-02T00:00:00Z', '18th')},
+                'expected': {('1700-01-01T00:00:00Z', '1732-01-01T00:00:00Z', '18th')},
             },
             '0110': {
                 # century_active=19th, birth_date=1844
                 'key': f'{self.PREFIX}FROMENTIN%2C%20JULES',
-                'expected': {('1844-01-01T00:00:00Z', '1900-01-02T00:00:00Z', '19th')},
+                'expected': {('1844-01-01T00:00:00Z', '1900-01-01T00:00:00Z', '19th')},
             },
             '0111': {
                 # century_active=19th, birth_date=1838, death_date=1898
                 'key': f'{self.PREFIX}PAULSEN%2C%20FRITZ',
-                'expected': {('1838-01-01T00:00:00Z', '1899-01-02T00:00:00Z', '19th')},
+                'expected': {('1838-01-01T00:00:00Z', '1899-01-01T00:00:00Z', '19th')},
             },
         }
 

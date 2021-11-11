@@ -25,12 +25,12 @@ class TestDateCleaners(unittest.TestCase):
 			'04/02/1804': [datetime(1804,2,4), datetime(1804,2,5)],			# DD/MM/YYYY
 			'ca. 1806': [datetime(1801,1,1), datetime(1811,1,1)],			# ca. YYYY
 			'ca.1806': [datetime(1801,1,1), datetime(1811,1,1)],			# ca. YYYY
-			'aft. 1807': [datetime(1807,1,1), None],						# aft[er|.] YYYY
-			'aft.1807': [datetime(1807,1,1), None],							# aft[er|.] YYYY
-			'after 1808': [datetime(1808,1,1), None],						# aft[er|.] YYYY
-			'bef. 1810': [None, datetime(1809,12,31)],						# bef[ore|.] YYYY
-			'bef.1810': [None, datetime(1809,12,31)],						# bef[ore|.] YYYY
-			'before 1811': [None, datetime(1810,12,31)],					# bef[ore|.] YYYY
+			'aft. 1807': [datetime(1807,1,1), datetime(1813,1,1)],			# aft[er|.] YYYY
+			'aft.1807': [datetime(1807,1,1), datetime(1813,1,1)],			# aft[er|.] YYYY
+			'after 1808': [datetime(1808,1,1), datetime(1814,1,1)],			# aft[er|.] YYYY
+			'bef. 1810': [datetime(1805,1,1), datetime(1811,1,1)],			# bef[ore|.] YYYY
+			'bef.1810': [datetime(1805,1,1), datetime(1811,1,1)],			# bef[ore|.] YYYY
+			'before 1811': [datetime(1806,1,1), datetime(1812,1,1)],		# bef[ore|.] YYYY
 			'1812.02.05': [datetime(1812,2,5), datetime(1812,2,6)],			# YYYY.MM.DD
 			'1813/4': [datetime(1813,1,1), datetime(1815,1,1)],				# YYYY/(Y|YY|YYYY)
 			'1814/21': [datetime(1814,1,1), datetime(1822,1,1)],			# YYYY/(Y|YY|YYYY)

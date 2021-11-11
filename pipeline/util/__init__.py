@@ -518,7 +518,7 @@ def make_ordinal(n):
 		suffix = 'th'
 	return f'{n}{suffix}'
 
-def timespan_for_century(century, narrow=False, **kwargs):
+def timespan_for_century(century, narrow=False, inclusive=False, **kwargs):
 	'''
 	Given a integer representing a century (e.g. 17 for the 17th century), return a
 	TimeSpan object for the bounds of that century.

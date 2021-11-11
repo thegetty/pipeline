@@ -30,12 +30,11 @@ class PIRModelingTest_OrAnonymousModifiers(TestSalesPipelineOutput):
 		or_anon_obj = objects['tag:getty.edu,2019:digital:pipeline:REPLACE-WITH-UUID:sales#OBJ,Br-A559,0103,1758-05-24']
 		production = or_anon_obj['produced_by']
 		attr_assignment = production['attributed_by'][0]
-		self.assertEqual(attr_assignment['assigned_property'], 'part')
+		self.assertEqual(attr_assignment['assigned_property'], 'carried_out_by')
 		self.assertEqual(attr_assignment['classified_as'][0]['_label'], 'Possibly')
-		uncertain_production = attr_assignment['assigned']
-		self.assertEqual(uncertain_production['type'], 'Production')
-		people = {p['_label'] for p in uncertain_production['carried_out_by']}
-		self.assertEqual(people, {'TILLEMANS, PETER'})
+		person = attr_assignment['assigned']
+		self.assertEqual(person['type'], 'Person')
+		self.assertEqual(person['_label'], 'TILLEMANS, PETER')
 
 
 if __name__ == '__main__':

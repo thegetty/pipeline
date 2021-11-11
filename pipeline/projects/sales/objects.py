@@ -502,6 +502,7 @@ class AddArtists(Configurable):
 		FORMERLY_ATTRIBUTED_TO = attribution_modifiers['formerly attributed to']
 		POSSIBLY = attribution_modifiers['possibly by']
 		UNCERTAIN = attribution_modifiers['uncertain']
+		ATTRIBUTED_TO = attribution_modifiers['attributed to']
 
 		event_uri = prod_event.id
 		sales_record = get_crom_object(data['_record'])
@@ -517,7 +518,8 @@ class AddArtists(Configurable):
 
 		# 5. Determine if the artist records represent a disjunction (similar to 2 above):
 		artist_all_mods = {m.lower().strip() for a in artists for m in a.get('attrib_mod_auth', '').split(';')} - {''}
-		artist_group_flag = (not or_anon_records) and all(['or' in a['modifiers'] for a in artists])
+		all_or_modifiers = ['or' in a['modifiers'] for a in artists]
+		artist_group_flag = (not or_anon_records) and len(all_or_modifiers) and all(all_or_modifiers)
 		artist_group = None
 		if artist_group_flag:
 			# The artist group URI is just the production event URI with a suffix. When URIs are
@@ -534,22 +536,27 @@ class AddArtists(Configurable):
 				'uri_keys': group_uri_key,
 				'role_label': 'uncertain artist'
 			}
+			add_crom_data(data=group_data, what=artist_group)
 			data['_organizations'].append(group_data)
 
-		# 6. Model all the artist records as sub-production events:
-
-		if artist_group_flag:
+			# 6. Model all the artist records as sub-production events:
+			prod_event.carried_out_by = artist_group
 			for seq_no, a_data in enumerate(artists):
+				mods = a_data['modifiers']
+				attribute_assignment_id = self.helper.prepend_uri_key(prod_event.id, f'ASSIGNMENT,Artist-{seq_no}')
 				artist_label = a_data.get('label') # TODO: this may not be right for groups
 				a_data = self.model_person_or_group(data, a_data, attribution_group_types, attribution_group_names, seq_no=seq_no, role='Artist', sales_record=sales_record)
 				person = get_crom_object(a_data)
-				person.member_of = artist_group
-
-				subprod_path = self.helper.make_uri_path(*a_data["uri_keys"])
-				subevent_id = event_uri + f'-{subprod_path}'
-				subevent = model.Production(ident=subevent_id, label=f'Production sub-event for {artist_label}')
-				subevent.carried_out_by = person
-				prod_event.part = subevent
+				if ATTRIBUTED_TO.intersects(mods):
+					attrib_assignment_classes = [model.AttributeAssignment]
+					attrib_assignment_classes.append(vocab.PossibleAssignment)
+					assignment = vocab.make_multitype_obj(*attrib_assignment_classes, ident=attribute_assignment_id, label=f'Possibly attributed to {artist_label}')
+					assignment._label = f'Possibly by {artist_label}'
+					person.attributed_by = assignment
+					assignment.assigned_property = 'member_of'
+					assignment.assigned = person
+				else:
+					person.member_of = artist_group
 		else:
 			for seq_no, a_data in enumerate(artists):
 				uncertain = all_uncertain
@@ -585,15 +592,15 @@ class AddArtists(Configurable):
 					assignment.assigned_property = 'carried_out_by'
 					assignment.assigned = person
 				else:
-					subevent = model.Production(ident=subevent_id, label=f'Production sub-event for {artist_label}')
-					subevent.carried_out_by = person
-					if uncertain:
+					if uncertain or ATTRIBUTED_TO.intersects(mods):
 						attrib_assignment_classes.append(vocab.PossibleAssignment)
 						assignment = vocab.make_multitype_obj(*attrib_assignment_classes, ident=attribute_assignment_id, label=f'Possibly attributed to {artist_label}')
 						prod_event.attributed_by = assignment
-						assignment.assigned_property = 'part'
-						assignment.assigned = subevent
+						assignment.assigned_property = 'carried_out_by'
+						assignment.assigned = person
 					else:
+						subevent = model.Production(ident=subevent_id, label=f'Production sub-event for {artist_label}')
+						subevent.carried_out_by = person
 						prod_event.part = subevent
 
 	def model_object_influence(self, data, people, hmo, prod_event, attribution_modifiers, attribution_group_types, attribution_group_names, all_uncertain=False):
@@ -628,6 +635,8 @@ class AddArtists(Configurable):
 				'uri': group_uri,
 				'role_label': 'uncertain influencer'
 			}
+			make_la_org = pipeline.linkedart.MakeLinkedArtOrganization()
+			group_data = make_la_org(group_data)
 			data['_organizations'].append(group_data)
 
 		# 3. Model all the non-artist records as an appropriate property/relationship of the object or production event:

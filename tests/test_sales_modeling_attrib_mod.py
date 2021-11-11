@@ -84,14 +84,20 @@ class PIRModelingTest_AttributionModifiers(TestSalesPipelineOutput):
 		self.assertIn('Possibly', {c['_label'] for c in attr_assignment['classified_as']})
 		
 		# 'formerly attributed to' modifiers use an AttributeAssignment that is classified as 'obsolete' to assert the 'carried_out_by' property
+		# 'attributed to' modifiers use an AttributeAssignment that is classified as 'possible' to assert the 'carried_out_by' property
 		formerly_obj = objects['tag:getty.edu,2019:digital:pipeline:REPLACE-WITH-UUID:sales#OBJ,B-A160,0221,1776-04-30']
 		production = formerly_obj['produced_by']
-		attr_assignment = production['attributed_by'][0]
-		self.assertEqual(attr_assignment['assigned_property'], 'carried_out_by')
-		self.assertIn('Obsolete', {c['_label'] for c in attr_assignment['classified_as']})
-		self.assertEqual(attr_assignment['assigned']['_label'], 'Schgosdass')
-		people = {person['_label'] for part in production['part'] for person in part['carried_out_by']}
-		self.assertEqual(people, {'Gosdaert [?]'})
+		assignments = production['attributed_by']
+		self.assertEqual(len(assignments), 2)
+		assignments = sorted(assignments, key=lambda x: x['_label'])
+		attr_assignment1, attr_assignment2 = assignments
+		# First attribute assignment (handling 'formerly attributed to')
+		self.assertEqual(attr_assignment1['assigned_property'], 'carried_out_by')
+		self.assertIn('Obsolete', {c['_label'] for c in attr_assignment1['classified_as']})
+		self.assertEqual(attr_assignment1['assigned']['_label'], 'Schgosdass')
+		# Second attribute assignment (handling 'attributed to')
+		person = attr_assignment2['assigned']
+		self.assertEqual(person['_label'], 'Gosdaert [?]')
 		
 		# 'copy after' modifiers assert that the object's production was 'influenced_by' another object by the named influencer artist
 		copy_after_obj = objects['tag:getty.edu,2019:digital:pipeline:REPLACE-WITH-UUID:sales#OBJ,B-A136,0089,1773-07-20']
@@ -103,11 +109,16 @@ class PIRModelingTest_AttributionModifiers(TestSalesPipelineOutput):
 		people = {person['_label'] for part in orig_production['part'] for person in part['carried_out_by']}
 		self.assertEqual(people, {'DYCK, ANTHONIE VAN'})
 
-		# 'attributed to' modifiers are no-ops; they result in a normal carried_out_by property
+		# 'attributed to' modifiers use an AttributeAssignment that is classified as 'possible' to assert the 'carried_out_by' property
 		attributed_to_obj = objects['tag:getty.edu,2019:digital:pipeline:REPLACE-WITH-UUID:sales#OBJ,B-A138,0022,1774-05-30']
 		production = attributed_to_obj['produced_by']
-		people = {person['_label'] for part in production['part'] for person in part['carried_out_by']}
-		self.assertEqual(people, {'SAVERY (XAVERY)'})
+		assignments = production['attributed_by']
+		self.assertEqual(len(assignments), 1)
+		attr_assignment1 = assignments[0]
+		person = attr_assignment1['assigned']
+		self.assertEqual(person['_label'], 'SAVERY (XAVERY)')
+
+
 
 
 if __name__ == '__main__':

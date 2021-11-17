@@ -492,6 +492,7 @@ class SalesPipeline(PipelineBase):
 		vocab.register_instance('history', {'parent': model.Type, 'id': '300033898', 'label': 'History'})
 
 		vocab.register_vocab_class('UncertainMemberClosedGroup', {'parent': model.Group, 'id': 'XXXXXX006', 'label': 'Closed Group Representing an Uncertain Person'})
+		vocab.register_vocab_class('ConstructedTitle', {'parent': model.Name, 'id': '300417205', 'label': 'Constructed Title'})
 
 		super().__init__(project_name, helper=helper)
 

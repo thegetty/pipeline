@@ -9,6 +9,7 @@ import pprint
 import pathlib
 import itertools
 import datetime
+from datetime import timedelta
 from collections import Counter, defaultdict, namedtuple
 from contextlib import suppress
 import inspect
@@ -276,10 +277,17 @@ class AddPerson(Configurable):
 			if remaining:
 				warnings.warn(f'UNHANDLED PEOPLE TYPES: {remaining}')
 
+			# professional_activity calls active_timespan which uses inclusive dates.
+			# but active_args are parsed by date_cleaner which returns exclusive dates.
+			# So we need to remove the final day on the end_of_end date
+			if 'date_range' in active_args and len(active_args['date_range']) == 2 and active_args['date_range'][1] is not None:
+				start, end = active_args['date_range']
+				end -= timedelta(days=1)
+				active_args['date_range'] = (start, end)
+
 			# model professional activity, but not if this record is a generic group.
 			if not self.helper.person_identity.is_anonymous_group(name):
 				for t in types:
-					# XXXXXXXXXXXX
 					a = self.helper.person_identity.professional_activity(name, classified_as=[t], **active_args)
 					data['events'].append(a)
 
@@ -451,7 +459,7 @@ class PeoplePipeline(PipelineBase):
 			self.add_serialization_chain(g, source.output, model=self.models[model], use_memory_writer=False)
 			self.run_graph(g, services={})
 
-		print('Writing people-groups mapping data to disk')
+		print('Writing people-groups mapping data to disk', file=sys.stderr)
 		pg_file = pathlib.Path(settings.pipeline_tmp_path).joinpath('people_groups.json')
 		with pg_file.open('w') as fh:
 			json.dump(services['people_groups'], fh)

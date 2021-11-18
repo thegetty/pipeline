@@ -500,14 +500,14 @@ def date_cleaner(value):
 		except:
 			warnings.warn("Bad aft value: %s" % value)
 			return None
-		return [datetime(y,1,1), None]
+		return [datetime(y,1,1), datetime(y+CIRCA+1,1,1)] # GRI guideline says that 'after 1900' really means (1900 or later)
 
 	elif value.startswith('bef'):
 		value = value.replace('bef.', '')
 		value = value.replace('before ', '')
 		value = value.strip()
 		y = int(value)
-		return [None, datetime(y-1,12,31)]
+		return [datetime(y-CIRCA,1,1), datetime(y+1,1,1)] # GRI guideline says that 'before 1900' really means (up to and including 1900)
 
 	elif len(value) <= 4 and (value.endswith('st') or value.endswith('nd') or value.endswith('rd') or value.endswith('th')):
 		century = value[:len(value)-2]

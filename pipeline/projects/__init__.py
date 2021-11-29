@@ -343,7 +343,7 @@ class PersonIdentity:
 					group_label = self.anonymous_group_label(role, century=century, nationality=nationality)
 					data['label'] = group_label
 					pact_uri = data['uri'] + '-ProfAct-dated-natl'
-					a = self.professional_activity(group_label, ident=pact_uri, century=century, narrow=True)
+					a = self.professional_activity(group_label, classified_as=[vocab.ActiveOccupation], ident=pact_uri, century=century, narrow=True)
 					data['events'].append(a)
 			elif dated_match:
 				with suppress(ValueError):
@@ -351,7 +351,7 @@ class PersonIdentity:
 					group_label = self.anonymous_group_label(role, century=century)
 					data['label'] = group_label
 					pact_uri = data['uri'] + '-ProfAct-dated'
-					a = self.professional_activity(group_label, ident=pact_uri, century=century, narrow=True)
+					a = self.professional_activity(group_label, classified_as=[vocab.ActiveOccupation], ident=pact_uri, century=century, narrow=True)
 					data['events'].append(a)
 			elif period_match:
 				period = period_match.group(1).lower()

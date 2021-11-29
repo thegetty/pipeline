@@ -252,7 +252,7 @@ class AddPerson(Configurable):
 			if 'institution' in type:
 				data['object_type'].append(vocab.Institution)
 			if active_args:
-				a = self.helper.person_identity.professional_activity(name, **active_args)
+				a = self.helper.person_identity.professional_activity(name, classified_as=[vocab.ActiveOccupation], **active_args)
 				data['events'].append(a)
 				
 			
@@ -327,6 +327,8 @@ class PeoplePipeline(PipelineBase):
 		vocab.register_vocab_class("CollectingOccupation", {"parent": model.Activity, "id":"300077121", "label": "Collecting", "metatype": "occupation"})
 		vocab.register_vocab_class("DealingOccupation", {"parent": model.Activity, "id":"300055675", "label": "Commercial Dealing in Artwork", "metatype": "occupation"})
 		vocab.register_vocab_class("OwningOccupation", {"parent": model.Activity, "id":"300055603", "label": "Owning", "metatype": "occupation"})
+
+		vocab.register_vocab_class('ActiveOccupation', {"parent": model.Activity, "id":"300393177", "label": "Professional Activities", "metatype": "occupation"})
 
 		helper = PeopleUtilityHelper(project_name)
 

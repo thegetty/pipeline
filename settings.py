@@ -4,19 +4,19 @@ arches_models = {
 	'Event': 'event',
 	'Group': 'group',
 	'Place': 'place',
-	'ProvenanceEntry': 'provenance_activity',
+	'ProvenanceEntry': 'provenance',
 	'Series': 'series',
-	'SaleActivity': 'sale_activity',
+	'SaleActivity': 'activity',
 	'Activity': 'auction',
 	'AuctionOfLot': 'auction_of_lot',
 	'Bidding': 'bidding',
 	'Drawing': 'auction_of_lot',
-	'HumanMadeObject': 'physical_thing',
+	'HumanMadeObject': 'object',
 	'Inventorying': 'inventorying',
 	'LinguisticObject': 'textual_work',
 	'Person': 'person',
 	'Phase': 'phase',
-	'Set': 'collection_or_set',
+	'Set': 'set',
 	'VisualItem': 'visual_work'
 }
 

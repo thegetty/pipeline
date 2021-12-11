@@ -423,10 +423,10 @@ class TestKnoedlerPipelineOutput(unittest.TestCase):
 		data = self.data.copy()
 		
 		tests_path = Path(f'tests/data/knoedler/{test_name}')
-		files = list(tests_path.rglob('knoedler*'))
+		files = list(tests_path.rglob('knoedler_ar*'))
 		
 		if files:
-			data['files_pattern'] = str(tests_path / 'knoedler*')
+			data['files_pattern'] = str(tests_path / 'knoedler_ar*')
 
 		writer = TestWriter()
 		pipeline = KnoedlerTestPipeline(
@@ -499,10 +499,10 @@ class TestPeoplePipelineOutput(unittest.TestCase):
 		data = self.data.copy()
 		
 		tests_path = Path(f'tests/data/people/{test_name}')
-		files = list(tests_path.rglob('people*'))
+		files = list(tests_path.rglob('people_authority_ar*'))
 		
 		if files:
-			data['files_pattern'] = str(tests_path / 'people*')
+			data['files_pattern'] = str(tests_path / 'people_authority_ar*')
 
 		writer = TestWriter()
 		pipeline = PeopleTestPipeline(

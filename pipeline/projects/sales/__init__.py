@@ -260,7 +260,7 @@ class SalesUtilityHelper(UtilityHelper):
 		sale_type_key = sale_type.replace(' ', '_').upper()
 		uid = f'{sale_type_key}-EVENT-{catalog_number}'
 		uri = self.make_proj_uri(f'{sale_type_key}-EVENT', catalog_number)
-		label = f"{sale_type} Event for {catalog_number}"
+		label = f"{sale_type} Event {catalog_number}"
 		auction = event_type(ident=uri, label=label)
 		return auction, uid, uri
 

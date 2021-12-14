@@ -145,6 +145,7 @@ class ProvenanceBase(Configurable):
 			tx.referred_to_by = note
 
 		ptx_data = tx_data.copy()
+		ptx_data['uri'] = tx_uri
 		data['_prov_entries'].append(add_crom_data(data=ptx_data, what=tx))
 
 	def set_possible_attribute(self, obj, prop, data):

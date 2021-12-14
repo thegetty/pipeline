@@ -74,7 +74,7 @@ class PIRModelingTest_AttributionModifiers(TestSalesPipelineOutput):
 		attr_assignment = production['attributed_by'][0]
 		self.assertEqual(attr_assignment['assigned_property'], 'influenced_by')
 		self.assertEqual({c['_label'] for c in attr_assignment['property_classified_as']}, {'Style Of'})
-		self.assertEqual(attr_assignment['assigned']['id'], 'tag:getty.edu,2019:digital:pipeline:REPLACE-WITH-UUID:shared#PERSON,AUTH,HOLBEIN%2C%20HANS%20%28THE%20YOUNGER%29')
+		self.assertEqual(attr_assignment['assigned'][0]['id'], 'tag:getty.edu,2019:digital:pipeline:REPLACE-WITH-UUID:shared#PERSON,AUTH,HOLBEIN%2C%20HANS%20%28THE%20YOUNGER%29')
 
 		# 'possibly by' modifiers use an AttributeAssignment that is classified as 'possibly' to assert the 'carried_out_by' property
 		possibly_by_obj = objects['tag:getty.edu,2019:digital:pipeline:REPLACE-WITH-UUID:sales#OBJ,B-A13,0086,1738-07-21']
@@ -94,9 +94,9 @@ class PIRModelingTest_AttributionModifiers(TestSalesPipelineOutput):
 		# First attribute assignment (handling 'formerly attributed to')
 		self.assertEqual(attr_assignment1['assigned_property'], 'carried_out_by')
 		self.assertIn('Obsolete', {c['_label'] for c in attr_assignment1['classified_as']})
-		self.assertEqual(attr_assignment1['assigned']['_label'], 'Schgosdass')
+		self.assertEqual(attr_assignment1['assigned'][0]['_label'], 'Schgosdass')
 		# Second attribute assignment (handling 'attributed to')
-		person = attr_assignment2['assigned']
+		person = attr_assignment2['assigned'][0]
 		self.assertEqual(person['_label'], 'Gosdaert [?]')
 		
 		# 'copy after' modifiers assert that the object's production was 'influenced_by' another object by the named influencer artist
@@ -115,7 +115,7 @@ class PIRModelingTest_AttributionModifiers(TestSalesPipelineOutput):
 		assignments = production['attributed_by']
 		self.assertEqual(len(assignments), 1)
 		attr_assignment1 = assignments[0]
-		person = attr_assignment1['assigned']
+		person = attr_assignment1['assigned'][0]
 		self.assertEqual(person['_label'], 'SAVERY (XAVERY)')
 
 

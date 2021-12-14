@@ -40,7 +40,7 @@ class PIRModelingTest_PrivateContractSales(TestSalesPipelineOutput):
 		
 		# there is a single non-auction 'Private Contract Sale' event, and it is referred to by the catalog text
 		pvt_sale = sale_activities['tag:getty.edu,2019:digital:pipeline:REPLACE-WITH-UUID:sales#PRIVATE_CONTRACT_SALE-EVENT,B-267']
-		self.assertEqual(pvt_sale['_label'], 'Private Contract Sale Event for B-267')
+		self.assertEqual(pvt_sale['_label'], 'Private Contract Sale Event B-267')
 		self.assertIn(expected_catalog_text_id, {r.get('id') for r in pvt_sale['referred_to_by']})
 		
 		# there are 3 physical Exhibition Catalogs
@@ -98,10 +98,10 @@ class PIRModelingTest_PrivateContractSales(TestSalesPipelineOutput):
 		prices = [d for d in object_set['dimension'] if d['type'] == 'MonetaryAmount']
 		self.assertEqual(len(prices), 1)
 		self.assertEqual({c['_label'] for c in prices[0]['classified_as']}, {'Asking Price'})
-		self.assertEqual(prices[0]['_label'], "50,000.0 frs")
+		self.assertEqual(prices[0]['_label'], "50,000.00 frs")
 		self.assertEqual(prices[0]['currency']['_label'], 'French Francs')
 		self.assertEqual(prices[0]['value'], 50000)
-		self.assertEqual({c['_label'] for c in object_set['dimension']}, {"50,000.0 frs"})
+		self.assertEqual({c['_label'] for c in object_set['dimension']}, {"50,000.00 frs"})
 
 		self.assertIn(object_set_key, {s['id'] for s in hmo['member_of']})
 		

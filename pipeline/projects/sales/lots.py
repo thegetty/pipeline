@@ -612,11 +612,13 @@ class AddAcquisitionOrBidding(ProvenanceBase):
 		return prev_procurements
 
 	def add_non_sale_sellers(self, data:dict, sellers, sale_type, transaction, transaction_types):
+		WITHDRAWN = transaction_types['withdrawn']
 		parent = data['parent_data']
 		auction_data = parent['auction_of_lot']
 		cno, lno, date = object_key(auction_data)
 
-		own_info_source = f'Listed as the seller of object in {cno} {lno} ({date}) that was not sold'
+		result = 'withdrawn' if transaction in WITHDRAWN else 'not sold'
+		own_info_source = f'Listed as the seller of object in {cno} {lno} ({date}) that was {result}'
 		note = vocab.SourceStatement(ident='', content=own_info_source)
 		rel = 'leading to the previous ownership of'
 		return self.add_sellers(data, sale_type, transaction, sellers, rel, source=note)

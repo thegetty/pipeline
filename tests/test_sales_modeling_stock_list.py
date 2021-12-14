@@ -43,7 +43,7 @@ class PIRModelingTest_StockListSales(TestSalesPipelineOutput):
 		# there is a single non-auction 'Private Contract Sale' event, and it is referred to by the catalog text
 		
 		pvt_sale = sale_activities[expected_event_id]
-		self.assertEqual(pvt_sale['_label'], 'Stock List Event for Br-541')
+		self.assertEqual(pvt_sale['_label'], 'Stock List Event Br-541')
 		self.assertIn(expected_catalog_text_id, {r.get('id') for r in pvt_sale['referred_to_by']})
 		
 		# there is 1 physical Accession Catalog

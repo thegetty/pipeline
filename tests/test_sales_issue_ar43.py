@@ -25,7 +25,7 @@ class PIRModelingTest_AR43(TestSalesPipelineOutput):
         self.assertEqual({c['_label'] for c in attr1[0]['classified_as']}, {'Possibly'})
         self.assertEqual(len(attr1), 1)
         self.assertEqual(attr1[0]['_label'], 'Possibly attributed to SAVERY (XAVERY)')
-        self.assertEqual(attr1[0]['assigned']['id'], 'tag:getty.edu,2019:digital:pipeline:REPLACE-WITH-UUID:shared#PERSON,AUTH,SAVERY%20%28XAVERY%29')
+        self.assertEqual(attr1[0]['assigned'][0]['id'], 'tag:getty.edu,2019:digital:pipeline:REPLACE-WITH-UUID:shared#PERSON,AUTH,SAVERY%20%28XAVERY%29')
 
         # There are no sub-parts of the production, since all the known
         # information has the 'attributed to' modifier, causing it to be
@@ -40,7 +40,7 @@ class PIRModelingTest_AR43(TestSalesPipelineOutput):
         self.assertEqual(len(attr2), 1)
         self.assertEqual({c['_label'] for c in attr2[0]['classified_as']}, {'Possibly'})
         self.assertEqual(attr2[0]['_label'], 'Possibly by CORNEILLE, JEAN BAPTISTE')
-        self.assertEqual(attr2[0]['assigned']['id'], 'tag:getty.edu,2019:digital:pipeline:REPLACE-WITH-UUID:shared#PERSON,AUTH,CORNEILLE%2C%20JEAN%20BAPTISTE')
+        self.assertEqual(attr2[0]['assigned'][0]['id'], 'tag:getty.edu,2019:digital:pipeline:REPLACE-WITH-UUID:shared#PERSON,AUTH,CORNEILLE%2C%20JEAN%20BAPTISTE')
         self.assertNotIn('part', prod2)
 
         # "copy by", "copy after"
@@ -75,13 +75,13 @@ class PIRModelingTest_AR43(TestSalesPipelineOutput):
         attr4_old = [a for a in attr4 if 'BOECKHORST' in a['_label']][0]
         self.assertEqual({c['_label'] for c in attr4_old['classified_as']}, {'Obsolete'})
         self.assertEqual(attr4_old['_label'], 'Formerly attributed to BOECKHORST, JOHANN')
-        self.assertEqual(attr4_old['assigned']['id'], 'tag:getty.edu,2019:digital:pipeline:REPLACE-WITH-UUID:shared#PERSON,AUTH,BOECKHORST%2C%20JOHANN')
+        self.assertEqual(attr4_old['assigned'][0]['id'], 'tag:getty.edu,2019:digital:pipeline:REPLACE-WITH-UUID:shared#PERSON,AUTH,BOECKHORST%2C%20JOHANN')
         
         # attributed to
         attr4_new = [a for a in attr4 if 'THYS' in a['_label']][0]
         self.assertEqual({c['_label'] for c in attr4_new['classified_as']}, {'Possibly'})
         self.assertEqual(attr4_new['_label'], 'Possibly attributed to THYS, PIETER')
-        self.assertEqual(attr4_new['assigned']['id'], 'tag:getty.edu,2019:digital:pipeline:REPLACE-WITH-UUID:shared#PERSON,AUTH,THYS%2C%20PIETER')
+        self.assertEqual(attr4_new['assigned'][0]['id'], 'tag:getty.edu,2019:digital:pipeline:REPLACE-WITH-UUID:shared#PERSON,AUTH,THYS%2C%20PIETER')
 
         # "school of; copy by", "copy after"
         obj5 = objects['tag:getty.edu,2019:digital:pipeline:REPLACE-WITH-UUID:sales#OBJ,F-75,0046,1804-05-23']

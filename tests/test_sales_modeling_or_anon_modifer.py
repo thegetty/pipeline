@@ -32,7 +32,7 @@ class PIRModelingTest_OrAnonymousModifiers(TestSalesPipelineOutput):
 		attr_assignment = production['attributed_by'][0]
 		self.assertEqual(attr_assignment['assigned_property'], 'carried_out_by')
 		self.assertEqual(attr_assignment['classified_as'][0]['_label'], 'Possibly')
-		person = attr_assignment['assigned']
+		person = attr_assignment['assigned'][0]
 		self.assertEqual(person['type'], 'Person')
 		self.assertEqual(person['_label'], 'TILLEMANS, PETER')
 

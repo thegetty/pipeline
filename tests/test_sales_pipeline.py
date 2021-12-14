@@ -52,7 +52,7 @@ class TestSalesPipelineOutput(unittest.TestCase):
 
 	def verify_auction(self, a, event, idents):
 		got_events = {c['_label'] for c in a.get('part_of', [])}
-		self.assertEqual(got_events, {f'Auction Event for {event}'})
+		self.assertEqual(got_events, {f'Auction Event {event}'})
 		got_idents = {c['content'] for c in a.get('identified_by', [])}
 		self.assertEqual(got_idents, idents)
 
@@ -107,7 +107,7 @@ class TestSalesPipelineOutput(unittest.TestCase):
 		events = [activities[k] for k in activities if k not in {key_119, key_120}]
 		event_labels = {e['_label'] for e in events}
 		carried_out_by = {h['id'] for e in events for h in e.get('carried_out_by', [])}
-		self.assertEqual(event_labels, {'Auction Event for B-A139'})
+		self.assertEqual(event_labels, {'Auction Event B-A139'})
 		self.assertEqual(carried_out_by, house_ids)
 
 

@@ -41,7 +41,7 @@ class PIRModelingTest_Withdrawn(TestSalesPipelineOutput):
 		
 		procurement_labels = {p['_label'] for p in procurements.values()}
 		self.assertEqual(procurement_labels, {
-			'Sale leading to the previous ownership of Br-3039 0082[b] (1827-11-24)',
+			'Event leading to Ownership of Br-3039 0082[b] (1827-11-24)',
 	 		'Sale of Br-3039 0082 (1827-11-24)'
 	 	})
 		

@@ -1169,7 +1169,7 @@ class ModelFinalSale(TransactionHandler):
 			current_tx_data = add_crom_data(data={}, what=current_tx)
 		
 			lot_object_key = list(self.helper.transaction_key_for_record(data, incoming=True))
-			tx_data = {'uri': tx.id, 'label': f'Sale leading to the currently known location of {hmo._label}'}
+			tx_data = {'uri': tx.id, 'label': f'Event leading to the currently known location of {hmo._label}'}
 			add_crom_data(data=tx_data, what=tx)
 			
 			self.handle_prev_post_owner(odata, hmo, current_tx_data, 'Sold', lot_object_key, org, f'final-owner-1', False, None, make_label=prov_entry_label)

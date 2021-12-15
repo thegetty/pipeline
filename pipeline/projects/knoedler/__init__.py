@@ -793,26 +793,6 @@ class TransactionHandler(ProvenanceBase):
 					relative_id=f'{role}_{i+1}'
 				)
 				knoedler_group.append(person)
-				name = p.get('name', p.get('auth_name', '(anonymous)'))
-				share = p.get('share', '1/1')
-				share_frac = Fraction(share)
-				if price_amount:
-					price = share_frac * price_amount
-					part_price_data = price_data.copy()
-					part_price_data.update({'price': str(price)})
-					part_amnt = extract_monetary_amount(part_price_data)
-					if not price.is_integer():
-						part_amnt._label = f'{part_amnt._label} ({share_frac} of {price_amount})'
-# 					print(f'*** {share_frac} of {price_amount} ({part_amnt._label})')
-					parts.append((person, part_amnt))
-				else:
-					pass
-					# This is commented out, because it wasn't deemed useful to model
-					# the parts of a shared payment where we didn't know the amount
-					# of a share. In this case, the payment part isn't adding any useful
-					# data (but would just be a place where more data could be added in
-					# the future).
-# 					parts.append((person, None))
 
 		paym = None
 		if amnt:
@@ -827,16 +807,21 @@ class TransactionHandler(ProvenanceBase):
 				else:
 					paym.paid_to = kp
 
-			if len(parts) > 1:
-				for i, partdata in enumerate(parts):
-					person, part_amnt = partdata
-					shared_payment_id = tx_uri + f'-Payment-{i}-share'
-					shared_paym = model.Payment(ident=shared_payment_id, label=f"{person._label} share of payment for {sn_ident}")
+			for i, partdata in enumerate(parts):
+				person, part_amnt = partdata
+				shared_payment_id = tx_uri + f'-Payment-{i}-share'
+				shared_paym = model.Payment(ident=shared_payment_id, label=f"{person._label} share of payment for {sn_ident}")
+				if part_amnt:
 					shared_paym.paid_amount = part_amnt
-					if incoming:
-						shared_paym.paid_from = person
-					else:
-						shared_paym.paid_to = person
+				if incoming:
+					shared_paym.paid_from = person
+				else:
+					shared_paym.paid_to = person
+
+				# add the part is there are multiple parts (shared tx), or if
+				# this is the single part we know about, but its value is not
+				#the same as the whole tx amount
+				if len(parts) > 1 or part_amnt != amnt:
 					paym.part = shared_paym
 
 		for person in people:

@@ -335,7 +335,21 @@ class AddGroupURI(Configurable):
 
 		return data
 
-class AddBook(Configurable):
+class KnoedlerProvenance:
+	def add_knoedler_creation_data(self, data):
+		thing_label = data['label']
+		knoedler = self.helper.static_instances.get_instance('Group', 'knoedler')
+		ny = self.helper.static_instances.get_instance('Place', 'newyork')
+
+		o = get_crom_object(data)
+		creation = model.Creation(ident='', label=f'Creation of {thing_label}')
+		creation.carried_out_by = knoedler
+		creation.took_place_at = ny
+		o.created_by = creation
+
+		return creation
+
+class AddBook(Configurable, KnoedlerProvenance):
 	helper = Option(required=True)
 	make_la_lo = Service('make_la_lo')
 	make_la_hmo = Service('make_la_hmo')
@@ -362,10 +376,12 @@ class AddBook(Configurable):
 
 		make_la_hmo(data['_physical_book'])
 		make_la_lo(data['_text_book'])
-
+		
+		self.add_knoedler_creation_data(data['_text_book'])
+		
 		return data
 
-class AddPage(Configurable):
+class AddPage(Configurable, KnoedlerProvenance):
 	helper = Option(required=True)
 	make_la_lo = Service('make_la_lo')
 	make_la_hmo = Service('make_la_hmo')
@@ -409,9 +425,11 @@ class AddPage(Configurable):
 		make_la_hmo(data['_physical_page'])
 		make_la_lo(data['_text_page'])
 
+		self.add_knoedler_creation_data(data['_text_page'])
+
 		return data
 
-class AddRow(Configurable):
+class AddRow(Configurable, KnoedlerProvenance):
 	helper = Option(required=True)
 	make_la_lo = Service('make_la_lo')
 	static_instances = Option(default="static_instances")
@@ -437,6 +455,13 @@ class AddRow(Configurable):
 		}
 		make_la_lo(data['_text_row'])
 
+		creation = self.add_knoedler_creation_data(data['_text_row'])
+		date = implode_date(data['entry_date'])
+		if date:
+			bounds = [date, date]
+			ts = timespan_from_outer_bounds(*bounds, inclusive=True)
+			ts.identified_by = model.Name(ident='', content=date)
+			creation.timespan = ts
 		return data
 
 class AddArtists(Configurable):
@@ -1635,7 +1660,9 @@ class KnoedlerPipeline(PipelineBase):
 			ExtractKeyedValue(key='_text_book'),
 			_input=books.output
 		)
+		act = graph.add_chain( ExtractKeyedValues(key='_activities'), _input=text.output )
 		if serialize:
+			self.add_serialization_chain(graph, act.output, model=self.models['ProvenanceEntry'])
 			self.add_serialization_chain(graph, phys.output, model=self.models['HumanMadeObject'])
 			self.add_serialization_chain(graph, text.output, model=self.models['LinguisticObject'])
 		return books
@@ -1653,7 +1680,9 @@ class KnoedlerPipeline(PipelineBase):
 			ExtractKeyedValue(key='_text_page'),
 			_input=pages.output
 		)
+		act = graph.add_chain( ExtractKeyedValues(key='_activities'), _input=text.output )
 		if serialize:
+			self.add_serialization_chain(graph, act.output, model=self.models['ProvenanceEntry'])
 			self.add_serialization_chain(graph, phys.output, model=self.models['HumanMadeObject'])
 			self.add_serialization_chain(graph, text.output, model=self.models['LinguisticObject'])
 		return pages
@@ -1667,7 +1696,9 @@ class KnoedlerPipeline(PipelineBase):
 			ExtractKeyedValue(key='_text_row'),
 			_input=rows.output
 		)
+		act = graph.add_chain( ExtractKeyedValues(key='_activities'), _input=text.output )
 		if serialize:
+			self.add_serialization_chain(graph, act.output, model=self.models['ProvenanceEntry'])
 			self.add_serialization_chain(graph, text.output, model=self.models['LinguisticObject'])
 		return rows
 

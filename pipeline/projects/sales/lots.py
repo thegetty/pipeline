@@ -252,6 +252,8 @@ def prov_entry_label(helper, sale_type, transaction, rel, cno, lots, date):
 	if sale_type == 'Auction':
 		if transaction in SOLD:
 			return f'Sale {rel} {id}'
+		elif transaction == 'Event':
+			return f'Event {rel} {id}'
 		else:
 			return f'Offer {rel} {id}'
 	else:
@@ -595,7 +597,7 @@ class AddAcquisitionOrBidding(ProvenanceBase):
 		ts = getattr(lot, 'timespan', None)
 
 		prev_procurements = []
-		tx_label_args = tuple([self.helper, sale_type, 'Sold', rel] + list(lot_object_key))
+		tx_label_args = tuple([self.helper, sale_type, 'Event', rel] + list(lot_object_key))
 		for i, seller_data in enumerate(sellers):
 			seller = get_crom_object(seller_data)
 			# The provenance entry for a seller's previous acquisition is specific to a
@@ -620,8 +622,8 @@ class AddAcquisitionOrBidding(ProvenanceBase):
 		result = 'withdrawn' if transaction in WITHDRAWN else 'not sold'
 		own_info_source = f'Listed as the seller of object in {cno} {lno} ({date}) that was {result}'
 		note = vocab.SourceStatement(ident='', content=own_info_source)
-		rel = 'leading to the previous ownership of'
-		return self.add_sellers(data, sale_type, transaction, sellers, rel, source=note)
+		rel = 'leading to Ownership of'
+		return self.add_sellers(data, sale_type, 'Event', sellers, rel, source=note)
 
 	def add_private_sellers(self, data:dict, sellers, sale_type, transaction, transaction_types):
 		parent = data['parent_data']
@@ -630,8 +632,8 @@ class AddAcquisitionOrBidding(ProvenanceBase):
 
 		own_info_source = f'Listed as the seller of object in {cno} {lno} ({date}) that was privately sold'
 		note = vocab.SourceStatement(ident='', content=own_info_source)
-		rel = 'leading to the previous ownership of'
-		return self.add_sellers(data, sale_type, transaction, sellers, rel, source=note)
+		rel = 'leading to Ownership of'
+		return self.add_sellers(data, sale_type, 'Event', sellers, rel, source=note)
 
 	def add_bidding(self, data:dict, buyers, sellers, buy_sell_modifiers, sale_type, transaction, transaction_types, auction_houses_data):
 		'''Add modeling of bids that did not lead to an acquisition'''
@@ -738,7 +740,7 @@ class AddAcquisitionOrBidding(ProvenanceBase):
 		for final_owner_data in final_owners_data:
 			final_owner = get_crom_object(final_owner_data)
 			hmo = get_crom_object(data)
-			tx_label_args = tuple([self.helper, sale_type, 'Sold', 'leading to the currently known location of'] + list(lot_object_key))
+			tx_label_args = tuple([self.helper, sale_type, 'Event', 'leading to the currently known location of'] + list(lot_object_key))
 			tx, acq = self.final_owner_prov_entry(tx_label_args, final_owner, current_tx, hmo, ts)
 			note = final_owner_data.get('note')
 			if note:

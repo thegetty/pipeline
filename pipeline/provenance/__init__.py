@@ -49,7 +49,7 @@ class ProvenanceBase(Configurable):
 		  * helper: the helper object for the current pipeline
 		  * sale_type: the sale type passed to `handle_prev_post_owner` (e.g. "Auction")
 		  * transaction: the transaction type being handled (e.g. "Sold")
-		  * rel: a string describing the relationship between this provenance entry and the object (e.g. "leading to the previous ownership of")
+		  * rel: a string describing the relationship between this provenance entry and the object (e.g. "leading to Ownership of")
 		  * N trailing arguments used that are the contents of the `lot_object_key` tuple passed to `handle_prev_post_owner`
 		'''
 
@@ -100,10 +100,10 @@ class ProvenanceBase(Configurable):
 		current_tx = get_crom_object(tx_data)
 		sales_record = get_crom_object(data.get('_record', data.get('_text_row')))
 		if rev:
-			rel = f'leading to the previous ownership of'
+			rel = f'leading to Ownership of'
 			source_label = 'Source of information on history of the object prior to the current sale.'
 		else:
-			rel = f'leading to the subsequent ownership of'
+			rel = f'leading to Ownership of'
 			source_label = 'Source of information on history of the object after the current sale.'
 		owner_record.update({
 			'pi_record_no': data['pi_record_no'],
@@ -133,7 +133,7 @@ class ProvenanceBase(Configurable):
 		# we run the rist of provenance entries being accidentally merged during URI
 		# reconciliation as part of the prev/post sale rewriting.
 		tx_uri = self.helper.prepend_uri_key(hmo.id, f'PROV-{record_id}')
-		tx_label_args = tuple([self.helper, sale_type, 'Sold', rel] + list(lot_object_key))
+		tx_label_args = tuple([self.helper, sale_type, 'Event', rel] + list(lot_object_key))
 		tx, _ = self.related_procurement(hmo, tx_label_args, current_tx, ts, buyer=owner, previous=rev, ident=tx_uri, make_label=make_label, sales_record=sales_record)
 		if owner_record.get('own_auth_e'):
 			content = owner_record['own_auth_e']

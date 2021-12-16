@@ -792,10 +792,16 @@ class AddAcquisitionOrBidding(ProvenanceBase):
 		]
 		all_mods = {m.lower().strip() for a in sellers for m in a.get('auth_mod_a', '').split(';')} - {''}
 		seller_group = (all_mods == {'or'}) # the seller is *one* of the named people, model as a group
+		# TODO: add buyer group handling?
 		
 		orig_sellers = sellers
 		if seller_group:
 			tx_data = parent.get('_prov_entry_data')
+			names = []
+			for seller_data in sellers:
+				# TODO: will all records here have an identifier with .content?
+				names.append(seller_data['identifiers'][0].content)
+			group_name = ' OR '.join(names)
 			if tx_data: # if there is a prov entry (e.g. was not withdrawn)
 				current_tx = get_crom_object(tx_data)
 				# The seller group URI is just the provenance entry URI with a suffix.
@@ -815,11 +821,12 @@ class AddAcquisitionOrBidding(ProvenanceBase):
 				}
 			g_label = f'Group containing the seller of {object_key_string(cno, lno, date)}'
 			g = vocab.UncertainMemberClosedGroup(ident=group_uri, label=g_label)
+			g.identified_by = model.Name(ident='', content=group_name)
 			for seller_data in sellers:
 				seller = get_crom_object(seller_data)
 				seller.member_of = g
 				data['_other_owners'].append(seller_data)
-			sellers = [add_crom_data({}, g)]
+			sellers = [add_crom_data(group_data, g)]
 
 		SOLD = transaction_types['sold']
 		UNSOLD = transaction_types['unsold']

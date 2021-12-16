@@ -525,6 +525,7 @@ class PipelineBase:
 		GETTY_GCI_URI = self.helper.make_shared_uri('STATIC', 'ORGANIZATION', 'Getty Conservation Institute')
 		LUGT_URI = self.helper.make_proj_uri('PERSON', 'ULAN', lugt_ulan)
 		KNOEDLER_URI = self.helper.make_shared_uri('ORGANIZATION', 'ULAN', str(knoedler_ulan))
+		NEWYORK_URI = self.helper.make_shared_uri('PLACE', 'USA', 'NY', 'New York')
 
 		gci = model.Group(ident=GETTY_GCI_URI, label='Getty Conservation Institute')
 		gci.identified_by = vocab.PrimaryName(ident='', content='Getty Conservation Institute')
@@ -549,11 +550,18 @@ class PipelineBase:
 		knoedler.identified_by = vocab.PrimaryName(ident='', content=knoedler_name)
 		knoedler.exact_match = model.BaseResource(ident=f'http://vocab.getty.edu/ulan/{knoedler_ulan}')
 
+		newyork_name = 'New York, NY'
+		newyork = model.Place(ident=NEWYORK_URI, label=newyork_name)
+		newyork.identified_by = vocab.PrimaryName(ident='', content=newyork_name)
+		
 		materials = {}
 		if 'materials' in self.services:
 			materials.update({
 				aat: model.Material(ident=f'http://vocab.getty.edu/aat/{aat}', label=label) for aat, label in self.services['materials'].items()
 			})
+
+		places = self._static_place_instances()
+		places.update({'newyork': newyork})
 
 		instances = defaultdict(dict)
 		instances.update({
@@ -568,7 +576,7 @@ class PipelineBase:
 				'lugt': lugt
 			},
 			'Material': materials,
-			'Place': self._static_place_instances()
+			'Place': places
 		})
 		
 		return instances

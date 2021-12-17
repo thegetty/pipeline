@@ -445,7 +445,7 @@ class AddRow(Configurable, KnoedlerProvenance):
 			if book.get(k):
 				notes.append(vocab.Note(ident='', content=book[k]))
 
-		star_id = self.helper.gri_number_id(rec_num, vocab.SystemNumber)
+		star_id = self.helper.gri_number_id(rec_num, vocab.StarNumber)
 		data['_text_row'] = {
 			'uri': self.helper.make_proj_uri('Text', 'Book', book_id, 'Page', page_id, 'Row', row_id),
 			'label': f'Knoedler Stock Book {book_id}, Page {page_id}, Row {row_id}',

@@ -44,7 +44,7 @@ class PIRModelingTest_AR48(TestKnoedlerPipelineOutput):
         self.assertDictContainsSubset({
             'Title': 'Knoedler Stock Book 3, Page 20, Row 42',
             'Entry Number': '42',
-            'System-Assigned Number': '44301',
+            'STAR Identifier': '44301',
         }, classified_identifiers(text_row))
 
 

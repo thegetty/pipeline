@@ -128,7 +128,7 @@ class PopulateAuctionCatalog(Configurable):
 
 		if not sno:
 			warnings.warn(f'Setting empty identifier on {catalog.id}')
-		catalog.identified_by = vocab.SystemNumber(ident='', content=sno)
+		catalog.identified_by = self.helper.gri_number_id(sno, vocab.StarNumber)
 		notes = data.get('notes')
 		if notes:
 			note = vocab.Note(ident='', content=parent['notes'])

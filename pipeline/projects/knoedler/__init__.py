@@ -850,16 +850,11 @@ class TransactionHandler(ProvenanceBase):
 					paym.part = shared_paym
 
 		for person in people:
-			if incoming:
-				if paym:
+			if paym:
+				if incoming:
 					paym.paid_to = person
-					for kp in knoedler_group:
-						paym.carried_out_by = kp
-			else:
-				if paym:
+				else:
 					paym.paid_from = person
-					for kp in knoedler_group:
-						paym.carried_out_by = kp
 
 	def _add_prov_entry_acquisition(self, data:dict, tx, from_people, to_people, date, incoming, purpose=None):
 		rec = data['book_record']

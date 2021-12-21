@@ -419,7 +419,7 @@ class AddPage(Configurable, KnoedlerProvenance):
 		if book.get('subheading'):
 			# Transcription of the subheading of the page
 			subheading = book['subheading']
-			data['_text_page']['part'].append(add_crom_data(data={}, what=vocab.SubHeading(ident='', content=subheading)))
+			data['_text_page']['part'].append(add_crom_data(data={}, what=vocab.Heading(ident='', content=subheading)))
 			data['_text_page']['subheading'] = subheading # TODO: add subheading handling to MakeLinkedArtLinguisticObject
 
 		make_la_hmo(data['_physical_page'])

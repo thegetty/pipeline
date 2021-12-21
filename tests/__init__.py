@@ -542,3 +542,21 @@ def classified_identifier_sets(data, key='identified_by'):
 			else:
 				classified_identifiers[None].add(content)
 	return classified_identifiers
+
+def classification_sets(data, key='_label'):
+	classification_set = set()
+	classification = data.get('classified_as', [])
+	if len(classification):
+		for cl in classification:
+			label = cl[key]
+			classification_set.add(label)
+	return classification_set
+
+def classification_tree(data, key='_label'):
+	tree = {}
+	classification = data.get('classified_as', [])
+	if len(classification):
+		for cl in classification:
+			label = cl[key]
+			tree[label] = classification_tree(cl, key=key)
+	return tree

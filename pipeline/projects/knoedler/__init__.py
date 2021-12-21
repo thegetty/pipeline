@@ -254,7 +254,7 @@ def add_crom_price(data, parent, services, add_citations=False):
 	amt = data.get('amount', '')
 	if '[' in amt:
 		data['amount'] = amt.replace('[', '').replace(']', '')
-	amnt = extract_monetary_amount(data, currency_mapping=currencies, add_citations=add_citations)
+	amnt = extract_monetary_amount(data, currency_mapping=currencies, add_citations=add_citations, truncate_label_digits=2)
 	if amnt:
 		add_crom_data(data=data, what=amnt)
 	return data
@@ -732,7 +732,7 @@ class TransactionHandler(ProvenanceBase):
 
 		d = model.Dimension(ident='')
 		d.unit = vocab.instances['percent']
-		d.value = float(100 * frac)
+		d.value = f'{float(100 * frac):.2f}'
 		right.dimension = d
 		return right
 

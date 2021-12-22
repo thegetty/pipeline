@@ -359,9 +359,13 @@ class AddBook(Configurable, KnoedlerProvenance):
 		book = data['book_record']
 		book_id, _, _ = record_id(book)
 
+		book_type = model.Type(ident='http://vocab.getty.edu/aat/300028051', label='Book')
+		book_type.classified_as = model.Type(ident='http://vocab.getty.edu/aat/300444970', label='Form')
+
 		data['_text_book'] = {
 			'uri': self.helper.make_proj_uri('Text', 'Book', book_id),
 			'object_type': vocab.AccountBookText,
+			'classified_as': [book_type],
 			'label': f'Knoedler Stock Book {book_id}',
 			'identifiers': [self.helper.knoedler_number_id(book_id, id_class=vocab.BookNumber)],
 		}
@@ -393,7 +397,7 @@ class AddPage(Configurable, KnoedlerProvenance):
 
 		data['_text_page'] = {
 			'uri': self.helper.make_proj_uri('Text', 'Book', book_id, 'Page', page_id),
-			'object_type': vocab.PageText,
+			'object_type': vocab.PageTextForm,
 			'label': f'Knoedler Stock Book {book_id}, Page {page_id}',
 			'identifiers': [self.helper.knoedler_number_id(page_id, id_class=vocab.PageNumber)],
 			'referred_to_by': [],
@@ -448,6 +452,7 @@ class AddRow(Configurable, KnoedlerProvenance):
 		star_id = self.helper.gri_number_id(rec_num, vocab.SystemNumber)
 		data['_text_row'] = {
 			'uri': self.helper.make_proj_uri('Text', 'Book', book_id, 'Page', page_id, 'Row', row_id),
+			'object_type': vocab.EntryTextForm,
 			'label': f'Knoedler Stock Book {book_id}, Page {page_id}, Row {row_id}',
 			'identifiers': [self.helper.knoedler_number_id(row_id, id_class=vocab.EntryNumber), star_id],
 			'part_of': [data['_text_page']],
@@ -1265,13 +1270,16 @@ class KnoedlerPipeline(PipelineBase):
 		super().__init__(project_name, helper=helper)
 		helper.static_instances = self.static_instances
 
+		vocab.register_instance('form type', {'parent': model.Type, 'id': '300444970', 'label': 'Form'})
+
 		vocab.register_vocab_class('SaleAsReturn', {"parent": model.Activity, "id":"XXXXXX005", "label": "Sale (Return to Original Owner)"})
 
 		vocab.register_vocab_class('EntryNumber', {"parent": model.Identifier, "id":"300445023", "label": "Entry Number"})
 		vocab.register_vocab_class('PageNumber', {"parent": model.Identifier, "id":"300445022", "label": "Page Number"})
 		vocab.register_vocab_class('BookNumber', {"parent": model.Identifier, "id":"300445021", "label": "Book Number"})
 
-
+		vocab.register_vocab_class('PageTextForm', {"parent": model.LinguisticObject, "id":"300194222", "label": "Page", "metatype": "form type"})
+		vocab.register_vocab_class('EntryTextForm', {"parent": model.LinguisticObject, "id":"300438434", "label": "Entry", "metatype": "form type"})
 
 		self.graph = None
 		self.models = kwargs.get('models', settings.arches_models)

@@ -88,6 +88,9 @@ class MakeLinkedArtRecord:
 		'''
 		self.set_referred_to_by(data, thing)
 
+		for c in data.get('classified_as', []):
+			thing.classified_as = c
+
 		for identifier in data.get('identifiers', []):
 			if isinstance(identifier, tuple):
 				content, itype = identifier
@@ -213,9 +216,6 @@ class MakeLinkedArtLinguisticObject(MakeLinkedArtRecord):
 
 		for a in data.get('about', []):
 			thing.about = a
-
-		for c in data.get('classified_as', []):
-			thing.classified_as = c
 
 		for t in data.get('translations', []):
 			n = set_la_name(thing, t, title_type)
@@ -620,8 +620,6 @@ class MakeLinkedArtPlace(MakeLinkedArtRecord):
 
 		if place_type:
 			thing.classified_as = place_type
-		for c in data.get('classified_as', []):
-			thing.classified_as = c
 		if not name:
 			warnings.warn(f'Place with missing name on {thing.id}')
 		if parent:

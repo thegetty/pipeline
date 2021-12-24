@@ -13,13 +13,17 @@ class PIRModelingTest_AR101(TestKnoedlerPipelineOutput):
         '''
         output = self.run_pipeline('ar101')
         lo = output['model-lo']
-        catalog = lo['tag:getty.edu,2019:digital:pipeline:REPLACE-WITH-UUID:knoedler#Text,Book,5,Page,190,Row,38']
+        objects = output['model-object']
+        vi = output['model-visual-item']
+        row = lo['tag:getty.edu,2019:digital:pipeline:REPLACE-WITH-UUID:knoedler#Text,Book,5,Page,190,Row,38']
         
-        self.assertEqual(classified_identifier_sets(catalog), {
-			'Entry Number': {'38'},
-			'STAR Identifier': {'53051'},
-			'Title': {'Knoedler Stock Book 5, Page 190, Row 38'}
-		})
+        self.assertEqual(classified_identifier_sets(row), {
+            'Entry Number': {'38'},
+            'STAR Identifier': {'53051'},
+            'Title': {'Knoedler Stock Book 5, Page 190, Row 38'}
+        })
+        
+        obj = objects['tag:getty.edu,2019:digital:pipeline:REPLACE-WITH-UUID:knoedler#Object,5995']
 
 
 if __name__ == '__main__':

@@ -328,8 +328,6 @@ class PeoplePipeline(PipelineBase):
 		vocab.register_vocab_class("DealingOccupation", {"parent": model.Activity, "id":"300055675", "label": "Commercial Dealing in Artwork", "metatype": "occupation"})
 		vocab.register_vocab_class("OwningOccupation", {"parent": model.Activity, "id":"300055603", "label": "Owning", "metatype": "occupation"})
 
-		vocab.register_vocab_class('ActiveOccupation', {"parent": model.Activity, "id":"300393177", "label": "Professional Activities", "metatype": "occupation"})
-
 		helper = PeopleUtilityHelper(project_name)
 
 		super().__init__(project_name, helper=helper)

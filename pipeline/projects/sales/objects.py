@@ -78,7 +78,7 @@ class PopulateSalesObject(Configurable, pipeline.linkedart.PopulateObject):
 
 			hmo.destroyed_by = d
 
-	def _populate_object_visual_item(self, data:dict, subject_genre):
+	def _populate_object_visual_item(self, data:dict, subject_genre, modified_title, record):
 		hmo = get_crom_object(data)
 		title = data.get('title')
 		title = truncate_with_ellipsis(title, 100) or title
@@ -88,11 +88,21 @@ class PopulateSalesObject(Configurable, pipeline.linkedart.PopulateObject):
 		# the URIs for the visual items (of which there should only be one per object)
 		vi_uri = hmo.id + '-VisItem'
 		vi = model.VisualItem(ident=vi_uri)
-		vidata = {'uri': vi_uri}
+		vidata = {'uri': vi_uri, 'names': [], 'identifiers': []}
 		if title:
 			vidata['label'] = f'Visual work of “{title}”'
 			sales_record = get_crom_object(data['_record'])
-			vidata['names'] = [(title,{'referred_to_by': [sales_record]})]
+			titletype = model.Name if modified_title else vocab.PrimaryName
+			t = titletype(ident='', content=title)
+			t.classified_as = model.Type(ident='http://vocab.getty.edu/aat/300417193', label='Title')
+			t.referred_to_by = sales_record
+			vidata['identifiers'].append(t)
+
+		if modified_title:
+			t = vocab.PrimaryName(ident='', content=modified_title)
+			t.classified_as = model.Type(ident='http://vocab.getty.edu/aat/300417193', label='Title')
+			t.referred_to_by = record
+			vidata['identifiers'].append(t)
 
 		for key in ('genre', 'subject'):
 			if key in data:
@@ -299,7 +309,7 @@ class PopulateSalesObject(Configurable, pipeline.linkedart.PopulateObject):
 		'''
 		hmo = get_crom_object(data)
 		this_lot_prefixes = title_modifiers['this lot']
-		handled = False
+		handled = None
 		if 'title_modifier' in data:
 			mod = data['title_modifier']
 			for prefix in this_lot_prefixes:
@@ -311,7 +321,7 @@ class PopulateSalesObject(Configurable, pipeline.linkedart.PopulateObject):
 					t.classified_as = model.Type(ident='http://vocab.getty.edu/aat/300417193', label='Title')
 					t.referred_to_by = record
 					data['identifiers'].append(t)
-					handled = True
+					handled = mod
 					break
 			if not handled:
 				hmo.referred_to_by = vocab.Note(ident='', content=mod)
@@ -347,7 +357,6 @@ class PopulateSalesObject(Configurable, pipeline.linkedart.PopulateObject):
 		data['_final_org'] = []
 		data['_events'] = []
 		record = self._populate_object_catalog_record(data, parent, lot, cno, parent['pi_record_no'])
-		self._populate_object_visual_item(data, subject_genre)
 		self._populate_object_destruction(data, parent, destruction_types_map)
 		self.populate_object_statements(data)
 		self._populate_object_materials(data, materials_map)
@@ -358,7 +367,9 @@ class PopulateSalesObject(Configurable, pipeline.linkedart.PopulateObject):
 			url = p['portal_url']
 			hmo.referred_to_by = vocab.WebPage(ident=url, label=url)
 
-		has_title = self._populate_title_modifier(data, title_modifiers, record)
+		modified_title = self._populate_title_modifier(data, title_modifiers, record)
+		self._populate_object_visual_item(data, subject_genre, modified_title, record)
+
 		if 'title' in data:
 			title = data['title']
 			if not hasattr(hmo, '_label'):
@@ -371,12 +382,11 @@ class PopulateSalesObject(Configurable, pipeline.linkedart.PopulateObject):
 				description.referred_to_by = record
 				hmo.referred_to_by = description
 				title = shorter
-			title_class = vocab.Name if has_title else vocab.PrimaryName
+			title_class = vocab.Name if modified_title else vocab.PrimaryName
 			t = title_class(ident='', content=title)
 			t.classified_as = model.Type(ident='http://vocab.getty.edu/aat/300417193', label='Title')
 			t.referred_to_by = record
 			data['identifiers'].append(t)
-		
 
 		for d in data.get('other_titles', []):
 			title = d['title']

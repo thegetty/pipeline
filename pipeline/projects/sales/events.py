@@ -190,7 +190,9 @@ class AddAuctionHouses(Configurable):
 			house_dict_copy['uri'] = house_dict['uri']
 			house_dicts.append(house_dict_copy)
 			house = get_crom_object(h)
-			auction.carried_out_by = house
+			act = vocab.AuctionHouseActivity(ident='', label=f'Activity of {house._label}')
+			act.carried_out_by = house
+			auction.part = act
 			d['_organizers'].append(h)
 		event_properties['auction_houses'][cno] += house_dicts
 		return d

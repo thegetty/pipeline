@@ -3,7 +3,7 @@ import unittest
 
 from cromulent import vocab
 
-from tests import TestPeoplePipelineOutput, classified_identifiers
+from tests import TestPeoplePipelineOutput, classified_identifier_sets
 
 vocab.add_attribute_assignment_check()
 
@@ -16,10 +16,19 @@ class PIRModelingTest_AR54(TestPeoplePipelineOutput):
 
         people = output['model-person']
         person = people['tag:getty.edu,2019:digital:pipeline:REPLACE-WITH-UUID:shared#PERSON,AUTH,Parsons%2C%20Charles%20H.']
-        self.assertEqual(classified_identifiers(person), {
-        	'STAR Identifier': '46035',
-        	'Personal Name': 'Parsons, Chs.',
-        	'Primary Name': 'Parsons, Charles H.',
+        self.assertEqual(classified_identifier_sets(person), {
+        	'STAR Identifier': {'46035'},
+        	'Personal Name': {
+				'Ch.s H. Parsons',
+				'Ch.s Parsons',
+				'Charles H. Parsons',
+				'Chs Parsons',
+				'Chs. Parsons',
+				'Parsons, Chs.',
+				'c. parsons',
+				'ch. parsons'
+			},
+        	'Primary Name': {'Parsons, Charles H.'},
         })
         
         star_id = [i for i in person['identified_by'] if i['content'] == '46035'][0]

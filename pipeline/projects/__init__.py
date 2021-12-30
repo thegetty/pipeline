@@ -132,10 +132,14 @@ class PersonIdentity:
 
 	def add_person(self, a, record=None, relative_id=None, **kwargs):
 		self.add_uri(a, record_id=relative_id)
-		self.add_names(a, referrer=record, **kwargs)
-		self.add_props(a, **kwargs)
 		auth_name = a.get('auth_name')
-		if auth_name and self.is_anonymous_group(auth_name):
+		
+		# is_group will be true here if this person record is a stand-in
+		# for a group of people (e.g. all French people, or 17th century Germans)
+		is_group = auth_name and self.is_anonymous_group(auth_name)
+		self.add_names(a, group=is_group, referrer=record, **kwargs)
+		self.add_props(a, **kwargs)
+		if is_group:
 			self.make_la_org(a)
 		else:
 			self.make_la_person(a)
@@ -143,7 +147,7 @@ class PersonIdentity:
 
 	def add_group(self, a, record=None, relative_id=None, **kwargs):
 		self.add_uri(a, record_id=relative_id)
-		self.add_names(a, referrer=record, **kwargs)
+		self.add_names(a, referrer=record, group=True, **kwargs)
 		self.add_props(a, **kwargs)
 		self.make_la_org(a)
 		return get_crom_object(a)
@@ -364,7 +368,7 @@ class PersonIdentity:
 			else:
 				warnings.warn(f'No nationality instance found in crom for: {key!r}')
 
-	def add_names(self, data:dict, referrer=None, role=None, **kwargs):
+	def add_names(self, data:dict, referrer=None, role=None, group=False, **kwargs):
 		'''
 		Based on the presence of `auth_name` and/or `name` fields in `data`, sets the
 		`label`, `names`, and `identifier` keys to appropriate strings/`model.Identifier`
@@ -376,21 +380,23 @@ class PersonIdentity:
 		data.setdefault('identifiers', [])
 		auth_name = data.get('auth_name', '')
 		disp_name = data.get('auth_display_name')
-		name_type = vocab.PrimaryName
+		name_types = [vocab.PrimaryName]
 		
+		personalNameType = vocab.CorporateName if group else vocab.PersonalName
+
 		if disp_name:
 			if auth_name:
 				data['identifiers'].append(vocab.PrimaryName(ident='', content=auth_name))
 				data['label'] = auth_name
 			auth_name = disp_name
-			name_type = vocab.Name
+			name_types = [personalNameType, vocab.DisplayName]
 
 		role_label = None
 		if self.acceptable_person_auth_name(auth_name):
 			if role:
 				role_label = f'{role} “{auth_name}”'
 			data.setdefault('label', auth_name)
-			pname = name_type(ident='', content=auth_name) # NOTE: most of these are also vocab.SortName, but not 100%, so witholding that assertion for now
+			pname = vocab.make_multitype_obj(*name_types, ident='', content=auth_name) # NOTE: most of these are also vocab.SortName, but not 100%, so witholding that assertion for now
 			if referrer:
 				pname.referred_to_by = referrer
 			data['identifiers'].append(pname)
@@ -411,7 +417,7 @@ class PersonIdentity:
 				role_label = f'{role} “{name}”'
 			name_kwargs = {}
 # 			name_kwargs['classified_as'] = model.Type(ident='http://vocab.getty.edu/aat/300266386', label='Personal Name')
-			name_kwargs['classified_as'] = vocab.PersonalName
+			name_kwargs['classified_as'] = personalNameType
 			if referrer:
 				name_kwargs['referred_to_by'] = [referrer]
 			data['names'].append((name, name_kwargs))
@@ -463,11 +469,12 @@ class PipelineBase:
 		helper.add_services(self.services)
 		self.static_instances = StaticInstanceHolder(self.setup_static_instances())
 		helper.add_static_instances(self.static_instances)
+
 		vocab.register_instance('occupation', {'parent': model.Type, 'id': '300263369', 'label': 'Occupation'})
 		vocab.register_instance('function', {'parent': model.Type, 'id': '300444971', 'label': 'Function (general concept)'})
 
 		vocab.register_vocab_class('StarNumber', {'parent': vocab.LocalNumber, 'id': 'https://data.getty.edu/local/thesaurus/star-identifier', 'label': 'STAR Identifier'})
-		vocab.register_instance('function', {'parent': model.Type, 'id': '300444971', 'label': 'Function (general concept)'})
+		vocab.register_vocab_class('CorporateName', {'parent': model.Name, 'id': '300445020', 'label': 'Corporate Name'})
 		vocab.register_vocab_class('Internal', {"parent": model.LinguisticObject, "id":"300444972", "label": "private (general concept)", "metatype": "function"})
 		vocab.register_vocab_class('External', {"parent": model.LinguisticObject, "id":"300444973", "label": "public (general concept)", "metatype": "function"})
 		vocab.register_vocab_class('ActiveOccupation', {"parent": model.Activity, "id":"300393177", "label": "Professional Activities", "metatype": "occupation"})

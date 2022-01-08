@@ -889,15 +889,6 @@ class UtilityHelper:
 		catalog_id.assigned_by = assignment
 		return catalog_id
 
-	def pscp_number_id(self, content, id_class=None):
-		if id_class is None:
-			id_class = vocab.StarNumber
-		catalog_id = id_class(ident='', content=content)
-		assignment = model.AttributeAssignment(ident=self.make_shared_uri('__pscp_attribute_assignment'))
-		assignment.carried_out_by = self.static_instances.get_instance('Group', 'pscp')
-		catalog_id.assigned_by = assignment
-		return catalog_id
-
 	def knoedler_number_id(self, content, id_class=None):
 		if id_class is None:
 			id_class = vocab.LocalNumber

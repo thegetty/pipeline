@@ -370,6 +370,9 @@ class PopulateSalesObject(Configurable, pipeline.linkedart.PopulateObject):
 		modified_title = self._populate_title_modifier(data, title_modifiers, record)
 		self._populate_object_visual_item(data, subject_genre, modified_title, record)
 
+		title_type = model.Type(ident='http://vocab.getty.edu/aat/300417193', label='Title')
+		trans_type = model.Type(ident='http://vocab.getty.edu/aat/300417194', label='Translated Title')
+
 		if 'title' in data:
 			title = data['title']
 			if not hasattr(hmo, '_label'):
@@ -384,10 +387,19 @@ class PopulateSalesObject(Configurable, pipeline.linkedart.PopulateObject):
 				title = shorter
 			title_class = vocab.Name if modified_title else vocab.PrimaryName
 			t = title_class(ident='', content=title)
-			t.classified_as = model.Type(ident='http://vocab.getty.edu/aat/300417193', label='Title')
+			t.classified_as = title_type
 			t.referred_to_by = record
 			data['identifiers'].append(t)
 
+		if 'title_translation' in data:
+			title = data['title_translation']
+			t = vocab.Name(ident='', content=title)
+			t.classified_as = title_type
+			t.classified_as = trans_type
+			t.language = vocab.instances['english']
+			t.referred_to_by = record
+			data['identifiers'].append(t)
+			
 		for d in data.get('other_titles', []):
 			title = d['title']
 			t = vocab.Name(ident='', content=title)

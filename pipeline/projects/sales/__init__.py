@@ -873,7 +873,7 @@ class SalesPipeline(PipelineBase):
 							},
 							'other_titles': {
 								'rename_keys': {
-									'post_sale_ttl': 'title'
+									'post_sale_ttl': 'title',
 								},
 								'prefixes': (
 									'post_sale_ttl')},
@@ -1008,7 +1008,8 @@ class SalesPipeline(PipelineBase):
 									'prev_sale',
 									'prev_owner',
 									'post_owner',
-									'portal')},
+									'portal',
+									'title_translation')},
 							'estimated_price': {
 								'rename_keys': {
 									'est_price_q': 'uncertain',

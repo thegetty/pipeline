@@ -444,6 +444,7 @@ class AddArtists(Configurable):
 	attribution_group_names = Service('attribution_group_names')
 
 	def add_properties(self, data:dict, a:dict):
+		sales_record = get_crom_object(data['_record'])
 		a.setdefault('referred_to_by', [])
 		a.update({
 			'pi_record_no': data['pi_record_no'],
@@ -462,6 +463,7 @@ class AddArtists(Configurable):
 			bio = a['biography']
 			del a['biography']
 			cite = vocab.BiographyStatement(ident='', content=bio)
+			cite.referred_to_by = sales_record
 			a['referred_to_by'].append(cite)
 
 	def is_or_anon(self, data:dict):

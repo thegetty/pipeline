@@ -29,7 +29,7 @@ class AddAuctionCatalog(Configurable):
 		cdata = {'uri': catalog.id}
 		puid = data.get('persistent_puid')
 		if puid:
-			puid_id = self.helper.gri_number_id(puid)
+			puid_id = self.helper.gpi_number_id(puid)
 			catalog.identified_by = puid_id
 			cdata['identifiers'] = [puid_id]
 		
@@ -124,11 +124,11 @@ class PopulateAuctionCatalog(Configurable):
 		if not cno:
 			warnings.warn(f'Setting empty identifier on {catalog.id}')
 		
-		catalog.identified_by = self.helper.gri_number_id(cno)
+		catalog.identified_by = self.helper.gpi_number_id(cno, vocab.LocalNumber)
 
 		if not sno:
 			warnings.warn(f'Setting empty identifier on {catalog.id}')
-		catalog.identified_by = vocab.SystemNumber(ident='', content=sno)
+		catalog.identified_by = self.helper.gpi_number_id(sno, vocab.StarNumber)
 		notes = data.get('notes')
 		if notes:
 			note = vocab.Note(ident='', content=parent['notes'])

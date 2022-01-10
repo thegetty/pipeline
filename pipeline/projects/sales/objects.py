@@ -126,7 +126,7 @@ class PopulateSalesObject(Configurable, pipeline.linkedart.PopulateObject):
 		lot_object_id = parent['lot_object_id']
 		
 		puid = parent.get('persistent_puid')
-		puid_id = self.helper.gri_number_id(puid)
+		puid_id = self.helper.gpi_number_id(puid)
 
 		record = vocab.ParagraphText(ident=record_uri, label=f'Sale recorded in catalog: {lot_object_id} (record number {rec_num})')
 		record_data	= {'uri': record_uri}

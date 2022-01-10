@@ -18,9 +18,11 @@ class PIRModelingTest_AR101(TestPeoplePipelineOutput):
         
         group = groups['tag:getty.edu,2019:digital:pipeline:REPLACE-WITH-UUID:shared#PERSON,AUTH,Boston%2C%20MA%2C%20USA.%20%20Isabella%20Stewart%20Gardner%20Museum']
         self.assertEqual(classified_identifier_sets(group), {
-            None: {'Isabella Stewart Gardner Museum'},
-            'Personal Name': {'Boston, MA, USA.  Isabella Stewart Gardner Museum',
-            'Boston, MA.  Isabella Stewart Gardner Museum'},
+            'Display Title': {'Isabella Stewart Gardner Museum'},
+            'Corporate Name': {
+            	'Boston, MA, USA.  Isabella Stewart Gardner Museum',
+	            'Boston, MA.  Isabella Stewart Gardner Museum',
+	            'Isabella Stewart Gardner Museum'},
             'Primary Name': {'Boston, MA, USA.  Isabella Stewart Gardner Museum'},
             'STAR Identifier': {'31556'}
         })

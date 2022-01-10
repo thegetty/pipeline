@@ -839,19 +839,23 @@ class TransactionHandler(ProvenanceBase):
 
 			for i, partdata in enumerate(parts):
 				person, part_amnt = partdata
-				shared_payment_id = tx_uri + f'-Payment-{i}-share'
-				shared_paym = model.Payment(ident=shared_payment_id, label=f"{person._label} share of payment for {sn_ident}")
-				if part_amnt:
-					shared_paym.paid_amount = part_amnt
-				if incoming:
-					shared_paym.paid_from = person
-				else:
-					shared_paym.paid_to = person
-
 				# add the part is there are multiple parts (shared tx), or if
 				# this is the single part we know about, but its value is not
 				#the same as the whole tx amount
-				if len(parts) > 1 or part_amnt != amnt:
+				different_amount = False
+				with suppress(AttributeError):
+					if amnt.value != part_amnt.value:
+						different_amount = True
+				if len(parts) > 1 or different_amount:
+					shared_payment_id = tx_uri + f'-Payment-{i}-share'
+					shared_paym = model.Payment(ident=shared_payment_id, label=f"{person._label} share of payment for {sn_ident}")
+					if part_amnt:
+						shared_paym.paid_amount = part_amnt
+					if incoming:
+						shared_paym.paid_from = person
+					else:
+						shared_paym.paid_to = person
+
 					paym.part = shared_paym
 
 		for person in people:
@@ -1241,10 +1245,10 @@ class ModelInventorying(TransactionHandler):
 		inv = vocab.Inventorying(ident=inv_uri, label=inv_label)
 		inv.identified_by = model.Name(ident='', content=inv_label)
 		inv.encountered = hmo
+		inv.carried_out_by = self.helper.static_instances.get_instance('Group', 'knoedler')
 		self.set_date(inv, data, 'entry_date')
 
 		tx_out.part = inv
-		tx_out.carried_out_by = self.helper.static_instances.get_instance('Group', 'knoedler')
 		self.set_date(tx_out, data, 'entry_date')
 
 		tx_out_data = add_crom_data(data={'uri': tx_out.id, 'label': inv_label}, what=tx_out)

@@ -1,5 +1,6 @@
 #!/usr/bin/env python3 -B
 import unittest
+from contextlib import suppress
 
 from tests import TestKnoedlerPipelineOutput, classified_identifiers
 from cromulent import vocab
@@ -16,11 +17,18 @@ class PIRModelingTest_AR76(TestKnoedlerPipelineOutput):
 
         txs = ['8,224,36', '3,118,4', '5,110,20', '9,172,29']
 
+        handled = 0
         for tx_suffix in txs:
-            tx1_out = activities['tag:getty.edu,2019:digital:pipeline:REPLACE-WITH-UUID:knoedler#TX,Out,' + tx_suffix]
-            tx1_in = activities['tag:getty.edu,2019:digital:pipeline:REPLACE-WITH-UUID:knoedler#TX,In,' + tx_suffix]
-            self.verifyKnoedlerPresence(tx1_out, 'out')
-            self.verifyKnoedlerPresence(tx1_in, 'in')
+            with suppress(KeyError):
+                tx1_out = activities['tag:getty.edu,2019:digital:pipeline:REPLACE-WITH-UUID:knoedler#TX,Out,' + tx_suffix]
+                self.verifyKnoedlerPresence(tx1_out, 'out')
+                handled += 1
+
+            with suppress(KeyError):
+                tx1_in = activities['tag:getty.edu,2019:digital:pipeline:REPLACE-WITH-UUID:knoedler#TX,In,' + tx_suffix]
+                self.verifyKnoedlerPresence(tx1_in, 'in')
+                handled += 1
+        self.assertEqual(handled, 7)
 
     def verifyKnoedlerPresence(self, tx, direction):
         parts = tx['part']

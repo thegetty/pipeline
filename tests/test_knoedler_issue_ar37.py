@@ -30,11 +30,11 @@ class PIRModelingTest_AR37(TestKnoedlerPipelineOutput):
         self.assertNotIn('K-1966', sale['_label'])
 
         # Inventorying
-        inv = activities['tag:getty.edu,2019:digital:pipeline:REPLACE-WITH-UUID:knoedler#TX,Out,3,53,2']
+        inv = activities['tag:getty.edu,2019:digital:pipeline:REPLACE-WITH-UUID:knoedler#TX,Out,4,86,15']
         self.assertDictContainsSubset({
-            None: {'Knoedler Inventorying of Stock Number 1228 (1878-08-14)'}
+            None: {'Knoedler Inventorying of Stock Number 5323 (1887-04-30)'}
         }, classified_identifier_sets(inv))
-        self.assertNotIn('K-547', inv['_label'])
+        self.assertNotIn('K-7988', inv['_label'])
 
         # Record without a stock number
         missing_sn_act = activities['tag:getty.edu,2019:digital:pipeline:REPLACE-WITH-UUID:knoedler#TX,Out,1,75,7']

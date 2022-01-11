@@ -727,6 +727,47 @@ class TransactionHandler(ProvenanceBase):
 		
 		return tx
 
+	def _apprasing_assignment(self, data):
+		rec = data['book_record']
+		odata = data['_object']
+		date = implode_date(data['entry_date'])
+		
+		hmo = get_crom_object(odata)
+		sn_ident = self.helper.stock_number_identifier(odata, date)
+
+		sellers = data['purchase_seller']
+		price_info = data.get('purchase')
+		if price_info and not len(sellers):
+			# this inventorying has a "purchase" amount that is an evaluated worth amount
+			amnt = get_crom_object(price_info)
+			assignment = vocab.AppraisingAssignment(ident='', label=f'Evaluated worth of {sn_ident}')
+			knoedler = self.helper.static_instances.get_instance('Group', 'knoedler')
+			assignment.carried_out_by = knoedler
+			assignment.assigned_property = 'dimension'
+			assignment.assigned = amnt
+			amnt.classified_as = model.Type(ident='http://vocab.getty.edu/aat/300412096', label='Valuation')
+			assignment.assigned_to = hmo
+			return assignment
+		return None
+
+	def _new_inventorying(self, data):
+		rec = data['book_record']
+		odata = data['_object']
+		book_id, page_id, row_id = record_id(rec)
+		date = implode_date(data['entry_date'])
+		
+		hmo = get_crom_object(odata)
+		sn_ident = self.helper.stock_number_identifier(odata, date)
+		inv_label = f'Knoedler Inventorying of {sn_ident}'
+
+		inv_uri = self.helper.make_proj_uri('INV', book_id, page_id, row_id)
+		inv = vocab.Inventorying(ident=inv_uri, label=inv_label)
+		inv.identified_by = model.Name(ident='', content=inv_label)
+		inv.encountered = hmo
+		self.set_date(inv, data, 'entry_date')
+
+		return inv
+
 	def ownership_right(self, frac, person=None):
 		if person:
 			name = person._label
@@ -1160,8 +1201,8 @@ class ModelFinalSale(TransactionHandler):
 		sales_record = get_crom_object(data['_text_row'])
 		self.helper.copy_source_information(data, odata)
 
-		odata['_prov_entries'] = []
-		odata['_people'] = []
+		odata.setdefault('_prov_entries', [])
+		odata.setdefault('_people', [])
 		hmo = get_crom_object(odata)
 		org = odata.get('_final_org')
 		if org:
@@ -1199,8 +1240,27 @@ class ModelSale(TransactionHandler):
 	make_la_person = Service('make_la_person')
 
 	def __call__(self, data:dict, make_la_person):
-		in_tx = self.add_incoming_tx(data)
+		sellers = data['purchase_seller']
+		if len(sellers):
+			# if there are sellers in this record, then model the incoming transaction.
+			in_tx = self.add_incoming_tx(data)
+		else:
+			# if there are no sellers, then this is an object that was previously unsold, and should be modeled as an inventory activity
+			inv = self._new_inventorying(data)
+			appraisal = self._apprasing_assignment(data)
+			inv_label = inv._label
+			in_tx = self._empty_tx(data, incoming=True)
+			in_tx.part = inv
+			if appraisal:
+				in_tx.part = appraisal
+			in_tx.identified_by = model.Name(ident='', content=inv_label)
+			in_tx._label = inv_label
+			in_tx_data = add_crom_data(data={'uri': in_tx.id, 'label': inv_label}, what=in_tx)
+			data.setdefault('_prov_entries', [])
+			data['_prov_entries'].append(in_tx_data)
+
 		out_tx = self.add_outgoing_tx(data)
+
 		in_tx.ends_before_the_start_of = out_tx
 		out_tx.starts_after_the_end_of = in_tx
 		yield data
@@ -1218,6 +1278,33 @@ class ModelReturn(ModelSale):
 		self.add_return_tx(data)
 		yield from super().__call__(data, make_la_person)
 
+class ModelUnsoldPurchases(TransactionHandler):
+	helper = Option(required=True)
+	make_la_person = Service('make_la_person')
+
+	def __call__(self, data:dict, make_la_person):
+		rec = data['book_record']
+		pi_rec = data['pi_record_no']
+		odata = data['_object']
+		book_id, page_id, row_id = record_id(rec)
+		sales_record = get_crom_object(data['_text_row'])
+		date = implode_date(data['entry_date'])
+		
+		sellers = data['purchase_seller']
+		if len(sellers) == 0:
+			# if there are no sellers in this record (and it is "Unsold" by design of the caller),
+			# then this is actually an Inventorying event, and handled in ModelInventorying
+			return
+
+		hmo = get_crom_object(odata)
+		object_label = f'“{hmo._label}”'
+
+		sn_ident = self.helper.stock_number_identifier(odata, date)
+
+		in_tx = self.add_incoming_tx(data)
+
+		yield data
+
 class ModelInventorying(TransactionHandler):
 	helper = Option(required=True)
 	make_la_person = Service('make_la_person')
@@ -1229,15 +1316,25 @@ class ModelInventorying(TransactionHandler):
 		book_id, page_id, row_id = record_id(rec)
 		sales_record = get_crom_object(data['_text_row'])
 		date = implode_date(data['entry_date'])
+		for k in ('_prov_entries', '_people'):
+			data.setdefault(k, [])
+		
+		sellers = data['purchase_seller']
+		if len(sellers) > 0:
+			# if there are sellers in this record (and it is "Unsold" by design of the caller),
+			# then this is not an actual Inventorying event, and handled in ModelUnsoldPurchases
+			return
 
 		hmo = get_crom_object(odata)
 		object_label = f'“{hmo._label}”'
 
 		sn_ident = self.helper.stock_number_identifier(odata, date)
 
-		in_tx = self.add_incoming_tx(data)
+		inv = self._new_inventorying(data)
+		appraisal = self._apprasing_assignment(data)
+		inv_label = inv._label
+
 		tx_out = self._empty_tx(data, incoming=False)
-		inv_label = f'Knoedler Inventorying of {sn_ident}'
 		tx_out._label = inv_label
 		tx_out.identified_by = model.Name(ident='', content=inv_label)
 
@@ -1249,12 +1346,14 @@ class ModelInventorying(TransactionHandler):
 		self.set_date(inv, data, 'entry_date')
 
 		tx_out.part = inv
+		if appraisal:
+			tx_out.part = appraisal
 		self.set_date(tx_out, data, 'entry_date')
 
 		tx_out_data = add_crom_data(data={'uri': tx_out.id, 'label': inv_label}, what=tx_out)
 		data['_prov_entries'].append(tx_out_data)
 
-		return data
+		yield data
 
 #mark - Knoedler Pipeline class
 
@@ -1270,6 +1369,8 @@ class KnoedlerPipeline(PipelineBase):
 		helper.static_instances = self.static_instances
 
 		vocab.register_instance('form type', {'parent': model.Type, 'id': '300444970', 'label': 'Form'})
+
+		vocab.register_vocab_class('AppraisingAssignment', {'parent': model.AttributeAssignment, 'id': '300054622', 'label': 'Appraising'})
 
 		vocab.register_vocab_class('SaleAsReturn', {"parent": model.Activity, "id":"XXXXXX005", "label": "Sale (Return to Original Owner)"})
 
@@ -1594,6 +1695,12 @@ class KnoedlerPipeline(PipelineBase):
 			_input=tx.output
 		)
 
+		unsold_purchases = graph.add_chain(
+			ExtractKeyedValue(key='Unsold'),
+			ModelUnsoldPurchases(helper=self.helper),
+			_input=tx.output
+		)
+
 		sale = graph.add_chain(
 			ExtractKeyedValue(key='Sold'),
 			ModelSale(helper=self.helper),
@@ -1630,7 +1737,7 @@ class KnoedlerPipeline(PipelineBase):
 			self.add_serialization_chain(graph, activities.output, model=self.models['Inventorying'])
 
 		# people and prov entries can come from any of these chains:
-		for branch in (sale, destruction, theft, loss, inventorying, returned):
+		for branch in (sale, destruction, theft, loss, inventorying, unsold_purchases, returned):
 			prov_entry = graph.add_chain( ExtractKeyedValues(key='_prov_entries'), _input=branch.output )
 			people = graph.add_chain( ExtractKeyedValues(key='_people'), _input=branch.output )
 

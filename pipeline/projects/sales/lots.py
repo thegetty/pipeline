@@ -92,7 +92,7 @@ class AddAuctionOfLot(ProvenanceBase):
 		lno = str(lno)
 		lot.identified_by = vocab.LotNumber(ident='', content=lno)
 
-	def set_lot_objects(self, lot, cno, lno, auction_of_lot_uri, data, sale_type, non_auctions):
+	def set_lot_objects(self, lot, cno, lno, auction_of_lot_uri, data, sale_type, non_auctions, event_properties):
 		'''Associate the set of objects with the auction lot.'''
 		shared_lot_number = self.helper.shared_lot_number_from_lno(lno)
 		set_type = vocab.AuctionLotSet if sale_type == 'Auction' else vocab.CollectionSet
@@ -100,7 +100,34 @@ class AddAuctionOfLot(ProvenanceBase):
 		coll = set_type(ident=f'{auction_of_lot_uri}-Set', label=coll_label)
 		coll.identified_by = model.Name(ident='', content=coll_label)
 		coll.identified_by = self.helper.lot_number_identifier(lno, cno, non_auctions, sale_type)
-		
+
+		# List the actors from the auction event as having carried out the set's creation
+		# and set the timespan of the creation to that of the auction event.
+		creation = model.Creation(ident='', label=f'Creation of {coll_label}')
+		for h in event_properties['auction_houses'].get(cno, []):
+			h = self.helper.add_auction_house_data(h.copy())
+			a = get_crom_object(h)
+			role = vocab.AuctionHouseActivity(ident='', label=f'Role of Auction House in the event {cno}')
+			role.carried_out_by = a
+			creation.part = role
+		for a in event_properties['commissaire'].get(cno, []):
+			role = vocab.CommissairePriseur(ident='', label=f'Role of Commissaire-priseur in the event {cno}')
+			role.carried_out_by = a
+			creation.part = role
+		for a in event_properties['experts'].get(cno, []):
+			role = vocab.Expert(ident='', label=f'Role of Expert in the event {cno}')
+			role.carried_out_by = a
+			creation.part = role
+
+		event_dates = event_properties['auction_dates'].get(cno)
+		if event_dates:
+			ts = timespan_from_outer_bounds(*event_dates)
+			label = label_for_timespan_range(*event_dates)
+			ts.identified_by = model.Name(ident='', content=label)
+			creation.timespan = ts
+		coll.created_by = creation
+
+
 		est_price = data.get('estimated_price')
 		if est_price:
 			self.set_possible_attribute(coll, 'dimension', est_price)
@@ -197,7 +224,7 @@ class AddAuctionOfLot(ProvenanceBase):
 		transaction = data.get('transaction')
 		SOLD = transaction_types['sold']
 		WITHDRAWN = transaction_types['withdrawn']
-		self.set_lot_objects(lot, cno, lno, sale_data['uri'], data, sale_type, non_auctions)
+		self.set_lot_objects(lot, cno, lno, sale_data['uri'], data, sale_type, non_auctions, event_properties)
 		auction, _, _ = self.helper.sale_event_for_catalog_number(cno, sale_type)
 		if transaction not in WITHDRAWN:
 			lot.part_of = auction

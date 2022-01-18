@@ -29,8 +29,6 @@ class PIRModelingTest_AR86(TestKnoedlerPipelineOutput):
         k_sales = [a for a in activities.values() if a.get('_label', '').startswith('Knoedler Sale of Stock Number 5323')]
         self.assertEqual(len(k_sales), 1)
 
-        self.assertEqual(len(activities), 4)
-
         # Also, the two inventorying events should have price information representing Knoedler's evaluated worth of the object
         # In this case, both inventorying activities resulted in the same evaluated amount (1250 francs).
         for act in k_inventorying:

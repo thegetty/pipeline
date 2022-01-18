@@ -753,7 +753,8 @@ class SalesPipeline(PipelineBase):
 							},
 							'_artists': {
 								'rename_keys': {
-									'artist_info': 'biography'
+									'artist_info': 'biography',
+									'art_authority': 'auth_name'
 								},
 								'postprocess': [
 									filter_empty_person,

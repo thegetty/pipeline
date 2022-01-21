@@ -6,7 +6,8 @@ from bonobo.config import Option, Service, Configurable, use
 
 from cromulent import model, vocab
 
-from pipeline.linkedart import add_crom_data, get_crom_object
+from pipeline.linkedart import add_crom_data, get_crom_object, \
+			MakeLinkedArtLinguisticObject
 
 #mark - Physical Catalogs
 
@@ -150,4 +151,36 @@ class AddAuctionCatalogEntry(Configurable):
 		record_uri = self.helper.make_proj_uri('CATALOG', cno, 'RECORD', rec_num)
 		record = vocab.ParagraphText(ident=record_uri, label=f'Sale recorded in catalog (record number {rec_num})')
 		data['_sale_record'] = add_crom_data({'uri': record_uri}, record)
+		
+		page_id = data.get('pg')
+		pdf_page_id = data.get('ppg')
+		if not page_id:
+			yield data
+			return
+
+		sale_type = non_auctions.get(cno, data.get('non_auction_flag'))
+		if sale_type:
+			non_auctions[cno] = sale_type
+		sale_type = sale_type or 'Auction'
+		catalog = self.helper.catalog_text(cno, sale_type)
+
+		cdata = add_crom_data(data={'uri': catalog.id}, what=catalog)
+		idents = [
+			vocab.PageNumber(ident='', content=page_id),
+		]
+		if pdf_page_id:
+			idents.append(vocab.make_multitype_obj(vocab.PageNumber, vocab.OrderNumber, ident='', content=pdf_page_id, label=f'Page Order'))
+		data['_text_page'] = {
+			'uri': self.helper.make_proj_uri('CATALOG', cno, 'Page', page_id),
+			'object_type': vocab.PageTextForm,
+			'label': f'Sale Catalog {cno}, Page {page_id}',
+			'identifiers': idents,
+			'referred_to_by': [],
+			'part_of': [cdata],
+			'part': [],
+		}
+
+		mlo = MakeLinkedArtLinguisticObject()
+		mlo(data['_text_page'])
+
 		yield data

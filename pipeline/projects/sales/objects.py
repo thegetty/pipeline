@@ -131,10 +131,21 @@ class PopulateSalesObject(Configurable, pipeline.linkedart.PopulateObject):
 		puid = parent.get('persistent_puid')
 		puid_id = self.helper.gpi_number_id(puid)
 
-		record = vocab.ParagraphText(ident=record_uri, label=f'Sale recorded in catalog: {lot_object_id} (record number {rec_num})')
+		record = vocab.EntryTextForm(ident=record_uri, label=f'Sale recorded in catalog: {lot_object_id} (record number {rec_num})')
 		record_data	= {'uri': record_uri}
-		record_data['identifiers'] = [model.Name(ident='', content=f'Record of sale {lot_object_id}'), puid_id]
-		record.part_of = catalog
+		record_data['identifiers'] = [
+			model.Name(ident='', content=f'Record of sale {lot_object_id}'),
+			puid_id,
+		]
+
+		# Some records will have data for which page in the auction catalog
+		# the entry appears on. In that case, the record for the entry should
+		# be part_of the page. Otherwise, it is part_of the catalog.
+		page = data.get('parent_data', {}).get('_text_page')
+		if page:
+			record.part_of = get_crom_object(page)
+		else:
+			record.part_of = catalog
 
 		if parent.get('transaction'):
 			record.referred_to_by = vocab.PropertyStatusStatement(ident='', label='Transaction type for sales record', content=parent['transaction'])

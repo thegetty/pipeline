@@ -27,7 +27,7 @@ class PIRModelingTest_AR42(TestSalesPipelineOutput):
         self.assertEqual(obj['current_owner'][0]['_label'], 'Detroit Institute of Arts (Detroit, MI, USA)')
         
         # ensure that the ploc note is attached to the object, and that it was assigned by the ploc institution
-        ploc_notes = [i for i in obj.get('referred_to_by', []) if i['content'] == 'as copy after Leonardo da Vinci']
+        ploc_notes = [i for i in obj.get('referred_to_by', []) if i.get('content') == 'as copy after Leonardo da Vinci']
         self.assertEqual(len(ploc_notes), 1)
         ploc_note = ploc_notes[0]
         self.assertEqual(ploc_note['assigned_by'][0]['carried_out_by'][0]['_label'], 'Detroit Institute of Arts (Detroit, MI, USA)')

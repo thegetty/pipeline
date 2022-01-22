@@ -101,7 +101,8 @@ class PopulateAuctionEvent(Configurable):
 		# gets stored in the `auction_locations` object to be used in the second graph component
 		# which uses the data to associate the place with auction lots.
 		base_uri = self.helper.make_proj_uri('AUCTION-EVENT', cno, 'PLACE', '')
-		place_data = self.helper.make_place(current, base_uri=base_uri)
+		record = get_crom_object(data.get('_record'))
+		place_data = self.helper.make_place(current, base_uri=base_uri, record=record)
 		place = get_crom_object(place_data)
 		if place:
 			data['_locations'] = [place_data]

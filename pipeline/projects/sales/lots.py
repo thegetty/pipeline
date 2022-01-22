@@ -100,6 +100,7 @@ class AddAuctionOfLot(ProvenanceBase):
 		coll = set_type(ident=f'{auction_of_lot_uri}-Set', label=coll_label)
 		coll.identified_by = model.Name(ident='', content=coll_label)
 		coll.identified_by = self.helper.lot_number_identifier(lno, cno, non_auctions, sale_type)
+		coll.referred_to_by = get_crom_object(data['_sale_record'])
 
 		# List the actors from the auction event as having carried out the set's creation
 		# and set the timespan of the creation to that of the auction event.
@@ -188,6 +189,8 @@ class AddAuctionOfLot(ProvenanceBase):
 		}
 
 		lot = self.helper.sale_for_sale_type(sale_type, lot_object_key)
+		sales_record = get_crom_object(data.get('_sale_record'))
+		lot.referred_to_by = sales_record
 		data['lot_object_id'] = f'{cno} {lno} ({date})'
 
 		if 'link_to_pdf' in auction_data:
@@ -244,6 +247,7 @@ class AddAuctionOfLot(ProvenanceBase):
 			lots = self.helper.lots_in_transaction(auction_data, data)
 			tx = vocab.ProvenanceEntry(ident=tx_uri)
 			tx_label = prov_entry_label(self.helper, sale_type, transaction, 'of', cno, lots, date)
+			tx.referred_to_by = get_crom_object(data['_sale_record'])
 			tx._label = tx_label
 			tx.identified_by = model.Name(ident='', content=tx_label)
 			tx.caused_by = lot
@@ -339,14 +343,15 @@ class AddAcquisitionOrBidding(ProvenanceBase):
 			label += f'; {content}'
 		return label
 
-	def final_owner_prov_entry(self, tx_label_args, final_owner, current_tx, hmo, current_ts):
+	def final_owner_prov_entry(self, tx_label_args, final_owner, current_tx, hmo, current_ts, sales_record):
 		# It's conceivable that there could be more than one "present location" for an
 		# object that is reconciled based on prev/post sale rewriting. Therefore, the
 		# provenance entry URI must not share a prefix with the object URI, otherwise all
 		# such provenance entries are liable to be merged during URI reconciliation as
 		# part of the prev/post sale rewriting.
+		
 		tx_uri = self.helper.prepend_uri_key(hmo.id, f'PROV,CURROWN')
-		tx, acq = self.related_procurement(hmo, tx_label_args, current_tx, current_ts, buyer=final_owner, ident=tx_uri, make_label=prov_entry_label)
+		tx, acq = self.related_procurement(hmo, tx_label_args, current_tx, current_ts, buyer=final_owner, ident=tx_uri, make_label=prov_entry_label, sales_record=sales_record)
 		return tx, acq
 
 	def add_transfer_of_custody(self, data, current_tx, xfer_to, xfer_from, buy_sell_modifiers, sequence=1, purpose=None):
@@ -632,7 +637,10 @@ class AddAcquisitionOrBidding(ProvenanceBase):
 			# prefix with the object URI, otherwise all such provenance entries are liable
 			# to be merged during URI reconciliation as part of the prev/post sale rewriting.
 			tx_uri = self.helper.prepend_uri_key(hmo.id, f'PROV,Seller-{i}')
-			tx, acq = self.related_procurement(hmo, tx_label_args, current_ts=ts, buyer=seller, previous=True, ident=tx_uri, make_label=prov_entry_label)
+# 			tx.referred_to_by = get_crom_object(data['_sale_record'])
+
+			sales_record = get_crom_object(data.get('_record'))
+			tx, acq = self.related_procurement(hmo, tx_label_args, current_ts=ts, buyer=seller, previous=True, ident=tx_uri, make_label=prov_entry_label, sales_record=sales_record)
 			self.attach_source_catalog(data, acq, [seller_data])
 			if source:
 				tx.referred_to_by = source
@@ -698,6 +706,7 @@ class AddAcquisitionOrBidding(ProvenanceBase):
 
 		data.setdefault('_prov_entries', [])
 		data['_prov_entries'].append(tx_data)
+		sales_record = get_crom_object(data.get('_record'))
 
 		self.add_prev_post_owners(data, hmo, tx_data, sale_type, lot_object_key, ts)
 
@@ -710,6 +719,7 @@ class AddAcquisitionOrBidding(ProvenanceBase):
 			all_bids_label = f'Bidding on {cno} {lno} ({date})'
 			all_bids = model.Activity(ident=bidding_id, label=all_bids_label)
 			all_bids.identified_by = model.Name(ident='', content=all_bids_label)
+			all_bids.referred_to_by = sales_record
 			for tx_data in prev_procurements:
 				tx = get_crom_object(tx_data)
 				all_bids.starts_after_the_end_of = tx
@@ -768,7 +778,8 @@ class AddAcquisitionOrBidding(ProvenanceBase):
 			final_owner = get_crom_object(final_owner_data)
 			hmo = get_crom_object(data)
 			tx_label_args = tuple([self.helper, sale_type, 'Event', 'leading to the currently known location of'] + list(lot_object_key))
-			tx, acq = self.final_owner_prov_entry(tx_label_args, final_owner, current_tx, hmo, ts)
+			sales_record = get_crom_object(data.get('_record'))
+			tx, acq = self.final_owner_prov_entry(tx_label_args, final_owner, current_tx, hmo, ts, sales_record)
 			note = final_owner_data.get('note')
 			if note:
 				acq.referred_to_by = vocab.Note(ident='', content=note)

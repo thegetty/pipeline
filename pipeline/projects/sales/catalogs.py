@@ -71,18 +71,21 @@ class AddPhysicalCatalogOwners(Configurable):
 		owner_code = data['owner_code']
 		copy_number = data.get('copy_number', '')
 		owner_name = None
+		entry_record = get_crom_object(data.get('_catalog'))
 		with suppress(KeyError):
 			owner_name = location_codes[owner_code]
 			owner_uri = self.helper.make_proj_uri('ORGANIZATION', 'LOCATION-CODE', owner_code)
 			data['_owner'] = {
 				'label': owner_name,
 				'uri': owner_uri,
+				'referred_to_by': [entry_record],
 				'identifiers': [
 					model.Name(ident='', content=owner_name),
 					model.Identifier(ident='', content=str(owner_code))
 				],
 			}
 			owner = model.Group(ident=owner_uri)
+			owner.referred_to_by = entry_record
 			add_crom_data(data['_owner'], owner)
 			if not owner_code:
 				warnings.warn(f'Setting empty identifier on {owner.id}')
@@ -115,6 +118,7 @@ class PopulateAuctionCatalog(Configurable):
 		parent = data['parent_data']
 		cno = str(parent['catalog_number'])
 		sno = parent['star_record_no']
+		entry_record = get_crom_object(data.get('_catalog'))
 		catalog = get_crom_object(d)
 		for lugt_no in parent.get('lugt', {}).values():
 			if not lugt_no:
@@ -134,3 +138,16 @@ class PopulateAuctionCatalog(Configurable):
 			note = vocab.Note(ident='', content=parent['notes'])
 			catalog.referred_to_by = note
 		return d
+
+class AddAuctionCatalogEntry(Configurable):
+	helper = Option(required=True)
+	non_auctions = Service('non_auctions')
+	
+	def __call__(self, data:dict, non_auctions):
+		'''Add modeling for auction catalogs as linguistic objects'''
+		cno = data['auction_of_lot']['catalog_number']
+		rec_num = data['pi_record_no']
+		record_uri = self.helper.make_proj_uri('CATALOG', cno, 'RECORD', rec_num)
+		record = vocab.ParagraphText(ident=record_uri, label=f'Sale recorded in catalog (record number {rec_num})')
+		data['_sale_record'] = add_crom_data({'uri': record_uri}, record)
+		yield data

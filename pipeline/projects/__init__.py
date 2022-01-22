@@ -143,14 +143,20 @@ class PersonIdentity:
 			self.make_la_org(a)
 		else:
 			self.make_la_person(a)
-		return get_crom_object(a)
+		p = get_crom_object(a)
+		if record:
+			p.referred_to_by = record
+		return p
 
 	def add_group(self, a, record=None, relative_id=None, **kwargs):
 		self.add_uri(a, record_id=relative_id)
 		self.add_names(a, referrer=record, group=True, **kwargs)
 		self.add_props(a, **kwargs)
 		self.make_la_org(a)
-		return get_crom_object(a)
+		g = get_crom_object(a)
+		if record:
+			g.referred_to_by = record
+		return g
 
 	def add_uri(self, data:dict, **kwargs):
 		keys, make = self._uri_keys(data, **kwargs)
@@ -754,7 +760,7 @@ class UtilityHelper:
 	def prepend_uri_key(self, uri, key):
 		return uri.replace('#', f'#{key},')
 
-	def make_place(self, data:dict, base_uri=None):
+	def make_place(self, data:dict, base_uri=None, record=None):
 		'''
 		Given a dictionary representing data about a place, construct a model.Place object,
 		assign it as the crom data in the dictionary, and return the dictionary.
@@ -800,7 +806,7 @@ class UtilityHelper:
 			name = canonical_location_names.get(name.casefold(), name)
 			label = name
 		elif parent_data:
-			parent_data = self.make_place(parent_data, base_uri=base_uri)
+			parent_data = self.make_place(parent_data, base_uri=base_uri, record=record)
 			parent = get_crom_object(parent_data)
 			if label:
 				label = f'{label}, {parent._label}'
@@ -835,9 +841,11 @@ class UtilityHelper:
 									parent_data = add_crom_data(data=place_data['part_of'], what=parent)
 								queue.append(parent_data)
 					elif 'part_of' in place_data:
-						parent_data = self.make_place(place_data['part_of'], base_uri=base_uri)
+						parent_data = self.make_place(place_data['part_of'], base_uri=base_uri, record=record)
 						queue.append(parent_data)
 		if p:
+			if record:
+				p.referred_to_by = record
 			return data
 
 		if label:
@@ -861,6 +869,8 @@ class UtilityHelper:
 				p.identified_by = vocab.PrimaryName(ident='', content=name)
 			else:
 				warnings.warn(f'Place with missing name on {p.id}')
+			if record:
+				p.referred_to_by = record
 			for name in names:
 				if name:
 					p.identified_by = model.Name(ident='', content=name)

@@ -1273,27 +1273,29 @@ class ModelSale(TransactionHandler):
 	make_la_person = Service('make_la_person')
 	buy_sell_modifiers = Service('buy_sell_modifiers')
 
-	def __call__(self, data:dict, make_la_person, buy_sell_modifiers):
+	def __call__(self, data:dict, make_la_person, buy_sell_modifiers, in_tx=None, out_tx=None):
 		sellers = data['purchase_seller']
-		if len(sellers):
-			# if there are sellers in this record, then model the incoming transaction.
-			in_tx = self.add_incoming_tx(data, buy_sell_modifiers)
-		else:
-			# if there are no sellers, then this is an object that was previously unsold, and should be modeled as an inventory activity
-			inv = self._new_inventorying(data)
-			appraisal = self._apprasing_assignment(data)
-			inv_label = inv._label
-			in_tx = self._empty_tx(data, incoming=True)
-			in_tx.part = inv
-			if appraisal:
-				in_tx.part = appraisal
-			in_tx.identified_by = model.Name(ident='', content=inv_label)
-			in_tx._label = inv_label
-			in_tx_data = add_crom_data(data={'uri': in_tx.id, 'label': inv_label}, what=in_tx)
-			data.setdefault('_prov_entries', [])
-			data['_prov_entries'].append(in_tx_data)
+		if not in_tx:
+			if len(sellers):
+				# if there are sellers in this record, then model the incoming transaction.
+				in_tx = self.add_incoming_tx(data, buy_sell_modifiers)
+			else:
+				# if there are no sellers, then this is an object that was previously unsold, and should be modeled as an inventory activity
+				inv = self._new_inventorying(data)
+				appraisal = self._apprasing_assignment(data)
+				inv_label = inv._label
+				in_tx = self._empty_tx(data, incoming=True)
+				in_tx.part = inv
+				if appraisal:
+					in_tx.part = appraisal
+				in_tx.identified_by = model.Name(ident='', content=inv_label)
+				in_tx._label = inv_label
+				in_tx_data = add_crom_data(data={'uri': in_tx.id, 'label': inv_label}, what=in_tx)
+				data.setdefault('_prov_entries', [])
+				data['_prov_entries'].append(in_tx_data)
 
-		out_tx = self.add_outgoing_tx(data, buy_sell_modifiers)
+		if not out_tx:
+			out_tx = self.add_outgoing_tx(data, buy_sell_modifiers)
 
 		in_tx.ends_before_the_start_of = out_tx
 		out_tx.starts_after_the_end_of = in_tx
@@ -1310,8 +1312,8 @@ class ModelReturn(ModelSale):
 		if not buyers:
 			buyers = sellers.copy()
 			data['sale_buyer'] = buyers
-		self.add_return_tx(data, buy_sell_modifiers)
-		yield from super().__call__(data, make_la_person, buy_sell_modifiers)
+		in_tx, out_tx = self.add_return_tx(data, buy_sell_modifiers)
+		yield from super().__call__(data, make_la_person, buy_sell_modifiers, in_tx=in_tx, out_tx=out_tx)
 
 class ModelUnsoldPurchases(TransactionHandler):
 	helper = Option(required=True)

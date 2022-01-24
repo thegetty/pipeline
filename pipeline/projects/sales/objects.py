@@ -88,6 +88,7 @@ class PopulateSalesObject(Configurable, pipeline.linkedart.PopulateObject):
 		# the URIs for the visual items (of which there should only be one per object)
 		vi_uri = hmo.id + '-VisItem'
 		vi = model.VisualItem(ident=vi_uri)
+		vi.referred_to_by = record
 		vidata = {'uri': vi_uri, 'names': [], 'identifiers': []}
 		if title:
 			vidata['label'] = f'Visual work of “{title}”'
@@ -411,24 +412,31 @@ class PopulateSalesObject(Configurable, pipeline.linkedart.PopulateObject):
 def add_object_type(data, vocab_type_map):
 	'''Add appropriate type information for an object based on its 'object_type' name'''
 	typestring = data.get('object_type', '')
+	hmo = None
 	if typestring in vocab_type_map:
 		clsname = vocab_type_map.get(typestring, None)
 		otype = getattr(vocab, clsname)
-		add_crom_data(data=data, what=otype(ident=data['uri']))
+		hmo = otype(ident=data['uri'])
+		add_crom_data(data=data, what=hmo)
 	elif ';' in typestring:
 		parts = [s.strip() for s in typestring.split(';')]
 		if all([s in vocab_type_map for s in parts]):
 			types = [getattr(vocab, vocab_type_map[s]) for s in parts]
-			obj = vocab.make_multitype_obj(*types, ident=data['uri'])
-			add_crom_data(data=data, what=obj)
+			hmo = vocab.make_multitype_obj(*types, ident=data['uri'])
+			add_crom_data(data=data, what=hmo)
 		else:
 			warnings.warn(f'*** Not all object types matched for {typestring!r}')
-			add_crom_data(data=data, what=model.HumanMadeObject(ident=data['uri']))
+			hmo = model.HumanMadeObject(ident=data['uri'])
+			add_crom_data(data=data, what=hmo)
 	else:
 		warnings.warn(f'*** No object type for {typestring!r}')
-		add_crom_data(data=data, what=model.HumanMadeObject(ident=data['uri']))
+		hmo = model.HumanMadeObject(ident=data['uri'])
+		add_crom_data(data=data, what=hmo)
 
 	parent = data['parent_data']
+	sale_record = get_crom_object(parent['_sale_record'])
+	if hmo:
+		hmo.referred_to_by = sale_record
 	coll_data = parent.get('_lot_object_set')
 	if coll_data:
 		coll = get_crom_object(coll_data)
@@ -480,6 +488,7 @@ class AddArtists(Configurable):
 		mods = a['modifiers']
 			
 		artist = self.helper.add_person(a, record=sales_record, relative_id=f'artist-{seq_no+1}', role=role)
+		artist.referred_to_by = sales_record
 		artist_label = a['label']
 		person = get_crom_object(a)
 
@@ -499,6 +508,7 @@ class AddArtists(Configurable):
 				# also be merged.
 				group_id = a['uri'] + f'-{clsname}'
 				group = cls(ident=group_id, label=group_label)
+				group.referred_to_by = sales_record
 				group.identified_by = model.Name(ident='', content=group_label)
 				formation = model.Formation(ident='', label=f'Formation of {group_label}')
 				formation.influenced_by = person
@@ -694,6 +704,7 @@ class AddArtists(Configurable):
 				original_id = hmo.id + '-Original'
 				original_label = f'Original of {hmo_label}'
 				original_hmo = cls(ident=original_id, label=original_label)
+				original_hmo.referred_to_by = sales_record
 				
 				# original title
 				original_hmo.identified_by = vocab.ConstructedTitle(ident='', content=f'[Work] by {artist_label}')

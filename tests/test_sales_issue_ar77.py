@@ -19,7 +19,7 @@ class PIRModelingTest_AR77(TestSalesPipelineOutput):
         # This will get modeled as a Biography Statement which needs to have
         # a proper 'referred_to_by' citation link back to the sales catalog.
         person = people['tag:getty.edu,2019:digital:pipeline:REPLACE-WITH-UUID:shared#PERSON,AUTH,FOHR%2C%20CARL%20PHILIPP']
-        los = [l for l in person['referred_to_by'] if l['content'] == '1795-1818']
+        los = [l for l in person['referred_to_by'] if l.get('content') == '1795-1818']
         self.assertEqual(len(los), 1)
         lo = los[0]
         self.assertIn('referred_to_by', lo)

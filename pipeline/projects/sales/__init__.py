@@ -1056,6 +1056,7 @@ class SalesPipeline(PipelineBase):
 					}
 				]
 			),
+			pipeline.projects.sales.catalogs.AddAuctionCatalogEntry(helper=self.helper),
 			pipeline.projects.sales.lots.AddAuctionOfLot(helper=self.helper),
 			_input=records.output
 		)

@@ -459,6 +459,7 @@ class AddRow(Configurable, KnoedlerProvenance):
 			'referred_to_by': notes,
 		}
 		make_la_lo(data['_text_row'])
+		data['_record'] = data['_text_row']
 
 		creation = self.add_knoedler_creation_data(data['_text_row'])
 		date = implode_date(data['entry_date'])
@@ -469,42 +470,30 @@ class AddRow(Configurable, KnoedlerProvenance):
 			creation.timespan = ts
 		return data
 
-class AddArtists(Configurable):
+class AddArtists(ProvenanceBase):
 	helper = Option(required=True)
 	make_la_person = Service('make_la_person')
+	attribution_modifiers = Service('attribution_modifiers')
+	attribution_group_types = Service('attribution_group_types')
+	attribution_group_names = Service('attribution_group_names')
+	
+	def add_properties(self, data:dict, a:dict):
+		sales_record = get_crom_object(data['_record'])
+		a.setdefault('referred_to_by', [])
+		a.update({
+			'pi_record_no': data['pi_record_no'],
+			'modifiers': self.modifiers(a),
+		})
 
-	def __call__(self, data:dict, *, make_la_person):
+		if self.helper.person_identity.acceptable_person_auth_name(a.get('auth_name')):
+			a.setdefault('label', a.get('auth_name'))
+		a.setdefault('label', a.get('name'))
+
+	def __call__(self, data:dict, *, make_la_person, attribution_modifiers, attribution_group_types, attribution_group_names):
 		'''Add modeling for artists as people involved in the production of an object'''
 		hmo = get_crom_object(data['_object'])
-		sales_record = get_crom_object(data['_text_row'])
-
-		try:
-			hmo_label = f'{hmo._label}'
-		except AttributeError:
-			hmo_label = 'object'
-			
-		# The production event URI is just the object URI with a suffix. When URIs are
-		# reconciled during prev/post sale rewriting, this will allow us to also reconcile
-		# the URIs for the production events (of which there should only be one per object)
-		event_uri = hmo.id + '-Production'
-		event = model.Production(ident=event_uri, label=f'Production event for {hmo_label}')
-		hmo.produced_by = event
-
-		artists = data.get('_artists', [])
-
-		pi = self.helper.person_identity
-
-		for seq_no, a in enumerate(artists):
-			artist_label = a.get('role_label')
-			person = get_crom_object(a)
-			person.referred_to_by = sales_record
-
-			subprod_path = self.helper.make_uri_path(*a["uri_keys"])
-			subevent_uri = event_uri + f'-{subprod_path}'
-			subevent = model.Production(ident=subevent_uri, label=f'Production sub-event for {artist_label}')
-			subevent.carried_out_by = person
-			event.part = subevent
-# 		data['_artists'] = [a for a in artists]
+		
+		self.model_artists_with_modifers(data, hmo, attribution_modifiers, attribution_group_types, attribution_group_names)
 		return data
 
 class PopulateKnoedlerObject(Configurable, pipeline.linkedart.PopulateObject):
@@ -516,7 +505,7 @@ class PopulateKnoedlerObject(Configurable, pipeline.linkedart.PopulateObject):
 		super().__init__(*args, **kwargs)
 
 	def _populate_object_visual_item(self, data:dict, title):
-		sales_record = get_crom_object(data['_text_row'])
+		sales_record = get_crom_object(data['_record'])
 		hmo = get_crom_object(data)
 		title = truncate_with_ellipsis(title, 100) or title
 
@@ -537,7 +526,7 @@ class PopulateKnoedlerObject(Configurable, pipeline.linkedart.PopulateObject):
 		hmo.shows = vi
 
 	def __call__(self, data:dict, *, vocab_type_map, make_la_org):
-		sales_record = get_crom_object(data['_text_row'])
+		sales_record = get_crom_object(data['_record'])
 		data.setdefault('_physical_objects', [])
 		data.setdefault('_linguistic_objects', [])
 		data.setdefault('_people', [])
@@ -551,15 +540,15 @@ class PopulateKnoedlerObject(Configurable, pipeline.linkedart.PopulateObject):
 		typestring = odata.get('object_type', '')
 		identifiers = []
 
-		mlap = MakeLinkedArtPerson()
-		for i, a in enumerate(data.get('_artists', [])):
-			self.helper.copy_source_information(a, data)
-			self.helper.person_identity.add_person(
-				a,
-				record=sales_record,
-				relative_id=f'artist-{i}'
-			)
-			mlap(a)
+# 		mlap = MakeLinkedArtPerson()
+# 		for i, a in enumerate(data.get('_artists', [])):
+# 			self.helper.copy_source_information(a, data)
+# 			self.helper.person_identity.add_person(
+# 				a,
+# 				record=sales_record,
+# 				relative_id=f'artist-{i}'
+# 			)
+# 			mlap(a)
 
 		title_refs = [sales_record]
 		if title_ref:
@@ -570,7 +559,7 @@ class PopulateKnoedlerObject(Configurable, pipeline.linkedart.PopulateObject):
 			'title': title,
 			'identifiers': identifiers,
 			'referred_to_by': [sales_record],
-			'_record': data['_text_row'],
+			'_record': data['_record'],
 			'_locations': [],
 			'_organizations': [],
 			'_text_row': data['_text_row'],
@@ -616,7 +605,7 @@ class PopulateKnoedlerObject(Configurable, pipeline.linkedart.PopulateObject):
 		return data
 
 	def _populate_object_present_location(self, data:dict):
-		sales_record = get_crom_object(data['_text_row'])
+		sales_record = get_crom_object(data['_record'])
 		hmo = get_crom_object(data)
 		location = data.get('present_location')
 		if location:
@@ -722,7 +711,7 @@ class TransactionHandler(ProvenanceBase):
 		else:
 			tx = vocab.ProvenanceEntry(ident=tx_uri)
 		
-		sales_record = get_crom_object(data['_text_row'])
+		sales_record = get_crom_object(data['_record'])
 		tx.referred_to_by = sales_record
 		
 		return tx
@@ -784,7 +773,7 @@ class TransactionHandler(ProvenanceBase):
 
 	def _add_prov_entry_rights(self, data:dict, tx, shared_people, incoming):
 		knoedler = self.helper.static_instances.get_instance('Group', 'knoedler')
-		sales_record = get_crom_object(data['_text_row'])
+		sales_record = get_crom_object(data['_record'])
 
 		hmo = get_crom_object(data['_object'])
 		object_label = f'“{hmo._label}”'
@@ -839,7 +828,7 @@ class TransactionHandler(ProvenanceBase):
 		knoedler = self.helper.static_instances.get_instance('Group', 'knoedler')
 		knoedler_group = [knoedler]
 
-		sales_record = get_crom_object(data['_text_row'])
+		sales_record = get_crom_object(data['_record'])
 		hmo = get_crom_object(data['_object'])
 		sn_ident = self.helper.stock_number_identifier(data['_object'], date)
 		
@@ -954,7 +943,7 @@ class TransactionHandler(ProvenanceBase):
 			parenthetical_parts.append(date)
 		
 		odata = data['_object']
-		sales_record = get_crom_object(data['_text_row'])
+		sales_record = get_crom_object(data['_record'])
 
 		tx = self._empty_tx(data, incoming, purpose=purpose)
 		tx_uri = tx.id
@@ -1050,7 +1039,7 @@ class TransactionHandler(ProvenanceBase):
 		return tx
 
 	def model_prev_owners(self, data, prev_owners, tx, lot_object_key):
-		sales_record = get_crom_object(data['_text_row'])
+		sales_record = get_crom_object(data['_record'])
 		for i, p in enumerate(prev_owners):
 			role = 'prev_own'
 			person_dict = self.helper.copy_source_information(p, data)
@@ -1064,7 +1053,7 @@ class TransactionHandler(ProvenanceBase):
 		ts = None # TODO
 		prev_post_owner_records = [(prev_owners, True)]
 
-		data['_record'] = data['_text_row']
+		data['_record'] = data['_record']
 		hmo = get_crom_object(data['_object'])
 		for owner_data, rev in prev_post_owner_records:
 			if rev:
@@ -1198,7 +1187,7 @@ class ModelFinalSale(TransactionHandler):
 		# reset prov entries and people because we're only interested in those
 		# related to the final sale on this branch of the graph
 		odata = data['_object'].copy()
-		sales_record = get_crom_object(data['_text_row'])
+		sales_record = get_crom_object(data['_record'])
 		self.helper.copy_source_information(data, odata)
 
 		odata.setdefault('_prov_entries', [])
@@ -1206,7 +1195,6 @@ class ModelFinalSale(TransactionHandler):
 		hmo = get_crom_object(odata)
 		org = odata.get('_final_org')
 		if org:
-			data['_record'] = data['_text_row']
 			odata['_record'] = data['_record']
 			rec = data['book_record']
 			book_id = rec['stock_book_no']
@@ -1287,7 +1275,7 @@ class ModelUnsoldPurchases(TransactionHandler):
 		pi_rec = data['pi_record_no']
 		odata = data['_object']
 		book_id, page_id, row_id = record_id(rec)
-		sales_record = get_crom_object(data['_text_row'])
+		sales_record = get_crom_object(data['_record'])
 		date = implode_date(data['entry_date'])
 		
 		sellers = data['purchase_seller']
@@ -1314,7 +1302,7 @@ class ModelInventorying(TransactionHandler):
 		pi_rec = data['pi_record_no']
 		odata = data['_object']
 		book_id, page_id, row_id = record_id(rec)
-		sales_record = get_crom_object(data['_text_row'])
+		sales_record = get_crom_object(data['_record'])
 		date = implode_date(data['entry_date'])
 		for k in ('_prov_entries', '_people'):
 			data.setdefault(k, [])
@@ -1370,6 +1358,7 @@ class KnoedlerPipeline(PipelineBase):
 
 		vocab.register_instance('form type', {'parent': model.Type, 'id': '300444970', 'label': 'Form'})
 
+		vocab.register_vocab_class('ConstructedTitle', {'parent': model.Name, 'id': '300417205', 'label': 'Constructed Title'})
 		vocab.register_vocab_class('AppraisingAssignment', {'parent': model.AttributeAssignment, 'id': '300054622', 'label': 'Appraising'})
 
 		vocab.register_vocab_class('SaleAsReturn', {"parent": model.Activity, "id":"XXXXXX005", "label": "Sale (Return to Original Owner)"})
@@ -1450,6 +1439,17 @@ class KnoedlerPipeline(PipelineBase):
 		different_objects = services.get('objects_different', {}).get('knoedler_numbers', [])
 		services['different_objects'] = different_objects
 
+		# make these case-insensitive by wrapping the value lists in CaseFoldingSet
+		for name in ('attribution_modifiers',):
+			if name in services:
+				services[name] = {k: CaseFoldingSet(v) for k, v in services[name].items()}
+
+		if 'attribution_modifiers' in services:
+			attribution_modifiers = services['attribution_modifiers']
+			PROBABLY = attribution_modifiers['probably by']
+			POSSIBLY = attribution_modifiers['possibly by']
+			attribution_modifiers['uncertain'] = PROBABLY | POSSIBLY
+
 		services.update({
 			# to avoid constructing new MakeLinkedArtPerson objects millions of times, this
 			# is passed around as a service to the functions and classes that require it.
@@ -1490,7 +1490,7 @@ class KnoedlerPipeline(PipelineBase):
 									"artist_authority": 'auth_name',
 									"artist_nationality": 'nationality',
 									"artist_attribution_mod": 'attribution_mod',
-									"artist_attribution_mod_auth": 'attribution_mod_auth',
+									"artist_attribution_mod_auth": 'attrib_mod_auth',
 								},
 								'postprocess': [
 									filter_empty_person,
@@ -1809,9 +1809,11 @@ class KnoedlerPipeline(PipelineBase):
 		)
 
 		people = graph.add_chain( ExtractKeyedValues(key='_people'), _input=objects.output )
-		hmos = graph.add_chain( ExtractKeyedValues(key='_physical_objects'), _input=objects.output )
+		hmos1 = graph.add_chain( ExtractKeyedValues(key='_physical_objects'), _input=objects.output )
+		hmos2 = graph.add_chain( ExtractKeyedValues(key='_original_objects'), _input=objects.output )
 		texts = graph.add_chain( ExtractKeyedValues(key='_linguistic_objects'), _input=objects.output )
-		groups = graph.add_chain( ExtractKeyedValues(key='_organizations'), _input=hmos.output )
+		groups1 = graph.add_chain( ExtractKeyedValues(key='_organizations'), _input=objects.output )
+		groups2 = graph.add_chain( ExtractKeyedValues(key='_organizations'), _input=hmos1.output )
 		odata = graph.add_chain(
 			ExtractKeyedValue(key='_object'),
 			_input=objects.output
@@ -1825,12 +1827,12 @@ class KnoedlerPipeline(PipelineBase):
 			_input=final_sale.output
 		)
 		people2 = graph.add_chain( ExtractKeyedValues(key='_people'), _input=final_sale.output )
-		owners = self.add_person_or_group_chain(graph, hmos, key='_other_owners', serialize=serialize)
+		owners = self.add_person_or_group_chain(graph, hmos1, key='_other_owners', serialize=serialize)
 
 		items = graph.add_chain(
 			ExtractKeyedValue(key='_visual_item'),
 			pipeline.linkedart.MakeLinkedArtRecord(),
-			_input=hmos.output
+			_input=hmos1.output
 		)
 
 # 		consigners = graph.add_chain( ExtractKeyedValue(key='_consigner'), _input=objects.output )
@@ -1841,10 +1843,12 @@ class KnoedlerPipeline(PipelineBase):
 		
 		if serialize:
 			self.add_serialization_chain(graph, items.output, model=self.models['VisualItem'])
-			self.add_serialization_chain(graph, hmos.output, model=self.models['HumanMadeObject'])
+			self.add_serialization_chain(graph, hmos1.output, model=self.models['HumanMadeObject'])
+			self.add_serialization_chain(graph, hmos2.output, model=self.models['HumanMadeObject'])
 			self.add_serialization_chain(graph, texts.output, model=self.models['LinguisticObject'])
 # 			self.add_serialization_chain(graph, consigners.output, model=self.models['Group'])
-			self.add_person_or_group_chain(graph, groups)
+			self.add_person_or_group_chain(graph, groups1)
+			self.add_person_or_group_chain(graph, groups2)
 			self.add_person_or_group_chain(graph, artists)
 			self.add_person_or_group_chain(graph, people)
 			self.add_person_or_group_chain(graph, people2)

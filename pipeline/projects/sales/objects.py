@@ -17,6 +17,7 @@ from pipeline.util.cleaners import \
 import pipeline.linkedart
 from pipeline.linkedart import add_crom_data, get_crom_object
 from pipeline.util import truncate_with_ellipsis
+from pipeline.provenance import ProvenanceBase
 
 #mark - Auction of Lot - Physical Object
 
@@ -445,7 +446,7 @@ def add_object_type(data, vocab_type_map):
 
 	return data
 
-class AddArtists(Configurable):
+class AddArtists(ProvenanceBase):
 	helper = Option(required=True)
 	attribution_modifiers = Service('attribution_modifiers')
 	attribution_group_types = Service('attribution_group_types')
@@ -457,14 +458,14 @@ class AddArtists(Configurable):
 		a.update({
 			'pi_record_no': data['pi_record_no'],
 			'ulan': a['artist_ulan'],
-			'auth_name': a['art_authority'],
+			'auth_name': a['auth_name'],
 			'name': a['artist_name'],
 			'modifiers': self.modifiers(a),
-# 			'label': a.get('art_authority', a.get('artist_name')),
+# 			'label': a.get('auth_name', a.get('artist_name')),
 		})
 		
-		if self.helper.person_identity.acceptable_person_auth_name(a.get('art_authority')):
-			a.setdefault('label', a.get('art_authority'))
+		if self.helper.person_identity.acceptable_person_auth_name(a.get('auth_name')):
+			a.setdefault('label', a.get('auth_name'))
 		a.setdefault('label', a.get('artist_name'))
 
 		if a.get('biography'):
@@ -748,89 +749,6 @@ class AddArtists(Configurable):
 	def __call__(self, data:dict, *, attribution_modifiers, attribution_group_types, attribution_group_names):
 		'''Add modeling for artists as people involved in the production of an object'''
 		hmo = get_crom_object(data)
-		data.setdefault('_organizations', [])
-		data.setdefault('_original_objects', [])
 
-		try:
-			hmo_label = f'{hmo._label}'
-		except AttributeError:
-			hmo_label = 'object'
-
-		STYLE_OF = attribution_modifiers['style of']
-		ATTRIBUTED_TO = attribution_modifiers['attributed to']
-		COPY_AFTER = attribution_modifiers['copy after']
-		COPY_BY = attribution_modifiers['copy by']
-		POSSIBLY = attribution_modifiers['possibly by']
-		UNCERTAIN = attribution_modifiers['uncertain']
-		FORMERLY_MODS = attribution_modifiers['formerly attributed to']
-		COPY_BY = attribution_modifiers['copy by']
-
-		GROUP_TYPES = set(attribution_group_types.values())
-		GROUP_MODS = {k for k, v in attribution_group_types.items() if v in GROUP_TYPES}
-
-
-		# The production event URI is just the object URI with a suffix. When URIs are
-		# reconciled during prev/post sale rewriting, this will allow us to also reconcile
-		# the URIs for the production events (of which there should only be one per object)
-		event_uri = hmo.id + '-Production'
-		prod_event = model.Production(ident=event_uri, label=f'Production event for {hmo_label}')
-		hmo.produced_by = prod_event
-
-		artists = data.get('_artists', [])
-
-		sales_record = get_crom_object(data['_record'])
-
-		for a in artists:
-			self.add_properties(data, a)
-
-		or_anon_records = any([self.is_or_anon(a) for a in artists])
-		uncertain_attribution = or_anon_records
-
-		all_mods = {m.lower().strip() for a in artists for m in a.get('attrib_mod_auth', '').split(';')} - {''}
-
-
-		# 1. Remove "copy by/after" modifiers when in the presence of "manner of; style of". This combination is not meaningful, and the intended semantics are preserved by keeping only the style assertion (with the understanding that every "copy by" modifier has a paired "copy after" in another artist record, and vice-versa)
-		for a in artists:
-			mods = a['modifiers']
-			if STYLE_OF.intersects(mods):
-				for COPY in (COPY_BY, COPY_AFTER):
-					if COPY.intersects(mods):
-						a['modifiers'] -= COPY.intersection(mods)
-
-		NON_ARTIST_MODS = COPY_AFTER | STYLE_OF
-		ARTIST_NON_GROUP_MODS = FORMERLY_MODS | COPY_BY | {'attributed to'}
-		artist_assertions = []
-		non_artist_assertions = []
-		for a in artists:
-			mods = a['modifiers']
-			if NON_ARTIST_MODS.intersects(mods):
-				non_artist_assertions.append(a)
-				if ARTIST_NON_GROUP_MODS.intersects(mods):
-					# these have both artist and non-artist assertions
-					artist_assertions.append(a)
-			else:
-				artist_assertions.append(a)
-
-# 		print('ARTISTS:')
-# 		pprint.pprint(artist_assertions)
-# 		print('NON-ARTISTS:')
-# 		pprint.pprint(non_artist_assertions)
-
-
-		# 4. Check for the special case of "A or style of A"
-		uncertain = False
-		if self.uncertain_artist_or_style(artists):
-			artist = artists[0]['label']
-			uncertain = True
-			note = f'Record indicates certainty that this object was either created by {artist} or was created in the style of {artist}'
-			hmo.referred_to_by = vocab.Note(ident='', content=note)
-
-		# 2--3
-		self.model_object_influence(data, non_artist_assertions, hmo, prod_event, attribution_modifiers, attribution_group_types, attribution_group_names, all_uncertain=uncertain)
-		
-		# 5
-		self.model_object_artists(data, artist_assertions, hmo, prod_event, attribution_modifiers, attribution_group_types, attribution_group_names, all_uncertain=uncertain)
-		
-		# data['_artists'] is what's pulled out by the serializers
-		data['_artists'] = [a for a in artists if not self.is_or_anon(a)]
+		self.model_artists_with_modifers(data, hmo, attribution_modifiers, attribution_group_types, attribution_group_names)
 		return data

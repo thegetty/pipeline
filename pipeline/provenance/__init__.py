@@ -10,7 +10,10 @@ from cromulent.model import factory
 
 from pipeline.util import \
 		timespan_before, \
-		timespan_after
+		timespan_after, \
+		timespan_from_outer_bounds, \
+		implode_date, \
+		CaseFoldingSet
 from pipeline.util.cleaners import parse_location_name
 from pipeline.linkedart import add_crom_data, get_crom_object
 
@@ -160,3 +163,345 @@ class ProvenanceBase(Configurable):
 			obj.attributed_by = assignment
 		else:
 			setattr(obj, prop, value)
+
+	def modifiers(self, a:dict):
+		mod = a.get('attrib_mod_auth', '')
+		mods = CaseFoldingSet({m.strip() for m in mod.split(';')} - {''})
+		return mods
+
+	def is_or_anon(self, data:dict):
+		pi = self.helper.person_identity
+		if pi.is_anonymous(data):
+			mods = {m.lower().strip() for m in data.get('attrib_mod_auth', '').split(';')}
+			return 'or' in mods
+		return False
+
+	def model_person_or_group(self, data:dict, a:dict, attribution_group_types, attribution_group_names, role='artist', seq_no=0, sales_record=None):
+		if get_crom_object(a):
+			return a
+
+		mods = a['modifiers']
+			
+		artist = self.helper.add_person(a, record=sales_record, relative_id=f'artist-{seq_no+1}', role=role)
+		artist_label = a['label']
+		person = get_crom_object(a)
+
+		if mods:
+			GROUP_TYPES = set(attribution_group_types.values())
+			GROUP_MODS = {k for k, v in attribution_group_types.items() if v in GROUP_TYPES}
+
+			if mods.intersects(GROUP_MODS):
+				mod_name = list(GROUP_MODS & mods)[0] # TODO: use all matching types?
+				clsname = attribution_group_types[mod_name]
+				cls = getattr(vocab, clsname)
+				group_name = attribution_group_names[clsname]
+				group_label = f'{group_name} {artist_label}'
+				a['label'] = group_label
+				# The group URI is just the person URI with a suffix. In any case
+				# where the person is merged, the group should be merged as well.
+				# For example, when if "RUBENS" is merged, "School of RUBENS" should
+				# also be merged.
+				group_id = a['uri'] + f'-{clsname}'
+				group = cls(ident=group_id, label=group_label)
+				group.identified_by = model.Name(ident='', content=group_label)
+				formation = model.Formation(ident='', label=f'Formation of {group_label}')
+				formation.influenced_by = person
+				group.formed_by = formation
+				pi_record_no = data['pi_record_no']
+				group_uri_key = ('GROUP', 'PI', pi_record_no, f'{role}Group')
+				group_data = {
+					'uri': group_id,
+					'uri_keys': group_uri_key,
+					'modifiers': mods,
+					'label': group_label
+				}
+				add_crom_data(group_data, group)
+				data['_organizations'].append(group_data)
+				return group_data
+
+		add_crom_data(a, artist)
+		return a
+
+	def uncertain_artist_or_style(self, people:dict):
+		if len(people) != 2:
+			return False
+		
+		names = [p.get('auth_name') for p in people]
+		if not names[0]:
+			return False
+
+		if names[0] != names[1]:
+			return False
+		
+		mods = set([frozenset(p['modifiers']) for p in people])
+		expected = {frozenset({'or'}), frozenset({'manner of', 'style of', 'or'})}
+		return mods == expected
+
+	def model_object_influence(self, data, people, hmo, prod_event, attribution_modifiers, attribution_group_types, attribution_group_names, all_uncertain=False):
+		STYLE_OF = attribution_modifiers['style of']
+		COPY_AFTER = attribution_modifiers['copy after']
+		NON_ARTIST_MODS = COPY_AFTER | STYLE_OF
+		GROUP_TYPES = set(attribution_group_types.values())
+		GROUP_MODS = {k for k, v in attribution_group_types.items() if v in GROUP_TYPES}
+
+		non_artist_assertions = people
+		sales_record = get_crom_object(data['_record'])
+
+		try:
+			hmo_label = f'{hmo._label}'
+		except AttributeError:
+			hmo_label = 'object'
+
+		# 2. Determine if the non-artist records represent a disjunction. If all such records have an "or" modifier, we will represent all the people as a Group, and classify it to indicate that one and only one of the named people was the actor. If there is at least one 'or' modifier, but not all of the records have 'or', then we model each such record with uncertainty.
+		non_artist_all_mods = {m.lower().strip() for a in non_artist_assertions for m in a.get('attrib_mod_auth', '').split(';')} - {''}
+		non_artist_group_flag = len(non_artist_assertions) and all(['or' in a['modifiers'] for a in non_artist_assertions])
+		non_artist_group = None
+		if non_artist_group_flag:
+			non_artist_mod = list(NON_ARTIST_MODS.intersection(non_artist_all_mods))[0]
+			# The artist group URI is just the production event URI with a suffix. When URIs are
+			# reconciled during prev/post sale rewriting, this will allow us to also reconcile
+			# the URIs for the artist groups (of which there should only be one per production/object)
+			group_uri = prod_event.id + '-NonArtistGroup'
+			g_label = f'Group containing the {non_artist_mod} of {hmo_label}'
+			non_artist_group = vocab.UncertainMemberClosedGroup(ident=group_uri, label=g_label)
+			non_artist_group.identified_by = model.Name(ident='', content=g_label)
+			group_data = {
+				'uri': group_uri,
+				'role_label': 'uncertain influencer'
+			}
+			make_la_org = pipeline.linkedart.MakeLinkedArtOrganization()
+			group_data = make_la_org(group_data)
+			data['_organizations'].append(group_data)
+
+		# 3. Model all the non-artist records as an appropriate property/relationship of the object or production event:
+		for seq_no, a_data in enumerate(non_artist_assertions):
+			a_data = self.model_person_or_group(data, a_data, attribution_group_types, attribution_group_names, seq_no=seq_no, role='NonArtist', sales_record=sales_record)
+			artist_label = a_data.get('label')
+			person = get_crom_object(a_data)
+
+			mods = a_data['modifiers']
+			attrib_assignment_classes = [model.AttributeAssignment]
+			uncertain = all_uncertain
+			if uncertain or 'or' in mods:
+				if non_artist_group_flag:
+					person.member_of = non_artist_group
+				else:
+					uncertain = True
+					attrib_assignment_classes.append(vocab.PossibleAssignment)
+			
+			if STYLE_OF.intersects(mods):
+				attribute_assignment_id = self.helper.prepend_uri_key(prod_event.id, f'ASSIGNMENT,NonArtist-{seq_no}')
+				assignment = vocab.make_multitype_obj(*attrib_assignment_classes, ident=attribute_assignment_id, label=f'In the style of {artist_label}')
+				prod_event.attributed_by = assignment
+				assignment.assigned_property = 'influenced_by'
+				assignment.property_classified_as = vocab.instances['style of']
+				assignment.assigned = person
+			elif COPY_AFTER.intersects(mods):
+				cls = type(hmo)
+				# The original object URI is just the object URI with a suffix. When URIs are
+				# reconciled during prev/post sale rewriting, this will allow us to also reconcile
+				# the URIs for the original object (of which there should be at most one per object)
+				original_id = hmo.id + '-Original'
+				original_label = f'Original of {hmo_label}'
+				original_hmo = cls(ident=original_id, label=original_label)
+				
+				# original title
+				original_hmo.identified_by = vocab.ConstructedTitle(ident='', content=f'[Work] by {artist_label}')
+				
+				# Similarly for the production of the original object.
+				original_event_id = original_hmo.id + '-Production'
+				original_event = model.Production(ident=original_event_id, label=f'Production event for {original_label}')
+				original_hmo.produced_by = original_event
+
+				original_subevent_id = original_event_id + f'-{seq_no}' # TODO: fix for the case of post-sales merging
+				original_subevent = model.Production(ident=original_subevent_id, label=f'Production sub-event for {artist_label}')
+				original_event.part = original_subevent
+				original_subevent.carried_out_by = person
+
+				if uncertain:
+					assignment = vocab.make_multitype_obj(*attrib_assignment_classes, ident=attribute_assignment_id, label=f'Possibly influenced by {person._label}')
+					prod_event.attributed_by = assignment
+					assignment.assigned_property = 'influenced_by'
+					assignment.assigned = original_hmo
+				else:
+					prod_event.influenced_by = original_hmo
+				data['_original_objects'].append(add_crom_data(data={'uri': original_id}, what=original_hmo))
+			else:
+				warnings.warn(f'Unrecognized non-artist attribution modifers: {mods}')
+
+	def model_object_artists(self, data, people, hmo, prod_event, attribution_modifiers, attribution_group_types, attribution_group_names, all_uncertain=False):
+		FORMERLY_ATTRIBUTED_TO = attribution_modifiers['formerly attributed to']
+		POSSIBLY = attribution_modifiers['possibly by']
+		UNCERTAIN = attribution_modifiers['uncertain']
+		ATTRIBUTED_TO = attribution_modifiers['attributed to']
+
+		event_uri = prod_event.id
+		sales_record = get_crom_object(data['_record'])
+		artists = [p for p in people if not self.is_or_anon(p)]
+		or_anon_records = any([self.is_or_anon(a) for a in people])
+		if or_anon_records:
+			all_uncertain = True
+
+		try:
+			hmo_label = f'{hmo._label}'
+		except AttributeError:
+			hmo_label = 'object'
+
+		# 5. Determine if the artist records represent a disjunction (similar to 2 above):
+		artist_all_mods = {m.lower().strip() for a in artists for m in a.get('attrib_mod_auth', '').split(';')} - {''}
+		all_or_modifiers = ['or' in a['modifiers'] for a in artists]
+		artist_group_flag = (not or_anon_records) and len(all_or_modifiers) and all(all_or_modifiers)
+		artist_group = None
+		if artist_group_flag:
+			# The artist group URI is just the production event URI with a suffix. When URIs are
+			# reconciled during prev/post sale rewriting, this will allow us to also reconcile
+			# the URIs for the artist groups (of which there should only be one per production/object)
+			group_uri = prod_event.id + '-ArtistGroup'
+			g_label = f'Group containing the artist of {hmo_label}'
+			artist_group = vocab.UncertainMemberClosedGroup(ident=group_uri, label=g_label)
+			artist_group.identified_by = model.Name(ident='', content=g_label)
+			pi_record_no = data['pi_record_no']
+			group_uri_key = ('GROUP', 'PI', pi_record_no, 'ArtistGroup')
+			group_data = {
+				'uri': group_uri,
+				'uri_keys': group_uri_key,
+				'role_label': 'uncertain artist'
+			}
+			add_crom_data(data=group_data, what=artist_group)
+			data['_organizations'].append(group_data)
+
+			# 6. Model all the artist records as sub-production events:
+			prod_event.carried_out_by = artist_group
+			for seq_no, a_data in enumerate(artists):
+				mods = a_data['modifiers']
+				attribute_assignment_id = self.helper.prepend_uri_key(prod_event.id, f'ASSIGNMENT,Artist-{seq_no}')
+				a_data = self.model_person_or_group(data, a_data, attribution_group_types, attribution_group_names, seq_no=seq_no, role='Artist', sales_record=sales_record)
+				artist_label = a_data.get('label') # TODO: this may not be right for groups
+				person = get_crom_object(a_data)
+				if ATTRIBUTED_TO.intersects(mods):
+					attrib_assignment_classes = [model.AttributeAssignment]
+					attrib_assignment_classes.append(vocab.PossibleAssignment)
+					assignment = vocab.make_multitype_obj(*attrib_assignment_classes, ident=attribute_assignment_id, label=f'Possibly attributed to {artist_label}')
+					assignment._label = f'Possibly by {artist_label}'
+					person.attributed_by = assignment
+					assignment.assigned_property = 'member_of'
+					assignment.assigned = person
+				else:
+					person.member_of = artist_group
+		else:
+			for seq_no, a_data in enumerate(artists):
+				uncertain = all_uncertain
+				attribute_assignment_id = self.helper.prepend_uri_key(prod_event.id, f'ASSIGNMENT,Artist-{seq_no}')
+				a_data = self.model_person_or_group(data, a_data, attribution_group_types, attribution_group_names, seq_no=seq_no, role='Artist', sales_record=sales_record)
+				artist_label = a_data.get('label') # TODO: this may not be right for groups
+				person = get_crom_object(a_data)
+				mods = a_data['modifiers']
+				attrib_assignment_classes = [model.AttributeAssignment]
+				subprod_path = self.helper.make_uri_path(*a_data["uri_keys"])
+				subevent_id = event_uri + f'-{subprod_path}'
+				if UNCERTAIN.intersects(mods):
+					if POSSIBLY.intersects(mods):
+						attrib_assignment_classes.append(vocab.PossibleAssignment)
+						assignment = vocab.make_multitype_obj(*attrib_assignment_classes, ident=attribute_assignment_id, label=f'Possibly attributed to {artist_label}')
+						assignment._label = f'Possibly by {artist_label}'
+					else:
+						attrib_assignment_classes.append(vocab.ProbableAssignment)
+						assignment = vocab.make_multitype_obj(*attrib_assignment_classes, ident=attribute_assignment_id, label=f'Probably attributed to {artist_label}')
+						assignment._label = f'Probably by {artist_label}'
+
+					# TODO: this assigns an uncertain carried_out_by property directly to the top-level production;
+					#       should it instead be an uncertain sub-production part?
+					prod_event.attributed_by = assignment
+					assignment.assigned_property = 'carried_out_by'
+					assignment.assigned = person
+				elif FORMERLY_ATTRIBUTED_TO.intersects(mods):
+					attrib_assignment_classes = [vocab.ObsoleteAssignment]
+					if uncertain:
+						attrib_assignment_classes.append(vocab.PossibleAssignment)
+					assignment = vocab.make_multitype_obj(*attrib_assignment_classes, ident=attribute_assignment_id, label=f'Formerly attributed to {artist_label}')
+					prod_event.attributed_by = assignment
+					assignment.assigned_property = 'carried_out_by'
+					assignment.assigned = person
+				else:
+					if uncertain or ATTRIBUTED_TO.intersects(mods):
+						attrib_assignment_classes.append(vocab.PossibleAssignment)
+						assignment = vocab.make_multitype_obj(*attrib_assignment_classes, ident=attribute_assignment_id, label=f'Possibly attributed to {artist_label}')
+						prod_event.attributed_by = assignment
+						assignment.assigned_property = 'carried_out_by'
+						assignment.assigned = person
+					else:
+						subevent = model.Production(ident=subevent_id, label=f'Production sub-event for {artist_label}')
+						subevent.carried_out_by = person
+						prod_event.part = subevent
+
+	def model_artists_with_modifers(self, data:dict, hmo, attribution_modifiers, attribution_group_types, attribution_group_names):
+		'''Add modeling for artists as people involved in the production of an object'''
+		sales_record = get_crom_object(data['_record'])
+
+		data.setdefault('_organizations', [])
+		data.setdefault('_original_objects', [])
+
+		try:
+			hmo_label = f'{hmo._label}'
+		except AttributeError:
+			hmo_label = 'object'
+
+		STYLE_OF = attribution_modifiers['style of']
+		ATTRIBUTED_TO = attribution_modifiers['attributed to']
+		COPY_AFTER = attribution_modifiers['copy after']
+		COPY_BY = attribution_modifiers['copy by']
+		POSSIBLY = attribution_modifiers['possibly by']
+		UNCERTAIN = attribution_modifiers['uncertain']
+		FORMERLY_MODS = attribution_modifiers['formerly attributed to']
+		COPY_BY = attribution_modifiers['copy by']
+
+		# The production event URI is just the object URI with a suffix. When URIs are
+		# reconciled during prev/post sale rewriting, this will allow us to also reconcile
+		# the URIs for the production events (of which there should only be one per object)
+		event_uri = hmo.id + '-Production'
+		prod_event = model.Production(ident=event_uri, label=f'Production event for {hmo_label}')
+		hmo.produced_by = prod_event
+
+		artists = data.get('_artists', [])
+		for a in artists:
+			self.add_properties(data, a)
+
+		# 1. Remove "copy by/after" modifiers when in the presence of "manner of; style of". This combination is not meaningful, and the intended semantics are preserved by keeping only the style assertion (with the understanding that every "copy by" modifier has a paired "copy after" in another artist record, and vice-versa)
+		for a in artists:
+			mods = a['modifiers']
+			if STYLE_OF.intersects(mods):
+				for COPY in (COPY_BY, COPY_AFTER):
+					if COPY.intersects(mods):
+						a['modifiers'] -= COPY.intersection(mods)
+
+		NON_ARTIST_MODS = COPY_AFTER | STYLE_OF
+		ARTIST_NON_GROUP_MODS = FORMERLY_MODS | COPY_BY | {'attributed to'}
+		artist_assertions = []
+		non_artist_assertions = []
+		for a in artists:
+			mods = a['modifiers']
+			if NON_ARTIST_MODS.intersects(mods):
+				non_artist_assertions.append(a)
+				if ARTIST_NON_GROUP_MODS.intersects(mods):
+					# these have both artist and non-artist assertions
+					artist_assertions.append(a)
+			else:
+				artist_assertions.append(a)
+
+		# 4. Check for the special case of "A or style of A"
+		uncertain = False
+		if self.uncertain_artist_or_style(artists):
+			artist = artists[0]['label']
+			uncertain = True
+			note = f'Record indicates certainty that this object was either created by {artist} or was created in the style of {artist}'
+			hmo.referred_to_by = vocab.Note(ident='', content=note)
+		
+		# 2--3
+		self.model_object_influence(data, non_artist_assertions, hmo, prod_event, attribution_modifiers, attribution_group_types, attribution_group_names, all_uncertain=uncertain)
+
+		# 5
+		self.model_object_artists(data, artist_assertions, hmo, prod_event, attribution_modifiers, attribution_group_types, attribution_group_names, all_uncertain=uncertain)
+		
+		# data['_artists'] is what's pulled out by the serializers
+		data['_artists'] = [a for a in artists if not self.is_or_anon(a)]
+		return data

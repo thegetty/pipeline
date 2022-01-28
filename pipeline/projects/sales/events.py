@@ -34,6 +34,7 @@ class AddAuctionEvent(Configurable):
 class PopulateAuctionEvent(Configurable):
 	helper = Option(required=True)
 	event_properties = Service('event_properties')
+	date_modifiers = Service('date_modifiers')
 
 	def auction_event_location(self, data:dict):
 		'''
@@ -81,7 +82,7 @@ class PopulateAuctionEvent(Configurable):
 				city['names'] = [place_verbatim]
 		return loc
 
-	def __call__(self, data:dict, event_properties):
+	def __call__(self, data:dict, event_properties, date_modifiers):
 		'''Add modeling data for an auction event'''
 		cno = data['catalog_number']
 		auction_locations = event_properties['auction_locations']
@@ -111,6 +112,7 @@ class PopulateAuctionEvent(Configurable):
 
 		ts, begin, end = timespan_from_bound_components(
 			data,
+			date_modifiers,
 			'sale_begin_', 'begin',
 			'sale_end_', 'eoe'
 		)

@@ -528,7 +528,7 @@ class SalesPipeline(PipelineBase):
 		services = super().setup_services()
 
 		# make these case-insensitive by wrapping the value lists in CaseFoldingSet
-		for name in ('transaction_types', 'attribution_modifiers'):
+		for name in ('transaction_types', 'attribution_modifiers', 'date_modifiers'):
 			if name in services:
 				services[name] = {k: CaseFoldingSet(v) for k, v in services[name].items()}
 

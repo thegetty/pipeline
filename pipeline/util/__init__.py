@@ -685,18 +685,23 @@ def exploded_date_has_uncertainty(date_tuple):
 		pass
 	return False
 
-def timespan_from_bound_components(data:dict, begin_prefix:str='', begin_clamp:str=None, end_prefix:str='', end_clamp:str=None):
+def timespan_from_bound_components(data:dict, date_modifiers, begin_prefix:str='', begin_clamp:str=None, end_prefix:str='', end_clamp:str=None):
 	begin_tuple = extract_date_tuple(data, begin_prefix)
 	end_tuple = extract_date_tuple(data, end_prefix)
 	
+	begin_mod = data.get(f'{begin_prefix}mod')
+	end_mod = data.get(f'{end_prefix}mod')
 	uncertain_dates = [exploded_date_has_uncertainty(t) for t in (begin_tuple, end_tuple)]
 	uncertain_date = any(uncertain_dates)
 	uncertain_tuple = begin_tuple if uncertain_dates[0] else end_tuple
 	
+	has_begin = False
+	has_end = False
 	if uncertain_date:
 		begin = implode_uncertain_date_tuple(uncertain_tuple, clamp=begin_clamp)
 		end = implode_uncertain_date_tuple(uncertain_tuple, clamp=end_clamp)
-		
+		has_begin = begin
+		has_end = end
 		# # for dates with a '00' for month, the end day will already be
 		# incremented by implode_uncertain_date_tuple with end_clamp='eoe'
 		inclusive = end_clamp != 'eoe'
@@ -708,6 +713,9 @@ def timespan_from_bound_components(data:dict, begin_prefix:str='', begin_clamp:s
 	else:
 		begin = implode_date_tuple(begin_tuple, clamp=begin_clamp)
 		end = implode_date_tuple(end_tuple, clamp=end_clamp)
+		has_begin = begin
+		has_end = end
+
 		# we use inclusive=False here, because clamping in the implode_date_tuple
 		# call will have already handled adjusting the date to handle the 'eoe'
 		# case (unlike the if case above, where we have to base inclusivity on
@@ -722,6 +730,15 @@ def timespan_from_bound_components(data:dict, begin_prefix:str='', begin_clamp:s
 		else:
 			end_label = end
 
+		# if the end date is modified with 'and following days' (or equivalent),
+		# we assert and end_of_the_end of +15 days, but keep the timespan label
+		# and identifiers as if there were no end date.
+		if end_mod in date_modifiers['and following days'] and not(''.join(end_tuple)) and ''.join(begin_tuple):
+			dt = datetime.datetime(*[int(v) for v in begin_tuple])
+			dt += datetime.timedelta(days=15)
+			ts.end_of_the_end = dt.strftime("%Y-%m-%dT%H:%M:%SZ")
+
+
 	if uncertain_date:
 		# attach an Identifier to the timespan that includes the original
 		# verbatim string values that include the '00' field values
@@ -734,11 +751,11 @@ def timespan_from_bound_components(data:dict, begin_prefix:str='', begin_clamp:s
 		# (either begin or end).
 		ts.identified_by = model.Name(ident='', content=f'{uncertain_str}')
 	else:
-		if begin and end:
+		if has_begin and has_end:
 			ts.identified_by = model.Name(ident='', content=f'{begin} to {end_label}')
-		elif begin:
+		elif has_begin:
 			ts.identified_by = model.Name(ident='', content=f'{begin} onwards')
-		elif end:
+		elif has_end:
 			ts.identified_by = model.Name(ident='', content=f'up to {end_label}')
 
 	return ts, begin, end

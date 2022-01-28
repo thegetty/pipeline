@@ -464,7 +464,9 @@ class AddRow(Configurable, KnoedlerProvenance):
 		creation = self.add_knoedler_creation_data(data['_text_row'])
 		date = implode_date(data['entry_date'])
 		if date:
-			bounds = [date, date]
+			begin_date = implode_date(data['entry_date'], clamp='begin')
+			end_date = implode_date(data['entry_date'], clamp='end')
+			bounds = [begin_date, end_date]
 			ts = timespan_from_outer_bounds(*bounds, inclusive=True)
 			ts.identified_by = model.Name(ident='', content=date)
 			creation.timespan = ts

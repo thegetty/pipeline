@@ -16,9 +16,9 @@ class PIRModelingTest_AR74(TestSalesPipelineOutput):
         activities = output['model-sale-activity']
         
         auction = activities['tag:getty.edu,2019:digital:pipeline:REPLACE-WITH-UUID:sales#AUCTION-EVENT,B-A136']
-        self.assertEqual(auction['_label'], 'Auction Event B-A136')
+        self.assertEqual(auction['_label'], 'Auction Event B-A136 (1773-07-20 onwards)')
         self.assertEqual(classified_identifier_sets(auction), {
-        	None: {'Auction Event B-A136'}
+        	None: {'Auction Event B-A136 (1773-07-20 onwards)'}
         })
 
 

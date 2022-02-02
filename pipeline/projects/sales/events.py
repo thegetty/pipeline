@@ -16,12 +16,24 @@ from pipeline.linkedart import add_crom_data, get_crom_object, remove_crom_objec
 
 class AddAuctionEvent(Configurable):
 	helper = Option(required=True)
+	event_properties = Service('event_properties')
 
-	def __call__(self, data:dict):
+	def __call__(self, data:dict, event_properties):
 		'''Add modeling for an auction event based on properties of the supplied `data` dict.'''
 		cno = data['catalog_number']
 		sale_type = data.get('non_auction_flag', 'Auction')
-		auction, uid, uri = self.helper.sale_event_for_catalog_number(cno, sale_type)
+
+		ts, begin, end = timespan_from_bound_components(
+			data,
+			'sale_begin_', 'begin',
+			'sale_end_', 'eoe'
+		)
+		
+		event_properties['auction_dates'][cno] = (ts, begin, end)
+		event_properties['auction_date_label'][cno] = ts._label
+		
+		event_date_label = event_properties['auction_date_label'].get(cno)
+		auction, uid, uri = self.helper.sale_event_for_catalog_number(cno, sale_type, date_label=event_date_label)
 		auction.identified_by = model.Name(ident='', content=auction._label)
 		data['uid'] = uid
 		data['uri'] = uri
@@ -114,8 +126,6 @@ class PopulateAuctionEvent(Configurable):
 			'sale_begin_', 'begin',
 			'sale_end_', 'eoe'
 		)
-		
-		event_properties['auction_dates'][cno] = (begin, end)
 
 		event_record = get_crom_object(data['_record'])
 		for seq_no, expert in enumerate(data.get('expert', [])):

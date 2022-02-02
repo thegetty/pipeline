@@ -91,10 +91,10 @@ class TestSalesPipelineOutput(unittest.TestCase):
 		key_120 = 'tag:getty.edu,2019:digital:pipeline:REPLACE-WITH-UUID:sales#AUCTION,B-A139,0120,1774-05-31'
 
 		auction_B_A139_0119 = activities[key_119]
-		self.verify_auction(auction_B_A139_0119, event='B-A139', idents={'0119[a]', '0119[b]', 'Auction of Lot B-A139 0119 (1774-05-31)'})
+		self.verify_auction(auction_B_A139_0119, event='B-A139 (1774-05-31 onwards)', idents={'0119[a]', '0119[b]', 'Auction of Lot B-A139 0119 (1774-05-31)'})
 
 		auction_B_A139_0120 = activities[key_120]
-		self.verify_auction(auction_B_A139_0120, event='B-A139', idents={'0120', 'Auction of Lot B-A139 0120 (1774-05-31)'})
+		self.verify_auction(auction_B_A139_0120, event='B-A139 (1774-05-31 onwards)', idents={'0120', 'Auction of Lot B-A139 0120 (1774-05-31)'})
 
 		house_ids = {o['id'] for o in houses.values()}
 		house_types = {c['_label'] for o in houses.values() for c in o.get('classified_as', [])}
@@ -105,7 +105,7 @@ class TestSalesPipelineOutput(unittest.TestCase):
 
 		events = [activities[k] for k in activities if k not in {key_119, key_120}]
 		event_labels = {e['_label'] for e in events}
-		self.assertEqual(event_labels, {'Auction Event B-A139'})
+		self.assertEqual(event_labels, {'Auction Event B-A139 (1774-05-31 onwards)'})
 
 
 if __name__ == '__main__':

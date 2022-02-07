@@ -40,7 +40,7 @@ class PIRModelingTest_PrivateContractSales(TestSalesPipelineOutput):
 		
 		# there is a single non-auction 'Private Contract Sale' event, and it is referred to by the catalog text
 		pvt_sale = sale_activities['tag:getty.edu,2019:digital:pipeline:REPLACE-WITH-UUID:sales#PRIVATE_CONTRACT_SALE-EVENT,B-267']
-		self.assertEqual(pvt_sale['_label'], 'Private Contract Sale Event B-267')
+		self.assertEqual(pvt_sale['_label'], 'Private Contract Sale Event B-267 (1817)')
 		self.assertIn(expected_catalog_text_id, {r.get('id') for r in pvt_sale['referred_to_by']})
 		
 		# there are 3 physical Exhibition Catalogs

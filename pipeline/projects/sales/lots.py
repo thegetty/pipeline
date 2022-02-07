@@ -99,7 +99,8 @@ class AddAuctionOfLot(ProvenanceBase):
 		coll_label = f'Object Set for Lot {cno} {shared_lot_number}'
 		coll = set_type(ident=f'{auction_of_lot_uri}-Set', label=coll_label)
 		coll.identified_by = model.Name(ident='', content=coll_label)
-		coll.identified_by = self.helper.lot_number_identifier(lno, cno, non_auctions, sale_type)
+		event_date_label = event_properties['auction_date_label'].get(cno)
+		coll.identified_by = self.helper.lot_number_identifier(lno, cno, non_auctions, sale_type, date_label=event_date_label)
 		coll.referred_to_by = get_crom_object(data['_sale_record'])
 
 		# List the actors from the auction event as having carried out the set's creation
@@ -122,8 +123,9 @@ class AddAuctionOfLot(ProvenanceBase):
 
 		event_dates = event_properties['auction_dates'].get(cno)
 		if event_dates:
-			ts = timespan_from_outer_bounds(*event_dates)
-			label = label_for_timespan_range(*event_dates)
+			_, begin, end = event_dates
+			ts = timespan_from_outer_bounds(begin, end)
+			label = label_for_timespan_range(begin, end)
 			ts.identified_by = model.Name(ident='', content=label)
 			creation.timespan = ts
 		coll.created_by = creation
@@ -228,10 +230,17 @@ class AddAuctionOfLot(ProvenanceBase):
 		SOLD = transaction_types['sold']
 		WITHDRAWN = transaction_types['withdrawn']
 		self.set_lot_objects(lot, cno, lno, sale_data['uri'], data, sale_type, non_auctions, event_properties)
-		auction, _, _ = self.helper.sale_event_for_catalog_number(cno, sale_type)
+		
+		event_dates = event_properties['auction_dates'].get(cno)
+		event_date_label = event_properties['auction_date_label'].get(cno)
+		auction, _, _ = self.helper.sale_event_for_catalog_number(cno, sale_type, date_label=event_date_label)
 		if transaction not in WITHDRAWN:
 			lot.part_of = auction
-			event_dates = event_properties['auction_dates'].get(cno)
+			if event_dates:
+				_, begin, end = event_dates
+				event_range = (begin, end)
+			else:
+				event_range = None
 
 			auction_houses = [
 				get_crom_object(self.helper.add_auction_house_data(h.copy()))
@@ -240,7 +249,7 @@ class AddAuctionOfLot(ProvenanceBase):
 
 			self.set_lot_auction_houses(lot, cno, auction_houses)
 			self.set_lot_location(lot, cno, auction_locations)
-			self.set_lot_date(lot, auction_data, event_dates)
+			self.set_lot_date(lot, auction_data, event_range)
 			self.set_lot_notes(lot, auction_data, sale_type, non_auctions)
 
 			tx_uri = self.helper.transaction_uri_for_lot(auction_data, data)

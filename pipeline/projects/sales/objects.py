@@ -30,6 +30,7 @@ class PopulateSalesObject(Configurable, pipeline.linkedart.PopulateObject):
 	materials_map = Service('materials_map')
 	non_auctions = Service('non_auctions')
 	title_modifiers = Service('title_modifiers')
+	event_properties = Service('event_properties')
 
 	def populate_destruction_events(self, data:dict, note, *, type_map, location=None):
 		destruction_types_map = type_map
@@ -330,7 +331,7 @@ class PopulateSalesObject(Configurable, pipeline.linkedart.PopulateObject):
 		return handled
 
 
-	def __call__(self, data:dict, post_sale_map, unique_catalogs, subject_genre, destruction_types_map, materials_map, non_auctions, title_modifiers):
+	def __call__(self, data:dict, post_sale_map, unique_catalogs, subject_genre, destruction_types_map, materials_map, non_auctions, title_modifiers, event_properties):
 		'''Add modeling for an object described by a sales record'''
 		hmo = get_crom_object(data)
 		parent = data['parent_data']
@@ -346,7 +347,8 @@ class PopulateSalesObject(Configurable, pipeline.linkedart.PopulateObject):
 				warnings.warn(f'Setting empty identifier on {hmo.id}')
 
 			sale_type = non_auctions.get(cno, 'Auction')
-			lot_number = self.helper.lot_number_identifier(lno, cno, non_auctions, sale_type)
+			event_date_label = event_properties['auction_date_label'].get(cno)
+			lot_number = self.helper.lot_number_identifier(lno, cno, non_auctions, sale_type, date_label=event_date_label)
 			data['identifiers'].append(lot_number)
 		else:
 			warnings.warn(f'***** NO AUCTION DATA FOUND IN populate_object')

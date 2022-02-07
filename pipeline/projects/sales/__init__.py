@@ -237,10 +237,10 @@ class SalesUtilityHelper(UtilityHelper):
 			lot_label = f'Auction of Lot {lot_id}'
 		elif sale_type in ('Private Contract Sale', 'Stock List'):
 			lot_id = f'{cno} {shared_lot_number} ({date})'
-			lot_label = f'Sale of {lot_id}'
+			lot_label = f'Sale of Object Set {lot_id}'
 		elif sale_type == 'Lottery':
 			lot_id = f'{cno} {shared_lot_number} ({date})'
-			lot_label = f'Lottery Drawing for {lot_id}'
+			lot_label = f'Lottery Drawing of Lot {lot_id}'
 		else:
 			warnings.warn(f'*** Unexpected sale type: {sale_type!r}')
 		if lot_label:
@@ -248,7 +248,7 @@ class SalesUtilityHelper(UtilityHelper):
 			lot.identified_by = model.Name(ident='', content=lot_label)
 		return lot
 
-	def sale_event_for_catalog_number(self, catalog_number, sale_type='Auction'):
+	def sale_event_for_catalog_number(self, catalog_number, sale_type='Auction', date_label=None):
 		'''
 		Return a `vocab.AuctionEvent` object and its associated 'uid' key and URI, based on
 		the supplied `catalog_number`.
@@ -261,6 +261,8 @@ class SalesUtilityHelper(UtilityHelper):
 		uid = f'{sale_type_key}-EVENT-{catalog_number}'
 		uri = self.make_proj_uri(f'{sale_type_key}-EVENT', catalog_number)
 		label = f"{sale_type} Event {catalog_number}"
+		if date_label:
+			label += f' ({date_label})'
 		auction = event_type(ident=uri, label=label)
 		return auction, uid, uri
 
@@ -398,13 +400,13 @@ class SalesUtilityHelper(UtilityHelper):
 
 		return add_crom_data(data=a, what=house)
 
-	def lot_number_identifier(self, lno, cno, non_auctions, sale_type):
+	def lot_number_identifier(self, lno, cno, non_auctions, sale_type, **kwargs):
 		'''
 		Return an Identifier for the lot number that is classified as a LotNumber,
 		and whose assignment has the specific purpose of the auction event.
 		'''
 		sale_type = non_auctions.get(cno, 'Auction')
-		auction, _, _ = self.sale_event_for_catalog_number(cno, sale_type)
+		auction, _, _ = self.sale_event_for_catalog_number(cno, sale_type, **kwargs)
 		lot_number = vocab.LotNumber(ident='', content=lno)
 		assignment = model.AttributeAssignment(ident='', label=f'Assignment of lot number {lno} from {cno}')
 		assignment.specific_purpose = auction
@@ -547,6 +549,7 @@ class SalesPipeline(PipelineBase):
 			'event_properties': {
 				'auction_houses': defaultdict(list),
 				'auction_dates': {},
+				'auction_date_label': {},
 				'auction_locations': {},
 				'experts': defaultdict(list),
 				'commissaire': defaultdict(list),

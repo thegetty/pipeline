@@ -705,6 +705,11 @@ def prov_entry_label(helper, sale_type, transaction, rel, *key):
 		return f'Provenance Entry {rel} object identified in book {book_id}, page {page_id}, row {row_id}'
 
 class TransactionHandler(ProvenanceBase):
+	def modifiers(self, a:dict, key:str):
+		mod = a.get(key, '')
+		mods = CaseFoldingSet({m.strip() for m in mod.split(';')} - {''})
+		return mods
+
 	def _empty_tx(self, data, incoming=False, purpose=None):
 		tx_uri = self.helper.transaction_uri_for_record(data, incoming)
 		tx_type = data.get('book_record', {}).get('transaction', 'Sold')
@@ -897,7 +902,7 @@ class TransactionHandler(ProvenanceBase):
 				else:
 					paym.paid_from = person
 
-	def _add_prov_entry_acquisition(self, data:dict, tx, from_people, to_people, date, incoming, purpose=None):
+	def _add_prov_entry_acquisition(self, data:dict, tx, from_people, from_agents, to_people, to_agents, date, incoming, purpose=None):
 		rec = data['book_record']
 		book_id, page_id, row_id = record_id(rec)
 
@@ -927,12 +932,19 @@ class TransactionHandler(ProvenanceBase):
 		
 		for p in from_people:
 			acq.transferred_title_from = p
+		for p in from_agents:
+			acq.carried_out_by = p
 		for p in to_people:
 			acq.transferred_title_to = p
+		for p in to_agents:
+			acq.carried_out_by = p
 
 		tx.part = acq
 
-	def _prov_entry(self, data, date_key, participants, price_info=None, knoedler_price_part=None, shared_people=None, incoming=False, purpose=None):
+	def _prov_entry(self, data, date_key, participants, price_info=None, knoedler_price_part=None, shared_people=None, incoming=False, purpose=None, buy_sell_modifiers=None):
+		THROUGH = CaseFoldingSet(buy_sell_modifiers['through'])
+		FOR = CaseFoldingSet(buy_sell_modifiers['for'])
+
 		if shared_people is None:
 			shared_people = []
 
@@ -961,41 +973,59 @@ class TransactionHandler(ProvenanceBase):
 			self.helper.copy_source_information(p, data)
 			for p in participants
 		]
-		people = [
-			self.helper.add_person(
-				p,
+		
+		people = []
+		people_agents = []
+		for i, p_data in enumerate(people_data):
+			mod = self.modifiers(p_data, 'auth_mod')
+			person = self.helper.add_person(
+				p_data,
 				record=sales_record,
 				relative_id=f'{role}_{i+1}'
-			) for i, p in enumerate(people_data)
-		]
+			)
+			if THROUGH.intersects(mod):
+				people_agents.append(person)
+			else:
+				people.append(person)
 		
 		knoedler = self.helper.static_instances.get_instance('Group', 'knoedler')
 		knoedler_group = [knoedler]
+		knoedler_group_agents = []
 		if shared_people:
 			# these are the people that joined Knoedler in the purchase/sale
 			role = 'shared-buyer' if incoming else 'shared-seller'
-			for i, p in enumerate(shared_people):
-				person_dict = self.helper.copy_source_information(p, data)
+			for i, p_data in enumerate(shared_people):
+				mod = self.modifiers(p_data, 'auth_mod')
+				person_dict = self.helper.copy_source_information(p_data, data)
 				person = self.helper.add_person(
 					person_dict,
 					record=sales_record,
 					relative_id=f'{role}_{i+1}'
 				)
-				knoedler_group.append(person)
+				if THROUGH.intersects(mod):
+					knoedler_group_agents.append(person)
+				else:
+					knoedler_group.append(person)
 
 		from_people = []
+		from_agents = []
 		to_people = []
+		to_agents = []
 		if incoming:
 			from_people = people
+			from_agents = people_agents
 			to_people = knoedler_group
+			to_agents = knoedler_group_agents
 		else:
 			from_people = knoedler_group
+			from_agents = knoedler_group_agents
 			to_people = people
+			to_agents = people_agents
 
 		if incoming:
 			self._add_prov_entry_rights(data, tx, shared_people, incoming)
 		self._add_prov_entry_payment(data, tx, knoedler_price_part, price_info, people, shared_people, date, incoming)
-		self._add_prov_entry_acquisition(data, tx, from_people, to_people, date, incoming, purpose=purpose)
+		self._add_prov_entry_acquisition(data, tx, from_people, from_agents, to_people, to_agents, date, incoming, purpose=purpose)
 
 # 		print('People:')
 # 		for p in people:
@@ -1009,7 +1039,7 @@ class TransactionHandler(ProvenanceBase):
 		data['_people'].extend(people_data)
 		return tx
 
-	def add_return_tx(self, data):
+	def add_return_tx(self, data, buy_sell_modifiers):
 		rec = data['book_record']
 		book_id, page_id, row_id = record_id(rec)
 
@@ -1019,11 +1049,11 @@ class TransactionHandler(ProvenanceBase):
 		shared_people = []
 		for p in sellers:
 			self.helper.copy_source_information(p, data)
-		in_tx = self._prov_entry(data, 'entry_date', sellers, purch_info, incoming=True)
-		out_tx = self._prov_entry(data, 'entry_date', sellers, sale_info, incoming=False, purpose='returning')
+		in_tx = self._prov_entry(data, 'entry_date', sellers, purch_info, incoming=True, buy_sell_modifiers=buy_sell_modifiers)
+		out_tx = self._prov_entry(data, 'entry_date', sellers, sale_info, incoming=False, purpose='returning', buy_sell_modifiers=buy_sell_modifiers)
 		return (in_tx, out_tx)
 
-	def add_incoming_tx(self, data):
+	def add_incoming_tx(self, data, buy_sell_modifiers):
 		price_info = data.get('purchase')
 		knoedler_price_part = data.get('purchase_knoedler_share')
 		shared_people = data.get('purchase_buyer')
@@ -1031,7 +1061,7 @@ class TransactionHandler(ProvenanceBase):
 		for p in sellers:
 			self.helper.copy_source_information(p, data)
 		
-		tx = self._prov_entry(data, 'entry_date', sellers, price_info, knoedler_price_part, shared_people, incoming=True)
+		tx = self._prov_entry(data, 'entry_date', sellers, price_info, knoedler_price_part, shared_people, incoming=True, buy_sell_modifiers=buy_sell_modifiers)
 		
 		prev_owners = data.get('prev_own', [])
 		lot_object_key = self.helper.transaction_key_for_record(data, incoming=True)
@@ -1072,14 +1102,14 @@ class TransactionHandler(ProvenanceBase):
 # 					continue
 				self.handle_prev_post_owner(data, hmo, tx_data, 'Sold', lot_object_key, owner_record, record_id, rev, ts, make_label=prov_entry_label)
 
-	def add_outgoing_tx(self, data):
+	def add_outgoing_tx(self, data, buy_sell_modifiers):
 		price_info = data.get('sale')
 		knoedler_price_part = data.get('sale_knoedler_share')
 		shared_people = data.get('purchase_buyer')
 		buyers = data['sale_buyer']
 		for p in buyers:
 			self.helper.copy_source_information(p, data)
-		return self._prov_entry(data, 'sale_date', buyers, price_info, knoedler_price_part, shared_people, incoming=False)
+		return self._prov_entry(data, 'sale_date', buyers, price_info, knoedler_price_part, shared_people, incoming=False, buy_sell_modifiers=buy_sell_modifiers)
 
 	@staticmethod
 	def set_date(event, data, date_key, date_key_prefix=''):
@@ -1099,8 +1129,9 @@ class TransactionHandler(ProvenanceBase):
 class ModelDestruction(TransactionHandler):
 	helper = Option(required=True)
 	make_la_person = Service('make_la_person')
+	buy_sell_modifiers = Service('buy_sell_modifiers')
 
-	def __call__(self, data:dict, make_la_person):
+	def __call__(self, data:dict, make_la_person, buy_sell_modifiers):
 		rec = data['book_record']
 		date = implode_date(data['sale_date'])
 		hmo = get_crom_object(data['_object'])
@@ -1117,20 +1148,21 @@ class ModelDestruction(TransactionHandler):
 			d.referred_to_by = vocab.Note(ident='', content=rec['verbatim_notes'])
 		hmo.destroyed_by = d
 
-		self.add_incoming_tx(data)
+		self.add_incoming_tx(data, buy_sell_modifiers)
 		return data
 
 class ModelTheftOrLoss(TransactionHandler):
 	helper = Option(required=True)
 	make_la_person = Service('make_la_person')
+	buy_sell_modifiers = Service('buy_sell_modifiers')
 
-	def __call__(self, data:dict, make_la_person):
+	def __call__(self, data:dict, make_la_person, buy_sell_modifiers):
 		rec = data['book_record']
 		pi_rec = data['pi_record_no']
 		hmo = get_crom_object(data['_object'])
 		sn_ident = self.helper.stock_number_identifier(data['_object'], None)
 		
-		self.add_incoming_tx(data)
+		self.add_incoming_tx(data, buy_sell_modifiers)
 		tx_out = self._empty_tx(data, incoming=False)
 
 		tx_type = rec['transaction']
@@ -1182,8 +1214,9 @@ class ModelFinalSale(TransactionHandler):
 	'''
 	helper = Option(required=True)
 	make_la_person = Service('make_la_person')
+	buy_sell_modifiers = Service('buy_sell_modifiers')
 
-	def __call__(self, data:dict, make_la_person):
+	def __call__(self, data:dict, make_la_person, buy_sell_modifiers):
 		data = data.copy()
 		
 		# reset prov entries and people because we're only interested in those
@@ -1208,9 +1241,9 @@ class ModelFinalSale(TransactionHandler):
 			shared_people = [org]
 			sellers = []
 			date_key = None
-			tx = self._prov_entry(data, date_key, sellers, price_info, knoedler_price_part, shared_people, incoming=True)
+			tx = self._prov_entry(data, date_key, sellers, price_info, knoedler_price_part, shared_people, incoming=True, buy_sell_modifiers=buy_sell_modifiers)
 		
-			current_tx = self.add_outgoing_tx(data)
+			current_tx = self.add_outgoing_tx(data, buy_sell_modifiers)
 			current_tx_data = add_crom_data(data={}, what=current_tx)
 		
 			lot_object_key = list(self.helper.transaction_key_for_record(data, incoming=True))
@@ -1228,28 +1261,31 @@ class ModelSale(TransactionHandler):
 	'''
 	helper = Option(required=True)
 	make_la_person = Service('make_la_person')
+	buy_sell_modifiers = Service('buy_sell_modifiers')
 
-	def __call__(self, data:dict, make_la_person):
+	def __call__(self, data:dict, make_la_person, buy_sell_modifiers, in_tx=None, out_tx=None):
 		sellers = data['purchase_seller']
-		if len(sellers):
-			# if there are sellers in this record, then model the incoming transaction.
-			in_tx = self.add_incoming_tx(data)
-		else:
-			# if there are no sellers, then this is an object that was previously unsold, and should be modeled as an inventory activity
-			inv = self._new_inventorying(data)
-			appraisal = self._apprasing_assignment(data)
-			inv_label = inv._label
-			in_tx = self._empty_tx(data, incoming=True)
-			in_tx.part = inv
-			if appraisal:
-				in_tx.part = appraisal
-			in_tx.identified_by = model.Name(ident='', content=inv_label)
-			in_tx._label = inv_label
-			in_tx_data = add_crom_data(data={'uri': in_tx.id, 'label': inv_label}, what=in_tx)
-			data.setdefault('_prov_entries', [])
-			data['_prov_entries'].append(in_tx_data)
+		if not in_tx:
+			if len(sellers):
+				# if there are sellers in this record, then model the incoming transaction.
+				in_tx = self.add_incoming_tx(data, buy_sell_modifiers)
+			else:
+				# if there are no sellers, then this is an object that was previously unsold, and should be modeled as an inventory activity
+				inv = self._new_inventorying(data)
+				appraisal = self._apprasing_assignment(data)
+				inv_label = inv._label
+				in_tx = self._empty_tx(data, incoming=True)
+				in_tx.part = inv
+				if appraisal:
+					in_tx.part = appraisal
+				in_tx.identified_by = model.Name(ident='', content=inv_label)
+				in_tx._label = inv_label
+				in_tx_data = add_crom_data(data={'uri': in_tx.id, 'label': inv_label}, what=in_tx)
+				data.setdefault('_prov_entries', [])
+				data['_prov_entries'].append(in_tx_data)
 
-		out_tx = self.add_outgoing_tx(data)
+		if not out_tx:
+			out_tx = self.add_outgoing_tx(data, buy_sell_modifiers)
 
 		in_tx.ends_before_the_start_of = out_tx
 		out_tx.starts_after_the_end_of = in_tx
@@ -1258,21 +1294,23 @@ class ModelSale(TransactionHandler):
 class ModelReturn(ModelSale):
 	helper = Option(required=True)
 	make_la_person = Service('make_la_person')
+	buy_sell_modifiers = Service('buy_sell_modifiers')
 
-	def __call__(self, data:dict, make_la_person):
+	def __call__(self, data:dict, make_la_person, buy_sell_modifiers):
 		sellers = data.get('purchase_seller', [])
 		buyers = data.get('sale_buyer', [])
 		if not buyers:
 			buyers = sellers.copy()
 			data['sale_buyer'] = buyers
-		self.add_return_tx(data)
-		yield from super().__call__(data, make_la_person)
+		in_tx, out_tx = self.add_return_tx(data, buy_sell_modifiers)
+		yield from super().__call__(data, make_la_person, buy_sell_modifiers, in_tx=in_tx, out_tx=out_tx)
 
 class ModelUnsoldPurchases(TransactionHandler):
 	helper = Option(required=True)
 	make_la_person = Service('make_la_person')
+	buy_sell_modifiers = Service('buy_sell_modifiers')
 
-	def __call__(self, data:dict, make_la_person):
+	def __call__(self, data:dict, make_la_person, buy_sell_modifiers):
 		rec = data['book_record']
 		pi_rec = data['pi_record_no']
 		odata = data['_object']
@@ -1291,15 +1329,16 @@ class ModelUnsoldPurchases(TransactionHandler):
 
 		sn_ident = self.helper.stock_number_identifier(odata, date)
 
-		in_tx = self.add_incoming_tx(data)
+		in_tx = self.add_incoming_tx(data, buy_sell_modifiers)
 
 		yield data
 
 class ModelInventorying(TransactionHandler):
 	helper = Option(required=True)
 	make_la_person = Service('make_la_person')
+	buy_sell_modifiers = Service('buy_sell_modifiers')
 
-	def __call__(self, data:dict, make_la_person):
+	def __call__(self, data:dict, make_la_person, buy_sell_modifiers):
 		rec = data['book_record']
 		pi_rec = data['pi_record_no']
 		odata = data['_object']

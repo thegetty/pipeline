@@ -763,6 +763,8 @@ class UtilityHelper:
 		return uri.replace('#', f'#{key},')
 
 	def get_canonical_place(self, name):
+		if name is None:
+			return None
 		canonical_location_names = self.canonical_location_names
 		if name.casefold() in canonical_location_names:
 			name = canonical_location_names.get(name.casefold(), name)

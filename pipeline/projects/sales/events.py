@@ -17,14 +17,16 @@ from pipeline.linkedart import add_crom_data, get_crom_object, remove_crom_objec
 class AddAuctionEvent(Configurable):
 	helper = Option(required=True)
 	event_properties = Service('event_properties')
+	date_modifiers = Service('date_modifiers')
 
-	def __call__(self, data:dict, event_properties):
+	def __call__(self, data:dict, event_properties, date_modifiers):
 		'''Add modeling for an auction event based on properties of the supplied `data` dict.'''
 		cno = data['catalog_number']
 		sale_type = data.get('non_auction_flag', 'Auction')
 
 		ts, begin, end = timespan_from_bound_components(
 			data,
+			date_modifiers,
 			'sale_begin_', 'begin',
 			'sale_end_', 'eoe'
 		)

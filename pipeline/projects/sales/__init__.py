@@ -176,7 +176,7 @@ class SalesUtilityHelper(UtilityHelper):
 		else:
 			cl = vocab.SalesCatalogText # Sale Catalog
 
-		catalog = cl(ident=uri, label=label)
+		catalog = vocab.make_multitype_obj(cl, vocab.CatalogForm, ident=uri, label=label)
 		catalog.identified_by = model.Name(ident='', content=label)
 
 		return catalog
@@ -488,6 +488,7 @@ class SalesPipeline(PipelineBase):
 		vocab.register_instance('act of returning', {'parent': model.Type, 'id': '300438467', 'label': 'Returning'})
 		vocab.register_instance('act of completing sale', {'parent': model.Type, 'id': 'XXXXXX003', 'label': 'Act of Completing Sale'})
 		vocab.register_instance('qualifier', {'parent': model.Type, 'id': '300435720', 'label': 'Qualifier'})
+		vocab.register_instance('form type', {'parent': model.Type, 'id': '300444970', 'label': 'Form'})
 
 		vocab.register_instance('fire', {'parent': model.Type, 'id': '300068986', 'label': 'Fire'})
 		vocab.register_instance('animal', {'parent': model.Type, 'id': '300249395', 'label': 'Animal'})
@@ -496,6 +497,18 @@ class SalesPipeline(PipelineBase):
 		vocab.register_vocab_class('UncertainMemberClosedGroup', {'parent': model.Group, 'id': 'XXXXXX006', 'label': 'Closed Group Representing an Uncertain Person'})
 		vocab.register_vocab_class('ConstructedTitle', {'parent': model.Name, 'id': '300417205', 'label': 'Constructed Title'})
 		vocab.register_vocab_class('AuctionHouseActivity', {'parent': model.Activity, 'id': '300417515', 'label': 'Auction House'})
+
+		vocab.register_vocab_class('EntryNumber', {"parent": model.Identifier, "id":"300445023", "label": "Entry Number"})
+		vocab.register_vocab_class('PageNumber', {"parent": model.Identifier, "id":"300445022", "label": "Page Number"})
+		vocab.register_vocab_class('OrderNumber', {"parent": model.Identifier, "id":"300247348", "label": "Order"})
+		
+		vocab.register_vocab_class('BookNumber', {"parent": model.Identifier, "id":"300445021", "label": "Book Number"})
+		vocab.register_vocab_class('PageTextForm', {"parent": model.LinguisticObject, "id":"300194222", "label": "Page", "metatype": "form type"})
+		vocab.register_vocab_class('EntryTextForm', {"parent": model.LinguisticObject, "id":"300438434", "label": "Entry", "metatype": "form type"})
+
+		vocab.register_vocab_class('CatalogForm', {"parent": model.LinguisticObject, "id":"300026059", "label": "Catalog", "metatype": "form type"})
+
+
 
 		super().__init__(project_name, helper=helper)
 
@@ -1065,6 +1078,11 @@ class SalesPipeline(PipelineBase):
 			_input=records.output
 		)
 
+		text = graph.add_chain(
+			ExtractKeyedValue(key='_text_page'),
+			_input=sales.output
+		)
+
 		auctions_of_lot = graph.add_chain(
 			ExtractKeyedValue(key='_event_causing_prov_entry'),
 			OnlyRecordsOfType(type=vocab.Auction),
@@ -1085,9 +1103,10 @@ class SalesPipeline(PipelineBase):
 
 		if serialize:
 			# write SALES data
-			self.add_serialization_chain(graph, auctions_of_lot.output, model=self.models['SaleActivity'], limit=1000)
-			self.add_serialization_chain(graph, private_sale_activities.output, model=self.models['SaleActivity'], limit=1000)
-			self.add_serialization_chain(graph, lottery_drawings.output, model=self.models['SaleActivity'], limit=1000)
+			self.add_serialization_chain(graph, text.output, model=self.models['LinguisticObject'])
+			self.add_serialization_chain(graph, auctions_of_lot.output, model=self.models['SaleActivity'])
+			self.add_serialization_chain(graph, private_sale_activities.output, model=self.models['SaleActivity'])
+			self.add_serialization_chain(graph, lottery_drawings.output, model=self.models['SaleActivity'])
 		return sales
 
 	def add_object_chain(self, graph, sales, serialize=True):
@@ -1128,7 +1147,7 @@ class SalesPipeline(PipelineBase):
 		)
 		if serialize:
 			# write SETS data
-			self.add_serialization_chain(graph, sets.output, model=self.models['Set'], limit=1000)
+			self.add_serialization_chain(graph, sets.output, model=self.models['Set'])
 		return sets
 
 	def add_visual_item_chain(self, graph, objects, serialize=True):
@@ -1152,7 +1171,7 @@ class SalesPipeline(PipelineBase):
 		)
 		if serialize:
 			# write RECORD data
-			self.add_serialization_chain(graph, texts.output, model=self.models['LinguisticObject'], limit=1000)
+			self.add_serialization_chain(graph, texts.output, model=self.models['LinguisticObject'])
 		return texts
 
 	def add_texts_chain(self, graph, objects, serialize=True):

@@ -367,9 +367,6 @@ class PopulateSalesObject(Configurable, pipeline.linkedart.PopulateObject):
 		self._populate_object_present_location(data, now_key, destruction_types_map)
 		self._populate_object_notes(data, parent, unique_catalogs)
 		self._populate_object_prev_post_sales(data, now_key, post_sale_map)
-		for p in data.get('portal', []):
-			url = p['portal_url']
-			hmo.referred_to_by = vocab.WebPage(ident=url, label=url)
 
 		modified_title = self._populate_title_modifier(data, title_modifiers, record)
 		self._populate_object_visual_item(data, subject_genre, modified_title, record)

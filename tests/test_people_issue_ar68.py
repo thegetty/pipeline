@@ -37,7 +37,7 @@ class PIRModelingTest_AR68(TestPeoplePipelineOutput):
         # This is a corporate_body Group that has a century active, so should have a professional activity based on that date data
         group3 = groups['tag:getty.edu,2019:digital:pipeline:REPLACE-WITH-UUID:shared#PERSON,AUTH,Macon%2C%20GA%2C%20USA.%20%20Wesleyan%20College']
         self.assertIn('carried_out', group3)
-        activities = group3['carried_out']
+        activities = [a for a in group3['carried_out'] if a['_label'].startswith('Professional activity')]
         self.assertEqual(len(activities), 1)
         activity = activities[0]
         self.assertEqual(activity['_label'], 'Professional activity of Macon, GA, USA.  Wesleyan College')

@@ -112,6 +112,7 @@ class AddPerson(Configurable):
 		self.year_range = re.compile(r'[ ]?\((\d{4}-\d{4}[^)]*)\)')
 		self.bound_year = re.compile(r'[ ]?\(((until|from|after) \d{4}[^)]*)\)')
 		self.c_year = re.compile(r'[ ]?\((c \d{4}[^)]*)\)')
+		self.active_date = re.compile(r'(.*?)[ ]+\(([^)]+)\)')
 	
 	def clean_dates(self, data):
 		cb = data.get('corporate_body', False)
@@ -132,7 +133,7 @@ class AddPerson(Configurable):
 		death = data.get('death')
 		period = data.get('period_active')
 		century = data.get('century_active')
-		active_city = data.get('active_city_active')
+		active_city = data.get('active_city_date')
 		
 		if century:
 			if '-' in century:
@@ -185,6 +186,24 @@ class AddPerson(Configurable):
 			cite = vocab.Note(ident='', content=award) # TODO: add proper classification for an Awards Statement
 			data['referred_to_by'].append(cite)
 
+	def model_active_city(self, data, loc):
+		m = self.active_date.search(loc)
+		date = None
+		if m:
+			date = m.group(2)
+			date_range = date_cleaner(date)
+			if date_range:
+				loc = m.group(1)
+			else:
+				# this apparently wasn't a date, but just a parenthetical
+				date = None
+		sdata = {
+			'location': loc,
+		}
+		if date:
+			sdata['address_date'] = date
+		return self.model_sojourn(data, sdata)
+
 	def model_sojourn(self, data, loc):
 		base_uri = self.helper.make_proj_uri('PLACE', '')
 		cb = data.get('corporate_body', False)
@@ -231,6 +250,12 @@ class AddPerson(Configurable):
 		for i, loc in enumerate(data.get('locations', [])):
 			sdata = self.model_sojourn(data, loc)
 			data['sojourns'].append(sdata)
+		
+		active_cities = {t.strip() for t in data.get('active_city_date', '').split(';')} - {''}
+		for i, loc in enumerate(sorted(active_cities)):
+			sdata = self.model_active_city(data, loc)
+			if sdata:
+				data['sojourns'].append(sdata)
 
 	def model_person_or_group(self, data):
 		name = data['auth_name']

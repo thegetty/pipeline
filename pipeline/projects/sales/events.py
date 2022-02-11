@@ -165,12 +165,22 @@ class PopulateAuctionEvent(Configurable):
 		if notes:
 			auction.referred_to_by = vocab.Note(ident='', content=notes)
 
-		for p in data.get('portal', []):
-			url = p['portal_url']
-			if url.startswith('http'):
-				auction.referred_to_by = vocab.WebPage(ident=url, label=url)
-			else:
-				warnings.warn(f'*** Portal URL value does not appear to be a valid URL: {url}')
+		if 'links' in data:
+			event_record = get_crom_object(data['_record'])
+			links = data['links']
+			link_keys = set(links.keys()) - {'portal'}
+			for p in links.get('portal', []):
+				url = p['portal_url']
+				if url.startswith('http'):
+					event_record.referred_to_by = vocab.WebPage(ident=url, label=url)
+				else:
+					warnings.warn(f'*** Portal URL value does not appear to be a valid URL: {url}')
+			for k in link_keys:
+				url = links[k]
+				if isinstance(url, str):
+					event_record.referred_to_by = vocab.WebPage(ident=url, label=url)
+				else:
+					print(f'*** not a URL string: {k}: {url}')
 
 		if ts:
 			auction.timespan = ts

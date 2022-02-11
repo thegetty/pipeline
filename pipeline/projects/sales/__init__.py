@@ -660,6 +660,14 @@ class SalesPipeline(PipelineBase):
 									'other_seller_2',
 									'other_seller_3')},
 							'title_pg_sell': {'properties': ('title_pg_sell_1', 'title_pg_sell_2')},
+							'links': {
+								'properties': (
+									'link_to_pdf',
+									'art_sales_cats_online',
+									'art_world_in_britain',
+									'portal'
+								)
+							},
 							'location': {
 								'properties': (
 									'city_of_sale',
@@ -1069,6 +1077,12 @@ class SalesPipeline(PipelineBase):
 									'ask_price_curr',
 									'ask_price_desc',
 									'ask_price_so')},
+							'links': {
+								'properties': (
+									'portal',
+									'link_to_pdf' # this is already grouped above in 'auction_of_lot'
+								)
+							}
 						}
 					}
 				]

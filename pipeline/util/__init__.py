@@ -685,7 +685,7 @@ def exploded_date_has_uncertainty(date_tuple):
 		pass
 	return False
 
-def timespan_from_bound_components(data:dict, date_modifiers, begin_prefix:str='', begin_clamp:str=None, end_prefix:str='', end_clamp:str=None):
+def timespan_from_bound_components(data:dict, date_modifiers:dict, begin_prefix:str='', begin_clamp:str=None, end_prefix:str='', end_clamp:str=None):
 	begin_tuple = extract_date_tuple(data, begin_prefix)
 	end_tuple = extract_date_tuple(data, end_prefix)
 	

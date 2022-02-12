@@ -732,6 +732,8 @@ class UtilityHelper:
 		self.services = services
 		self.static_instances = None
 		self.canonical_location_names = {k.casefold(): v for k, v in self.services.get('unique_locations', {}).get('canonical_names', {}).items()}
+		for n in list(self.canonical_location_names.values()):
+			self.canonical_location_names[n.casefold()] = n
 
 	def add_static_instances(self, static_instances):
 		self.static_instances = static_instances
@@ -760,6 +762,17 @@ class UtilityHelper:
 	def prepend_uri_key(self, uri, key):
 		return uri.replace('#', f'#{key},')
 
+	def get_canonical_place(self, name):
+		if name is None:
+			return None
+		canonical_location_names = self.canonical_location_names
+		if name.casefold() in canonical_location_names:
+			name = canonical_location_names.get(name.casefold(), name)
+		si = self.static_instances
+		if si:
+			return si.get_instance('Place', name)
+		return None
+		
 	def make_place(self, data:dict, base_uri=None, record=None):
 		'''
 		Given a dictionary representing data about a place, construct a model.Place object,

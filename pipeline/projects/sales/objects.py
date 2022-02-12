@@ -176,8 +176,6 @@ class PopulateSalesObject(Configurable, pipeline.linkedart.PopulateObject):
 				note = None
 
 			if loc:
-				# TODO: if `parse_location_name` fails, still preserve the location string somehow
-				current = parse_location_name(loc, uri_base=self.helper.uid_tag_prefix)
 				inst = location.get('inst')
 				if inst:
 					owner_data = {
@@ -200,14 +198,23 @@ class PopulateSalesObject(Configurable, pipeline.linkedart.PopulateObject):
 						'uri': self.helper.make_proj_uri('ORG', 'CURR-OWN', *now_key),
 					}
 
+				# TODO: if `parse_location_name` fails, still preserve the location string somehow
+				current = parse_location_name(loc, uri_base=self.helper.uid_tag_prefix)
+
 				# It's conceivable that there could be more than one "present location"
 				# for an object that is reconciled based on prev/post sale rewriting.
 				# Therefore, the place URI must not share a prefix with the object URI,
 				# otherwise all such places are liable to be merged during URI
 				# reconciliation as part of the prev/post sale rewriting.
 				base_uri = self.helper.prepend_uri_key(hmo.id, 'PLACE')
-				place_data = self.helper.make_place(current, base_uri=base_uri)
-				place = get_crom_object(place_data)
+				
+				canonical_place = self.helper.get_canonical_place(loc)
+				if canonical_place:
+					place = canonical_place
+					place_data = add_crom_data(data={'uri': place.id}, what=place)
+				else:
+					place_data = self.helper.make_place(current, base_uri=base_uri)
+					place = get_crom_object(place_data)
 				hmo.current_location = place
 
 				make_la_org = pipeline.linkedart.MakeLinkedArtOrganization()

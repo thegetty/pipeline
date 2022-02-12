@@ -117,8 +117,23 @@ class PopulateAuctionEvent(Configurable):
 		# which uses the data to associate the place with auction lots.
 		base_uri = self.helper.make_proj_uri('AUCTION-EVENT', cno, 'PLACE', '')
 		record = get_crom_object(data.get('_record'))
-		place_data = self.helper.make_place(current, base_uri=base_uri, record=record)
-		place = get_crom_object(place_data)
+		
+		current_p = current
+		locs = []
+		while current_p:
+			l = current_p.get('name')
+			if l:
+				locs.append(l)
+			current_p = current_p.get('part_of')
+		loc = ', '.join(locs) if len(locs) else None
+		canonical_place = self.helper.get_canonical_place(loc)
+		if canonical_place:
+			place = canonical_place
+			place_data = add_crom_data(data={'uri': place.id}, what=place)
+		else:
+			place_data = self.helper.make_place(current, base_uri=base_uri, record=record)
+			place = get_crom_object(place_data)
+
 		if place:
 			data['_locations'] = [place_data]
 			auction.took_place_at = place

@@ -497,6 +497,8 @@ class SalesPipeline(PipelineBase):
 		vocab.register_instance('act of completing sale', {'parent': model.Type, 'id': '300448858', 'label': 'Act of Completing Sale'})
 		vocab.register_instance('qualifier', {'parent': model.Type, 'id': '300435720', 'label': 'Qualifier'})
 		vocab.register_instance('form type', {'parent': model.Type, 'id': '300444970', 'label': 'Form'})
+		vocab.register_instance('buyer description', {'parent': model.Type, 'id': '300445024', 'label': 'Buyer description'})
+		vocab.register_instance('seller description', {'parent': model.Type, 'id': '300445025', 'label': 'Seller description'})
 
 		vocab.register_instance('fire', {'parent': model.Type, 'id': '300068986', 'label': 'Fire'})
 		vocab.register_instance('animal', {'parent': model.Type, 'id': '300249395', 'label': 'Animal'})

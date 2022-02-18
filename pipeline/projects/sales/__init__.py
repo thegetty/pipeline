@@ -484,9 +484,9 @@ class SalesPipeline(PipelineBase):
 		helper = SalesUtilityHelper(project_name)
 		self.uid_tag_prefix = UID_TAG_PREFIX
 
-		vocab.register_instance('act of selling', {'parent': model.Type, 'id': 'XXXXXX001', 'label': 'Act of Selling'})
+		vocab.register_instance('act of selling', {'parent': model.Type, 'id': '300438483', 'label': 'Act of Selling'})
 		vocab.register_instance('act of returning', {'parent': model.Type, 'id': '300438467', 'label': 'Returning'})
-		vocab.register_instance('act of completing sale', {'parent': model.Type, 'id': 'XXXXXX003', 'label': 'Act of Completing Sale'})
+		vocab.register_instance('act of completing sale', {'parent': model.Type, 'id': '300448858', 'label': 'Act of Completing Sale'})
 		vocab.register_instance('qualifier', {'parent': model.Type, 'id': '300435720', 'label': 'Qualifier'})
 		vocab.register_instance('form type', {'parent': model.Type, 'id': '300444970', 'label': 'Form'})
 
@@ -494,7 +494,7 @@ class SalesPipeline(PipelineBase):
 		vocab.register_instance('animal', {'parent': model.Type, 'id': '300249395', 'label': 'Animal'})
 		vocab.register_instance('history', {'parent': model.Type, 'id': '300033898', 'label': 'History'})
 
-		vocab.register_vocab_class('UncertainMemberClosedGroup', {'parent': model.Group, 'id': 'XXXXXX006', 'label': 'Closed Group Representing an Uncertain Person'})
+		vocab.register_vocab_class('UncertainMemberClosedGroup', {'parent': model.Group, 'id': '300448855', 'label': 'Closed Group Representing an Uncertain Person'})
 		vocab.register_vocab_class('ConstructedTitle', {'parent': model.Name, 'id': '300417205', 'label': 'Constructed Title'})
 		vocab.register_vocab_class('AuctionHouseActivity', {'parent': model.Activity, 'id': '300417515', 'label': 'Auction House'})
 

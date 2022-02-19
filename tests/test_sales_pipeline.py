@@ -73,7 +73,7 @@ class TestSalesPipelineOutput(unittest.TestCase):
 
         self.assertEqual(len(people), 4, 'expected count of people') # 3 from the data, and 1 (Lugt) which is a static instance
         self.assertEqual(len(objects), 6, 'expected count of physical objects')
-        self.assertEqual(len(los), 4, 'expected count of linguistic objects')
+        self.assertEqual(len(los), 10, 'expected count of linguistic objects')
         self.assertEqual(len(prov), 2, 'expected count of prov entries') # 2 prov entries
         self.assertEqual(len(activities), 3, 'expected count of sale activities') # 1 auction event, 2 auctions of lot
         self.assertEqual(len(houses), 1, 'expected count of auction houses')
@@ -82,7 +82,7 @@ class TestSalesPipelineOutput(unittest.TestCase):
         self.assertEqual(object_types, {'Auction Catalog', 'Painting'})
 
         lo_types = {c['_label'] for o in los.values() for c in o.get('classified_as', [])}
-        self.assertEqual(lo_types, {'Auction Catalog', 'Catalog', 'Entry'})
+        self.assertEqual(lo_types, {'Auction Catalog', 'Catalog', 'Entry', 'Database'})
 
         people_names = {o['_label'] for o in people.values()}
         self.assertEqual(people_names, {'Frits Lugt', '[Anonymous]', 'GILLEMANS, JAN PAUWEL', 'VINCKEBOONS, DAVID'})

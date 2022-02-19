@@ -101,7 +101,7 @@ class MergingFileWriter(Configurable):
 						os.mkdir(pp)
 
 	def merge(self, model_object, fn):
-		r = reader.Reader()
+		r = reader.Reader(validate_profile=False, validate_props=False)
 		merger = self.merger
 
 		if getsize(fn) == 0:

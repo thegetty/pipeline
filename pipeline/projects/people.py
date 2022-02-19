@@ -55,6 +55,7 @@ from pipeline.io.csv import CurriedCSVReader
 from pipeline.nodes.basic import \
 			RemoveKeys, \
 			KeyManagement, \
+			PreserveCSVFields, \
 			GroupRepeatingKeys, \
 			GroupKeys, \
 			AddArchesModel, \
@@ -102,6 +103,26 @@ class PeopleUtilityHelper(UtilityHelper):
 		key = data['uri_keys']
 		self.services['people_groups']['group_keys'].append(key)
 		return g
+
+class AddPersonEntry(Configurable):
+	helper = Option(required=True)
+	
+	def __call__(self, data:dict):
+		'''Add modeling for the entry describing a person/group in the PSCP PEOPLE dataset.'''
+		recno = data['star_record_no']
+		auth_name = data.get('auth_name')
+		record_uri = self.helper.make_proj_uri('ENTRY', 'PEOPLE', recno)
+		content = data['star_csv_data']
+		record = vocab.EntryTextForm(ident=record_uri, label=f'Entry recorded in PSCP PEOPLE dataset for {auth_name}', content=content)
+		creation = model.Creation(ident='')
+		creation.carried_out_by = self.helper.static_instances.get_instance('Group', 'gpi')
+		record.created_by = creation
+		record.identified_by = self.helper.gpi_number_id(recno, vocab.StarNumber)
+		record.identified_by = vocab.PrimaryName(ident='', content=f'STAR Person Authority Entry {recno}')
+		record.part_of = self.helper.static_instances.get_instance('LinguisticObject', 'db-people')
+		data['_entry_record'] = add_crom_data({'uri': record_uri}, record)
+
+		yield data
 
 class AddPerson(Configurable):
 	helper = Option(required=True)
@@ -172,6 +193,9 @@ class AddPerson(Configurable):
 				data['period_active_clean'] = ts
 
 	def handle_statements(self, data):
+		record = get_crom_object(data['_entry_record'])
+		data['referred_to_by'].append(record)
+
 		source_content = data.get('source')
 		if source_content:
 			cite = vocab.BibliographyStatement(ident='', content=source_content)
@@ -353,6 +377,9 @@ class PeoplePipeline(PipelineBase):
 		vocab.register_vocab_class("DealingOccupation", {"parent": model.Activity, "id":"300055675", "label": "Commercial Dealing in Artwork", "metatype": "occupation"})
 		vocab.register_vocab_class("OwningOccupation", {"parent": model.Activity, "id":"300055603", "label": "Owning", "metatype": "occupation"})
 
+		vocab.register_instance('form type', {'parent': model.Type, 'id': '300444970', 'label': 'Form'})
+		vocab.register_vocab_class('EntryTextForm', {"parent": model.LinguisticObject, "id":"300438434", "label": "Entry", "metatype": "form type"})
+		
 		helper = PeopleUtilityHelper(project_name)
 
 		super().__init__(project_name, helper=helper)
@@ -390,6 +417,7 @@ class PeoplePipeline(PipelineBase):
 		contents_records = g.add_chain(
 			MatchingFiles(path='/', pattern=self.contents_files_pattern, fs='fs.data.people'),
 			CurriedCSVReader(fs='fs.data.people', limit=self.limit, field_names=self.contents_headers),
+			PreserveCSVFields(key='star_csv_data', order=self.contents_headers),
 			KeyManagement(
 				operations=[
 					{
@@ -417,6 +445,7 @@ class PeoplePipeline(PipelineBase):
 									'notes': 'internal_notes'
 								},
 								'properties': (
+									'star_csv_data',
 									'star_record_no',
 									'person_authority',
 									'person_auth_disp',
@@ -448,13 +477,21 @@ class PeoplePipeline(PipelineBase):
 				]
 			),
 # 			Trace(name='foo', ordinals=range(10)),
+			PreserveCSVFields(key='star_csv_data', order=self.contents_headers),
 			ExtractKeyedValue(key='person'),
+			AddPersonEntry(helper=self.helper),
 			AddPerson(helper=self.helper),
 		)
 
 		_ = self.add_person_or_group_chain(g, contents_records, serialize=True)
 		_ = self.add_places_chain(g, contents_records, key='_places', serialize=True)
 		
+		records = g.add_chain(
+			ExtractKeyedValue(key='_entry_record'),
+			_input=contents_records.output
+		)
+		
+		self.add_serialization_chain(g, records.output, model=self.models['LinguisticObject'], use_memory_writer=False)
 
 		self.graph = g
 

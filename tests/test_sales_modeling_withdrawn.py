@@ -35,7 +35,7 @@ class PIRModelingTest_Withdrawn(TestSalesPipelineOutput):
 		procurements = output['model-activity']
 		
 		self.assertEqual(len(objects), 2)
-		self.assertEqual(len(texts), 2)
+		self.assertEqual(len(texts), 3)
 		self.assertEqual(len(auctions), 1)
 		self.assertEqual(len(procurements), 2)
 		

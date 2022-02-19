@@ -63,6 +63,7 @@ from pipeline.io.csv import CurriedCSVReader
 from pipeline.nodes.basic import \
 			RecordCounter, \
 			KeyManagement, \
+			PreserveCSVFields, \
 			RemoveKeys, \
 			GroupRepeatingKeys, \
 			GroupKeys, \
@@ -207,14 +208,12 @@ class SalesUtilityHelper(UtilityHelper):
 		uri = self.make_proj_uri('PHYS-CAT', *keys)
 		return uri
 
-	def physical_catalog(self, cno, sale_type, owner=None, copy=None, add_name=False):
-		uri = self.physical_catalog_uri(cno, owner, copy)
+	def physical_catalog_label(self, cno, sale_type, owner=None, copy=None):
 		labels = []
 		if owner:
 			labels.append(f'owned by “{owner}”')
 		if copy:
 			labels.append(f'copy {copy}')
-		catalog_type = self.catalog_type_for_sale_type(sale_type)
 		if sale_type in ('Auction', 'Collection Catalog'):
 			labels = [f'Sale Catalog {cno}'] + labels
 		elif sale_type == 'Private Contract Sale':
@@ -227,6 +226,12 @@ class SalesUtilityHelper(UtilityHelper):
 			warnings.warn(f'*** Unexpected sale type: {sale_type!r}')
 			return None
 		label = ', '.join(labels)
+		return label
+		
+	def physical_catalog(self, cno, sale_type, owner=None, copy=None, add_name=False):
+		uri = self.physical_catalog_uri(cno, owner, copy)
+		label = self.physical_catalog_label(cno, sale_type, owner, copy)
+		catalog_type = self.catalog_type_for_sale_type(sale_type)
 		catalog = catalog_type(ident=uri, label=label)
 		if add_name:
 			catalog.identified_by = vocab.Name(ident='', content=label)
@@ -585,15 +590,22 @@ class SalesPipeline(PipelineBase):
 	def add_physical_catalogs_chain(self, graph, records, serialize=True):
 		'''Add modeling of physical copies of auction catalogs.'''
 		catalogs = graph.add_chain(
+			PreserveCSVFields(key='star_csv_data', order=self.catalogs_headers),
+			pipeline.projects.sales.catalogs.AddPhysicalCatalogEntry(helper=self.helper),
 			pipeline.projects.sales.catalogs.AddAuctionCatalog(helper=self.helper),
 			pipeline.projects.sales.catalogs.AddPhysicalCatalogObjects(helper=self.helper),
 			pipeline.projects.sales.catalogs.AddPhysicalCatalogOwners(helper=self.helper),
 			RecordCounter(name='physical_catalogs', verbose=self.debug),
 			_input=records.output
 		)
+		records = graph.add_chain(
+			ExtractKeyedValue(key='_catalog_record'),
+			_input=catalogs.output
+		)
 		if serialize:
 			# write SALES data
 			self.add_serialization_chain(graph, catalogs.output, model=self.models['HumanMadeObject'], use_memory_writer=False)
+			self.add_serialization_chain(graph, records.output, model=self.models['LinguisticObject'], use_memory_writer=False)
 		return catalogs
 
 	def add_catalog_linguistic_objects_chain(self, graph, events, serialize=True):
@@ -611,6 +623,7 @@ class SalesPipeline(PipelineBase):
 	def add_auction_events_chain(self, graph, records, serialize=True):
 		'''Add modeling of auction events.'''
 		auction_events = graph.add_chain(
+			PreserveCSVFields(key='star_csv_data', order=self.auction_events_headers),
 			KeyManagement(
 				drop_empty=True,
 				operations=[
@@ -762,6 +775,7 @@ class SalesPipeline(PipelineBase):
 	def add_sales_chain(self, graph, records, services, serialize=True):
 		'''Add transformation of sales records to the bonobo pipeline.'''
 		sales = graph.add_chain(
+			PreserveCSVFields(key='star_csv_data', order=self.contents_headers),
 			KeyManagement(
 				drop_empty=True,
 				operations=[
@@ -1025,6 +1039,7 @@ class SalesPipeline(PipelineBase):
 							'_object': {
 								'postprocess': add_pir_object_uri_factory(self.helper),
 								'properties': (
+									'star_csv_data',
 									'title',
 									'other_titles',
 									'title_modifier',

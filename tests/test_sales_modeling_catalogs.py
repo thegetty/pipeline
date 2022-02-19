@@ -27,16 +27,16 @@ class PIRModelingTest_Catalog(TestSalesPipelineOutput):
 		los = output['model-lo']
 		self.assertEqual(len(objects), 2)
 		self.assertEqual(len(sale_activities), 1)
-		self.assertEqual(len(los), 1)
+		self.assertEqual(len(los), 5)
 
 		# physical catalog copies carry the same catalog linguistic object
 		catalogs = {o['carries'][0]['id'] for o in objects.values()}
 		lingobj_ids = set([l['id'] for l in los.values()])
-		self.assertEqual(catalogs, lingobj_ids)
+		self.assertTrue(catalogs <= lingobj_ids)
 
 		# the auction event is referred to by the catalog linguistic object
 		event_subjects = {s['id'] for e in sale_activities.values() for s in e['referred_to_by'] if 'id' in s}
-		self.assertEqual(catalogs, event_subjects)
+		self.assertTrue(catalogs <= event_subjects)
 
 
 if __name__ == '__main__':

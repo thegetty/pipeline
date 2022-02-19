@@ -64,6 +64,21 @@ class CleanDateToSpan(Configurable):
 				pprint.pprint(data, stream=sys.stderr)
 		return NOT_MODIFIED
 
+class PreserveCSVFields(Configurable):
+	key = Option(str, default='csv_line')
+	order = Option(list, default=None)
+	
+	def __call__(self, data:dict):
+		s = ''
+		keyorder = self.order
+		if not keyorder:
+			keyorder = sorted(data.keys())
+		for k in keyorder:
+			v = data.get(k, '')
+			s += f'{k}: {v}\n'
+		data[self.key] = s
+		yield data
+
 class KeyManagement(Configurable):
 	operations = Option(list)
 	drop_empty = Option(bool, default=True)

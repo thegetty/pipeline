@@ -473,8 +473,6 @@ class PipelineBase:
 		self.verbose = verbose
 		self.services = self.setup_services()
 		helper.add_services(self.services)
-		self.static_instances = StaticInstanceHolder(self.setup_static_instances())
-		helper.add_static_instances(self.static_instances)
 
 		vocab.register_instance('occupation', {'parent': model.Type, 'id': '300263369', 'label': 'Occupation'})
 		vocab.register_instance('function', {'parent': model.Type, 'id': '300444971', 'label': 'Function (general concept)'})
@@ -484,6 +482,13 @@ class PipelineBase:
 		vocab.register_vocab_class('Internal', {"parent": model.LinguisticObject, "id":"300444972", "label": "private (general concept)", "metatype": "function"})
 		vocab.register_vocab_class('External', {"parent": model.LinguisticObject, "id":"300444973", "label": "public (general concept)", "metatype": "function"})
 		vocab.register_vocab_class('ActiveOccupation', {"parent": model.Activity, "id":"300393177", "label": "Professional Activities", "metatype": "occupation"})
+		vocab.register_vocab_class('Database', {"parent": model.LinguisticObject, "id":"300028543", "label": "Database"})
+		vocab.register_vocab_class('Transcription', {"parent": model.LinguisticObject, "id":"300404333", "label": "Transcription", "metatype": "brief text"})
+		vocab.register_vocab_class('TranscriptionProcess', {"parent": model.Creation, "id":"300440752", "label": "Transcription Process"})
+		
+
+		self.static_instances = StaticInstanceHolder(self.setup_static_instances())
+		helper.add_static_instances(self.static_instances)
 
 
 	def setup_services(self):
@@ -579,9 +584,22 @@ class PipelineBase:
 
 		places = self._static_place_instances()
 		places.update({'newyork': newyork})
+		
+		db_people = self.static_db_instance('PEOPLE', name='STAR Person Authority Database', creator=gpi)
+		db_knoedler = self.static_db_instance('Knoedler', name='STAR Knoedler Database', creator=gpi)
+		db_sales_events = self.static_db_instance('Sales', 'Descriptions', name='STAR Sales Catalogue Database', creator=gpi)
+		db_sales_catalogs = self.static_db_instance('Sales', 'Catalogue', name='STAR Physical Sales Catalogue Database', creator=gpi)
+		db_sales_contents = self.static_db_instance('Sales', 'Contents', name='STAR Sales Contents Database', creator=gpi)
 
 		instances = defaultdict(dict)
 		instances.update({
+			'LinguisticObject': {
+				'db-people': db_people,
+				'db-knoedler': db_knoedler,
+				'db-sales_events': db_sales_events,
+				'db-sales_catalogs': db_sales_catalogs,
+				'db-sales_contents': db_sales_contents,
+			},
 			'Group': {
 				'gci': gci,
 				'pscp': pscp,
@@ -597,6 +615,19 @@ class PipelineBase:
 		})
 		
 		return instances
+
+	def static_db_instance(self, *keys, **kwargs):
+		uri = self.helper.make_shared_uri('DB', *keys)
+		label = ' '.join(keys)
+		name = kwargs.get('name', f'STAR {label} Database')
+		db = vocab.Database(ident=uri, label=name)
+		db.identified_by = vocab.PrimaryName(ident='', content=name)
+		creator = kwargs.get('creator')
+		if creator:
+			creation = model.Creation(ident='')
+			creation.carried_out_by = creator
+			db.created_by = creation
+		return db
 
 	def _static_place_instances(self):
 		'''

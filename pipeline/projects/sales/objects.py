@@ -132,7 +132,18 @@ class PopulateSalesObject(Configurable, pipeline.linkedart.PopulateObject):
 		puid = parent.get('persistent_puid')
 		puid_id = self.helper.gpi_number_id(puid)
 
+		content = data['star_csv_data']
+		row = vocab.Transcription(ident='', content=content)
+		row.part_of = self.helper.static_instances.get_instance('LinguisticObject', 'db-sales_contents')
+		creation = vocab.TranscriptionProcess(ident='')
+		creation.carried_out_by = self.helper.static_instances.get_instance('Group', 'gpi')
+		row.created_by = creation
+		row.identified_by = self.helper.gpi_number_id(rec_num, vocab.StarNumber)
+
 		record = vocab.EntryTextForm(ident=record_uri, label=f'Sale recorded in catalog: {lot_object_id} (record number {rec_num})')
+		record._validate_profile = False
+		record.features_are_also_found_on = row
+
 		transaction = data['parent_data']['transaction']
 		tx_cl = transaction_classification.get(transaction)
 		if tx_cl:

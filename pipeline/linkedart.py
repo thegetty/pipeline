@@ -208,6 +208,13 @@ class MakeLinkedArtLinguisticObject(MakeLinkedArtRecord):
 		if 'label' in data:
 			name = set_la_name(thing, data['label'], title_type, set_label=True)
 
+		if 'content' in data:
+			thing.content = data['content']
+		
+		if 'also_found_on' in data:
+			thing._validate_profile = False
+			thing.features_are_also_found_on = data['also_found_on']
+
 		for author in data.get('created_by', []):
 			thing.created_by = author
 

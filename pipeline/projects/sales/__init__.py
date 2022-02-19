@@ -149,6 +149,14 @@ class SalesUtilityHelper(UtilityHelper):
 		else:
 			warnings.warn(f'*** Unexpected sale type: {sale_type!r}')
 
+	def set_type_name_for_sale_type(self, sale_type):
+		if sale_type in ('Private Contract Sale', 'Stock List', 'Collection Catalog'):
+			return 'Object Set'
+		elif sale_type in ('Auction', 'Lottery'):
+			return 'Lot'
+		else:
+			warnings.warn(f'*** Unexpected sale type: {sale_type!r}')
+
 	def catalog_type_for_sale_type(self, sale_type):
 		if sale_type == 'Private Contract Sale':
 			return vocab.ExhibitionCatalog

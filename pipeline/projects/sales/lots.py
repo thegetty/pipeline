@@ -92,11 +92,12 @@ class AddAuctionOfLot(ProvenanceBase):
 		lno = str(lno)
 		lot.identified_by = vocab.LotNumber(ident='', content=lno)
 
-	def set_lot_objects(self, lot, cno, lno, auction_of_lot_uri, data, sale_type, non_auctions, event_properties):
+	def set_lot_objects(self, lot, cno, lno, auction_of_lot_uri, data, lot_object_key, sale_type, non_auctions, event_properties):
 		'''Associate the set of objects with the auction lot.'''
 		shared_lot_number = self.helper.shared_lot_number_from_lno(lno)
 		set_type = vocab.AuctionLotSet if sale_type == 'Auction' else vocab.CollectionSet
-		coll_label = f'Object Set for Lot {cno} {shared_lot_number}'
+		set_type_name = self.helper.set_type_name_for_sale_type(sale_type)
+		coll_label = f'{set_type_name} {cno} {shared_lot_number}'
 		coll = set_type(ident=f'{auction_of_lot_uri}-Set', label=coll_label)
 		coll.identified_by = model.Name(ident='', content=coll_label)
 		event_date_label = event_properties['auction_date_label'].get(cno)
@@ -229,7 +230,7 @@ class AddAuctionOfLot(ProvenanceBase):
 		transaction = data.get('transaction')
 		SOLD = transaction_types['sold']
 		WITHDRAWN = transaction_types['withdrawn']
-		self.set_lot_objects(lot, cno, lno, sale_data['uri'], data, sale_type, non_auctions, event_properties)
+		self.set_lot_objects(lot, cno, lno, sale_data['uri'], data, lot_object_key, sale_type, non_auctions, event_properties)
 		
 		event_dates = event_properties['auction_dates'].get(cno)
 		event_date_label = event_properties['auction_date_label'].get(cno)

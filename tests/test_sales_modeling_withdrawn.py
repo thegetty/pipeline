@@ -38,17 +38,18 @@ class PIRModelingTest_Withdrawn(TestSalesPipelineOutput):
 		self.assertEqual(len(objects), 2)
 		self.assertEqual(len(texts), 3)
 		self.assertEqual(len(auctions), 1)
-		self.assertEqual(len(procurements), 2)
+		self.assertEqual(len(procurements), 3)
 		
 		procurement_labels = {p['_label'] for p in procurements}
 		self.assertEqual(procurement_labels, {
+			'Event leading to Ownership of Br-3039 0082[a] (1827-11-24)',
 			'Event leading to Ownership of Br-3039 0082[b] (1827-11-24)',
 	 		'Sale of Br-3039 0082 (1827-11-24)'
 	 	})
 		
 		procurement = activities['tag:getty.edu,2019:digital:pipeline:REPLACE-WITH-UUID:sales#PROV,Br-3039,1827-11-24,0082']
 		parts = procurement.get('part', [])
-		self.assertEqual(len(parts), 6)
+		self.assertEqual(len(parts), 8)
 		part_types = {p['type'] for p in parts}
 		self.assertEqual(part_types, {'Acquisition', 'AttributeAssignment', 'Payment', 'TransferOfCustody'})
 		acqs = [p for p in parts if p['type'] == 'Acquisition']

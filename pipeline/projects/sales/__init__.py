@@ -746,10 +746,6 @@ class SalesPipeline(PipelineBase):
 			ExtractKeyedValue(key='_acquisition'),
 			_input=bid_acqs.output
 		)
-		bids = graph.add_chain(
-			ExtractKeyedValue(key='_bidding'),
-			_input=bid_acqs.output
-		)
 		drawing = graph.add_chain(
 			ExtractKeyedValue(key='_drawing'),
 			_input=bid_acqs.output
@@ -769,7 +765,6 @@ class SalesPipeline(PipelineBase):
 			self.add_serialization_chain(graph, catalogs.output, model=self.models['HumanMadeObject'])
 			self.add_serialization_chain(graph, notes.output, model=self.models['LinguisticObject'], use_memory_writer=False)
 			self.add_serialization_chain(graph, refs.output, model=self.models['LinguisticObject'], use_memory_writer=False)
-			self.add_serialization_chain(graph, bids.output, model=self.models['Bidding'], use_memory_writer=False)
 			self.add_serialization_chain(graph, drawing.output, model=self.models['SaleActivity'], use_memory_writer=False)
 		return bid_acqs
 

@@ -13,19 +13,15 @@ class PIRModelingTest_AR73(TestSalesPipelineOutput):
         AR-73: Change Phrasing of Title for Provenance Events
         '''
         output = self.run_pipeline('ar73')
-        bidding = output['model-bidding']
         sales = output['model-sale-activity']
         activities = output['model-activity']
         
-        b1 = bidding['tag:getty.edu,2019:digital:pipeline:REPLACE-WITH-UUID:sales#BID,OBJ,B-A13,0339,1738-07-21']
-        b2 = bidding['tag:getty.edu,2019:digital:pipeline:REPLACE-WITH-UUID:sales#BID,OBJ,B-A92,0028,1767-11-16']
-
-        prev1 = b1['starts_after_the_end_of'][0]['id']
+        prev1 = 'tag:getty.edu,2019:digital:pipeline:REPLACE-WITH-UUID:sales#PROV-post-owner-1,OBJ,B-A13,0339,1738-07-21'
         self.assertIn(prev1, activities)
         e1 = activities[prev1]
         self.assertEqual(e1['_label'], 'Event leading to Ownership of B-A13 0339 (1738-07-21)')
 
-        prev2 = b2['starts_after_the_end_of'][0]['id']
+        prev2 = 'tag:getty.edu,2019:digital:pipeline:REPLACE-WITH-UUID:sales#PROV,Seller-0,OBJ,B-A92,0028,1767-11-16'
         self.assertIn(prev2, activities)
         e2 = activities[prev2]
         self.assertEqual(e2['_label'], 'Event leading to Ownership of B-A92 0028 (1767-11-16)')

@@ -602,13 +602,18 @@ class AddAcquisitionOrBidding(ProvenanceBase):
 				payments_used.add('buy')
 
 		if prices:
+			# We clone the price and give it a new id so that it when serialized
+			# it will appear distinct from the use of the same payment amount
+			# in other branches of the mode. For example, here it is used as
+			# a Payment.paid_amount, but elsewhere it may be used to set the
+			# "Hammer price" valuation on the lot set.
 			amnt_data = prices[0]
-			amnt = get_crom_object(amnt_data)
+			amnt = self.copy_object_with_new_id(get_crom_object(amnt_data))
+			add_crom_data(amnt_data, amnt)
 			self.add_valuation(data, amnt_data, lot_object_key, current_tx, buyers)
 			for paym in payments.values():
-				self.set_possible_attribute(paym, 'paid_amount', prices[0])
+				self.set_possible_attribute(paym, 'paid_amount', amnt_data)
 				for price in prices[1:]:
-					amnt = get_crom_object(price)
 					content = self._price_note(price)
 					if content:
 						paym.referred_to_by = vocab.PriceStatement(ident='', content=content)
@@ -748,62 +753,15 @@ class AddAcquisitionOrBidding(ProvenanceBase):
 		self.add_prev_post_owners(data, hmo, tx_data, sale_type, lot_object_key, ts)
 
 		if prices:
-			# The bidding for an object is specific to a single transaction. Therefore,
-			# the bidding URI must not share a prefix with the object URI, otherwise all
-			# such bidding entries are liable to be merged during URI reconciliation as
-			# part of the prev/post sale rewriting.
-			bidding_id = self.helper.prepend_uri_key(hmo.id, 'BID')
-			all_bids_label = f'Bidding on {cno} {lno} ({date})'
-			all_bids = model.Activity(ident=bidding_id, label=all_bids_label)
-			all_bids.identified_by = model.Name(ident='', content=all_bids_label)
-			all_bids.referred_to_by = sales_record
-			for tx_data in prev_procurements:
-				tx = get_crom_object(tx_data)
-				all_bids.starts_after_the_end_of = tx
-
-			all_bids.part_of = lot
-
-			THROUGH = CaseFoldingSet(buy_sell_modifiers['through'])
-			FOR = CaseFoldingSet(buy_sell_modifiers['for'])
-
 			for seq_no, amnt_data in enumerate(prices):
-				amnt = get_crom_object(amnt_data)
-				# The individual bid and promise URIs are just the bidding URI with a suffix.
-				# In any case where the bidding is merged, the bids and promises should be
-				# merged as well.
-				bid_id = bidding_id + f'-Bid-{seq_no}'
-				bid = vocab.Bidding(ident=bid_id)
-				prop_id = bidding_id + f'-Bid-{seq_no}-Promise'
-				try:
-					amnt_label = amnt._label
-					bid_label = f'Bid of {amnt_label} on {cno} {lno} ({date})'
-					prop = model.PropositionalObject(ident=prop_id, label=f'Promise to pay {amnt_label}')
-				except AttributeError:
-					bid_label = f'Bid on {cno} {lno} ({date})'
-					prop = model.PropositionalObject(ident=prop_id, label=f'Promise to pay')
-
-				bid._label = bid_label
-				bid.identified_by = model.Name(ident='', content=bid_label)
-				self.set_possible_attribute(prop, 'refers_to', amnt_data)
-				prop.refers_to = amnt
-				bid.created = prop
-
-				# TODO: there are often no buyers listed for non-sold records.
-				#       should we construct an anonymous person to carry out the bid?
-				for buyer_data in buyers:
-					buyer = get_crom_object(buyer_data)
-					mod = self.modifiers(buyer_data, 'auth_mod_a')
-					if THROUGH.intersects(mod):
-						bid.carried_out_by = buyer
-					elif FOR.intersects(mod):
-						warnings.warn(f'buyer modifier {mod} for non-sale bidding: {cno} {lno} {date}')
-					else:
-						bid.carried_out_by = buyer
-
-				all_bids.part = bid
-
-			data['_bidding'] = {'uri': bidding_id}
-			add_crom_data(data=data['_bidding'], what=all_bids)
+				amnt = self.copy_object_with_new_id(get_crom_object(amnt_data))
+				attrib_assignment_classes = [model.AttributeAssignment, vocab.Bidding]
+				assignment = vocab.make_multitype_obj(*attrib_assignment_classes, label=f'Bidding valuation of {cno} {lno} {date}')
+				assignment.assigned_property = 'dimension'
+				assignment.assigned = amnt
+				for object_set in data.get('member_of', []):
+					assignment.assigned_to = object_set
+				tx.part = assignment
 			yield data
 		else:
 			warnings.warn(f'*** No price data found for {parent["transaction"]!r} transaction')
@@ -887,28 +845,28 @@ class AddAcquisitionOrBidding(ProvenanceBase):
 				experts = event_experts.get(cno, [])
 				commissaires = event_commissaires.get(cno, [])
 				custody_recievers = houses + [add_crom_data(data={}, what=r) for r in experts + commissaires]
+				for data in self.add_bidding(data, buyers, sellers, buy_sell_modifiers, sale_type, transaction, transaction_types, custody_recievers):
+					if sale_type in ('Auction', 'Collection Catalog'):
+						# 'Collection Catalog' is treated just like an Auction
+						self.add_transfer_of_custody(data, current_tx, xfer_to=custody_recievers, xfer_from=sellers, buy_sell_modifiers=buy_sell_modifiers, sequence=1, purpose='selling')
+						self.add_transfer_of_custody(data, current_tx, xfer_to=buyers, xfer_from=custody_recievers, buy_sell_modifiers=buy_sell_modifiers, sequence=2, purpose='completing sale')
+					elif sale_type in ('Private Contract Sale', 'Stock List'):
+						# 'Stock List' is treated just like a Private Contract Sale, except for the catalogs
+						for i, h in enumerate(custody_recievers):
+							house = get_crom_object(h)
+							if hasattr(house, 'label'):
+								house._label = f'{house._label}, private sale organizer for {cno} {shared_lot_number} ({date})'
+							else:
+								house._label = f'Private sale organizer for {cno} {shared_lot_number} ({date})'
+							data['_organizations'].append(h)
 
-				if sale_type in ('Auction', 'Collection Catalog'):
-					# 'Collection Catalog' is treated just like an Auction
-					self.add_transfer_of_custody(data, current_tx, xfer_to=custody_recievers, xfer_from=sellers, buy_sell_modifiers=buy_sell_modifiers, sequence=1, purpose='selling')
-					self.add_transfer_of_custody(data, current_tx, xfer_to=buyers, xfer_from=custody_recievers, buy_sell_modifiers=buy_sell_modifiers, sequence=2, purpose='completing sale')
-				elif sale_type in ('Private Contract Sale', 'Stock List'):
-					# 'Stock List' is treated just like a Private Contract Sale, except for the catalogs
-					for i, h in enumerate(custody_recievers):
-						house = get_crom_object(h)
-						if hasattr(house, 'label'):
-							house._label = f'{house._label}, private sale organizer for {cno} {shared_lot_number} ({date})'
-						else:
-							house._label = f'Private sale organizer for {cno} {shared_lot_number} ({date})'
-						data['_organizations'].append(h)
+						self.add_transfer_of_custody(data, current_tx, xfer_to=custody_recievers, xfer_from=sellers, buy_sell_modifiers=buy_sell_modifiers, sequence=1, purpose='selling')
+						self.add_transfer_of_custody(data, current_tx, xfer_to=buyers, xfer_from=custody_recievers, buy_sell_modifiers=buy_sell_modifiers, sequence=2, purpose='completing sale')
 
-					self.add_transfer_of_custody(data, current_tx, xfer_to=custody_recievers, xfer_from=sellers, buy_sell_modifiers=buy_sell_modifiers, sequence=1, purpose='selling')
-					self.add_transfer_of_custody(data, current_tx, xfer_to=buyers, xfer_from=custody_recievers, buy_sell_modifiers=buy_sell_modifiers, sequence=2, purpose='completing sale')
-
-					prev_procurements = self.add_private_sellers(data, sellers, sale_type, transaction, transaction_types)
-				else:
-					warnings.warn(f'*** not modeling transfer of custody for auction type {transaction}')
-				yield data
+						prev_procurements = self.add_private_sellers(data, sellers, sale_type, transaction, transaction_types)
+					else:
+						warnings.warn(f'*** not modeling transfer of custody for auction type {transaction}')
+					yield data
 		elif transaction in UNSOLD:
 			houses = [self.helper.add_auction_house_data(h) for h in auction_houses_data.get(cno, [])]
 			experts = event_experts.get(cno, [])

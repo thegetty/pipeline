@@ -31,6 +31,7 @@ class PopulateSalesObject(Configurable, pipeline.linkedart.PopulateObject):
 	non_auctions = Service('non_auctions')
 	title_modifiers = Service('title_modifiers')
 	event_properties = Service('event_properties')
+	transaction_classification = Service('transaction_classification')
 
 	def populate_destruction_events(self, data:dict, note, *, type_map, location=None):
 		destruction_types_map = type_map
@@ -119,7 +120,7 @@ class PopulateSalesObject(Configurable, pipeline.linkedart.PopulateObject):
 		data['_visual_item'] = add_crom_data(data=vidata, what=vi)
 		hmo.shows = vi
 
-	def _populate_object_catalog_record(self, data:dict, parent, lot, cno, rec_num):
+	def _populate_object_catalog_record(self, data:dict, parent, lot, cno, rec_num, transaction_classification):
 		hmo = get_crom_object(data)
 
 		catalog_uri = self.helper.make_proj_uri('CATALOG', cno)
@@ -132,6 +133,15 @@ class PopulateSalesObject(Configurable, pipeline.linkedart.PopulateObject):
 		puid_id = self.helper.gpi_number_id(puid)
 
 		record = vocab.EntryTextForm(ident=record_uri, label=f'Sale recorded in catalog: {lot_object_id} (record number {rec_num})')
+		transaction = data['parent_data']['transaction']
+		tx_cl = transaction_classification.get(transaction)
+		if tx_cl:
+			label = tx_cl.get('label')
+			url = tx_cl.get('url')
+			record.about = model.Type(ident=url, label=label)
+		else:
+			warnings.warn(f'*** No classification found for transaction type: {transaction!r}')
+
 		record_data	= {'uri': record_uri}
 		record_data['identifiers'] = [
 			model.Name(ident='', content=f'Record of sale {lot_object_id}'),
@@ -349,7 +359,7 @@ class PopulateSalesObject(Configurable, pipeline.linkedart.PopulateObject):
 		return handled
 
 
-	def __call__(self, data:dict, post_sale_map, unique_catalogs, subject_genre, destruction_types_map, materials_map, non_auctions, title_modifiers, event_properties):
+	def __call__(self, data:dict, post_sale_map, unique_catalogs, subject_genre, destruction_types_map, materials_map, non_auctions, title_modifiers, event_properties, transaction_classification):
 		'''Add modeling for an object described by a sales record'''
 		hmo = get_crom_object(data)
 		parent = data['parent_data']
@@ -378,7 +388,7 @@ class PopulateSalesObject(Configurable, pipeline.linkedart.PopulateObject):
 		data['_locations'] = []
 		data['_final_org'] = []
 		data['_events'] = []
-		record = self._populate_object_catalog_record(data, parent, lot, cno, parent['pi_record_no'])
+		record = self._populate_object_catalog_record(data, parent, lot, cno, parent['pi_record_no'], transaction_classification)
 		self._populate_object_destruction(data, parent, destruction_types_map)
 		self.populate_object_statements(data)
 		self._populate_object_materials(data, materials_map)

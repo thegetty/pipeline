@@ -66,7 +66,7 @@ class PIRModelingTest_Withdrawn(TestSalesPipelineOutput):
 
 		# the withdrawn record is about the withdrawn object
 		withdrawn_rec_about = {o['id'] for o in withdrawn_rec['about']}
-		self.assertEqual(withdrawn_rec_about, {withdrawn_obj['id']})
+		self.assertIn(withdrawn_obj['id'], withdrawn_rec_about)
 
 
 if __name__ == '__main__':

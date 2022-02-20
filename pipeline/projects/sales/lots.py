@@ -441,7 +441,6 @@ class AddAcquisitionOrBidding(ProvenanceBase):
 		'''Add modeling of an acquisition as a transfer of title from the seller to the buyer'''
 		hmo = get_crom_object(data)
 		parent = data['parent_data']
-	# 	transaction = parent['transaction']
 		prices = parent.get('price')
 		ask_price = parent.get('ask_price')
 		auction_data = parent['auction_of_lot']

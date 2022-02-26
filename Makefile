@@ -163,6 +163,17 @@ $(GETTY_PIPELINE_TMP_PATH)/people.pdf: $(GETTY_PIPELINE_TMP_PATH)/people.dot
 	$(DOT) -Tpdf -o $(GETTY_PIPELINE_TMP_PATH)/people.pdf $(GETTY_PIPELINE_TMP_PATH)/people.dot
 
 
+### MERGED PROV PROJECTS
+
+prov: provpipelines provpostprocessing jsonlist
+	cat $(GETTY_PIPELINE_TMP_PATH)/json_files.txt | PYTHONPATH=`pwd` $(PYTHON) ./scripts/generate_metadata_graph.py sales
+	find $(GETTY_PIPELINE_OUTPUT) -type d -empty -delete
+
+provpipelines: salespipeline knoedlerpipeline peoplepipeline
+
+provpostprocessing: salespostprocessing knoedlerpostprocessing peoplepostprocessing
+
+
 ### SALES
 
 sales: salesdata jsonlist

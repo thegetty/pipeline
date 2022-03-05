@@ -21,7 +21,7 @@ class PIRModelingTest_AR101(TestSalesPipelineOutput):
         self.assertEqual(classified_identifier_sets(catalog), {
             None: {'Sale Catalog SC-A40'},
             'Owner-Assigned Number': {'SC-A40'},
-            'STAR Identifier': {'13209', 'SCANDICATS-57'}
+            'STAR Identifier': {'13214', 'SCANDICATS-57'}
         })
 
 

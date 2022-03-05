@@ -47,7 +47,7 @@ class PIRModelingTest_StockListSales(TestSalesPipelineOutput):
 		self.assertIn(expected_catalog_text_id, {r.get('id') for r in pvt_sale['referred_to_by']})
 		
 		# there is 1 physical Accession Catalog
-		phys_catalogs = [o for o in objects.values() if o['classified_as'][0]['_label'] == 'Accession Catalog']
+		phys_catalogs = [o for o in objects.values() if o.get('classified_as', [{}])[0].get('_label', '') == 'Accession Catalog']
 		self.assertEqual(len(phys_catalogs), 1)
 		
 		# all physical catalogs carry the same catalog text

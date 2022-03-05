@@ -26,16 +26,16 @@ class PIRModelingTest_AR80(TestSalesPipelineOutput):
         })
 
         self.verifyReferences(record2, {
-            'http://artworld.york.ac.uk/'						# art_world_in_britain
+            'http://artworld.york.ac.uk/'                       # art_world_in_britain
         })
 
         self.verifyReferences(record3, {
-            'http://dx.doi.org/10.1163/2210-7886_ASC-1490',		# art_sales_cats_online
-            'http://portal.getty.edu/books/inha_17892'			# portal_url_1
+            'http://dx.doi.org/10.1163/2210-7886_ASC-1490',     # art_sales_cats_online
+            'http://portal.getty.edu/books/inha_17892'          # portal_url_1
         })
 
         self.verifyReferences(record4, {
-            'http://dx.doi.org/10.1163/2210-7886_ASC-3529'		# art_sales_cats_online
+            'http://dx.doi.org/10.1163/2210-7886_ASC-3529'      # art_sales_cats_online
         })
 
     def verifyReferences(self, record, expectedUrls):

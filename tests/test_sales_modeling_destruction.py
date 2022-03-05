@@ -26,8 +26,10 @@ class PIRModelingTest_Destruction(TestSalesPipelineOutput):
 		output = self.run_pipeline('destruction')
 
 		objects = output['model-object']
-		self.assertEqual(len(objects), 16)
+		self.assertEqual(len(objects), 15)
 		for o in objects.values():
+			if 'destroyed_by' not in o:
+				print(f"****** BAD RECORD: {o['id']}")
 			self.assertIn('destroyed_by', o)
 			self.assertEqual(o['destroyed_by']['type'], 'Destruction')
 

@@ -41,7 +41,7 @@ class PIRModelingTest_AttributionModifiers(TestSalesPipelineOutput):
 		# was "copy after" an original painting.
 		self.assertEqual(len(objects), 10)
 		
-		# there are 16 people:
+		# there are 18 people:
 		# 	"Pierre André Joseph Knyff" (seller)
 		# 	"Jeffrey, Henry" (seller)
 		# 	"Schgosdass" (artist, formerly attributed to)
@@ -52,13 +52,15 @@ class PIRModelingTest_AttributionModifiers(TestSalesPipelineOutput):
 		# 	"POUSSIN, NICOLAS" (circle of)
 		# 	"Col. Nugent" (buyer)
 		# 	"WEST, BENJAMIN" (studio of)
-		# 	"Gosdaert [?]" (artist, changed from Schgosdass)
+		# 	"Gosdaert" (artist, changed from Schgosdass)
 		# 	"RUBENS, PETER PAUL" (school of, follower of)
 		# 	"Giot" (buyer)
 		# 	"H Sudn [?]" (seller)
 		# 	"CORNEILLE, JEAN BAPTISTE" (artist, possibly by)
 		#   "Dr. S. (Berlin W 15, Kaiserallee 208)" (seller of an unsold transaction ("Unverkauft"))
-		self.assertEqual(len(people), 16)
+		#   "Waepenaert, P.J. De" (seller)
+		#   "Fraula, Thomas-François-Joseph, comte de" (seller)
+		self.assertEqual(len(people), 18)
 
 		# there are 5 groups:
 		# 	'FollowerGroup of artist “RUBENS, PETER PAUL”' (influencer of the formation of the "follower of" group)
@@ -97,7 +99,7 @@ class PIRModelingTest_AttributionModifiers(TestSalesPipelineOutput):
 		self.assertEqual(attr_assignment1['assigned'][0]['_label'], 'Schgosdass')
 		# Second attribute assignment (handling 'attributed to')
 		person = attr_assignment2['assigned'][0]
-		self.assertEqual(person['_label'], 'Gosdaert [?]')
+		self.assertEqual(person['_label'], 'Gosdaert')
 		
 		# 'copy after' modifiers assert that the object's production was 'influenced_by' another object by the named influencer artist
 		copy_after_obj = objects['tag:getty.edu,2019:digital:pipeline:REPLACE-WITH-UUID:sales#OBJ,B-A136,0089,1773-07-20']

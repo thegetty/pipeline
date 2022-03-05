@@ -19,10 +19,10 @@ class PIRModelingTest_AR83(TestSalesPipelineOutput):
         self.assertEqual(classified_identifier_sets(catalog), {
             None: {'Sale Catalog SC-A40'},
             'Owner-Assigned Number': {'SC-A40'},
-            'STAR Identifier': {'13209', 'SCANDICATS-57'}
+            'STAR Identifier': {'13214', 'SCANDICATS-57'}
         })
 
-        for ident in ('13209', 'SCANDICATS-57'):
+        for ident in ('13214', 'SCANDICATS-57'):
             star_ids = [i for i in catalog['identified_by'] if i['content'] == ident]
             self.assertEqual(len(star_ids), 1)
             star_id = star_ids[0]

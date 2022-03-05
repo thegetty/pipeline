@@ -65,7 +65,7 @@ class PIRModelingTest_AR43(TestSalesPipelineOutput):
         influence_part = influence_parts[0]
         self.assertEqual(influence_part['carried_out_by'][0]['id'], 'tag:getty.edu,2019:digital:pipeline:REPLACE-WITH-UUID:shared#PERSON,AUTH,WILSON%2C%20RICHARD')
 
-        # "formerly attributed to", "attributed to"
+        # "attributed to"
         obj4 = objects['tag:getty.edu,2019:digital:pipeline:REPLACE-WITH-UUID:sales#OBJ,Br-36,0092,1801-05-09']
         prod4 = obj4['produced_by']
         self.assertIn('attributed_by', prod4)
@@ -73,14 +73,14 @@ class PIRModelingTest_AR43(TestSalesPipelineOutput):
         self.assertEqual(len(attr4), 2)
         # formerly attributed to
         attr4_old = [a for a in attr4 if 'BOECKHORST' in a['_label']][0]
-        self.assertEqual({c['_label'] for c in attr4_old['classified_as']}, {'Obsolete'})
-        self.assertEqual(attr4_old['_label'], 'Formerly attributed to BOECKHORST, JOHANN')
+        self.assertEqual({c['_label'] for c in attr4_old['classified_as']}, {'Possibly'})
+        self.assertEqual(attr4_old['_label'], 'Possibly attributed to BOECKHORST, JOHANN')
         self.assertEqual(attr4_old['assigned'][0]['id'], 'tag:getty.edu,2019:digital:pipeline:REPLACE-WITH-UUID:shared#PERSON,AUTH,BOECKHORST%2C%20JOHANN')
         
-        # attributed to
+        # "formerly attributed to", attributed to
         attr4_new = [a for a in attr4 if 'THYS' in a['_label']][0]
-        self.assertEqual({c['_label'] for c in attr4_new['classified_as']}, {'Possibly'})
-        self.assertEqual(attr4_new['_label'], 'Possibly attributed to THYS, PIETER')
+        self.assertEqual({c['_label'] for c in attr4_new['classified_as']}, {'Obsolete'})
+        self.assertEqual(attr4_new['_label'], 'Formerly attributed to THYS, PIETER')
         self.assertEqual(attr4_new['assigned'][0]['id'], 'tag:getty.edu,2019:digital:pipeline:REPLACE-WITH-UUID:shared#PERSON,AUTH,THYS%2C%20PIETER')
 
         # "school of; copy by", "copy after"

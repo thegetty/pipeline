@@ -54,10 +54,10 @@ class PIRModelingTest_Withdrawn(TestSalesPipelineOutput):
 		self.assertEqual(len(acqs), 1)
 
 		withdrawn_obj = objects['tag:getty.edu,2019:digital:pipeline:REPLACE-WITH-UUID:sales#OBJ,Br-3039,0082%5Bb%5D,1827-11-24']
-		withdrawn_rec = texts['tag:getty.edu,2019:digital:pipeline:REPLACE-WITH-UUID:sales#CATALOG,Br-3039,RECORD,343048']
+		withdrawn_rec = texts['tag:getty.edu,2019:digital:pipeline:REPLACE-WITH-UUID:sales#CATALOG,Br-3039,RECORD,346889']
 
 		sold_obj = objects['tag:getty.edu,2019:digital:pipeline:REPLACE-WITH-UUID:sales#OBJ,Br-3039,0082%5Ba%5D,1827-11-24']
-		sold_rec = texts['tag:getty.edu,2019:digital:pipeline:REPLACE-WITH-UUID:sales#CATALOG,Br-3039,RECORD,343049']
+		sold_rec = texts['tag:getty.edu,2019:digital:pipeline:REPLACE-WITH-UUID:sales#CATALOG,Br-3039,RECORD,346890']
 		
 		# both sold and withdrawn objects are members of the auction set...
 		set_id = 'tag:getty.edu,2019:digital:pipeline:REPLACE-WITH-UUID:sales#AUCTION,Br-3039,0082,1827-11-24-Set'

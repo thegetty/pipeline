@@ -846,8 +846,10 @@ class AddAcquisitionOrBidding(ProvenanceBase):
 			tx_data = parent.get('_prov_entry_data')
 			names = []
 			for seller_data in sellers:
-				# TODO: will all records here have an identifier with .content?
-				names.append(seller_data['identifiers'][0].content)
+				if len(seller_data['identifiers']):
+					names.append(seller_data['identifiers'][0].content)
+				else:
+					names.append(seller_data['label'])
 			group_name = ' OR '.join(names)
 			if tx_data: # if there is a prov entry (e.g. was not withdrawn)
 				current_tx = get_crom_object(tx_data)

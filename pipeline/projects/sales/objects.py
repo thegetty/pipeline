@@ -157,7 +157,9 @@ class PopulateSalesObject(Configurable, pipeline.linkedart.PopulateObject):
 	def _populate_object_destruction(self, data:dict, parent, destruction_types_map):
 		notes = parent.get('auction_of_lot', {}).get('lot_notes')
 		if notes and notes.lower().startswith('destroyed'):
-			self.populate_destruction_events(data, notes, type_map=destruction_types_map)
+			# Issue AR-122 removed modeling of object destruction.
+			# self.populate_destruction_events(data, notes, type_map=destruction_types_map)
+			pass
 
 	def _populate_object_present_location(self, data:dict, now_key, destruction_types_map):
 		hmo = get_crom_object(data)
@@ -169,10 +171,12 @@ class PopulateSalesObject(Configurable, pipeline.linkedart.PopulateObject):
 			# in these two if blocks, the object was destroyed, so any "present location"
 			# data is actually an indication of the location of destruction.
 			if isinstance(loc, str) and 'destroyed ' in loc.lower():
-				self.populate_destruction_events(data, loc, type_map=destruction_types_map)
+				# Issue AR-122 removed modeling of object destruction.
+				# self.populate_destruction_events(data, loc, type_map=destruction_types_map)
 				loc = None
 			elif isinstance(note, str) and 'destroyed ' in note.lower():
-				self.populate_destruction_events(data, note, type_map=destruction_types_map, location=loc)
+				# Issue AR-122 removed modeling of object destruction.
+				# self.populate_destruction_events(data, note, type_map=destruction_types_map, location=loc)
 				note = None
 
 			if loc:

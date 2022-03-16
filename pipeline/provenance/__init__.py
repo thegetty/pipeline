@@ -75,12 +75,15 @@ class ProvenanceBase(Configurable):
 			else:
 				tx.starts_after_the_end_of = current_tx
 		modifier_label = 'Previous' if previous else 'Subsequent'
+		
+		prev_acq_id = ident + '-prev-acq' if ident else ''
+		trsf_id = ident + '-prev-transfer' if ident else ''
 		try:
-			pacq = model.Acquisition(ident='', label=f'{modifier_label} Acquisition of: “{hmo._label}”')
-			pxfer = model.TransferOfCustody(ident='', label=f'{modifier_label} Transfer of Custody of: “{hmo._label}”')
+			pacq = model.Acquisition(ident=prev_acq_id, label=f'{modifier_label} Acquisition of: “{hmo._label}”')
+			pxfer = model.TransferOfCustody(ident=trsf_id, label=f'{modifier_label} Transfer of Custody of: “{hmo._label}”')
 		except AttributeError:
-			pacq = model.Acquisition(ident='', label=f'{modifier_label} Acquisition')
-			pxfer = model.TransferOfCustody(ident='', label=f'{modifier_label} Transfer of Custody')
+			pacq = model.Acquisition(ident=prev_acq_id, label=f'{modifier_label} Acquisition')
+			pxfer = model.TransferOfCustody(ident=trsf_id, label=f'{modifier_label} Transfer of Custody')
 		pacq.transferred_title_of = hmo
 		pxfer.transferred_custody_of = hmo
 		if buyer:

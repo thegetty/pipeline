@@ -1,0 +1,54 @@
+{
+    "Sold": {
+        "url": "http://vocab.getty.edu/aat/300417642",
+        "label": "Purchase"
+    },
+    "Vendu": {
+        "url": "http://vocab.getty.edu/aat/300417642",
+        "label": "Purchase"
+    },
+    "Verkauft": {
+        "url": "http://vocab.getty.edu/aat/300417642",
+        "label": "Purchase"
+    },
+    "Non Vendu": {
+        "url": "http://vocab.getty.edu/aat/300438599",
+        "label": "Bought In"
+    },
+    "Unsold": {
+        "url": "http://vocab.getty.edu/aat/300438599",
+        "label": "Bought In"
+    },
+    "Unverkauft": {
+        "url": "http://vocab.getty.edu/aat/300438599",
+        "label": "Bought In"
+    },
+    "Bought In": {
+        "url": "http://vocab.getty.edu/aat/300438599",
+        "label": "Bought In"
+    },
+    "Inconnue": {
+        "url": "http://vocab.getty.edu/aat/XXX-TX-10"
+    },
+    "Unknown": {
+        "url": "http://vocab.getty.edu/aat/XXX-TX-10"
+    },
+    "Unbekannt": {
+        "url": "http://vocab.getty.edu/aat/XXX-TX-10"
+    },
+    "Passed": {
+        "url": "http://vocab.getty.edu/aat/300445698"
+    },
+    "Retir\u00e9": {
+        "url": "http://vocab.getty.edu/aat/300438600",
+        "label": "Withdrawn"
+    },
+    "Withdrawn": {
+        "url": "http://vocab.getty.edu/aat/300438600",
+        "label": "Withdrawn"
+    },
+    "Zur\u00fcckgezogen": {
+        "url": "http://vocab.getty.edu/aat/300438600",
+        "label": "Withdrawn"
+    }
+}

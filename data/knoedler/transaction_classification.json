@@ -1,0 +1,34 @@
+{
+    "Unsold": {
+        "url": "http://vocab.getty.edu/aat/300077506",
+        "label": "Inventorying"
+    },
+    "Sold": {
+        "url": "http://vocab.getty.edu/aat/300417642",
+        "label": "Purchase"
+    },
+    "Exchanged": {
+        "url": "http://vocab.getty.edu/aat/300263427",
+        "label": "Exchange"
+    },
+    "Expensed": {
+        "url": "http://vocab.getty.edu/aat/300417637",
+        "label": "Gift"
+    },
+    "Lost": {
+        "url": "http://vocab.getty.edu/aat/300417655",
+        "label": "Lost"
+    },
+    "Returned": {
+        "url": "http://vocab.getty.edu/aat/300445014",
+        "label": "Returning"
+    },
+    "Destroyed": {
+        "url": "http://vocab.getty.edu/aat/300417656",
+        "label": "Destroyed"
+    },
+    "Stolen": {
+        "url": "http://vocab.getty.edu/aat/300417657",
+        "label": "Stolen"
+    }
+}

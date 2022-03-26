@@ -436,9 +436,10 @@ class AddPage(Configurable, KnoedlerProvenance):
 class AddRow(Configurable, KnoedlerProvenance):
 	helper = Option(required=True)
 	make_la_lo = Service('make_la_lo')
+	transaction_classification = Service('transaction_classification')
 	static_instances = Option(default="static_instances")
 
-	def __call__(self, data:dict, make_la_lo):
+	def __call__(self, data:dict, make_la_lo, transaction_classification):
 		book = data['book_record']
 		book_id, page_id, row_id = record_id(book)
 		rec_num = data["star_record_no"]
@@ -460,6 +461,15 @@ class AddRow(Configurable, KnoedlerProvenance):
 		}
 		make_la_lo(data['_text_row'])
 		data['_record'] = data['_text_row']
+		record = get_crom_object(data['_text_row'])
+		transaction = data['book_record']['transaction']
+		tx_cl = transaction_classification.get(transaction)
+		if tx_cl:
+			label = tx_cl.get('label')
+			url = tx_cl.get('url')
+			record.about = model.Type(ident=url, label=label)
+		else:
+			warnings.warn(f'*** No classification found for transaction type: {transaction!r}')
 
 		creation = self.add_knoedler_creation_data(data['_text_row'])
 		date = implode_date(data['entry_date'])

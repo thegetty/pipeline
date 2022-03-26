@@ -543,12 +543,12 @@ def classified_identifier_sets(data, key='identified_by'):
 				classified_identifiers[None].add(content)
 	return classified_identifiers
 
-def classification_sets(data, key='_label'):
+def classification_sets(data, key='_label', classification_key='classified_as'):
 	classification_set = set()
-	classification = data.get('classified_as', [])
+	classification = data.get(classification_key, [])
 	if len(classification):
 		for cl in classification:
-			label = cl[key]
+			label = cl.get(key)
 			classification_set.add(label)
 	return classification_set
 

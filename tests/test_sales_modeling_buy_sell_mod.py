@@ -10,7 +10,7 @@ import inspect
 from pathlib import Path
 import warnings
 
-from tests import TestSalesPipelineOutput
+from tests import TestSalesPipelineOutput, classified_identifier_sets
 from cromulent import vocab
 
 vocab.add_attribute_assignment_check()
@@ -82,7 +82,7 @@ class PIRModelingTest_AttributionModifiers(TestSalesPipelineOutput):
 
 		# the verbatim text of modifiers are preserved in notes attached to the acquisition; in this case, the sellers are 'or'
 		acq_notes = {n['content'] for n in acq['referred_to_by']}
-		self.assertEqual(acq_notes, {'or'})
+		self.assertEqual(acq_notes, {'or', 'and'})
 		
 		# TODO: this transaction is not modeled, as it is 'Bought In'
 		# seller 'and' is modeled as a procurement with multiple records for both transferred_title_from and paid_to

@@ -811,12 +811,16 @@ class AddAcquisitionOrBidding(ProvenanceBase):
 		event_experts = event_properties['experts']
 		event_commissaires = event_properties['commissaire']
 
+		data.setdefault('_prov_entries', [])
+		data.setdefault('_other_owners', [])
+
 		sales_record = get_crom_object(data['_record'])
 		transaction = parent['transaction']
 		transaction = transaction.replace('[?]', '').rstrip()
 		auction_data = parent['auction_of_lot']
 		lot_object_key = object_key(auction_data)
 		cno, lno, date = lot_object_key
+		tx_data = parent.get('_prov_entry_data')
 		shared_lot_number = self.helper.shared_lot_number_from_lno(lno)
 		buyers = [
 			self.add_person(
@@ -826,9 +830,7 @@ class AddAcquisitionOrBidding(ProvenanceBase):
 				catalog_number=cno
 			) for i, p in enumerate(parent['buyer'])
 		]
-
-		data.setdefault('_prov_entries', [])
-		data.setdefault('_other_owners', [])
+		buyers, all_buyer_mods = self.model_people_as_possible_group(buyers, tx_data, data, object_key_string(cno, lno, date), 'Buyer')
 
 		sellers = [
 			self.add_person(
@@ -838,45 +840,7 @@ class AddAcquisitionOrBidding(ProvenanceBase):
 				catalog_number=cno
 			) for i, p in enumerate(parent['seller'])
 		]
-		all_mods = {m.lower().strip() for a in sellers for m in a.get('auth_mod_a', '').split(';')} - {''}
-		seller_group = (all_mods == {'or'}) # the seller is *one* of the named people, model as a group
-		# TODO: add buyer group handling?
-		
-		orig_sellers = sellers
-		if seller_group:
-			tx_data = parent.get('_prov_entry_data')
-			names = []
-			for seller_data in sellers:
-				if len(seller_data['identifiers']):
-					names.append(seller_data['identifiers'][0].content)
-				else:
-					names.append(seller_data['label'])
-			group_name = ' OR '.join(names)
-			if tx_data: # if there is a prov entry (e.g. was not withdrawn)
-				current_tx = get_crom_object(tx_data)
-				# The seller group URI is just the provenance entry URI with a suffix.
-				# In any case where the provenance entry is merged, the seller group
-				# should be merged as well.
-				group_uri = current_tx.id + '-SellerGroup'
-				group_data = {
-					'uri': group_uri,
-				}
-			else:
-				pi_record_no = data['pi_record_no']
-				group_uri_key = ('GROUP', 'PI', pi_record_no, 'SellerGroup')
-				group_uri = self.helper.make_proj_uri(*group_uri_key)
-				group_data = {
-					'uri_keys': group_uri_key,
-					'uri': group_uri,
-				}
-			g_label = f'Group containing the seller of {object_key_string(cno, lno, date)}'
-			g = vocab.UncertainMemberClosedGroup(ident=group_uri, label=g_label)
-			g.identified_by = model.Name(ident='', content=group_name)
-			for seller_data in sellers:
-				seller = get_crom_object(seller_data)
-				seller.member_of = g
-				data['_other_owners'].append(seller_data)
-			sellers = [add_crom_data(group_data, g)]
+		sellers, all_seller_mods = self.model_people_as_possible_group(sellers, tx_data, data, object_key_string(cno, lno, date), 'Seller')
 
 		SOLD = transaction_types['sold']
 		UNSOLD = transaction_types['unsold']
@@ -889,7 +853,8 @@ class AddAcquisitionOrBidding(ProvenanceBase):
 			houses = [self.helper.add_auction_house_data(h) for h in auction_houses_data.get(cno, [])]
 			for data, current_tx in self.add_acquisition(data, buyers, sellers, houses, non_auctions, buy_sell_modifiers, transaction, transaction_types):
 				acq = get_crom_object(data['_acquisition'])
-				self.add_mod_notes(acq, all_mods, label=f'Seller modifier')
+				self.add_mod_notes(acq, all_seller_mods, label=f'Seller modifier')
+				self.add_mod_notes(acq, all_buyer_mods, label=f'Buyer modifier')
 				experts = event_experts.get(cno, [])
 				commissaires = event_commissaires.get(cno, [])
 				custody_recievers = houses + [add_crom_data(data={}, what=r) for r in experts + commissaires]
@@ -928,7 +893,8 @@ class AddAcquisitionOrBidding(ProvenanceBase):
 			for data in self.add_bidding(data, buyers, sellers, buy_sell_modifiers, sale_type, transaction, transaction_types, custody_recievers):
 				bid_count += 1
 				act = get_crom_object(data.get('_bidding'))
-				self.add_mod_notes(act, all_mods, label=f'Seller modifier')
+				self.add_mod_notes(act, all_seller_mods, label=f'Seller modifier')
+				self.add_mod_notes(act, all_buyer_mods, label=f'Buyer modifier')
 				yield data
 			if not bid_count:
 				# there was no bidding, but we still want to model the seller(s) as
@@ -948,7 +914,8 @@ class AddAcquisitionOrBidding(ProvenanceBase):
 				]
 				for data in self.add_bidding(data, buyers, sellers, buy_sell_modifiers, sale_type, transaction, transaction_types, houses):
 					act = get_crom_object(data.get('_bidding'))
-					self.add_mod_notes(act, all_mods, label=f'Seller modifier')
+					self.add_mod_notes(act, all_seller_mods, label=f'Seller modifier')
+					self.add_mod_notes(act, all_buyer_mods, label=f'Buyer modifier')
 					yield data
 		else:
 			prev_procurements = self.add_non_sale_sellers(data, sellers, sale_type, transaction, transaction_types)

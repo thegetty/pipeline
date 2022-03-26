@@ -514,3 +514,59 @@ class ProvenanceBase(Configurable):
 		# data['_artists'] is what's pulled out by the serializers
 		data['_artists'] = [a for a in artists if not self.is_or_anon(a)]
 		return data
+
+	def model_people_as_possible_group(self, people, tx_data, data, object_key, label, store_key='_other_owners', mod_key='auth_mod_a'):
+		'''
+		Takes an array of crom-object-containing dicts containing Person objects (people)
+		and returns an array of people that should be used in its place according to
+		the modifier values in each dict's mod_key field. Also returns the set of
+		modifier values.
+		
+		If all modifiers are 'or', then the set of people are set as members of a
+		new Group, and that group is returned as the single stand-in for the set of
+		people.
+		
+		tx_data is the crom-containing dict for a related prov entry.
+		
+		If a group is created, the people records will be stored in data[store_key].
+		
+		object_key and label will be used in constructing a descriptive string
+		for the group: 'Group containing the {label.lower()} of {object_key}'.
+		For example, label='buyer' and object_key='B-340 0291 (1820-07-19)'.
+		'''
+		all_mods = {m.lower().strip() for a in people for m in a.get(mod_key, '').split(';')} - {''}
+		group = (all_mods == {'or'}) # the person is *one* of the named people, model as a group
+		if group:
+			names = []
+			for person_data in people:
+				if len(person_data['identifiers']):
+					names.append(person_data['identifiers'][0].content)
+				else:
+					names.append(person_data['label'])
+			group_name = ' OR '.join(names)
+			if tx_data: # if there is a prov entry (e.g. was not withdrawn)
+				current_tx = get_crom_object(tx_data)
+				# The person group URI is just the provenance entry URI with a suffix.
+				# In any case where the provenance entry is merged, the person group
+				# should be merged as well.
+				group_uri = current_tx.id + f'-{label}Group'
+				group_data = {
+					'uri': group_uri,
+				}
+			else:
+				pi_record_no = data['pi_record_no']
+				group_uri_key = ('GROUP', 'PI', pi_record_no, f'{label}Group')
+				group_uri = self.helper.make_proj_uri(*group_uri_key)
+				group_data = {
+					'uri_keys': group_uri_key,
+					'uri': group_uri,
+				}
+			g_label = f'Group containing the {label.lower()} of {object_key}'
+			g = vocab.UncertainMemberClosedGroup(ident=group_uri, label=g_label)
+			g.identified_by = model.Name(ident='', content=group_name)
+			for person_data in people:
+				person = get_crom_object(person_data)
+				person.member_of = g
+				data['_other_owners'].append(person_data)
+			people = [add_crom_data(group_data, g)]
+		return people, all_mods

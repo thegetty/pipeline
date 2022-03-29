@@ -46,10 +46,16 @@ def object_key(data):
 	Returns a 3-tuple of (catalog number, lot number, sale date) that identify an object
 	from a sales record, extracted from properties of the supplied `data` dict.
 	'''
-	cno = data['catalog_number']
-	lno = data['lot_number']
-	date = implode_date(data, 'lot_sale_')
-	return (cno, lno, date)
+	try:
+		cno = data['catalog_number']
+		lno = data['lot_number']
+		date = implode_date(data, 'lot_sale_')
+		return (cno, lno, date)
+	except KeyError as e:
+		import pprint
+		warnings.warn(f'Error in object_key call: {e}')
+		pprint.pprint(data)
+		raise
 
 def object_uri(data, helper):
 	key = object_key(data)

@@ -445,7 +445,7 @@ def add_crom_price(data, parent, services, add_citations=False):
 		if k in data:
 			price = data.get(k)
 			if '-' in price:
-				with suppress(ValueError):
+				with suppress(ValueError, KeyError):
 					price = price.replace('[?]', '').strip()
 					currency = data['currency']
 					currency = c.get(currency.lower(), currency)

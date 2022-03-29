@@ -794,12 +794,14 @@ class AddAcquisitionOrBidding(ProvenanceBase):
 				acq.referred_to_by = vocab.Note(ident='', content=note)
 			data['_prov_entries'].append(add_crom_data(data={}, what=tx))
 
-	def add_mod_notes(self, act, all_mods, label):
+	def add_mod_notes(self, act, all_mods, label, classification=None):
 		if act and all_mods:
 			# Preserve the seller modifier strings as notes on the acquisition/bidding activity
 			for mod in all_mods:
 				note = vocab.Note(ident='', label=label, content=mod)
 				note.classified_as = vocab.instances['qualifier']
+				if classification:
+					note.classified_as = classification
 				act.referred_to_by = note
 
 	def __call__(self, data:dict, non_auctions, event_properties, buy_sell_modifiers, transaction_types):
@@ -852,8 +854,8 @@ class AddAcquisitionOrBidding(ProvenanceBase):
 			houses = [self.helper.add_auction_house_data(h) for h in auction_houses_data.get(cno, [])]
 			for data, current_tx in self.add_acquisition(data, buyers, sellers, houses, non_auctions, buy_sell_modifiers, transaction, transaction_types):
 				acq = get_crom_object(data['_acquisition'])
-				self.add_mod_notes(acq, all_seller_mods, label=f'Seller modifier')
-				self.add_mod_notes(acq, all_buyer_mods, label=f'Buyer modifier')
+				self.add_mod_notes(acq, all_seller_mods, label=f'Seller modifier', classification=vocab.instances["seller description"])
+				self.add_mod_notes(acq, all_buyer_mods, label=f'Buyer modifier', classification=vocab.instances["buyer description"])
 				experts = event_experts.get(cno, [])
 				commissaires = event_commissaires.get(cno, [])
 				custody_recievers = houses + [add_crom_data(data={}, what=r) for r in experts + commissaires]
@@ -892,8 +894,8 @@ class AddAcquisitionOrBidding(ProvenanceBase):
 			for data in self.add_bidding(data, buyers, sellers, buy_sell_modifiers, sale_type, transaction, transaction_types, custody_recievers):
 				bid_count += 1
 				act = get_crom_object(data.get('_bidding'))
-				self.add_mod_notes(act, all_seller_mods, label=f'Seller modifier')
-				self.add_mod_notes(act, all_buyer_mods, label=f'Buyer modifier')
+				self.add_mod_notes(act, all_seller_mods, label=f'Seller modifier', classification=vocab.instances["seller description"])
+				self.add_mod_notes(act, all_buyer_mods, label=f'Buyer modifier', classification=vocab.instances["buyer description"])
 				yield data
 			if not bid_count:
 				# there was no bidding, but we still want to model the seller(s) as
@@ -913,8 +915,8 @@ class AddAcquisitionOrBidding(ProvenanceBase):
 				]
 				for data in self.add_bidding(data, buyers, sellers, buy_sell_modifiers, sale_type, transaction, transaction_types, houses):
 					act = get_crom_object(data.get('_bidding'))
-					self.add_mod_notes(act, all_seller_mods, label=f'Seller modifier')
-					self.add_mod_notes(act, all_buyer_mods, label=f'Buyer modifier')
+					self.add_mod_notes(act, all_seller_mods, label=f'Seller modifier', classification=vocab.instances["seller description"])
+					self.add_mod_notes(act, all_buyer_mods, label=f'Buyer modifier', classification=vocab.instances["buyer description"])
 					yield data
 		else:
 			prev_procurements = self.add_non_sale_sellers(data, sellers, sale_type, transaction, transaction_types)

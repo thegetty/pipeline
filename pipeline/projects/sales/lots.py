@@ -256,6 +256,7 @@ class AddAuctionOfLot(ProvenanceBase):
 			tx_uri = self.helper.transaction_uri_for_lot(auction_data, data)
 			lots = self.helper.lots_in_transaction(auction_data, data)
 			tx = vocab.ProvenanceEntry(ident=tx_uri)
+			tx.used_specific_object = get_crom_object(data['_lot_object_set'])
 			tx_label = prov_entry_label(self.helper, sale_type, transaction, 'of', cno, lots, date)
 			tx.referred_to_by = get_crom_object(data['_sale_record'])
 			tx._label = tx_label

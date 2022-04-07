@@ -16,7 +16,6 @@ class PIRModelingTest_AR48(TestKnoedlerPipelineOutput):
         objects = output['model-object']
         
         phys_book = objects['tag:getty.edu,2019:digital:pipeline:REPLACE-WITH-UUID:knoedler#Book,3']
-        phys_page = objects['tag:getty.edu,2019:digital:pipeline:REPLACE-WITH-UUID:knoedler#Book,3,Page,20']
 
         text_book = lo['tag:getty.edu,2019:digital:pipeline:REPLACE-WITH-UUID:knoedler#Text,Book,3']
         text_page = lo['tag:getty.edu,2019:digital:pipeline:REPLACE-WITH-UUID:knoedler#Text,Book,3,Page,20']
@@ -27,10 +26,6 @@ class PIRModelingTest_AR48(TestKnoedlerPipelineOutput):
             'Title': 'Knoedler Stock Book 3',
             'Book Number': '3'
         }, classified_identifiers(phys_book))
-        self.assertDictContainsSubset({
-            'Title': 'Knoedler Stock Book 3, Page 20',
-            'Page Number': '20',
-        }, classified_identifiers(phys_page))
 
 		# Test the linguistic object records
         self.assertDictContainsSubset({

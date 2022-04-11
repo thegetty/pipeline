@@ -620,7 +620,7 @@ class AddArtists(ProvenanceBase):
 					assignment._label = f'Possibly by {artist_label}'
 					person.attributed_by = assignment
 					assignment.assigned_property = 'member_of'
-					assignment.assigned = person
+					assignment.assigned = artist_group
 				else:
 					person.member_of = artist_group
 		else:

@@ -405,15 +405,6 @@ class AddPage(Configurable, KnoedlerProvenance):
 			'part': [],
 		}
 
-		data['_physical_page'] = {
-			'uri': self.helper.make_proj_uri('Book', book_id, 'Page', page_id),
-			'object_type': vocab.Page,
-			'label': f'Knoedler Stock Book {book_id}, Page {page_id}',
-			'identifiers': [self.helper.knoedler_number_id(page_id, id_class=vocab.PageNumber)],
-			'part_of': [data['_physical_book']],
-			'carries': [data['_text_page']],
-		}
-
 		if book.get('heading'):
 			# This is a transcription of the heading of the page
 			# Meaning it is part of the page linguistic object
@@ -426,7 +417,6 @@ class AddPage(Configurable, KnoedlerProvenance):
 			data['_text_page']['part'].append(add_crom_data(data={}, what=vocab.Heading(ident='', content=subheading)))
 			data['_text_page']['subheading'] = subheading # TODO: add subheading handling to MakeLinkedArtLinguisticObject
 
-		make_la_hmo(data['_physical_page'])
 		make_la_lo(data['_text_page'])
 
 		self.add_knoedler_creation_data(data['_text_page'])
@@ -1822,10 +1812,6 @@ class KnoedlerPipeline(PipelineBase):
 			AddPage(static_instances=self.static_instances, helper=self.helper),
 			_input=books.output
 		)
-		phys = graph.add_chain(
-			ExtractKeyedValue(key='_physical_page'),
-			_input=pages.output
-		)
 		text = graph.add_chain(
 			ExtractKeyedValue(key='_text_page'),
 			_input=pages.output
@@ -1833,7 +1819,6 @@ class KnoedlerPipeline(PipelineBase):
 		act = graph.add_chain( ExtractKeyedValues(key='_activities'), _input=text.output )
 		if serialize:
 			self.add_serialization_chain(graph, act.output, model=self.models['ProvenanceEntry'])
-			self.add_serialization_chain(graph, phys.output, model=self.models['HumanMadeObject'])
 			self.add_serialization_chain(graph, text.output, model=self.models['LinguisticObject'])
 		return pages
 

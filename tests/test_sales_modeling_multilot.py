@@ -27,10 +27,11 @@ class PIRModelingTest_MultiLot(TestSalesPipelineOutput):
 		objects = output['model-object']
 		auctions = list(output['model-sale-activity'].values())
 		activities = list(output['model-activity'].values())
-		self.assertEqual(len(activities), 1)
+		sales = [a for a in activities if a.get('_label', '').startswith('Sale')]
+		self.assertEqual(len(sales), 1)
 		self.assertEqual(len(auctions), 2)
 		
-		by_type = {k: list(v) for k,v in groupby(activities, key=lambda a: a['classified_as'][0]['_label'])}
+		by_type = {k: list(v) for k,v in groupby(sales, key=lambda a: a['classified_as'][0]['_label'])}
 		self.assertEqual(sorted(by_type.keys()), ['Provenance Activity'])
 
 		# there are 2 lots and 1 procurement
@@ -49,7 +50,7 @@ class PIRModelingTest_MultiLot(TestSalesPipelineOutput):
 		# procurement has 1 payment, 2 acquisitions, and 4 transfers of custody
 		parts = procurement['part']
 		proc_types = sorted([a['type'] for a in parts])
-		self.assertEqual(proc_types, ['Acquisition', 'Acquisition', 'Payment', 'Payment', 'TransferOfCustody', 'TransferOfCustody', 'TransferOfCustody', 'TransferOfCustody'])
+		self.assertEqual(proc_types, ['Acquisition', 'Acquisition', 'AttributeAssignment', 'AttributeAssignment', 'Payment', 'Payment', 'TransferOfCustody', 'TransferOfCustody', 'TransferOfCustody', 'TransferOfCustody'])
 		acqs = [a for a in parts if a['type'] == 'Acquisition']
 		paym = [a for a in parts if a['type'] == 'Payment'][0]
 

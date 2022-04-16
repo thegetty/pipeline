@@ -27,10 +27,11 @@ class PIRModelingTest_MultiObject(TestSalesPipelineOutput):
 		activities = list(output['model-activity'].values())
 		sale_activities = list(output['model-sale-activity'].values())
 
-		self.assertEqual(len(activities), 1)
+		sales = [a for a in activities if a.get('_label', '').startswith('Sale')]
+		self.assertEqual(len(sales), 1)
 		self.assertEqual(len(sale_activities), 2)
 		
-		act_by_type = {k: list(v) for k,v in groupby(activities, key=lambda a: a['classified_as'][0]['_label'])}
+		act_by_type = {k: list(v) for k,v in groupby(sales, key=lambda a: a['classified_as'][0]['_label'])}
 		self.assertEqual(set(act_by_type.keys()), {'Provenance Activity'})
 		
 		sale_by_type = {k: list(v) for k,v in groupby(sale_activities, key=lambda a: a['classified_as'][0]['_label'])}
@@ -47,7 +48,7 @@ class PIRModelingTest_MultiObject(TestSalesPipelineOutput):
 		# procurement has 1 payment, 3 acquisitions, and 6 transfers of custody
 		parts = procurement['part']
 		proc_types = sorted([a['type'] for a in parts])
-		self.assertEqual(proc_types, ['Acquisition', 'Acquisition', 'Acquisition', 'Payment', 'Payment', 'TransferOfCustody', 'TransferOfCustody', 'TransferOfCustody', 'TransferOfCustody', 'TransferOfCustody', 'TransferOfCustody'])
+		self.assertEqual(proc_types, ['Acquisition', 'Acquisition', 'Acquisition', 'AttributeAssignment', 'AttributeAssignment', 'AttributeAssignment', 'Payment', 'Payment', 'TransferOfCustody', 'TransferOfCustody', 'TransferOfCustody', 'TransferOfCustody', 'TransferOfCustody', 'TransferOfCustody'])
 		acqs = [a for a in parts if a['type'] == 'Acquisition']
 		paym = [a for a in parts if a['type'] == 'Payment'][0]
 

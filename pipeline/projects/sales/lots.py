@@ -1,24 +1,21 @@
 import warnings
 import sys
+import uuid
 import pprint
 import traceback
 from contextlib import suppress
 
-from bonobo.config import Option, Service, Configurable
+from bonobo.config import Service
 
 from cromulent import model, vocab
+from cromulent.model import factory
 
-import pipeline.execution
 from pipeline.projects.sales.util import object_key, object_key_string
 from pipeline.util import \
 		implode_date, \
 		timespan_from_outer_bounds, \
 		label_for_timespan_range, \
-		timespan_before, \
-		timespan_after, \
 		CaseFoldingSet
-from pipeline.util.cleaners import parse_location_name
-import pipeline.linkedart
 from pipeline.linkedart import add_crom_data, get_crom_object
 from pipeline.provenance import ProvenanceBase
 
@@ -170,7 +167,7 @@ class AddAuctionOfLot(ProvenanceBase):
 			warnings.warn(f'Skipping {cno} {lno} because it asserts an asking price')
 			return
 
-		if sale_type != 'Auction':
+		if sale_type not in ('Auction', 'Private Contract Sale'):
 			# the records in this sales catalog do not represent auction sales, so the
 			# price data should not be asserted as a sale price, but instead as an
 			# asking price.
@@ -231,7 +228,7 @@ class AddAuctionOfLot(ProvenanceBase):
 		SOLD = transaction_types['sold']
 		WITHDRAWN = transaction_types['withdrawn']
 		self.set_lot_objects(lot, cno, lno, sale_data['uri'], data, lot_object_key, sale_type, non_auctions, event_properties)
-		
+
 		event_dates = event_properties['auction_dates'].get(cno)
 		event_date_label = event_properties['auction_date_label'].get(cno)
 		auction, _, _ = self.helper.sale_event_for_catalog_number(cno, sale_type, date_label=event_date_label)
@@ -264,7 +261,12 @@ class AddAuctionOfLot(ProvenanceBase):
 			tx_data = {'uri': tx_uri}
 
 			if transaction in SOLD:
-				if sale_type == 'Auction':
+				price_mapping = {
+					'Auction': vocab.HammerPrice,
+					'Private Contract Sale': vocab.SalePrice
+				}
+				if sale_type in price_mapping:
+					price_type = price_mapping[sale_type]
 					# the records in this sales catalog represent auction sales, so the
 					# price data for a sale should be asserted as a hammer price.
 					with suppress(KeyError):
@@ -273,7 +275,7 @@ class AddAuctionOfLot(ProvenanceBase):
 							price_data = prices[0]
 							price = get_crom_object(price_data)
 							if price:
-								vocab.add_classification(price, vocab.HammerPrice)
+								vocab.add_classification(price, price_type)
 
 				multi = self.helper.transaction_contains_multiple_lots(auction_data, data)
 				if multi:
@@ -359,7 +361,7 @@ class AddAcquisitionOrBidding(ProvenanceBase):
 		# provenance entry URI must not share a prefix with the object URI, otherwise all
 		# such provenance entries are liable to be merged during URI reconciliation as
 		# part of the prev/post sale rewriting.
-		
+
 		tx_uri = self.helper.prepend_uri_key(hmo.id, f'PROV,CURROWN')
 		tx, acq = self.related_procurement(hmo, tx_label_args, current_tx, current_ts, buyer=final_owner, ident=tx_uri, make_label=prov_entry_label, sales_record=sales_record)
 		return tx, acq
@@ -412,6 +414,16 @@ class AddAcquisitionOrBidding(ProvenanceBase):
 
 		current_tx.part = xfer
 
+	def copy_object_with_new_id(self, value):
+		# Some objects had trouble in the JSON-LD merging that occurs during post-processing,
+		# resulting in duplication. Adding an id to the object lets merging work correctly, and the
+		# id will just be ignored by Arches since these are not top-level model objects.
+		if value is None:
+			return None
+		c = value.clone()
+		c.id = "urn:uuid:%s" % uuid.uuid4()
+		return c
+
 	def attach_source_catalog(self, data, acq, people):
 		phys_catalog_notes = {}
 		phys_catalogs = {}
@@ -437,6 +449,20 @@ class AddAcquisitionOrBidding(ProvenanceBase):
 		mod = a.get(key, '')
 		mods = CaseFoldingSet({m.strip() for m in mod.split(';')} - {''})
 		return mods
+
+	def add_valuation(self, data:dict, amnt_data, lot_object_key, current_tx, buyers):
+		cno, lno, date = lot_object_key
+		amnt = self.copy_object_with_new_id(get_crom_object(amnt_data))
+		attrib_assignment_classes = [model.AttributeAssignment, vocab.Bidding]
+		assignment = vocab.make_multitype_obj(*attrib_assignment_classes, label=f'Bidding valuation of {cno} {lno} {date}')
+		assignment.assigned_property = 'dimension'
+		assignment.assigned = amnt
+		for buyer_data in buyers:
+			buyer = get_crom_object(buyer_data)
+			assignment.carried_out_by = buyer
+		for object_set in data.get('member_of', []):
+			assignment.assigned_to = object_set
+		current_tx.part = assignment
 
 	def add_acquisition(self, data, buyers, sellers, houses, non_auctions, buy_sell_modifiers, transaction, transaction_types):
 		'''Add modeling of an acquisition as a transfer of title from the seller to the buyer'''
@@ -510,7 +536,7 @@ class AddAcquisitionOrBidding(ProvenanceBase):
 			attrib_assignment_classes = [model.AttributeAssignment]
 			if uncertain_attribution:
 				attrib_assignment_classes.append(vocab.PossibleAssignment)
-			
+
 			if THROUGH.intersects(mod):
 				acq.carried_out_by = seller
 				payments['sell'].carried_out_by = seller
@@ -525,7 +551,7 @@ class AddAcquisitionOrBidding(ProvenanceBase):
 				# merged as well.
 				acq_assignment_uri = acq.id + f'-seller-assignment-{seq_no}'
 				paym_assignment_uri = payments['sell'].id + f'-seller-assignment-{seq_no}'
-				
+
 				acq_assignment_label = f'Uncertain seller as previous title holder in acquisition'
 				acq_assignment = vocab.PossibleAssignment(ident=acq_assignment_uri, label=acq_assignment_label)
 				acq_assignment.referred_to_by = vocab.Note(ident='', content=acq_assignment_label)
@@ -576,7 +602,9 @@ class AddAcquisitionOrBidding(ProvenanceBase):
 				payments_used.add('buy')
 
 		if prices:
-			amnt = get_crom_object(prices[0])
+			amnt_data = prices[0]
+			amnt = get_crom_object(amnt_data)
+			self.add_valuation(data, amnt_data, lot_object_key, current_tx, buyers)
 			for paym in payments.values():
 				self.set_possible_attribute(paym, 'paid_amount', prices[0])
 				for price in prices[1:]:
@@ -588,7 +616,7 @@ class AddAcquisitionOrBidding(ProvenanceBase):
 			# for non-auction sales, the ask price is the amount paid for the acquisition
 			for paym in payments.values():
 				self.set_possible_attribute(paym, 'paid_amount', ask_price)
-			
+
 
 		ts = tx_data.get('_date')
 		if ts:
@@ -866,10 +894,6 @@ class AddAcquisitionOrBidding(ProvenanceBase):
 					self.add_transfer_of_custody(data, current_tx, xfer_to=buyers, xfer_from=custody_recievers, buy_sell_modifiers=buy_sell_modifiers, sequence=2, purpose='completing sale')
 				elif sale_type in ('Private Contract Sale', 'Stock List'):
 					# 'Stock List' is treated just like a Private Contract Sale, except for the catalogs
-					metadata = {
-						'pi_record_no': parent['pi_record_no'],
-						'catalog_number': cno
-					}
 					for i, h in enumerate(custody_recievers):
 						house = get_crom_object(h)
 						if hasattr(house, 'label'):

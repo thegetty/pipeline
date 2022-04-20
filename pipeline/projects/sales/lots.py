@@ -761,6 +761,9 @@ class AddAcquisitionOrBidding(ProvenanceBase):
 				assignment.assigned = amnt
 				for object_set in data.get('member_of', []):
 					assignment.assigned_to = object_set
+				for buyer_data in buyers:
+					buyer = get_crom_object(buyer_data)
+					assignment.carried_out_by = buyer
 				tx.part = assignment
 			yield data
 		else:

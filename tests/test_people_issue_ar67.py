@@ -42,7 +42,7 @@ class PIRModelingTest_AR67(TestPeoplePipelineOutput):
 
     def verifyPrivateField(self, person):
         self.assertIn('referred_to_by', person)
-        refs = [r for r in person['referred_to_by'] if 'was born in Geneva' in r['content']]
+        refs = [r for r in person['referred_to_by'] if 'was born in Geneva' in r.get('content', '')]
         self.assertEqual(len(refs), 1)
         ref = refs[0]
 

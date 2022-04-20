@@ -65,6 +65,7 @@ from pipeline.io.csv import CurriedCSVReader
 from pipeline.nodes.basic import \
 			RecordCounter, \
 			KeyManagement, \
+			PreserveCSVFields, \
 			AddArchesModel, \
 			Serializer, \
 			Trace
@@ -433,6 +434,14 @@ class AddRow(Configurable, KnoedlerProvenance):
 		book = data['book_record']
 		book_id, page_id, row_id = record_id(book)
 		rec_num = data["star_record_no"]
+		content = data['star_csv_data']
+		
+		row = vocab.Transcription(ident='', content=content)
+		row.part_of = self.helper.static_instances.get_instance('LinguisticObject', 'db-knoedler')
+		creation = vocab.TranscriptionProcess(ident='')
+		creation.carried_out_by = self.helper.static_instances.get_instance('Group', 'gpi')
+		row.created_by = creation
+		row.identified_by = self.helper.gpi_number_id(rec_num, vocab.StarNumber)
 
 		notes = []
 		# TODO: add attributed star record number to row as a LocalNumber
@@ -448,6 +457,7 @@ class AddRow(Configurable, KnoedlerProvenance):
 			'identifiers': [self.helper.knoedler_number_id(row_id, id_class=vocab.EntryNumber), star_id],
 			'part_of': [data['_text_page']],
 			'referred_to_by': notes,
+			'also_found_on': row
 		}
 		make_la_lo(data['_text_row'])
 		data['_record'] = data['_text_row']
@@ -1507,6 +1517,7 @@ class KnoedlerPipeline(PipelineBase):
 		sales_records = graph.add_chain(
 # 			"star_record_no",
 # 			"pi_record_no",
+			PreserveCSVFields(key='star_csv_data', order=self.headers),
 			KeyManagement(
 				drop_empty=True,
 				operations=[

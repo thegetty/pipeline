@@ -376,8 +376,8 @@ class PopulateSalesObject(Configurable, pipeline.linkedart.PopulateObject):
 
 	def __call__(self, data:dict, post_sale_map, unique_catalogs, subject_genre, destruction_types_map, materials_map, non_auctions, title_modifiers, event_properties, transaction_classification):
 		'''Add modeling for an object described by a sales record'''
-		hmo = get_crom_object(data)
 		parent = data['parent_data']
+		hmo = get_crom_object(data)
 		auction_data = parent.get('auction_of_lot')
 		cno = auction_data['catalog_number']
 		lno = auction_data['lot_number']

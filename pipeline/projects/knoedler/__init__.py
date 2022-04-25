@@ -1410,7 +1410,6 @@ class KnoedlerPipeline(PipelineBase):
 		vocab.register_instance('form type', {'parent': model.Type, 'id': '300444970', 'label': 'Form'})
 
 		vocab.register_vocab_class('ConstructedTitle', {'parent': model.Name, 'id': '300417205', 'label': 'Constructed Title'})
-		vocab.register_vocab_class('AppraisingAssignment', {'parent': model.AttributeAssignment, 'id': '300054622', 'label': 'Appraising'})
 
 		vocab.register_vocab_class('SaleAsReturn', {"parent": model.Activity, "id":"300445014", "label": "Sale (Return to Original Owner)"})
 

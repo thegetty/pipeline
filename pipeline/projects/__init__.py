@@ -485,7 +485,7 @@ class PipelineBase:
 		vocab.register_vocab_class('Database', {"parent": model.LinguisticObject, "id":"300028543", "label": "Database"})
 		vocab.register_vocab_class('Transcription', {"parent": model.LinguisticObject, "id":"300404333", "label": "Transcription", "metatype": "brief text"})
 		vocab.register_vocab_class('TranscriptionProcess', {"parent": model.Creation, "id":"300440752", "label": "Transcription Process"})
-		
+		vocab.register_vocab_class('AppraisingAssignment', {'parent': model.AttributeAssignment, 'id': '300054622', 'label': 'Appraising'})
 
 		self.static_instances = StaticInstanceHolder(self.setup_static_instances())
 		helper.add_static_instances(self.static_instances)

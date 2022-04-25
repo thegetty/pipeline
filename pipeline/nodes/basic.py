@@ -111,7 +111,8 @@ class KeyManagement(Configurable):
 						rename = mapping.get('rename_keys', {})
 						for k in properties:
 							v = data.get(k)
-							to_delete.add(k)
+							if k != key:
+								to_delete.add(k)
 							if self.drop_empty and not v:
 								continue
 							sub_key = rename.get(k, k)
@@ -142,7 +143,8 @@ class KeyManagement(Configurable):
 								try:
 									sub_key = rename.get(p, p)
 									subd[sub_key] = data[k]
-									to_delete.add(k)
+									if k != key:
+										to_delete.add(k)
 								except KeyError:
 									exit = True
 							if self.drop_empty:
@@ -190,7 +192,8 @@ class GroupRepeatingKeys(Configurable):
 				for p, k in ks:
 					try:
 						subd[p] = data[k]
-						to_delete.add(k)
+						if k != key:
+							to_delete.add(k)
 					except KeyError:
 						exit = True
 				if self.drop_empty:
@@ -221,7 +224,8 @@ class GroupKeys(Configurable):
 			postprocess = mapping.get('postprocess')
 			for k in properties:
 				v = data.get(k)
-				to_delete.add(k)
+				if k != key:
+					to_delete.add(k)
 				if self.drop_empty and not v:
 					continue
 				subd[k] = v

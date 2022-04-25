@@ -841,7 +841,7 @@ class TransactionHandler(ProvenanceBase):
 
 			data['_people'].extend(people)
 
-	def _add_prov_entry_payment(self, data:dict, tx, knoedler_price_part, price_info, people, shared_people, date, incoming):
+	def _add_prov_entry_payment(self, data:dict, tx, knoedler_price_part, price_info, people, people_agents, shared_people, shared_people_agents, date, incoming):
 		knoedler = self.helper.static_instances.get_instance('Group', 'knoedler')
 		knoedler_group = [knoedler]
 
@@ -883,6 +883,13 @@ class TransactionHandler(ProvenanceBase):
 					paym.paid_from = kp
 				else:
 					paym.paid_to = kp
+			for p in shared_people_agents:
+				# when an agent is acting on behalf of the buyer/seller, model their involvement in a sub-activity
+				subpaym_role = 'Buyer' if incoming else 'Seller'
+				subpaym = model.Activity(ident='', label=f"{subpaym_role}'s agent's role in payment")
+				subpaym.classified_as = vocab.instances[f'{subpaym_role}sAgent']
+				subpaym.carried_out_by = p
+				paym.part = subpaym
 
 			for i, partdata in enumerate(parts):
 				person, part_amnt = partdata
@@ -911,6 +918,14 @@ class TransactionHandler(ProvenanceBase):
 					paym.paid_to = person
 				else:
 					paym.paid_from = person
+		for p in people_agents:
+			# when an agent is acting on behalf of the buyer/seller, model their involvement in a sub-activity
+			if paym:
+				subpaym_role = 'Seller' if incoming else 'Buyer'
+				subpaym = model.Activity(ident='', label=f"{subpaym_role}'s agent's role in payment")
+				subpaym.classified_as = vocab.instances[f'{subpaym_role}sAgent']
+				subpaym.carried_out_by = p
+				paym.part = subpaym
 
 	def _add_prov_entry_acquisition(self, data:dict, tx, from_people, from_agents, to_people, to_agents, date, incoming, purpose=None):
 		rec = data['book_record']
@@ -943,11 +958,19 @@ class TransactionHandler(ProvenanceBase):
 		for p in from_people:
 			acq.transferred_title_from = p
 		for p in from_agents:
-			acq.carried_out_by = p
+			# when an agent is acting on behalf of the seller, model their involvement in a sub-activity
+			subacq = model.Activity(ident='', label="Seller's agent's role in acquisition")
+			subacq.classified_as = vocab.instances['SellersAgent']
+			subacq.carried_out_by = p
+			acq.part = subacq
 		for p in to_people:
 			acq.transferred_title_to = p
 		for p in to_agents:
-			acq.carried_out_by = p
+			# when an agent is acting on behalf of the buyer, model their involvement in a sub-activity
+			subacq = model.Activity(ident='', label="Buyer's agent's role in acquisition")
+			subacq.classified_as = vocab.instances['BuyersAgent']
+			subacq.carried_out_by = p
+			acq.part = subacq
 
 		tx.part = acq
 
@@ -1034,7 +1057,7 @@ class TransactionHandler(ProvenanceBase):
 
 		if incoming:
 			self._add_prov_entry_rights(data, tx, shared_people, incoming)
-		self._add_prov_entry_payment(data, tx, knoedler_price_part, price_info, people, shared_people, date, incoming)
+		self._add_prov_entry_payment(data, tx, knoedler_price_part, price_info, people, people_agents, shared_people, knoedler_group_agents, date, incoming)
 		self._add_prov_entry_acquisition(data, tx, from_people, from_agents, to_people, to_agents, date, incoming, purpose=purpose)
 
 # 		print('People:')

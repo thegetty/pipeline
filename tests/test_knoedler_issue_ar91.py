@@ -63,9 +63,11 @@ class PIRModelingTest_AR91(TestKnoedlerPipelineOutput):
         acq = acqs[0]
         reciever = {p.get('_label') for p in acq['transferred_title_from']}
         sender = {p.get('_label') for p in acq['transferred_title_to']}
-        agents = {p.get('_label') for p in acq['carried_out_by']}
         self.assertEqual(sender, buyers)
         self.assertEqual(reciever, sellers)
+
+        agent_parts = [p for p in acq.get('part', [])]
+        agents = {p.get('_label') for part in agent_parts for p in part['carried_out_by']}
         self.assertEqual(agents, seller_agents|buyer_agents)
 
 

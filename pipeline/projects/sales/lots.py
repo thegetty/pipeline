@@ -450,10 +450,14 @@ class AddAcquisitionOrBidding(ProvenanceBase):
 		mods = CaseFoldingSet({m.strip() for m in mod.split(';')} - {''})
 		return mods
 
-	def add_valuation(self, data:dict, amnt_data, lot_object_key, current_tx, buyers):
+	def add_valuation(self, data:dict, amnt_data, lot_object_key, current_tx, buyers=None, valuation_type=None):
+		if valuation_type is None:
+			valuation_type = vocab.Bidding
+		if buyers is None:
+			buyers = []
 		cno, lno, date = lot_object_key
 		amnt = self.copy_object_with_new_id(get_crom_object(amnt_data))
-		attrib_assignment_classes = [model.AttributeAssignment, vocab.Bidding]
+		attrib_assignment_classes = [model.AttributeAssignment, valuation_type]
 		assignment = vocab.make_multitype_obj(*attrib_assignment_classes, label=f'Bidding valuation of {cno} {lno} {date}')
 		assignment.assigned_property = 'dimension'
 		assignment.assigned = amnt
@@ -754,20 +758,11 @@ class AddAcquisitionOrBidding(ProvenanceBase):
 
 		if prices:
 			for seq_no, amnt_data in enumerate(prices):
-				amnt = self.copy_object_with_new_id(get_crom_object(amnt_data))
-				attrib_assignment_classes = [model.AttributeAssignment, vocab.Bidding]
-				assignment = vocab.make_multitype_obj(*attrib_assignment_classes, label=f'Bidding valuation of {cno} {lno} {date}')
-				assignment.assigned_property = 'dimension'
-				assignment.assigned = amnt
-				for object_set in data.get('member_of', []):
-					assignment.assigned_to = object_set
-				for buyer_data in buyers:
-					buyer = get_crom_object(buyer_data)
-					assignment.carried_out_by = buyer
-				tx.part = assignment
+				self.add_valuation(data, amnt_data, lot_object_key, tx, buyers)
 			yield data
 		else:
-			warnings.warn(f'*** No price data found for {parent["transaction"]!r} transaction')
+			# add valuation without price data (this will assert that the buyers assigned some unknown valuation to the lot set)
+			self.add_valuation(data, None, lot_object_key, tx, buyers)
 			yield data
 
 	def add_final_owner_orgs(self, data, lot_object_key, sale_type, ts, current_tx=None):

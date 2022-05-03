@@ -257,6 +257,8 @@ class AddAuctionOfLot(ProvenanceBase):
 			tx.referred_to_by = get_crom_object(data['_sale_record'])
 			tx._label = tx_label
 			tx.identified_by = model.Name(ident='', content=tx_label)
+			vocab.add_classification(tx, vocab.Purchase)
+			
 			tx.caused_by = lot
 			tx_data = {'uri': tx_uri}
 

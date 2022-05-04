@@ -451,6 +451,7 @@ class AddAcquisitionOrBidding(ProvenanceBase):
 		return mods
 
 	def add_valuation(self, data:dict, amnt_data, lot_object_key, current_tx, buyers=None, valuation_type=None):
+		data.setdefault('seller', [])
 		if valuation_type is None:
 			valuation_type = vocab.Bidding
 		if buyers is None:
@@ -464,6 +465,9 @@ class AddAcquisitionOrBidding(ProvenanceBase):
 		for buyer_data in buyers:
 			buyer = get_crom_object(buyer_data)
 			assignment.carried_out_by = buyer
+			# in case the seller isn't modeled elsewhere (if there was no sale, and this is just a Bidding valuation),
+			# we ensure that the seller is added to the list of entries to be serialized.
+			data['seller'].append(buyer_data)
 		for object_set in data.get('member_of', []):
 			assignment.assigned_to = object_set
 		current_tx.part = assignment

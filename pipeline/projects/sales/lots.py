@@ -28,6 +28,8 @@ class AddAuctionOfLot(ProvenanceBase):
 	event_properties = Service('event_properties')
 	non_auctions = Service('non_auctions')
 	transaction_types = Service('transaction_types')
+	transaction_classification = Service('transaction_classification')
+	
 	def __init__(self, *args, **kwargs):
 		self.lot_cache = {}
 		super().__init__(*args, **kwargs)
@@ -143,7 +145,7 @@ class AddAuctionOfLot(ProvenanceBase):
 		lot.used_specific_object = coll
 		data['_lot_object_set'] = add_crom_data(data={}, what=coll)
 
-	def __call__(self, data, non_auctions, event_properties, problematic_records, transaction_types):
+	def __call__(self, data, non_auctions, event_properties, problematic_records, transaction_types, transaction_classification):
 		'''Add modeling data for the auction of a lot of objects.'''
 		self.helper.copy_source_information(data['_object'], data)
 
@@ -257,8 +259,13 @@ class AddAuctionOfLot(ProvenanceBase):
 			tx.referred_to_by = get_crom_object(data['_sale_record'])
 			tx._label = tx_label
 			tx.identified_by = model.Name(ident='', content=tx_label)
-			vocab.add_classification(tx, vocab.Purchase)
-			
+			tx_cl = transaction_classification.get(transaction)
+			if tx_cl:
+				label = tx_cl.get('label')
+				url = tx_cl.get('url')
+				tx.classified_as = model.Type(ident=url, label=label)
+			else:
+				warnings.warn(f'*** No classification found for transaction type: {transaction!r}')
 			tx.caused_by = lot
 			tx_data = {'uri': tx_uri}
 

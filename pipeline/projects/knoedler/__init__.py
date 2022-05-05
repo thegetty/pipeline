@@ -1322,7 +1322,7 @@ class ModelReturn(ModelSale):
 	buy_sell_modifiers = Service('buy_sell_modifiers')
 	transaction_classification = Service('transaction_classification')
 
-	def __call__(self, data:dict, make_la_person, buy_sell_modifiers,transaction_classification):
+	def __call__(self, data:dict, make_la_person, buy_sell_modifiers, transaction_classification):
 		sellers = data.get('purchase_seller', [])
 		buyers = data.get('sale_buyer', [])
 		if not buyers:

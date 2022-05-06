@@ -18,7 +18,7 @@ class PIRModelingTest_AR132(TestKnoedlerPipelineOutput):
             'tag:getty.edu,2019:digital:pipeline:REPLACE-WITH-UUID:knoedler#TX,Out,2,11,20' : 'Inventorying',
             'tag:getty.edu,2019:digital:pipeline:REPLACE-WITH-UUID:knoedler#TX,Out,4,222,15' : 'Lost',
             'tag:getty.edu,2019:digital:pipeline:REPLACE-WITH-UUID:knoedler#TX,Out,3,201,13' : 'Purchase',
-            'tag:getty.edu,2019:digital:pipeline:REPLACE-WITH-UUID:knoedler#TX,Out,6,13,1' : 'Returning',
+            'tag:getty.edu,2019:digital:pipeline:REPLACE-WITH-UUID:knoedler#TX,Out,6,13,1' : 'Sale (Return to Original Owner)',
             'tag:getty.edu,2019:digital:pipeline:REPLACE-WITH-UUID:knoedler#TX,Out,5,222,15' : 'Stolen'
         }
 

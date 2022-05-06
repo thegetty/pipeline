@@ -723,7 +723,10 @@ class TransactionHandler(ProvenanceBase):
 	def _empty_tx(self, data, incoming=False, purpose=None):
 		tx_uri = self.helper.transaction_uri_for_record(data, incoming)
 		tx_type = data.get('book_record', {}).get('transaction', 'Sold')
-		tx = vocab.ProvenanceEntry(ident=tx_uri)
+		if purpose == 'returning':
+			tx = vocab.make_multitype_obj(vocab.SaleAsReturn, vocab.ProvenanceEntry, ident=tx_uri)
+		else:
+			tx = vocab.ProvenanceEntry(ident=tx_uri)
 		
 		sales_record = get_crom_object(data['_record'])
 		tx.referred_to_by = sales_record
@@ -1162,9 +1165,8 @@ class ModelTheftOrLoss(TransactionHandler):
 	helper = Option(required=True)
 	make_la_person = Service('make_la_person')
 	buy_sell_modifiers = Service('buy_sell_modifiers')
-	transaction_classification = Service('transaction_classification')
 
-	def __call__(self, data:dict, make_la_person, buy_sell_modifiers, transaction_classification):
+	def __call__(self, data:dict, make_la_person, buy_sell_modifiers):
 		rec = data['book_record']
 		pi_rec = data['pi_record_no']
 		hmo = get_crom_object(data['_object'])
@@ -1182,13 +1184,6 @@ class ModelTheftOrLoss(TransactionHandler):
 			label_type = 'Theft'
 			transfer_class = vocab.Theft
 
-		tx_cl = transaction_classification.get(tx_type)
-		if tx_cl:
-			label = tx_cl.get('label')	
-			url = tx_cl.get('url')
-			tx_out.classified_as = model.Type(ident=url,label=label)
-		else:
-			warnings.warn(f'*** No classification found for transaction type: {tx_type!r}')
 		tx_out._label = f'{label_type} of {sn_ident}'
 		tx_out_data = add_crom_data(data={'uri': tx_out.id, 'label': tx_out._label}, what=tx_out)
 
@@ -1277,9 +1272,8 @@ class ModelSale(TransactionHandler):
 	helper = Option(required=True)
 	make_la_person = Service('make_la_person')
 	buy_sell_modifiers = Service('buy_sell_modifiers')
-	transaction_classification = Service('transaction_classification')
 
-	def __call__(self, data:dict, make_la_person, buy_sell_modifiers, transaction_classification, in_tx=None, out_tx=None):
+	def __call__(self, data:dict, make_la_person, buy_sell_modifiers, in_tx=None, out_tx=None):
 		sellers = data['purchase_seller']
 		if not in_tx:
 			if len(sellers):
@@ -1303,15 +1297,6 @@ class ModelSale(TransactionHandler):
 		if not out_tx:
 			out_tx = self.add_outgoing_tx(data, buy_sell_modifiers)
 
-		transaction = data['book_record']['transaction']
-		tx_cl = transaction_classification.get(transaction)
-		if tx_cl:
-			label = tx_cl.get('label')	
-			url = tx_cl.get('url')
-			out_tx.classified_as = model.Type(ident=url,label=label)
-		else:
-			warnings.warn(f'*** No classification found for transaction type: {transaction!r}')
-
 		in_tx.ends_before_the_start_of = out_tx
 		out_tx.starts_after_the_end_of = in_tx
 		yield data
@@ -1320,16 +1305,15 @@ class ModelReturn(ModelSale):
 	helper = Option(required=True)
 	make_la_person = Service('make_la_person')
 	buy_sell_modifiers = Service('buy_sell_modifiers')
-	transaction_classification = Service('transaction_classification')
 
-	def __call__(self, data:dict, make_la_person, buy_sell_modifiers, transaction_classification):
+	def __call__(self, data:dict, make_la_person, buy_sell_modifiers):
 		sellers = data.get('purchase_seller', [])
 		buyers = data.get('sale_buyer', [])
 		if not buyers:
 			buyers = sellers.copy()
 			data['sale_buyer'] = buyers
 		in_tx, out_tx = self.add_return_tx(data, buy_sell_modifiers)
-		yield from super().__call__(data, make_la_person, buy_sell_modifiers, transaction_classification,in_tx=in_tx, out_tx=out_tx)
+		yield from super().__call__(data, make_la_person, buy_sell_modifiers, in_tx=in_tx, out_tx=out_tx)
 
 class ModelUnsoldPurchases(TransactionHandler):
 	helper = Option(required=True)
@@ -1363,9 +1347,8 @@ class ModelInventorying(TransactionHandler):
 	helper = Option(required=True)
 	make_la_person = Service('make_la_person')
 	buy_sell_modifiers = Service('buy_sell_modifiers')
-	transaction_classification = Service('transaction_classification')
 
-	def __call__(self, data:dict, make_la_person, buy_sell_modifiers, transaction_classification):
+	def __call__(self, data:dict, make_la_person, buy_sell_modifiers):
 		rec = data['book_record']
 		pi_rec = data['pi_record_no']
 		odata = data['_object']
@@ -1394,14 +1377,6 @@ class ModelInventorying(TransactionHandler):
 		tx_out._label = inv_label
 		tx_out.identified_by = model.Name(ident='', content=inv_label)
 
-		transaction = rec['transaction']
-		tx_cl = transaction_classification.get(transaction)
-		if tx_cl:
-			label = tx_cl.get('label')
-			url = tx_cl.get('url')
-			tx_out.classified_as = model.Type(ident=url,label=label)
-		else:
-			warnings.warn(f'*** No classification found for transaction type: {transaction!r}')
 		inv_uri = self.helper.make_proj_uri('INV', book_id, page_id, row_id)
 		inv = vocab.Inventorying(ident=inv_uri, label=inv_label)
 		inv.identified_by = model.Name(ident='', content=inv_label)
@@ -1436,6 +1411,8 @@ class KnoedlerPipeline(PipelineBase):
 
 		vocab.register_vocab_class('ConstructedTitle', {'parent': model.Name, 'id': '300417205', 'label': 'Constructed Title'})
 		vocab.register_vocab_class('AppraisingAssignment', {'parent': model.AttributeAssignment, 'id': '300054622', 'label': 'Appraising'})
+
+		vocab.register_vocab_class('SaleAsReturn', {"parent": model.Activity, "id":"300445014", "label": "Sale (Return to Original Owner)"})
 
 		vocab.register_vocab_class('EntryNumber', {"parent": model.Identifier, "id":"300445023", "label": "Entry Number"})
 		vocab.register_vocab_class('PageNumber', {"parent": model.Identifier, "id":"300445022", "label": "Page Number"})

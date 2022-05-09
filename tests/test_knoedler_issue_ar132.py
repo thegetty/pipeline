@@ -15,11 +15,11 @@ class PIRModelingTest_AR132(TestKnoedlerPipelineOutput):
         activies = output['model-activity']
         
         expected = {
-            'tag:getty.edu,2019:digital:pipeline:REPLACE-WITH-UUID:knoedler#TX,Out,2,11,20' : 'Inventorying',
-            'tag:getty.edu,2019:digital:pipeline:REPLACE-WITH-UUID:knoedler#TX,Out,4,222,15' : 'Lost',
-            'tag:getty.edu,2019:digital:pipeline:REPLACE-WITH-UUID:knoedler#TX,Out,3,201,13' : 'Purchase',
-            'tag:getty.edu,2019:digital:pipeline:REPLACE-WITH-UUID:knoedler#TX,Out,6,13,1' : 'Sale (Return to Original Owner)',
-            'tag:getty.edu,2019:digital:pipeline:REPLACE-WITH-UUID:knoedler#TX,Out,5,222,15' : 'Stolen'
+            'tag:getty.edu,2019:digital:pipeline:REPLACE-WITH-UUID:knoedler#TX,Out,3,11,20' : 'Inventorying',
+            'tag:getty.edu,2019:digital:pipeline:REPLACE-WITH-UUID:knoedler#TX,Out,8,208,43' : 'Lost',
+            'tag:getty.edu,2019:digital:pipeline:REPLACE-WITH-UUID:knoedler#TX,Out,4,29,14' : 'Purchase',
+            'tag:getty.edu,2019:digital:pipeline:REPLACE-WITH-UUID:knoedler#TX,Out,3,13,1' : 'Sale (Return to Original Owner)',
+            'tag:getty.edu,2019:digital:pipeline:REPLACE-WITH-UUID:knoedler#TX,Out,9,33,13' : 'Stolen'
         }
 
         for url,cl in expected.items():
@@ -28,7 +28,7 @@ class PIRModelingTest_AR132(TestKnoedlerPipelineOutput):
             self.assertIn(cl,got)
 
         # an unsold with sellers is not an inventorying event
-        unsold = classification_sets(activies['tag:getty.edu,2019:digital:pipeline:REPLACE-WITH-UUID:knoedler#TX,In,1,201,13'])
+        unsold = classification_sets(activies['tag:getty.edu,2019:digital:pipeline:REPLACE-WITH-UUID:knoedler#TX,In,3,12,7'])
         self.assertNotIn('Inventorying',unsold)
 
 

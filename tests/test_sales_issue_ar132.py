@@ -17,13 +17,13 @@ class PIRModelingTest_AR132(TestSalesPipelineOutput):
         activies = output['model-activity']
         
         expected = {
-            'tag:getty.edu,2019:digital:pipeline:REPLACE-WITH-UUID:sales#PROV,B-183,1810-10-26,0050' : 'Purchase',
-            'tag:getty.edu,2019:digital:pipeline:REPLACE-WITH-UUID:sales#PROV,B-183,1810-10-26,0035' : 'Bought In'
+            'tag:getty.edu,2019:digital:pipeline:REPLACE-WITH-UUID:sales#PROV,B-A138,1774-05-30,0050' : 'Purchase',
+            'tag:getty.edu,2019:digital:pipeline:REPLACE-WITH-UUID:sales#PROV-MULTI,B-A111,1769-07-31,13,14' : 'Bought In'
         }
 
         expected_id = {
-            'tag:getty.edu,2019:digital:pipeline:REPLACE-WITH-UUID:sales#PROV,B-183,1810-10-26,0005' : 'http://vocab.getty.edu/aat/300445698', # passed has no label
-            'tag:getty.edu,2019:digital:pipeline:REPLACE-WITH-UUID:sales#PROV,B-183,1810-10-26,0015' : 'https://data.getty.edu/local/thesaurus/unknown', #unknown has no label
+            'tag:getty.edu,2019:digital:pipeline:REPLACE-WITH-UUID:sales#PROV,Br-4716,1837-03-11,0087' : 'http://vocab.getty.edu/aat/300445698', # passed has no label
+            'tag:getty.edu,2019:digital:pipeline:REPLACE-WITH-UUID:sales#PROV,B-A136,1773-07-20,0090' : 'https://data.getty.edu/local/thesaurus/unknown', #unknown has no label
         }
 
         for url,cl in expected.items():

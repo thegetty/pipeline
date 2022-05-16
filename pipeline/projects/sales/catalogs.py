@@ -188,9 +188,10 @@ class AddAuctionCatalogEntry(Configurable):
 		]
 		if pdf_page_id:
 			idents.append(vocab.make_multitype_obj(vocab.PageNumber, vocab.OrderNumber, ident='', content=pdf_page_id, label=f'Page Order'))
+
 		data['_text_page'] = {
 			'uri': self.helper.make_proj_uri('CATALOG', cno, 'Page', page_id),
-			'object_type': vocab.PageTextForm,
+			'object_type': [vocab.PageTextForm,self.helper.catalog_type(sale_type)],
 			'label': f'Sale Catalog {cno}, Page {page_id}',
 			'identifiers': idents,
 			'referred_to_by': [],
@@ -220,7 +221,7 @@ class AddPhysicalCatalogEntry(Configurable):
 
 		catalog_label = self.helper.physical_catalog_label(cno, sale_type, owner, copy)
 		row_name = f'STAR Entry for Physical {catalog_label}'
-		row = vocab.EntryTextForm(ident=record_uri, content=content, label=row_name)
+		row = vocab.make_multitype_obj(vocab.EntryTextForm,self.helper.catalog_type(sale_type), ident=record_uri, content=content, label=row_name)
 		row.part_of = self.helper.static_instances.get_instance('LinguisticObject', 'db-sales_catalogs')
 		creation = model.Creation(ident='')
 		creation.carried_out_by = self.helper.static_instances.get_instance('Group', 'gpi')

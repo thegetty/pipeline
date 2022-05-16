@@ -190,6 +190,18 @@ class SalesUtilityHelper(UtilityHelper):
 
 		return catalog
 
+	def catalog_type(self, cno, sale_type='Auction'):
+		if sale_type in ('Auction', 'Collection Catalog'): # Sale Catalog
+			return vocab.AuctionCatalogText
+		elif sale_type == 'Private Contract Sale': # Private Sale Exhibition Catalog
+			return vocab.ExhibitionCatalogText
+		elif sale_type == 'Stock List': # Accession Catalog
+			return vocab.AccessionCatalogText
+		elif sale_type == 'Lottery': # Lottery Catalog
+			return vocab.LotteryCatalogText
+		else:
+			return vocab.SalesCatalogText # Sale Catalog
+
 	def physical_catalog_notes(self, cno, owner, copy):
 		cat_uri = self.physical_catalog_uri(cno, owner, copy)
 		uri = cat_uri + '-HandNotes'
@@ -518,10 +530,10 @@ class SalesPipeline(PipelineBase):
 		vocab.register_vocab_class('OrderNumber', {"parent": model.Identifier, "id":"300247348", "label": "Order"})
 		
 		vocab.register_vocab_class('BookNumber', {"parent": model.Identifier, "id":"300445021", "label": "Book Number"})
+		
+		vocab.register_vocab_class('CatalogForm', {"parent": model.LinguisticObject, "id":"300026059", "label": "Catalog", "metatype": "form type"})
 		vocab.register_vocab_class('PageTextForm', {"parent": model.LinguisticObject, "id":"300194222", "label": "Page", "metatype": "form type"})
 		vocab.register_vocab_class('EntryTextForm', {"parent": model.LinguisticObject, "id":"300438434", "label": "Entry", "metatype": "form type"})
-
-		vocab.register_vocab_class('CatalogForm', {"parent": model.LinguisticObject, "id":"300026059", "label": "Catalog", "metatype": "form type"})
 
 		vocab.register_vocab_class('SalePrice', {"parent": model.MonetaryAmount, "id":"300417246", "label": "Sale Price"})
 

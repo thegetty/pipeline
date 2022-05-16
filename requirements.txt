@@ -1,4 +1,4 @@
-cromulent==0.16.3
+cromulent==0.17.1
 ujson==1.35
 python-dateutil==2.8.0
 bonobo==0.6.4

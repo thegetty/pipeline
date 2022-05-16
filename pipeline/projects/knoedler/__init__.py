@@ -395,10 +395,9 @@ class AddPage(Configurable, KnoedlerProvenance):
 	def __call__(self, data:dict, make_la_lo, make_la_hmo):
 		book = data['book_record']
 		book_id, page_id, _ = record_id(book)
-
 		data['_text_page'] = {
 			'uri': self.helper.make_proj_uri('Text', 'Book', book_id, 'Page', page_id),
-			'object_type': vocab.PageTextForm,
+			'object_type': [vocab.PageTextForm,vocab.AccountBookText],
 			'label': f'Knoedler Stock Book {book_id}, Page {page_id}',
 			'identifiers': [self.helper.knoedler_number_id(page_id, id_class=vocab.PageNumber)],
 			'referred_to_by': [],
@@ -452,7 +451,7 @@ class AddRow(Configurable, KnoedlerProvenance):
 		star_id = self.helper.gpi_number_id(rec_num, vocab.StarNumber)
 		data['_text_row'] = {
 			'uri': self.helper.make_proj_uri('Text', 'Book', book_id, 'Page', page_id, 'Row', row_id),
-			'object_type': vocab.EntryTextForm,
+			'object_type': [vocab.EntryTextForm,vocab.AccountBookText],
 			'label': f'Knoedler Stock Book {book_id}, Page {page_id}, Row {row_id}',
 			'identifiers': [self.helper.knoedler_number_id(row_id, id_class=vocab.EntryNumber), star_id],
 			'part_of': [data['_text_page']],

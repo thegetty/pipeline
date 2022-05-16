@@ -190,6 +190,20 @@ class SalesUtilityHelper(UtilityHelper):
 
 		return catalog
 
+	def catalog_type(self, cno, sale_type='Auction'):
+		if sale_type in ('Auction', 'Collection Catalog'): # Sale Catalog
+			cl = vocab.AuctionCatalogText
+		elif sale_type == 'Private Contract Sale': # Private Sale Exhibition Catalog
+			cl = vocab.ExhibitionCatalogText
+		elif sale_type == 'Stock List': # Accession Catalog
+			cl = vocab.AccessionCatalogText
+		elif sale_type == 'Lottery': # Lottery Catalog
+			cl = vocab.LotteryCatalogText
+		else:
+			cl = vocab.SalesCatalogText # Sale Catalog
+
+		return cl
+
 	def physical_catalog_notes(self, cno, owner, copy):
 		cat_uri = self.physical_catalog_uri(cno, owner, copy)
 		uri = cat_uri + '-HandNotes'
@@ -501,10 +515,10 @@ class SalesPipeline(PipelineBase):
 		vocab.register_instance('act of returning', {'parent': model.Type, 'id': '300438467', 'label': 'Returning'})
 		vocab.register_instance('act of completing sale', {'parent': model.Type, 'id': '300448858', 'label': 'Act of Completing Sale'})
 		vocab.register_instance('qualifier', {'parent': model.Type, 'id': '300435720', 'label': 'Qualifier'})
-		vocab.register_instance('form type', {'parent': model.Type, 'id': '300444970', 'label': 'Form'})
+		vocab.register_instance('form type', {'parent': model.Type, 'id': '300444970', 'label': 'Form'})		
 		vocab.register_instance('buyer description', {'parent': model.Type, 'id': '300445024', 'label': 'Buyer description'})
 		vocab.register_instance('seller description', {'parent': model.Type, 'id': '300445025', 'label': 'Seller description'})
-
+		
 		vocab.register_instance('fire', {'parent': model.Type, 'id': '300068986', 'label': 'Fire'})
 		vocab.register_instance('animal', {'parent': model.Type, 'id': '300249395', 'label': 'Animal'})
 		vocab.register_instance('history', {'parent': model.Type, 'id': '300033898', 'label': 'History'})

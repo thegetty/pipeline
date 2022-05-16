@@ -476,16 +476,17 @@ class PipelineBase:
 
 		vocab.register_instance('occupation', {'parent': model.Type, 'id': '300263369', 'label': 'Occupation'})
 		vocab.register_instance('function', {'parent': model.Type, 'id': '300444971', 'label': 'Function (general concept)'})
+		vocab.register_instance('form type', {'parent': model.Type, 'id': '300444970', 'label': 'Form'})
+		vocab.register_instance('object type', {'parent': model.Type, 'id': '300435443', 'label': 'Object / Work Type'})
 
 		vocab.register_vocab_class('StarNumber', {'parent': vocab.LocalNumber, 'id': 'https://data.getty.edu/local/thesaurus/star-identifier', 'label': 'STAR Identifier'})
 		vocab.register_vocab_class('CorporateName', {'parent': model.Name, 'id': '300445020', 'label': 'Corporate Name'})
 		vocab.register_vocab_class('Internal', {"parent": model.LinguisticObject, "id":"300444972", "label": "private (general concept)", "metatype": "function"})
 		vocab.register_vocab_class('External', {"parent": model.LinguisticObject, "id":"300444973", "label": "public (general concept)", "metatype": "function"})
 		vocab.register_vocab_class('ActiveOccupation', {"parent": model.Activity, "id":"300393177", "label": "Professional Activities", "metatype": "occupation"})
-		vocab.register_vocab_class('Database', {"parent": model.LinguisticObject, "id":"300028543", "label": "Database"})
+		vocab.register_vocab_class('Database', {"parent": model.LinguisticObject, "id":"300028543", "label": "Database", "metatype": "form type"})
 		vocab.register_vocab_class('Transcription', {"parent": model.LinguisticObject, "id":"300404333", "label": "Transcription", "metatype": "brief text"})
 		vocab.register_vocab_class('TranscriptionProcess', {"parent": model.Creation, "id":"300440752", "label": "Transcription Process"})
-		
 
 		self.static_instances = StaticInstanceHolder(self.setup_static_instances())
 		helper.add_static_instances(self.static_instances)
@@ -622,6 +623,9 @@ class PipelineBase:
 		name = kwargs.get('name', f'STAR {label} Database')
 		db = vocab.Database(ident=uri, label=name)
 		db.identified_by = vocab.PrimaryName(ident='', content=name)
+		er_classification = model.Type(ident='http://vocab.getty.edu/aat/300379790', label='Electronic Records')
+		er_classification.classified_as = vocab.instances["object type"]
+		db.classified_as = er_classification
 		creator = kwargs.get('creator')
 		if creator:
 			creation = model.Creation(ident='')

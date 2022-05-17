@@ -123,12 +123,10 @@ class PopulateSalesObject(Configurable, pipeline.linkedart.PopulateObject):
 	def _populate_object_catalog_record(self, data:dict, parent, lot, cno, rec_num, transaction_classification,non_auctions):
 		hmo = get_crom_object(data)
 
-		sale_type = non_auctions.get(cno, data.get('non_auction_flag'))
+		sale_type = non_auctions.get(cno)
 		sale_type = sale_type or 'Auction'
 		catalog_type = self.helper.catalog_type(cno,sale_type)
-
-		catalog_uri = self.helper.make_proj_uri('CATALOG', cno)
-		catalog = vocab.AuctionCatalogText(ident=catalog_uri, label=f'Sale Catalog {cno}')
+		catalog = self.helper.catalog_text(cno, sale_type)
 
 		record_uri = self.helper.make_proj_uri('CATALOG', cno, 'RECORD', rec_num)
 		lot_object_id = parent['lot_object_id']

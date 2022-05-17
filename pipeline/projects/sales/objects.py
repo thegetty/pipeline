@@ -120,8 +120,12 @@ class PopulateSalesObject(Configurable, pipeline.linkedart.PopulateObject):
 		data['_visual_item'] = add_crom_data(data=vidata, what=vi)
 		hmo.shows = vi
 
-	def _populate_object_catalog_record(self, data:dict, parent, lot, cno, rec_num, transaction_classification):
+	def _populate_object_catalog_record(self, data:dict, parent, lot, cno, rec_num, transaction_classification,non_auctions):
 		hmo = get_crom_object(data)
+
+		sale_type = non_auctions.get(cno, data.get('non_auction_flag'))
+		sale_type = sale_type or 'Auction'
+		catalog_type = self.helper.catalog_type(cno,sale_type)
 
 		catalog_uri = self.helper.make_proj_uri('CATALOG', cno)
 		catalog = vocab.AuctionCatalogText(ident=catalog_uri, label=f'Sale Catalog {cno}')
@@ -139,8 +143,8 @@ class PopulateSalesObject(Configurable, pipeline.linkedart.PopulateObject):
 		creation.carried_out_by = self.helper.static_instances.get_instance('Group', 'gpi')
 		row.created_by = creation
 		row.identified_by = self.helper.gpi_number_id(rec_num, vocab.StarNumber)
-
-		record = vocab.EntryTextForm(ident=record_uri, label=f'Sale recorded in catalog: {lot_object_id} (record number {rec_num})')
+		
+		record = vocab.make_multitype_obj(catalog_type,vocab.EntryTextForm,ident=record_uri, label=f'Sale recorded in catalog: {lot_object_id} (record number {rec_num})')
 		record._validate_profile = False
 		record.features_are_also_found_on = row
 
@@ -403,7 +407,7 @@ class PopulateSalesObject(Configurable, pipeline.linkedart.PopulateObject):
 		data['_locations'] = []
 		data['_final_org'] = []
 		data['_events'] = []
-		record = self._populate_object_catalog_record(data, parent, lot, cno, parent['pi_record_no'], transaction_classification)
+		record = self._populate_object_catalog_record(data, parent, lot, cno, parent['pi_record_no'], transaction_classification,non_auctions)
 		self._populate_object_destruction(data, parent, destruction_types_map)
 		self.populate_object_statements(data)
 		self._populate_object_materials(data, materials_map)

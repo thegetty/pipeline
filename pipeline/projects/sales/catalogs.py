@@ -187,7 +187,7 @@ class AddAuctionCatalogEntry(Configurable):
 			idents.append(vocab.make_multitype_obj(vocab.PageNumber, vocab.OrderNumber, ident='', content=pdf_page_id, label=f'Page Order'))
 		data['_text_page'] = {
 			'uri': self.helper.make_proj_uri('CATALOG', cno, 'Page', page_id),
-			'object_type': vocab.PageTextForm,
+			'object_type': [vocab.PageTextForm,self.helper.catalog_type(cno,sale_type)],
 			'label': f'Sale Catalog {cno}, Page {page_id}',
 			'identifiers': idents,
 			'referred_to_by': [],

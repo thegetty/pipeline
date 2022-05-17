@@ -14,7 +14,6 @@ class PIRModelingTest_AR139(TestSalesPipelineOutput):
         output = self.run_pipeline('ar139')
         texts = output['model-lo']
         
-        print(texts)
         catalog = texts['tag:getty.edu,2019:digital:pipeline:REPLACE-WITH-UUID:sales#CATALOG,D-2748']
         page = texts['tag:getty.edu,2019:digital:pipeline:REPLACE-WITH-UUID:sales#CATALOG,D-2748,Page,11']
         entry = texts['tag:getty.edu,2019:digital:pipeline:REPLACE-WITH-UUID:sales#CATALOG,D-2748,RECORD,1052503']
@@ -23,6 +22,13 @@ class PIRModelingTest_AR139(TestSalesPipelineOutput):
         self.assertEqual(classification_sets(catalog, key='id'), {'http://vocab.getty.edu/aat/300026068','http://vocab.getty.edu/aat/300026059'})
         self.assertEqual(classification_sets(page, key='id'), {'http://vocab.getty.edu/aat/300026068','http://vocab.getty.edu/aat/300194222'})
         self.assertEqual(classification_sets(entry, key='id'), {'http://vocab.getty.edu/aat/300026068','http://vocab.getty.edu/aat/300438434'})
+
+
+        catalog2 = texts['tag:getty.edu,2019:digital:pipeline:REPLACE-WITH-UUID:sales#CATALOG,B-267']
+        entry2 = texts['tag:getty.edu,2019:digital:pipeline:REPLACE-WITH-UUID:sales#CATALOG,B-267,RECORD,22949']
+        self.assertEqual(classification_sets(catalog2, key='id'), {'http://vocab.getty.edu/aat/300026096','http://vocab.getty.edu/aat/300026059'})
+        self.assertEqual(classification_sets(entry2, key='id'), {'http://vocab.getty.edu/aat/300026096','http://vocab.getty.edu/aat/300438434'})
+
 
 
 

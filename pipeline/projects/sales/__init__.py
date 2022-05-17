@@ -190,6 +190,20 @@ class SalesUtilityHelper(UtilityHelper):
 
 		return catalog
 
+	def catalog_type(self, cno, sale_type='Auction'):
+		if sale_type in ('Auction', 'Collection Catalog'): # Sale Catalog
+			cl = vocab.AuctionCatalogText
+		elif sale_type == 'Private Contract Sale': # Private Sale Exhibition Catalog
+			cl = vocab.ExhibitionCatalogText
+		elif sale_type == 'Stock List': # Accession Catalog
+			cl = vocab.AccessionCatalogText
+		elif sale_type == 'Lottery': # Lottery Catalog
+			cl = vocab.LotteryCatalogText
+		else:
+			cl = vocab.SalesCatalogText # Sale Catalog
+
+		return cl
+
 	def physical_catalog_notes(self, cno, owner, copy):
 		cat_uri = self.physical_catalog_uri(cno, owner, copy)
 		uri = cat_uri + '-HandNotes'

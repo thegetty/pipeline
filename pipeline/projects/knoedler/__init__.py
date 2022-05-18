@@ -1185,6 +1185,7 @@ class ModelTheftOrLoss(TransactionHandler):
 			transfer_class = vocab.Theft
 
 		tx_out._label = f'{label_type} of {sn_ident}'
+		tx_out.identified_by = model.Name(ident='', content=tx_out._label)
 		tx_out_data = add_crom_data(data={'uri': tx_out.id, 'label': tx_out._label}, what=tx_out)
 
 		title = self.helper.title_value(data['_object'].get('title'))

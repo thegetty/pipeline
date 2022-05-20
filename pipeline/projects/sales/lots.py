@@ -400,16 +400,30 @@ class AddAcquisitionOrBidding(ProvenanceBase):
 		if purpose in self.custody_xfer_purposes:
 			xfer.general_purpose = self.custody_xfer_purposes[purpose]
 
-		for seller_data in sellers:
+		for agent_seq, seller_data in enumerate(sellers):
 			seller = get_crom_object(seller_data)
 			mods = self.modifiers(seller_data, 'auth_mod_a')
-			if not THROUGH.intersects(mods):
+			if THROUGH.intersects(mods):
+				# when an agent is acting on behalf of the seller, model their involvement in a sub-activity
+				subxfer_id = self.helper.prepend_uri_key(hmo.id, f'CustodyTransfer,{sequence},SellerAgent,{agent_seq}')
+				subxfer = model.Activity(ident=subxfer_id, label="Seller's agent's role in transfer of custody")
+				subxfer.classified_as = vocab.instances['SellersAgent']
+				subxfer.carried_out_by = seller
+				xfer.part = subxfer
+			else:
 				xfer.transferred_custody_from = seller
 
-		for buyer_data in buyers:
+		for agent_seq, buyer_data in enumerate(buyers):
 			buyer = get_crom_object(buyer_data)
 			mods = self.modifiers(buyer_data, 'auth_mod_a')
-			if not THROUGH.intersects(mods):
+			if THROUGH.intersects(mods):
+				# when an agent is acting on behalf of the buyer, model their involvement in a sub-activity
+				subxfer_id = self.helper.prepend_uri_key(hmo.id, f'CustodyTransfer,{sequence},BuyerAgent,{agent_seq}')
+				subxfer = model.Activity(ident=subxfer_id, label="Buyer's agent's role in transfer of custody")
+				subxfer.classified_as = vocab.instances['BuyersAgent']
+				subxfer.carried_out_by = buyer
+				xfer.part = subxfer
+			else:
 				xfer.transferred_custody_to = buyer
 
 		current_tx.part = xfer
@@ -538,9 +552,19 @@ class AddAcquisitionOrBidding(ProvenanceBase):
 				attrib_assignment_classes.append(vocab.PossibleAssignment)
 
 			if THROUGH.intersects(mod):
-				acq.carried_out_by = seller
-				payments['sell'].carried_out_by = seller
+				# when an agent is acting on behalf of the seller, model their involvement in a sub-activities
 				payments_used.add('sell')
+				subpaym_id = self.helper.prepend_uri_key(hmo.id, f'Payment,SellerAgent,{seq_no}')
+				subpaym = model.Activity(ident=subpaym_id, label="Seller's agent's role in payment")
+				subpaym.classified_as = vocab.instances['SellersAgent']
+				subpaym.carried_out_by = seller
+				payments['sell'].part = subpaym
+
+				subacq_id = self.helper.prepend_uri_key(hmo.id, f'Acquisition,SellerAgent,{seq_no}')
+				subacq = model.Activity(ident=subacq_id, label="Seller's agent's role in acquisition")
+				subacq.classified_as = vocab.instances['SellersAgent']
+				subacq.carried_out_by = seller
+				acq.part = subacq
 			elif FOR.intersects(mod):
 				acq.transferred_title_from = seller
 				payments['sell'].paid_to = seller
@@ -574,7 +598,7 @@ class AddAcquisitionOrBidding(ProvenanceBase):
 				payments['sell'].paid_to = seller
 				payments_used.add('sell')
 
-		for buyer_data in buyers:
+		for seq_no, buyer_data in enumerate(buyers):
 			buyer = get_crom_object(buyer_data)
 			mod = self.modifiers(buyer_data, 'auth_mod_a')
 
@@ -586,9 +610,19 @@ class AddAcquisitionOrBidding(ProvenanceBase):
 				warnings.warn(f'Handle buyer modifier: {mod}') # TODO: some way to model this uncertainty?
 
 			if THROUGH.intersects(mod):
-				acq.carried_out_by = buyer
-				payments['buy'].carried_out_by = buyer
+				# when an agent is acting on behalf of the buyer, model their involvement in a sub-activities
 				payments_used.add('buy')
+				subpaym_id = self.helper.prepend_uri_key(hmo.id, f'Payment,BuyerAgent,{seq_no}')
+				subpaym = model.Activity(ident=subpaym_id, label="Buyer's agent's role in payment")
+				subpaym.classified_as = vocab.instances['BuyersAgent']
+				subpaym.carried_out_by = buyer
+				payments['buy'].part = subpaym
+
+				subacq_id = self.helper.prepend_uri_key(hmo.id, f'Acquisition,BuyerAgent,{seq_no}')
+				subacq = model.Activity(ident=subacq_id, label="Buyer's agent's role in acquisition")
+				subacq.classified_as = vocab.instances['BuyersAgent']
+				subacq.carried_out_by = buyer
+				acq.part = subacq
 			elif FOR.intersects(mod):
 				acq.transferred_title_to = buyer
 				payments['buy'].paid_from = buyer

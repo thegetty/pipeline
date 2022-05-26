@@ -15,6 +15,11 @@ class PIRModelingTest_AR132(TestKnoedlerPipelineOutput):
         activies = output['model-activity']
         
         expected = {
+            'tag:getty.edu,2019:digital:pipeline:REPLACE-WITH-UUID:knoedler#TX,In,4,29,14': 'Purchase',
+            'tag:getty.edu,2019:digital:pipeline:REPLACE-WITH-UUID:knoedler#TX,In,3,12,7' : 'Purchase',
+            'tag:getty.edu,2019:digital:pipeline:REPLACE-WITH-UUID:knoedler#TX,In,3,13,1' : 'Purchase',
+            'tag:getty.edu,2019:digital:pipeline:REPLACE-WITH-UUID:knoedler#TX,In,8,208,43' : 'Purchase',
+            'tag:getty.edu,2019:digital:pipeline:REPLACE-WITH-UUID:knoedler#TX,In,8,215,17' : 'Purchase',
             'tag:getty.edu,2019:digital:pipeline:REPLACE-WITH-UUID:knoedler#TX,Out,3,11,20' : 'Inventorying',
             'tag:getty.edu,2019:digital:pipeline:REPLACE-WITH-UUID:knoedler#TX,Out,8,208,43' : 'Lost',
             'tag:getty.edu,2019:digital:pipeline:REPLACE-WITH-UUID:knoedler#TX,Out,4,29,14' : 'Purchase',

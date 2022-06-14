@@ -737,6 +737,7 @@ def timespan_from_bound_components(data:dict, date_modifiers:dict, begin_prefix:
 			dt = datetime.datetime(*[int(v) for v in begin_tuple])
 			dt += datetime.timedelta(days=15)
 			ts.end_of_the_end = dt.strftime("%Y-%m-%dT%H:%M:%SZ")
+			end = dt.strftime("%Y-%m-%d")
 
 
 	if uncertain_date:

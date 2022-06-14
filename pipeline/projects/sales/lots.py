@@ -121,10 +121,7 @@ class AddAuctionOfLot(ProvenanceBase):
 
 		event_dates = event_properties['auction_dates'].get(cno)
 		if event_dates:
-			_, begin, end = event_dates
-			ts = timespan_from_outer_bounds(begin, end)
-			label = label_for_timespan_range(begin, end)
-			ts.identified_by = model.Name(ident='', content=label)
+			ts, begin, end = event_dates
 			creation.timespan = ts
 		coll.created_by = creation
 

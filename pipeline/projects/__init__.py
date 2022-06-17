@@ -62,26 +62,14 @@ class PersonIdentity:
 			return False
 		return True
 
-	def is_anonymous_group(self, auth_name):
-		if self.anon_nationality_re.match(auth_name):
-			return True
-		if self.anon_dated_nationality_re.match(auth_name):
-			return True
-		elif self.anon_dated_re.match(auth_name):
-			return True
-		elif self.anon_period_re.match(auth_name):
-			return True
-
-		for anon_key in ('[ILLEGIBLE]', '[Unknown]'):
-			if anon_key == auth_name:
-				return True
-
-		return False
+	def is_anonymous_group(self, generic_name):
+		return str(generic_name).strip() == 'Yes'
 
 	def is_anonymous(self, data:dict):
 		auth_name = data.get('auth_name')
+		generic_name = data.get('generic_name')
 		if auth_name:
-			if self.is_anonymous_group(auth_name):
+			if self.is_anonymous_group(generic_name):
 				return False
 			return '[ANONYMOUS' in auth_name
 		elif data.get('name'):
@@ -99,8 +87,8 @@ class PersonIdentity:
 
 		auth_name = data.get('auth_name')
 		auth_name_q = '?' in data.get('auth_nameq', '')
-
-		if auth_name and self.is_anonymous_group(auth_name):
+		generic_name = data.get('generic_name', '')
+		if auth_name and self.is_anonymous_group(generic_name):
 			key = ('GROUP', 'AUTH', auth_name)
 			return key, self.make_shared_uri
 		elif auth_name and self.acceptable_person_auth_name(auth_name):
@@ -133,10 +121,10 @@ class PersonIdentity:
 	def add_person(self, a, record=None, relative_id=None, **kwargs):
 		self.add_uri(a, record_id=relative_id)
 		auth_name = a.get('auth_name')
-		
+		generic_name = a.get('generic_name')
 		# is_group will be true here if this person record is a stand-in
 		# for a group of people (e.g. all French people, or 17th century Germans)
-		is_group = auth_name and self.is_anonymous_group(auth_name)
+		is_group = auth_name and self.is_anonymous_group(generic_name)
 		self.add_names(a, group=is_group, referrer=record, **kwargs)
 		self.add_props(a, **kwargs)
 		if is_group:
@@ -292,6 +280,7 @@ class PersonIdentity:
 	def add_props(self, data:dict, role=None, **kwargs):
 		role = role if role else 'person'
 		auth_name = data.get('auth_name', '')
+		generic_name = data.get('generic_name', '')
 		period_match = self.anon_period_re.match(auth_name)
 		nationalities = []
 		if 'nationality' in data:
@@ -334,7 +323,7 @@ class PersonIdentity:
 			cite = vocab.BibliographyStatement(ident='', content=data['name_cite'])
 			data['referred_to_by'].append(cite)
 
-		if self.is_anonymous_group(auth_name):
+		if self.is_anonymous_group(generic_name):
 			nationality_match = self.anon_nationality_re.match(auth_name)
 			dated_nationality_match = self.anon_dated_nationality_re.match(auth_name)
 			dated_match = self.anon_dated_re.match(auth_name)

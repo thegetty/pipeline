@@ -44,10 +44,7 @@ class PersonIdentity:
 		self.ignore_authnames = CaseFoldingSet(('NEW', 'NON-UNIQUE'))
 		self.make_la_person = pipeline.linkedart.MakeLinkedArtPerson()
 		self.make_la_org = pipeline.linkedart.MakeLinkedArtOrganization()
-		self.anon_dated_re = re.compile(r'\[ANONYMOUS - (\d+)TH C[.]\]')
 		self.anon_period_re = re.compile(r'\[ANONYMOUS - (MODERN|ANTIQUE)\]')
-		self.anon_dated_nationality_re = re.compile(r'\[(\w+) - (\d+)TH C[.]\]')
-		self.anon_nationality_re = re.compile(r'\[(?!ANON|ILLEGIBLE|Unknown)(\w+)\]', re.IGNORECASE)
 
 	def acceptable_person_auth_name(self, auth_name):
 		if not auth_name:
@@ -281,11 +278,12 @@ class PersonIdentity:
 		role = role if role else 'person'
 		auth_name = data.get('auth_name', '')
 		generic_name = data.get('generic_name', '')
+		century_active = data.get('century_active', '')
 		period_match = self.anon_period_re.match(auth_name)
 		nationalities = []
 		if 'nationality' in data:
 			nationality = data['nationality']
-			if isinstance(nationality, str):
+			if isinstance(nationality, str) and nationality != 'Unknown':
 				nationalities += [n.lower().strip() for n in nationality.split(';')]
 			elif isinstance(nationality, list):
 				nationalities += [n.lower() for n in nationality]
@@ -324,29 +322,23 @@ class PersonIdentity:
 			data['referred_to_by'].append(cite)
 
 		if self.is_anonymous_group(generic_name):
-			nationality_match = self.anon_nationality_re.match(auth_name)
-			dated_nationality_match = self.anon_dated_nationality_re.match(auth_name)
-			dated_match = self.anon_dated_re.match(auth_name)
 			data.setdefault('events', [])
-			if nationality_match:
+			if nationalities and not century_active:
 				with suppress(ValueError):
-					nationality = nationality_match.group(1).lower()
-					nationalities.append(nationality)
-					group_label = self.anonymous_group_label(role, nationality=nationality)
+					group_label = self.anonymous_group_label(role, nationality=nationalities[0])
 					data['label'] = group_label
-			elif dated_nationality_match:
+			elif nationalities and century_active:
 				with suppress(ValueError):
-					nationality = dated_nationality_match.group(1).lower()
-					nationalities.append(nationality)
-					century = int(dated_nationality_match.group(2))
-					group_label = self.anonymous_group_label(role, century=century, nationality=nationality)
+					# TODO handle things like 7th - 3rd BC
+					century = int(century_active[:2])
+					group_label = self.anonymous_group_label(role, century=century, nationality=nationalities[0])
 					data['label'] = group_label
 					pact_uri = data['uri'] + '-ProfAct-dated-natl'
 					a = self.professional_activity(group_label, classified_as=[vocab.ActiveOccupation], ident=pact_uri, century=century, narrow=True)
 					data['events'].append(a)
-			elif dated_match:
+			elif century_active:
 				with suppress(ValueError):
-					century = int(dated_match.group(1))
+					century = int(century_active[:2])
 					group_label = self.anonymous_group_label(role, century=century)
 					data['label'] = group_label
 					pact_uri = data['uri'] + '-ProfAct-dated'

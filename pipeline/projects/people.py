@@ -283,7 +283,7 @@ class AddPerson(Configurable):
 
 	def model_person_or_group(self, data):
 		name = data['auth_name']
-		generic_name = data['generic_name']
+		generic_name = data.get('generic_name')
 		type = {t.strip() for t in data.get('type', '').lower().split(';')} - {''}
 
 		data.setdefault('occupation', [])

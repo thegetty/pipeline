@@ -469,7 +469,8 @@ class PeoplePipeline(PipelineBase):
 									'bibliography',
 									'ulan_id',
 									'segment',
-									'corporate_body'
+									'corporate_body',
+									'generic_name'
 								)
 							}
 						}

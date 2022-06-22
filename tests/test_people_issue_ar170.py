@@ -26,11 +26,11 @@ class PIRModelingTest_AR170(TestPeoplePipelineOutput):
                 'timespan' : ['1700-01-01T00:00:00Z', '1800-01-01T00:00:00Z']
             },
             'tag:getty.edu,2019:digital:pipeline:REPLACE-WITH-UUID:shared#GROUP,AUTH,MYTENS' : {
-                'label' : "Professional activity of persons in the 17th century",
+                'label' : "Professional activity of Unknown persons in the 17th century",
                 'timespan' : ['1600-01-01T00:00:00Z', '1700-01-01T00:00:00Z']
             },
             'tag:getty.edu,2019:digital:pipeline:REPLACE-WITH-UUID:shared#GROUP,AUTH,%5BANONYMOUS%20-%2014TH%20C.%5D' : {
-                'label' : "Professional activity of persons in the 14th century",
+                'label' : "Professional activity of Unknown persons in the 14th century",
                 'timespan' : ['1300-01-01T00:00:00Z', '1400-01-01T00:00:00Z']
             },
             'tag:getty.edu,2019:digital:pipeline:REPLACE-WITH-UUID:shared#GROUP,AUTH,RIEDEL%2C%20JOHANN' : {
@@ -44,6 +44,10 @@ class PIRModelingTest_AR170(TestPeoplePipelineOutput):
             'tag:getty.edu,2019:digital:pipeline:REPLACE-WITH-UUID:shared#GROUP,AUTH,%5BAMERICAN%20-%2019TH%20C.%5D' : {
                 'label' : "Professional activity of American persons in the 19th century",
                 'timespan' : ['1800-01-01T00:00:00Z', '1900-01-01T00:00:00Z']
+            },
+            'tag:getty.edu,2019:digital:pipeline:REPLACE-WITH-UUID:shared#GROUP,AUTH,%5BETRUSCAN%5D' : {
+                'label' : "Professional activity of Etruscan persons in the 7th century",
+                'timespan' : ['0600-01-01T00:00:00Z', '0700-01-01T00:00:00Z']
             }
         }
 

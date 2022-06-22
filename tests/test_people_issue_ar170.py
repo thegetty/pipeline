@@ -18,15 +18,15 @@ class PIRModelingTest_AR170(TestPeoplePipelineOutput):
 
         expected = {
             'tag:getty.edu,2019:digital:pipeline:REPLACE-WITH-UUID:shared#GROUP,AUTH,Strubin' : {
-                'label' : "Professional activity of persons in the 18th century",
+                'label' : "Professional activity of \"Strubin\" in the 18th century",
                 'timespan' : ['1700-01-01T00:00:00Z', '1800-01-01T00:00:00Z']
             },
             'tag:getty.edu,2019:digital:pipeline:REPLACE-WITH-UUID:shared#GROUP,AUTH,Tracy' : {
-                'label' : "Professional activity of persons in the 18th century",
+                'label' : "Professional activity of \"Tracy\" in the 18th century",
                 'timespan' : ['1700-01-01T00:00:00Z', '1800-01-01T00:00:00Z']
             },
             'tag:getty.edu,2019:digital:pipeline:REPLACE-WITH-UUID:shared#GROUP,AUTH,MYTENS' : {
-                'label' : "Professional activity of Unknown persons in the 17th century",
+                'label' : "Professional activity of \"Mytens\" in the 17th century",
                 'timespan' : ['1600-01-01T00:00:00Z', '1700-01-01T00:00:00Z']
             },
             'tag:getty.edu,2019:digital:pipeline:REPLACE-WITH-UUID:shared#GROUP,AUTH,%5BANONYMOUS%20-%2014TH%20C.%5D' : {
@@ -34,11 +34,11 @@ class PIRModelingTest_AR170(TestPeoplePipelineOutput):
                 'timespan' : ['1300-01-01T00:00:00Z', '1400-01-01T00:00:00Z']
             },
             'tag:getty.edu,2019:digital:pipeline:REPLACE-WITH-UUID:shared#GROUP,AUTH,RIEDEL%2C%20JOHANN' : {
-                'label' : "Professional activity of Austrian persons in the 18th century",
+                'label' : "Professional activity of \"Riedel, Johann\" in the 18th century",
                 'timespan' : ['1700-01-01T00:00:00Z', '1800-01-01T00:00:00Z']
             },
             'tag:getty.edu,2019:digital:pipeline:REPLACE-WITH-UUID:shared#GROUP,AUTH,ERTINGER' : {
-                'label' : "Professional activity of Austrian persons in the 17th century",
+                'label' : "Professional activity of \"Ertinger\" in the 17th century",
                 'timespan' : ['1600-01-01T00:00:00Z', '1700-01-01T00:00:00Z']
             },
             'tag:getty.edu,2019:digital:pipeline:REPLACE-WITH-UUID:shared#GROUP,AUTH,%5BAMERICAN%20-%2019TH%20C.%5D' : {

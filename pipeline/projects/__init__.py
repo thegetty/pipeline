@@ -161,6 +161,18 @@ class PersonIdentity:
 		else:
 			return f'{role}s'
 		return a
+
+	def group_label_from_authority_name(self, role, century=None, authority_name=None):
+		if century and authority_name:
+			ord = make_ordinal(century)
+			return f'"{authority_name.title()}" in the {ord} century'
+		elif century:
+			ord = make_ordinal(century)
+			return f'{role}s in the {ord} century'
+		elif authority_name:
+			return f'"{authority_name.title()}"'
+		else:
+			return f'{role}s'
 		
 	def professional_activity(self, name:str, century=None, date_range=None, classified_as=None, **kwargs):
 		'''
@@ -325,15 +337,22 @@ class PersonIdentity:
 		if self.is_anonymous_group(generic_name):
 			century_match = self.century_span_re.match(century_active)
 			data.setdefault('events', [])
+			use_auth_name = not auth_name.startswith('[')
 			if nationalities and not century_active:
 				with suppress(ValueError):
-					group_label = self.anonymous_group_label(role, nationality=nationalities[0])
+					if use_auth_name:
+						group_label = self.group_label_from_authority_name(role, authority_name=auth_name)
+					else:
+						group_label = self.anonymous_group_label(role, nationality=nationalities[0])
 					data['label'] = group_label
 			elif nationalities and century_active:
 				with suppress(ValueError):
 					# TODO handle things like 7th - 3rd BC
 					c_begin = int(century_match.group(1))
-					group_label = self.anonymous_group_label(role, century=c_begin, nationality=nationalities[0])
+					if use_auth_name:
+						group_label = self.group_label_from_authority_name(role, century=c_begin, authority_name=auth_name)
+					else:
+						group_label = self.anonymous_group_label(role, century=c_begin, nationality=nationalities[0])
 					data['label'] = group_label
 					pact_uri = data['uri'] + '-ProfAct-dated-natl'
 					a = self.professional_activity(group_label, classified_as=[vocab.ActiveOccupation], ident=pact_uri, century=c_begin, narrow=True)
@@ -341,7 +360,10 @@ class PersonIdentity:
 			elif century_active:
 				with suppress(ValueError):
 					c_begin = int(century_match.group(1))
-					group_label = self.anonymous_group_label(role, century=c_begin)
+					if use_auth_name:
+						group_label = self.group_label_from_authority_name(role, century=c_begin, authority_name=auth_name)
+					else:
+						group_label = self.anonymous_group_label(role, century=c_begin)
 					data['label'] = group_label
 					pact_uri = data['uri'] + '-ProfAct-dated'
 					a = self.professional_activity(group_label, classified_as=[vocab.ActiveOccupation], ident=pact_uri, century=c_begin, narrow=True)

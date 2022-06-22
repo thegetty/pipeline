@@ -515,10 +515,10 @@ class SalesPipeline(PipelineBase):
 		vocab.register_instance('act of returning', {'parent': model.Type, 'id': '300438467', 'label': 'Returning'})
 		vocab.register_instance('act of completing sale', {'parent': model.Type, 'id': '300448858', 'label': 'Act of Completing Sale'})
 		vocab.register_instance('qualifier', {'parent': model.Type, 'id': '300435720', 'label': 'Qualifier'})
-		vocab.register_instance('form type', {'parent': model.Type, 'id': '300444970', 'label': 'Form'})
+		vocab.register_instance('form type', {'parent': model.Type, 'id': '300444970', 'label': 'Form'})		
 		vocab.register_instance('buyer description', {'parent': model.Type, 'id': '300445024', 'label': 'Buyer description'})
 		vocab.register_instance('seller description', {'parent': model.Type, 'id': '300445025', 'label': 'Seller description'})
-
+		
 		vocab.register_instance('fire', {'parent': model.Type, 'id': '300068986', 'label': 'Fire'})
 		vocab.register_instance('animal', {'parent': model.Type, 'id': '300249395', 'label': 'Animal'})
 		vocab.register_instance('history', {'parent': model.Type, 'id': '300033898', 'label': 'History'})
@@ -538,6 +538,7 @@ class SalesPipeline(PipelineBase):
 		vocab.register_vocab_class('CatalogForm', {"parent": model.LinguisticObject, "id":"300026059", "label": "Catalog", "metatype": "form type"})
 
 		vocab.register_vocab_class('SalePrice', {"parent": model.MonetaryAmount, "id":"300417246", "label": "Sale Price"})
+		
 
 
 		super().__init__(project_name, helper=helper)

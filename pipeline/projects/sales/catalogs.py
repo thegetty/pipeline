@@ -218,6 +218,8 @@ class AddPhysicalCatalogEntry(Configurable):
 		catalog_label = self.helper.physical_catalog_label(cno, sale_type, owner, copy)
 		row_name = f'STAR Entry for Physical {catalog_label}'
 		row = vocab.EntryTextForm(ident=record_uri, content=content, label=row_name)
+		# add classified_as
+		# row.classified_as = vocab.ElectronicRecords(ident=record_uri, content=content, label=row_name)
 		row.part_of = self.helper.static_instances.get_instance('LinguisticObject', 'db-sales_catalogs')
 		creation = model.Creation(ident='')
 		creation.carried_out_by = self.helper.static_instances.get_instance('Group', 'gpi')

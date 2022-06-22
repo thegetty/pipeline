@@ -1419,6 +1419,7 @@ class KnoedlerPipeline(PipelineBase):
 
 		vocab.register_vocab_class('PageTextForm', {"parent": model.LinguisticObject, "id":"300194222", "label": "Page", "metatype": "form type"})
 		vocab.register_vocab_class('EntryTextForm', {"parent": model.LinguisticObject, "id":"300438434", "label": "Entry", "metatype": "form type"})
+	
 
 		self.graph = None
 		self.models = kwargs.get('models', settings.arches_models)

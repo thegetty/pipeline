@@ -195,7 +195,9 @@ class AddAuctionOfLot(ProvenanceBase):
 
 		if 'link_to_pdf' in auction_data:
 			url = auction_data['link_to_pdf']
-			page = vocab.WebPage(ident=url, label=url)
+			page = vocab.WebPage(ident='', label=url)
+			page._validate_range = False
+			page.access_point = url
 			lot.referred_to_by = page
 
 		for problem_key, problem in problematic_records.get('lots', []):

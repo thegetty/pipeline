@@ -38,7 +38,8 @@ class PIRModelingTest_AR81(TestSalesPipelineOutput):
         # Its timespan should include an end-date matching the event.
         sale = activities['tag:getty.edu,2019:digital:pipeline:REPLACE-WITH-UUID:sales#AUCTION,Br-A2042,0047,1794-05-12']
         ts = sale['timespan']
-        self.assertEqual(ts['_label'], f'1794-05-12 to 1794-05-26')
+        self.assertIn('1794-05-12 onwards', classified_identifier_sets(ts)[None])
+        self.assertEqual(ts['_label'], f'1794-05-12 onwards')
         self.assertIn('end_of_the_end', ts)
         self.assertEqual(ts['begin_of_the_begin'], '1794-05-12T00:00:00Z')
         self.assertEqual(ts['end_of_the_end'], '1794-05-27T00:00:00Z')

@@ -697,6 +697,7 @@ def timespan_from_bound_components(data:dict, date_modifiers:dict, begin_prefix:
 	
 	has_begin = False
 	has_end = False
+	uses_following_days_style = False
 	if uncertain_date:
 		begin = implode_uncertain_date_tuple(uncertain_tuple, clamp=begin_clamp)
 		end = implode_uncertain_date_tuple(uncertain_tuple, clamp=end_clamp)
@@ -738,6 +739,7 @@ def timespan_from_bound_components(data:dict, date_modifiers:dict, begin_prefix:
 			dt += datetime.timedelta(days=15)
 			ts.end_of_the_end = dt.strftime("%Y-%m-%dT%H:%M:%SZ")
 			end = dt.strftime("%Y-%m-%d")
+			uses_following_days_style = True
 
 
 	if uncertain_date:
@@ -759,7 +761,7 @@ def timespan_from_bound_components(data:dict, date_modifiers:dict, begin_prefix:
 		elif has_end:
 			ts.identified_by = model.Name(ident='', content=f'up to {end_label}')
 
-	return ts, begin, end
+	return ts, begin, end, uses_following_days_style
 
 def timespan_from_outer_bounds(begin=None, end=None, inclusive=False):
 	'''

@@ -25,14 +25,14 @@ class AddAuctionEvent(Configurable):
 		cno = data['catalog_number']
 		sale_type = data.get('non_auction_flag', 'Auction')
 
-		ts, begin, end = timespan_from_bound_components(
+		ts, begin, end, uses_following_days_style = timespan_from_bound_components(
 			data,
 			date_modifiers,
 			'sale_begin_', 'begin',
 			'sale_end_', 'eoe'
 		)
 		
-		event_properties['auction_dates'][cno] = (ts, begin, end)
+		event_properties['auction_dates'][cno] = (ts, begin, end, uses_following_days_style)
 		event_properties['auction_date_label'][cno] = ts._label
 		
 		event_date_label = event_properties['auction_date_label'].get(cno)
@@ -141,7 +141,7 @@ class PopulateAuctionEvent(Configurable):
 			auction.took_place_at = place
 			auction_locations[cno] = place.clone(minimal=True)
 
-		ts, begin, end = timespan_from_bound_components(
+		ts, begin, end, uses_following_days_style = timespan_from_bound_components(
 			data,
 			date_modifiers,
 			'sale_begin_', 'begin',

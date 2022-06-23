@@ -19,11 +19,13 @@ class PIRModelingTest_AR46(TestSalesPipelineOutput):
         activities = output['model-activity']
         sale_act = output['model-sale-activity']
         
-        # lot sale date ('+' modified), event begin date, NO end date (so inherits end date from event)
+        # lot sale date ('+' modified), event begin date, NO end date (so inherits end date from event, but the event end date was estimated, so it doesn't show up in the label/identifier)
         event1 = sale_act['tag:getty.edu,2019:digital:pipeline:REPLACE-WITH-UUID:sales#PRIVATE_CONTRACT_SALE-EVENT,Br-279']
         sale1 = sale_act['tag:getty.edu,2019:digital:pipeline:REPLACE-WITH-UUID:sales#AUCTION,Br-279,0103,1804-06-11']
-        self.assertIn('1804-06-11 to 1804-06-25', classified_identifier_sets(sale1['timespan'])[None])
+        self.assertIn('1804-06-11 onwards', classified_identifier_sets(sale1['timespan'])[None])
         self.assertIn('1804-06-11 onwards', classified_identifier_sets(event1['timespan'])[None])
+        self.assertIn('end_of_the_end', sale1['timespan'])
+        self.assertEqual(sale1['timespan']['end_of_the_end'], '1804-06-26T00:00:00Z')
 
         # lot sale date ('+' modified), event begin date, event end date
         event2 = sale_act['tag:getty.edu,2019:digital:pipeline:REPLACE-WITH-UUID:sales#PRIVATE_CONTRACT_SALE-EVENT,Br-64']
@@ -33,6 +35,8 @@ class PIRModelingTest_AR46(TestSalesPipelineOutput):
         	classified_identifier_sets(sale2['timespan']),
         	classified_identifier_sets(event2['timespan']),
         )
+        self.assertIn('end_of_the_end', sale2['timespan'])
+        self.assertEqual(sale2['timespan']['end_of_the_end'], '1803-01-02T00:00:00Z')
 
         # lot sale date ('+' modified, zero-day), event begin date (zero-day), NO end date
         # in this case, the lot sale date and the event begin date are the same (both with a zero-valued day field).

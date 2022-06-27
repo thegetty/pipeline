@@ -46,6 +46,7 @@ class PersonIdentity:
 		self.make_la_org = pipeline.linkedart.MakeLinkedArtOrganization()
 		self.anon_period_re = re.compile(r'\[ANONYMOUS - (MODERN|ANTIQUE)\]')
 		self.century_span_re = re.compile(r'(\d+)[A-Z]*-?(\d*)', re.IGNORECASE)
+		self.unacceptable_century_active_re = re.compile(r'.*\s+BC')
 
 	def acceptable_person_auth_name(self, auth_name):
 		if not auth_name:
@@ -59,6 +60,12 @@ class PersonIdentity:
 		elif '[' in auth_name:
 			return False
 		return True
+
+	def acceptable_century_active(self, century_active):
+		unacceptable = self.unacceptable_century_active_re.match(century_active)
+		if unacceptable:
+			warnings.warn(f"No timespan information will be populated for {century_active}")
+		return not unacceptable
 
 	def is_anonymous_group(self, generic_name):
 		return str(generic_name).strip() == 'Yes'
@@ -149,37 +156,71 @@ class PersonIdentity:
 		data['uri_keys'] = keys
 		data['uri'] = make(*keys)
 
-	def anonymous_group_label(self, role, century=None, nationality=None):
-		if century and nationality:
-			ord = make_ordinal(century)
-			return f'{nationality.capitalize()} {role}s in the {ord} century'
-		elif century:
-			ord = make_ordinal(century)
-			return f'{role}s in the {ord} century'
+	def anonymous_group_label(self, role, century_range=None, nationality=None):
+		if century_range:
+			b, e = century_range
+			if b and e and nationality:
+				ord_begin = make_ordinal(b)
+				ord_end = make_ordinal(e)
+				return f'{nationality.capitalize()} {role}s from {ord_begin} to {ord_end} century'
+			elif b and e:
+				ord_begin = make_ordinal(b)
+				ord_end = make_ordinal(e)
+				return f'{role}s from {ord_begin} to {ord_end} century'
+			elif b and nationality:
+				ord = make_ordinal(b)
+				return f'{nationality.capitalize()} {role}s in the {ord} century'
+			elif b:
+				ord = make_ordinal(b)
+				return f'{role}s in the {ord} century'
 		elif nationality:
 			return f'{nationality.capitalize()} {role}s'
 		else:
 			return f'{role}s'
-		return a
 
-	def group_label_from_authority_name(self, role, century=None, authority_name=None):
-		if century and authority_name:
-			ord = make_ordinal(century)
-			return f'"{authority_name.title()}" in the {ord} century'
-		elif century:
-			ord = make_ordinal(century)
-			return f'{role}s in the {ord} century'
+	def group_label_from_authority_name(self, role, century_range=None, authority_name=None):
+		if century_range:
+			b, e = century_range
+			if b and e and authority_name:
+				ord_begin = make_ordinal(b)
+				ord_end = make_ordinal(e)
+				return f'"{authority_name.title()}" from {ord_begin} to {ord_end} century'
+			elif b and e:
+				ord_begin = make_ordinal(b)
+				ord_end = make_ordinal(e)
+				return f'{role}s from {ord_begin} to {ord_end} century'
+			elif b and authority_name:
+				ord = make_ordinal(b)
+				return f'"{authority_name.title()}" in the {ord} century'
+			elif b:
+				ord = make_ordinal(b)
+				return f'{role}s in the {ord} century'
 		elif authority_name:
 			return f'"{authority_name.title()}"'
 		else:
 			return f'{role}s'
-		
-	def professional_activity(self, name:str, century=None, date_range=None, classified_as=None, **kwargs):
+	
+	def make_label_for_professional_activity(self, role: str, authority_name=None, century_range=None, nationality=None):
+		if self.acceptable_person_auth_name(auth_name=authority_name):
+			return self.group_label_from_authority_name(role, century_range=century_range, authority_name=authority_name)
+		else:
+			return self.anonymous_group_label(role, century_range=century_range, nationality=nationality)
+	
+	def century_range_from_century_active(self, century_active: str):
+		if self.acceptable_century_active(century_active=century_active):
+			century_match = self.century_span_re.match(century_active)
+			c_begin = int(century_match.group(1))
+			c_end = int(century_match.group(2)) if century_match.group(2) else None
+			return [c_begin, c_end]
+		else:
+			return None
+
+	def professional_activity(self, name:str, century_range=None, date_range=None, classified_as=None, **kwargs):
 		'''
 		Return a vocab.Active object representing the professional activities
 		of the `name`d person.
 		
-		If `century` or `date_range` arguments are supplied, they are used to
+		If `century_range` or `date_range` arguments are supplied, they are used to
 		associate a timespan with the activity.
 		
 		If a `classified_as` list is supplied, it is used to further classify
@@ -193,21 +234,22 @@ class PersonIdentity:
 			args['ident'] = kwargs['ident']
 		a = vocab.make_multitype_obj(*classified_as, **args)
 
-		ts = self.active_timespan(century=century, date_range=date_range, **kwargs)
+		ts = self.active_timespan(century_range=century_range, date_range=date_range, **kwargs)
 		if ts:
 			if 'verbatim_active_period' in kwargs:
 				ts.identified_by = model.Name(ident='', content=kwargs['verbatim_active_period'])
 			a.timespan = ts
 		return a
 
-	def active_timespan(self, century=None, date_range=None, **kwargs):
+	def active_timespan(self, century_range=None, date_range=None, **kwargs):
 		'''
 		Return a TimeSpan object representing the period during which a
 		person was active in their professional activities. If no such
 		information is supplied, return None.
 		'''
-		if century:
-			ts = timespan_for_century(century, **kwargs)
+		if century_range:
+			b, e = century_range
+			ts = timespan_for_century(begin=b, end=e, **kwargs)
 			return ts
 		elif date_range:
 			b, e = date_range
@@ -335,38 +377,25 @@ class PersonIdentity:
 			data['referred_to_by'].append(cite)
 
 		if self.is_anonymous_group(generic_name):
-			century_match = self.century_span_re.match(century_active)
 			data.setdefault('events', [])
-			use_auth_name = not auth_name.startswith('[')
 			if nationalities and not century_active:
 				with suppress(ValueError):
-					if use_auth_name:
-						group_label = self.group_label_from_authority_name(role, authority_name=auth_name)
-					else:
-						group_label = self.anonymous_group_label(role, nationality=nationalities[0])
-					data['label'] = group_label
+					data['label'] = self.make_label_for_professional_activity(role, authority_name=auth_name, nationality=nationalities[0])
 			elif nationalities and century_active:
 				with suppress(ValueError):
-					# TODO handle things like 7th - 3rd BC
-					c_begin = int(century_match.group(1))
-					if use_auth_name:
-						group_label = self.group_label_from_authority_name(role, century=c_begin, authority_name=auth_name)
-					else:
-						group_label = self.anonymous_group_label(role, century=c_begin, nationality=nationalities[0])
+					c_range = self.century_range_from_century_active(century_active)
+					group_label = self.make_label_for_professional_activity(role, authority_name=auth_name, century_range=c_range, nationality=nationalities[0])
 					data['label'] = group_label
 					pact_uri = data['uri'] + '-ProfAct-dated-natl'
-					a = self.professional_activity(group_label, classified_as=[vocab.ActiveOccupation], ident=pact_uri, century=c_begin, narrow=True)
+					a = self.professional_activity(group_label, classified_as=[vocab.ActiveOccupation], ident=pact_uri, century_range=c_range, narrow=True)
 					data['events'].append(a)
 			elif century_active:
 				with suppress(ValueError):
-					c_begin = int(century_match.group(1))
-					if use_auth_name:
-						group_label = self.group_label_from_authority_name(role, century=c_begin, authority_name=auth_name)
-					else:
-						group_label = self.anonymous_group_label(role, century=c_begin)
+					c_range = self.century_range_from_century_active(century_active)
+					group_label = self.make_label_for_professional_activity(role, authority_name=auth_name, century_range=c_range)
 					data['label'] = group_label
 					pact_uri = data['uri'] + '-ProfAct-dated'
-					a = self.professional_activity(group_label, classified_as=[vocab.ActiveOccupation], ident=pact_uri, century=c_begin, narrow=True)
+					a = self.professional_activity(group_label, classified_as=[vocab.ActiveOccupation], ident=pact_uri, century_range=c_range, narrow=True)
 					data['events'].append(a)
 			elif period_match:
 				period = period_match.group(1).lower()

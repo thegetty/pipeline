@@ -18,16 +18,16 @@ class PIRModelingTest_AR170(TestPeoplePipelineOutput):
 
         expected = {
             'tag:getty.edu,2019:digital:pipeline:REPLACE-WITH-UUID:shared#GROUP,AUTH,Strubin' : {
-                'label' : "Professional activity of \"Strubin\" in the 18th century",
-                'timespan' : ['1700-01-01T00:00:00Z', '1800-01-01T00:00:00Z']
+                'label' : "Professional activity of \"Strubin\" from 18th to 19th century",
+                'timespan' : ['1700-01-01T00:00:00Z', '1900-01-01T00:00:00Z']
             },
             'tag:getty.edu,2019:digital:pipeline:REPLACE-WITH-UUID:shared#GROUP,AUTH,Tracy' : {
                 'label' : "Professional activity of \"Tracy\" in the 18th century",
                 'timespan' : ['1700-01-01T00:00:00Z', '1800-01-01T00:00:00Z']
             },
             'tag:getty.edu,2019:digital:pipeline:REPLACE-WITH-UUID:shared#GROUP,AUTH,MYTENS' : {
-                'label' : "Professional activity of \"Mytens\" in the 17th century",
-                'timespan' : ['1600-01-01T00:00:00Z', '1700-01-01T00:00:00Z']
+                'label' : "Professional activity of \"Mytens\" from 17th to 18th century",
+                'timespan' : ['1600-01-01T00:00:00Z', '1800-01-01T00:00:00Z']
             },
             'tag:getty.edu,2019:digital:pipeline:REPLACE-WITH-UUID:shared#GROUP,AUTH,%5BANONYMOUS%20-%2014TH%20C.%5D' : {
                 'label' : "Professional activity of Unknown persons in the 14th century",
@@ -38,20 +38,25 @@ class PIRModelingTest_AR170(TestPeoplePipelineOutput):
                 'timespan' : ['1700-01-01T00:00:00Z', '1800-01-01T00:00:00Z']
             },
             'tag:getty.edu,2019:digital:pipeline:REPLACE-WITH-UUID:shared#GROUP,AUTH,ERTINGER' : {
-                'label' : "Professional activity of \"Ertinger\" in the 17th century",
-                'timespan' : ['1600-01-01T00:00:00Z', '1700-01-01T00:00:00Z']
+                'label' : "Professional activity of \"Ertinger\" from 17th to 18th century",
+                'timespan' : ['1600-01-01T00:00:00Z', '1800-01-01T00:00:00Z']
             },
             'tag:getty.edu,2019:digital:pipeline:REPLACE-WITH-UUID:shared#GROUP,AUTH,%5BAMERICAN%20-%2019TH%20C.%5D' : {
                 'label' : "Professional activity of American persons in the 19th century",
                 'timespan' : ['1800-01-01T00:00:00Z', '1900-01-01T00:00:00Z']
             },
-            'tag:getty.edu,2019:digital:pipeline:REPLACE-WITH-UUID:shared#GROUP,AUTH,%5BETRUSCAN%5D' : {
-                'label' : "Professional activity of Etruscan persons in the 7th century",
-                'timespan' : ['0600-01-01T00:00:00Z', '0700-01-01T00:00:00Z']
-            }
+            'tag:getty.edu,2019:digital:pipeline:REPLACE-WITH-UUID:shared#GROUP,AUTH,Alessandri%20family' : {
+                'label' : "Professional activity of \"Alessandri Family\" from 14th to 20th century",
+                'timespan' : ['1300-01-01T00:00:00Z', '2000-01-01T00:00:00Z']
+            },
         }
 
         self.verify_results(groups, expected)
+
+        professional_activities = groups['tag:getty.edu,2019:digital:pipeline:REPLACE-WITH-UUID:shared#GROUP,AUTH,%5BETRUSCAN%5D']['carried_out'] if 'carried_out' in groups['tag:getty.edu,2019:digital:pipeline:REPLACE-WITH-UUID:shared#GROUP,AUTH,%5BETRUSCAN%5D'] else []
+        self.assertEqual(len(professional_activities), 1)
+        # in the century active timespan is a BC date, do not produce any timespan related to the professional activity
+        self.assertNotIn('timespan', professional_activities[0])
 
         # in case there is a nationality but no century active information, then no professional activity should be populated
         professional_activities = groups['tag:getty.edu,2019:digital:pipeline:REPLACE-WITH-UUID:shared#GROUP,AUTH,%5BAMERICAN%5D']['carried_out'] if 'carried_out' in groups['tag:getty.edu,2019:digital:pipeline:REPLACE-WITH-UUID:shared#GROUP,AUTH,%5BAMERICAN%5D'] else []
@@ -60,7 +65,6 @@ class PIRModelingTest_AR170(TestPeoplePipelineOutput):
     def verify_results(self, groups, expected):
         for (key, value) in groups.items():
             if key in expected.keys():
-                print(key)
                 professional_activities = [a for a in value['carried_out'] if a['_label'].startswith('Professional activity')]
                 self.assertEqual(len(professional_activities), 1)        
                 self.assertEqual(professional_activities[0]['_label'], expected[key]['label'])

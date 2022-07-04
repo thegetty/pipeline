@@ -538,7 +538,6 @@ class SalesPipeline(PipelineBase):
 		vocab.register_vocab_class('CatalogForm', {"parent": model.LinguisticObject, "id":"300026059", "label": "Catalog", "metatype": "form type"})
 
 		vocab.register_vocab_class('SalePrice', {"parent": model.MonetaryAmount, "id":"300417246", "label": "Sale Price"})
-		
 
 
 		super().__init__(project_name, helper=helper)

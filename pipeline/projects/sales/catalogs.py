@@ -214,18 +214,18 @@ class AddPhysicalCatalogEntry(Configurable):
 		keys = [v for v in [cno, owner, copy] if v]
 		record_uri = self.helper.make_proj_uri('ENTRY', 'PHYS-CAT', *keys)
 		content = data['star_csv_data']
-
+		
 		catalog_label = self.helper.physical_catalog_label(cno, sale_type, owner, copy)
 		row_name = f'STAR Entry for Physical {catalog_label}'
 		row = vocab.EntryTextForm(ident=record_uri, content=content, label=row_name)
-		# add classified_as
-		# row.classified_as = vocab.ElectronicRecords(ident=record_uri, content=content, label=row_name)
 		row.part_of = self.helper.static_instances.get_instance('LinguisticObject', 'db-sales_catalogs')
 		creation = model.Creation(ident='')
 		creation.carried_out_by = self.helper.static_instances.get_instance('Group', 'gpi')
 		row.created_by = creation
 		row.identified_by = self.helper.gpi_number_id(rec_num, vocab.StarNumber)
 		row.identified_by = vocab.PrimaryName(ident='', content=row_name)
+		# CAN BE ADDED IN VOCAB AS INSTANCES
+		row.classified_as = model.Type(ident='http://vocab.getty.edu/aat/300379790', label='Electronic Records')
 
 		data['_catalog_record'] = add_crom_data({'uri': record_uri}, row)
 

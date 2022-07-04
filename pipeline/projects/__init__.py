@@ -483,7 +483,6 @@ class PipelineBase:
 		vocab.register_vocab_class('External', {"parent": model.LinguisticObject, "id":"300444973", "label": "public (general concept)", "metatype": "function"})
 		vocab.register_vocab_class('ActiveOccupation', {"parent": model.Activity, "id":"300393177", "label": "Professional Activities", "metatype": "occupation"})
 		vocab.register_vocab_class('Database', {"parent": model.LinguisticObject, "id":"300028543", "label": "Database", "metatype": "form type"})
-		vocab.register_vocab_class('ElectronicRecords', {"parent": model.LinguisticObject, "id":"300379790", "label": "Electronic Records"})
 		vocab.register_vocab_class('Transcription', {"parent": model.LinguisticObject, "id":"300404333", "label": "Transcription", "metatype": "brief text"})
 		vocab.register_vocab_class('TranscriptionProcess', {"parent": model.Creation, "id":"300440752", "label": "Transcription Process"})
 		
@@ -622,9 +621,8 @@ class PipelineBase:
 		label = ' '.join(keys)
 		name = kwargs.get('name', f'STAR {label} Database')
 		db = vocab.Database(ident=uri, label=name)
-		db.classified_as = vocab.PrimaryName(ident='', content=name)
-		# db.classified_as = vocab.ElectronicRecords(ident=uri, content=name)
 		db.identified_by = vocab.PrimaryName(ident='', content=name)
+		db.classified_as = model.Type(ident='http://vocab.getty.edu/aat/300379790', label='Electronic Records')
 		creator = kwargs.get('creator')
 		if creator:
 			creation = model.Creation(ident='')

@@ -224,9 +224,9 @@ class AddPhysicalCatalogEntry(Configurable):
 		row.created_by = creation
 		row.identified_by = self.helper.gpi_number_id(rec_num, vocab.StarNumber)
 		row.identified_by = vocab.PrimaryName(ident='', content=row_name)
-		# CAN BE ADDED IN VOCAB AS INSTANCES
-		row.classified_as = model.Type(ident='http://vocab.getty.edu/aat/300379790', label='Electronic Records')
-
+		er_classification = model.Type(ident='http://vocab.getty.edu/aat/300379790', label='Electronic Records')
+		er_classification.classified_as = vocab.instances["object type"]
+		row.classified_as = er_classification
 		data['_catalog_record'] = add_crom_data({'uri': record_uri}, row)
 
 		yield data

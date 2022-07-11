@@ -622,7 +622,9 @@ class PipelineBase:
 		name = kwargs.get('name', f'STAR {label} Database')
 		db = vocab.Database(ident=uri, label=name)
 		db.identified_by = vocab.PrimaryName(ident='', content=name)
-		db.classified_as = model.Type(ident='http://vocab.getty.edu/aat/300379790', label='Electronic Records')
+		er_classification = model.Type(ident='http://vocab.getty.edu/aat/300379790', label='Electronic Records')
+		er_classification.classified_as = vocab.instances["object type"]
+		db.classified_as = er_classification
 		creator = kwargs.get('creator')
 		if creator:
 			creation = model.Creation(ident='')

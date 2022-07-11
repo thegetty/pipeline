@@ -289,6 +289,7 @@ class ProvenanceBase(Configurable):
 			person = get_crom_object(a_data)
 
 			mods = a_data['modifiers']
+			verbatim_mod = a_data.get('attrib_mod_auth', '')
 			attrib_assignment_classes = [model.AttributeAssignment]
 			uncertain = all_uncertain
 			if uncertain or 'or' in mods:
@@ -305,6 +306,8 @@ class ProvenanceBase(Configurable):
 				assignment.assigned_property = 'influenced_by'
 				assignment.property_classified_as = vocab.instances['style of']
 				assignment.assigned = person
+				assignment.referred_to_by = vocab.Note(ident='', content=verbatim_mod)
+				assignment.carried_out_by = self.helper.static_instances.get_instance('Group', 'knoedler')
 			elif COPY_AFTER.intersects(mods):
 				cls = type(hmo)
 				# The original object URI is just the object URI with a suffix. When URIs are
@@ -332,6 +335,8 @@ class ProvenanceBase(Configurable):
 					prod_event.attributed_by = assignment
 					assignment.assigned_property = 'influenced_by'
 					assignment.assigned = original_hmo
+					assignment.referred_to_by = vocab.Note(ident='', content=verbatim_mod)
+					assignment.carried_out_by = self.helper.static_instances.get_instance('Group', 'knoedler')
 				else:
 					prod_event.influenced_by = original_hmo
 				data['_original_objects'].append(add_crom_data(data={'uri': original_id}, what=original_hmo))
@@ -387,6 +392,7 @@ class ProvenanceBase(Configurable):
 				a_data = self.model_person_or_group(data, a_data, attribution_group_types, attribution_group_names, seq_no=seq_no, role='Artist', sales_record=sales_record)
 				artist_label = a_data.get('label') # TODO: this may not be right for groups
 				person = get_crom_object(a_data)
+				verbatim_mods = a_data.get('attrib_mod_auth', '')
 				if ATTRIBUTED_TO.intersects(mods):
 					attrib_assignment_classes = [model.AttributeAssignment]
 					attrib_assignment_classes.append(vocab.PossibleAssignment)
@@ -395,6 +401,8 @@ class ProvenanceBase(Configurable):
 					person.attributed_by = assignment
 					assignment.assigned_property = 'member_of'
 					assignment.assigned = person
+					assignment.referred_to_by = vocab.Note(ident='', content=verbatim_mods)
+					assignment.carried_out_by = self.helper.static_instances.get_instance('Group', 'knoedler')
 				else:
 					person.member_of = artist_group
 		else:
@@ -405,6 +413,7 @@ class ProvenanceBase(Configurable):
 				artist_label = a_data.get('label') # TODO: this may not be right for groups
 				person = get_crom_object(a_data)
 				mods = a_data['modifiers']
+				verbatim_mods = a_data.get('attrib_mod_auth', '')
 				attrib_assignment_classes = [model.AttributeAssignment]
 				subprod_path = self.helper.make_uri_path(*a_data["uri_keys"])
 				subevent_id = event_uri + f'-{subprod_path}'
@@ -413,10 +422,16 @@ class ProvenanceBase(Configurable):
 						attrib_assignment_classes.append(vocab.PossibleAssignment)
 						assignment = vocab.make_multitype_obj(*attrib_assignment_classes, ident=attribute_assignment_id, label=f'Possibly attributed to {artist_label}')
 						assignment._label = f'Possibly by {artist_label}'
+						assignment.used_specific_object = sales_record
+						assignment.referred_to_by = vocab.Note(ident='', content=verbatim_mods)
+						assignment.carried_out_by = self.helper.static_instances.get_instance('Group', 'knoedler')
 					else:
 						attrib_assignment_classes.append(vocab.ProbableAssignment)
 						assignment = vocab.make_multitype_obj(*attrib_assignment_classes, ident=attribute_assignment_id, label=f'Probably attributed to {artist_label}')
 						assignment._label = f'Probably by {artist_label}'
+						assignment.used_specific_object = sales_record
+						assignment.referred_to_by = vocab.Note(ident='', content=verbatim_mods)
+						assignment.carried_out_by = self.helper.static_instances.get_instance('Group', 'knoedler')
 
 					# TODO: this assigns an uncertain carried_out_by property directly to the top-level production;
 					#       should it instead be an uncertain sub-production part?
@@ -431,6 +446,9 @@ class ProvenanceBase(Configurable):
 					prod_event.attributed_by = assignment
 					assignment.assigned_property = 'carried_out_by'
 					assignment.assigned = person
+					assignment.used_specific_object = sales_record
+					assignment.referred_to_by = vocab.Note(ident='', content=verbatim_mods)
+					assignment.carried_out_by = self.helper.static_instances.get_instance('Group', 'knoedler')
 				else:
 					if uncertain or ATTRIBUTED_TO.intersects(mods):
 						attrib_assignment_classes.append(vocab.PossibleAssignment)
@@ -438,6 +456,9 @@ class ProvenanceBase(Configurable):
 						prod_event.attributed_by = assignment
 						assignment.assigned_property = 'carried_out_by'
 						assignment.assigned = person
+						assignment.used_specific_object = sales_record
+						assignment.referred_to_by = vocab.Note(ident='', content=verbatim_mods)
+						assignment.carried_out_by = self.helper.static_instances.get_instance('Group', 'knoedler')
 					else:
 						subevent = model.Production(ident=subevent_id, label=f'Production sub-event for {artist_label}')
 						subevent.carried_out_by = person

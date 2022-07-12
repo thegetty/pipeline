@@ -408,12 +408,12 @@ class ProvenanceBase(Configurable):
 		else:
 			for seq_no, a_data in enumerate(artists):
 				uncertain = all_uncertain
+				verbatim_mods = a_data.get('attrib_mod_auth', '')
 				attribute_assignment_id = self.helper.prepend_uri_key(prod_event.id, f'ASSIGNMENT,Artist-{seq_no}')
 				a_data = self.model_person_or_group(data, a_data, attribution_group_types, attribution_group_names, seq_no=seq_no, role='Artist', sales_record=sales_record)
 				artist_label = a_data.get('label') # TODO: this may not be right for groups
 				person = get_crom_object(a_data)
 				mods = a_data['modifiers']
-				verbatim_mods = a_data.get('attrib_mod_auth', '')
 				attrib_assignment_classes = [model.AttributeAssignment]
 				subprod_path = self.helper.make_uri_path(*a_data["uri_keys"])
 				subevent_id = event_uri + f'-{subprod_path}'

@@ -26,6 +26,10 @@ class PIRModelingTest_AR40(TestKnoedlerPipelineOutput):
         hmo = objects['tag:getty.edu,2019:digital:pipeline:REPLACE-WITH-UUID:knoedler#Object,13556']
         self.verifyObjectAttribution(hmo, 'style of; manner of')
 
+        # "style of; manner of"
+        hmo = objects['tag:getty.edu,2019:digital:pipeline:REPLACE-WITH-UUID:knoedler#Object,13006']
+        self.verifyObjectAttribution(hmo, 'attributed to; school of')
+
     def verifyObjectAttribution(self, hmo, verbatim_attrib_mod):
         prod = hmo['produced_by']
         self.assertIn('attributed_by', prod)

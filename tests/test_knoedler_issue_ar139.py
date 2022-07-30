@@ -1,7 +1,7 @@
 #!/usr/bin/env python3 -B
 import unittest
 
-from tests import TestKnoedlerPipelineOutput, classification_sets
+from tests import TestKnoedlerPipelineOutput, classification_sets, classification_tree
 from cromulent import vocab
 
 vocab.add_attribute_assignment_check()
@@ -23,6 +23,20 @@ class PIRModelingTest_AR139(TestKnoedlerPipelineOutput):
         self.assertEqual(classification_sets(page, key='id'), {'http://vocab.getty.edu/aat/300027483','http://vocab.getty.edu/aat/300194222'})
         self.assertEqual(classification_sets(entry, key='id'), {'http://vocab.getty.edu/aat/300027483','http://vocab.getty.edu/aat/300438434'})
 
+        self.assertEqual(classification_tree(book, key='id'), {
+            'http://vocab.getty.edu/aat/300027483': {'http://vocab.getty.edu/aat/300435443': {}}, # Account Books => Type of Work
+            'http://vocab.getty.edu/aat/300028051': {'http://vocab.getty.edu/aat/300444970': {}}  # Book => Form
+        }) 
+
+        self.assertEqual(classification_tree(page, key='id'), {
+            'http://vocab.getty.edu/aat/300027483': {'http://vocab.getty.edu/aat/300435443': {}}, # Account Books => Type of Work
+            'http://vocab.getty.edu/aat/300194222': {'http://vocab.getty.edu/aat/300444970': {}}  # Page => Form
+        })
+
+        self.assertEqual(classification_tree(entry, key='id'), {
+            'http://vocab.getty.edu/aat/300027483': {'http://vocab.getty.edu/aat/300435443': {}}, # Account Books => Type of Work
+            'http://vocab.getty.edu/aat/300438434': {'http://vocab.getty.edu/aat/300444970': {}}  # Entry => Form
+        })
 
 
 if __name__ == '__main__':

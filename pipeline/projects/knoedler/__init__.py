@@ -88,6 +88,8 @@ class KnoedlerUtilityHelper(UtilityHelper):
 		self.title_re = re.compile(r'\["(.*)" (title )?(info )?from ([^]]+)\]')
 		self.title_ref_re = re.compile(r'Sales Book (\d+), (\d+-\d+), f.(\d+)')
 		self.uid_tag_prefix = self.proj_prefix
+		self.records_merged_with_concordance_sheet = 0
+		self.stock_numbers_from_concordance_encountered = set()
 
 	def stock_number_identifier(self, data, date):
 		stock_number = data.get('knoedler_number')
@@ -243,6 +245,10 @@ class KnoedlerUtilityHelper(UtilityHelper):
 			uri_key = uri_key[:-1] + ['flag-separated', kn, pi_rec_no]
 		elif kn in same_objects:
 			uri_key[-1] = same_objects[uri_key[-1]]
+			if uri_key[-1] not in self.stock_numbers_from_concordance_encountered:
+				self.stock_numbers_from_concordance_encountered.add(uri_key[-1])
+			else:
+				self.records_merged_with_concordance_sheet += 1
 		uri = self.make_proj_uri(*uri_key)
 		return uri
 
@@ -2017,4 +2023,5 @@ class KnoedlerFilePipeline(KnoedlerPipeline):
 				w.flush()
 
 		print('====================================================')
+		print(f"Total Number of Records merged using the `Knoedler Stock Numbers Concordance` : {self.helper.records_merged_with_concordance_sheet}")
 		print('Total runtime: ', timeit.default_timer() - start)

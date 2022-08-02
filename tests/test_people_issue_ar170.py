@@ -61,13 +61,21 @@ class PIRModelingTest_AR170(TestPeoplePipelineOutput):
         # in case there is a nationality but no century active information, then no professional activity should be populated
         professional_activities = groups['tag:getty.edu,2019:digital:pipeline:REPLACE-WITH-UUID:shared#GROUP,AUTH,%5BAMERICAN%5D']['carried_out'] if 'carried_out' in groups['tag:getty.edu,2019:digital:pipeline:REPLACE-WITH-UUID:shared#GROUP,AUTH,%5BAMERICAN%5D'] else []
         self.assertEqual(len(professional_activities), 0)
-
+        
+        # check that when split, the all statement contents contain no empty nodes
+        statements = [statement for statement in groups['tag:getty.edu,2019:digital:pipeline:REPLACE-WITH-UUID:shared#GROUP,AUTH,CERMAK']['referred_to_by'] ]
+        for stmt in statements[1:]:
+            self.assertIn('content',stmt)
+            self.assertNotEqual(stmt['content'], '')
+                
     def verify_results(self, groups, expected):
         for (key, value) in groups.items():
             if key in expected.keys():
                 professional_activities = [a for a in value['carried_out'] if a['_label'].startswith('Professional activity')]
                 self.assertEqual(len(professional_activities), 1)        
                 self.assertEqual(professional_activities[0]['_label'], expected[key]['label'])
+                # check that the timespan has a label, a type, an end of the begin and a begin of the end
+                self.assertEqual(len(professional_activities[0]['timespan']), 4)
                 self.assertEqual(professional_activities[0]['timespan']['end_of_the_begin'], expected[key]['timespan'][0])
                 self.assertEqual(professional_activities[0]['timespan']['begin_of_the_end'], expected[key]['timespan'][1])
 

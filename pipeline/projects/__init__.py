@@ -363,7 +363,10 @@ class PersonIdentity:
 		}
 		for key, note_classification in notes_field_classification.items():
 			if key in data:
-				for content in [n.strip() for n in data[key].split(';')]:
+				# there's a chance that a `;` separated field might end with a `;`, thus creating an extra entry which is empty
+				# the following line splits the field and then filters all empty out
+				contents = [n.strip() for n in data[key].split(';') if n.strip()]
+				for content in contents:
 					cite = vocab.make_multitype_obj(*note_classification, ident='', content=content)
 					data['referred_to_by'].append(cite)
 

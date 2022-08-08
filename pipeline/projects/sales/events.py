@@ -196,7 +196,7 @@ class PopulateAuctionEvent(Configurable):
 				if url.startswith('http'):
 					page = vocab.WebPage(ident='', label=label)
 					page._validate_range = False
-					page.access_point = url
+					page.access_point = [vocab.DigitalObject(ident=url)]
 					if description:
 						page.referred_to_by = vocab.Note(ident='', content=description)
 					event_record.referred_to_by = page
@@ -216,7 +216,7 @@ class PopulateAuctionEvent(Configurable):
 					link_type_cl = getattr(vocab, link_data.get('type'), vocab.WebPage)
 					w = link_type_cl(ident='', label=label)
 					w._validate_range = False
-					w.access_point = url
+					w.access_point = [vocab.DigitalObject(ident=url)]
 					if description:
 						w.referred_to_by = vocab.Note(ident='', content=description)
 					event_record.referred_to_by = w

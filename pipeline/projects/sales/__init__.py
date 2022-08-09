@@ -686,6 +686,7 @@ class SalesPipeline(PipelineBase):
 							'title_pg_sell': {'properties': ('title_pg_sell_1', 'title_pg_sell_2')},
 							'links': {
 								'properties': (
+									'heidelberg_link',
 									'hoet_link',
 									'art_sales_cats_online',
 									'art_world_in_britain',

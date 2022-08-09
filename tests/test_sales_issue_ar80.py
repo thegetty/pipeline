@@ -19,7 +19,7 @@ class PIRModelingTest_AR80(TestSalesPipelineOutput):
         record2 = texts['tag:getty.edu,2019:digital:pipeline:REPLACE-WITH-UUID:sales#CATALOG,Br-A348']
         record3 = texts['tag:getty.edu,2019:digital:pipeline:REPLACE-WITH-UUID:sales#CATALOG,D-A51']
         record4 = texts['tag:getty.edu,2019:digital:pipeline:REPLACE-WITH-UUID:sales#CATALOG,SC-A38']
-        # record5 = texts['tag:getty.edu,2019:digital:pipeline:REPLACE-WITH-UUID:sales#CATALOG,D-250']
+        record5 = texts['tag:getty.edu,2019:digital:pipeline:REPLACE-WITH-UUID:sales#CATALOG,D-250']
         record6 =  texts['tag:getty.edu,2019:digital:pipeline:REPLACE-WITH-UUID:sales#CATALOG,Br-A371']
         record7 = texts['tag:getty.edu,2019:digital:pipeline:REPLACE-WITH-UUID:sales#CATALOG,N-A130']
         
@@ -59,12 +59,12 @@ class PIRModelingTest_AR80(TestSalesPipelineOutput):
             }      # art_sales_cats_online
         })
         
-        # self.verifyReferences(record5, {
-        #     'http://digi.ub.uni-heidelberg.de/diglit/creutzer1930_11_12': {
-        #     	'classification': 'Web Page',
-        #     	'note': 'URL link to citation page hosted by Heidelberg (20th C German Sales). Full pdfs available via citation pages.'
-        #     }      # heidelberg_link
-        # })
+        self.verifyReferences(record5, {
+            'http://digi.ub.uni-heidelberg.de/diglit/creutzer1930_11_12': {
+            	'classification': 'Web Page',
+            	'note': 'URL link to citation page hosted by Heidelberg (20th C German Sales). Full pdfs available via citation pages.'
+            }      # heidelberg_link
+        })
         
         self.verifyReferences(record6, {
             'http://dx.doi.org/10.1163/2210-7886_ASC-553': {

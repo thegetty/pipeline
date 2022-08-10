@@ -306,6 +306,7 @@ class ProvenanceBase(Configurable):
 				assignment.assigned_property = 'influenced_by'
 				assignment.property_classified_as = vocab.instances['style of']
 				assignment.assigned = person
+				assignment.used_specific_object = sales_record
 				assignment.referred_to_by = vocab.Note(ident='', content=verbatim_mod)
 				assignment.carried_out_by = self.helper.static_instances.get_instance('Group', 'knoedler')
 			elif COPY_AFTER.intersects(mods):

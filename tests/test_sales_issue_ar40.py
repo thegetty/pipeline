@@ -40,29 +40,39 @@ class PIRModelingTest_AR40(TestSalesPipelineOutput):
             'tag:getty.edu,2019:digital:pipeline:REPLACE-WITH-UUID:sales#OBJ,B-A138,0022,1774-05-30' : {
                 'tag:getty.edu,2019:digital:pipeline:REPLACE-WITH-UUID:sales#ASSIGNMENT,Artist-0,OBJ,B-A138,0022,1774-05-30-Production' : {
                     'used_specific_object' : 'tag:getty.edu,2019:digital:pipeline:REPLACE-WITH-UUID:sales#CATALOG,B-A138,RECORD,110',
-                    'verbatim_mod' : 'attributed to'
+                    'verbatim_mod' : 'attributed'
                 }
             },
            'tag:getty.edu,2019:digital:pipeline:REPLACE-WITH-UUID:sales#OBJ,B-A13,0086,1738-07-21' : {
                 'tag:getty.edu,2019:digital:pipeline:REPLACE-WITH-UUID:sales#ASSIGNMENT,Artist-0,OBJ,B-A13,0086,1738-07-21-Production' : {
                     'used_specific_object' : 'tag:getty.edu,2019:digital:pipeline:REPLACE-WITH-UUID:sales#CATALOG,B-A13,RECORD,6688',
-                    'verbatim_mod' : 'possibly by'
+                    'verbatim_mod' : '?'
                 }
             },
             'tag:getty.edu,2019:digital:pipeline:REPLACE-WITH-UUID:sales#OBJ,Br-36,0092,1801-05-09' : {
                 'tag:getty.edu,2019:digital:pipeline:REPLACE-WITH-UUID:sales#ASSIGNMENT,Artist-0,OBJ,Br-36,0092,1801-05-09-Production' : {
                     'used_specific_object' : 'tag:getty.edu,2019:digital:pipeline:REPLACE-WITH-UUID:sales#CATALOG,Br-36,RECORD,149539',
-                    'verbatim_mod' : 'attributed to'
+                    'verbatim_mod' : 'changed from Thys, P.'
                 },
                 'tag:getty.edu,2019:digital:pipeline:REPLACE-WITH-UUID:sales#ASSIGNMENT,Artist-1,OBJ,Br-36,0092,1801-05-09-Production' : {
                     'used_specific_object' : 'tag:getty.edu,2019:digital:pipeline:REPLACE-WITH-UUID:sales#CATALOG,Br-36,RECORD,149539',
-                    'verbatim_mod' : 'formerly attributed to'
+                    'verbatim_mod' : 'changed to Boeckhorst'
                 }
             },
             'tag:getty.edu,2019:digital:pipeline:REPLACE-WITH-UUID:sales#OBJ,B-A385,0121,1800-06-10' : {
                 'tag:getty.edu,2019:digital:pipeline:REPLACE-WITH-UUID:sales#ASSIGNMENT,NonArtist-0,OBJ,B-A385,0121,1800-06-10-Production' : {
                     'used_specific_object' :'tag:getty.edu,2019:digital:pipeline:REPLACE-WITH-UUID:sales#CATALOG,B-A385,RECORD,100016',
-                    'verbatim_mod' : 'manner of; style of'
+                    'verbatim_mod' : 'manner'
+                }
+            },
+            'tag:getty.edu,2019:digital:pipeline:REPLACE-WITH-UUID:sales#OBJ,B-213,0005,1813-02-22' : {
+                'tag:getty.edu,2019:digital:pipeline:REPLACE-WITH-UUID:sales#ASSIGNMENT,NonArtist-0,OBJ,B-213,0005,1813-02-22-Production' : {
+                    'used_specific_object' :'tag:getty.edu,2019:digital:pipeline:REPLACE-WITH-UUID:sales#CATALOG,B-213,RECORD,23408',
+                    'verbatim_mod' : 'manner; or Vrancx, manner; copy by'
+                },
+                'tag:getty.edu,2019:digital:pipeline:REPLACE-WITH-UUID:sales#ASSIGNMENT,NonArtist-1,OBJ,B-213,0005,1813-02-22-Production' : {
+                    'used_specific_object' :'tag:getty.edu,2019:digital:pipeline:REPLACE-WITH-UUID:sales#CATALOG,B-213,RECORD,23408',
+                    'verbatim_mod' : 'manner; or Francken, manner; copy by'
                 }
             },
         }

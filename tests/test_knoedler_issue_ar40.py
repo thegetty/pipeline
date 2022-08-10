@@ -38,6 +38,7 @@ class PIRModelingTest_AR40(TestKnoedlerPipelineOutput):
 
         self.assertIn('carried_out_by', attr)
         self.assertIn('referred_to_by', attr)
+        self.assertIn('used_specific_object', attr)
         
         carried_out_by = attr['carried_out_by']
         referred_to_by = attr['referred_to_by']

@@ -461,14 +461,16 @@ def add_crom_price(data, parent, services, add_citations=False):
 						primary_value = int(parts.pop(0))
 						total_price = Fraction(primary_value)
 						part_names = [f'{primary_value} {primary_unit}']
+						denom = 1
 						for value, unit in zip(parts, decimalization_data['subunits']):
 							if value:
-								name, denom = unit
+								name = unit[0]
+								denom = denom * unit[1]
 								frac = Fraction(value, denom)
 								total_price += frac
 								part_names.append(f'{value} {name}')
 						decimalized_value = str(float(total_price))
-						verbatim.append(', '.join(part_names))
+						verbatim.append(price)
 					else:
 						decimalized_value = price
 						warnings.warn(f'No decimalization rules for currency {currency!r}')

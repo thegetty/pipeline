@@ -22,3 +22,4 @@ at kronen,Austrian Kronen,300435706,decimal,Austrian Kronen,Heller,100,,,,,1919-
 ,Deutsch-Osterreichisch Kronen,need new AAT term?,decimal,Kronen,,100,,,,,"Unclear if this is different from the other Kronen currencies, but it is probably also a decimal currency."
 ,Czechoslovak koruna,need new AAT term,decimal,koruna,,100,,,,,"We currently have ""Tschekoslowakische Kronen,"" which must be Czechoslovak koruna. This was a decimal currency."
 ,Daalder,need new AAT term,1 Daalder = 30 stuivers,Daalder,stuivers,30,,,,,"I don't think this is in Sales. Possibly in Inventories? It is similar to thalers, with a subunit of 30 to 1."
+bg francs,Belgian francs,300412018,decimal,francs,centimes,100,,,,,"Added 8/5/2022. Used in Belgium from 1832-2002 (French francs had been used from 1797-1832). Decimal currency that does not need conversion, but I am adding this currency to distinguish it from the French franc. Already in AAT."

@@ -62,7 +62,7 @@ if __name__ == '__main__':
 			subject_genre['classified_as'][key] = {}
 
 			for cl in classifiers:
-				aat = f"https://vocab.getty.edu/aat/{cl}"
+				aat = f"http://vocab.getty.edu/aat/{cl}"
 				if cl in cache:
 					subject_genre['classified_as'][key][cache[cl]] = aat
 				else:
@@ -81,7 +81,7 @@ if __name__ == '__main__':
 			subject_genre['represents_instance_of_type'][key] = {}
 
 			for d in depicts:
-				aat = f"https://vocab.getty.edu/aat/{d}"
+				aat = f"http://vocab.getty.edu/aat/{d}"
 				if d in cache:
 					subject_genre['represents_instance_of_type'][key][cache[d]] = aat
 				else:

@@ -3,7 +3,8 @@ import bonobo
 import csv
 import sys
 from pipeline.projects import PersonIdentity, PipelineBase, UtilityHelper
-from pipeline.util import MatchingFiles
+from pipeline.util import MatchingFiles, strip_key_prefix
+from pipeline.projects.knoedler import add_crom_price
 from pipeline.io.csv import CurriedCSVReader
 from pipeline.nodes.basic import KeyManagement, RecordCounter
 
@@ -123,7 +124,123 @@ class GoupilPipeline(PipelineBase):
                                 },
                                 "prefixes": ("joint_own", "joint_own_sh", "joint_ulan_id"),
                             },
-                        }
+                            "buyers": {
+                                "rename_keys": {
+                                    "buyer_name": "name",
+                                    "buyer_loc": "location",
+                                    "buyer_mod": "mod",
+                                    "buy_auth_name": "auth_name",
+                                    "buy_auth_addr": "auth_location",
+                                    "buy_mod_auth": "auth_mod",
+                                    "buyer_ulan_id": "ulan_id",
+                                },
+                                "prefixes": (
+                                    "buyer_name",
+                                    "buyer_loc",
+                                    "buyer_mod",
+                                    "buy_auth_name",
+                                    "buy_auth_addr",
+                                    "buy_mod_auth",
+                                    "buyer_ulan_id",
+                                ),
+                            },
+                        },
+                        "group": {
+                            "entry_date": {
+                                "postprocess": lambda x, _: strip_key_prefix("entry_date_", x),
+                                "properties": (
+                                    "entry_date_year",
+                                    "entry_date_month",
+                                    "entry_date_day",
+                                ),
+                            },
+                            "sale_date": {
+                                "postprocess": lambda x, _: strip_key_prefix("sale_date_", x),
+                                "properties": (
+                                    "sale_date_year",
+                                    "sale_date_month",
+                                    "sale_date_day",
+                                ),
+                            },
+                            "purchase": {
+                                "rename_keys": {
+                                    "purch_amount": "amount",
+                                    "purch_currency": "currency",
+                                    "purch_note": "note",
+                                    "purch_frame": "frame",
+                                    "purch_code": "code",
+                                    "purch_ques": "uncertain",
+                                    "purch_loc": "location",
+                                    "purch_loc_note": "location_note",
+                                },
+                                "postprocess": [
+                                    # lambda d, p: add_crom_price(d, p, services)
+                                ],  # use the one from knoedler for the time being
+                                "properties": (
+                                    "purch_amount",
+                                    "purch_currency",
+                                    "purch_note",
+                                    "purch_frame",
+                                    "purch_code",
+                                    "purch_ques",
+                                    "purch_loc",
+                                    "purch_loc_note",
+                                ),
+                            },
+                            "cost": {
+                                "postprocess": lambda x, _: strip_key_prefix("cost_", x),
+                                "properties": (
+                                    "cost_code",
+                                    "cost_translation",
+                                    "cost_currency",
+                                    "cost_frame",
+                                    "cost_description",
+                                    "cost_number",
+                                ),
+                            },
+                            "object": {
+                                "properties": (
+                                    "title",
+                                    "description",
+                                    "subject",
+                                    "genre",
+                                    "object_type",
+                                    "materials",
+                                    "dimensions",
+                                )
+                            },
+                            "object": {
+                                "properties": (
+                                    "title",
+                                    "description",
+                                    "subject",
+                                    "genre",
+                                    "object_type",
+                                    "materials",
+                                    "dimensions",
+                                    "working_note",
+                                    "verbatim_notes",
+                                    "editor_notes",
+                                    "no_name_notes",
+                                    "resetta_handle",
+                                    "sale_location",
+                                    "previous_owner",
+                                    "previous_sale",
+                                    "post_owner",
+                                    "post_sale",
+                                )
+                            },
+                            "present_location": {
+                                "postprocess": lambda x, _: strip_key_prefix("present_loc_", x),
+                                "properties": (
+                                    "present_loc_geog",
+                                    "present_loc_inst",
+                                    "present_loc_acc",
+                                    "present_loc_note",
+                                    "present_loc_ulan_id",
+                                ),
+                            },
+                        },
                     }
                 ],
             ),

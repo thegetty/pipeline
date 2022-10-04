@@ -119,6 +119,7 @@ data/sales/*.sql*
 data/sales/data_dictionary
 data/sales/headers
 data/*.sqlite
+data/goupil/*.csv
 output
 endpoint
 

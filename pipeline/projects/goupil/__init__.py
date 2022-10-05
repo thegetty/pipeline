@@ -79,7 +79,7 @@ class AddBooks(Configurable):
                 "uri": self.helper.make_proj_uri("Text", "Book", book_id),
                 "object_type": vocab.AccountBookText,
                 "classified_as": [book_type],
-                "label": f"Goupil Stock Book {book_id}",
+                "label": f"Goupil StockBook #{book_id}",
                 "identifiers": [self.helper.goupil_number_id(book_id, id_class=vocab.BookNumber)],
             }
 

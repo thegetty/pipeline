@@ -244,6 +244,12 @@ $(GETTY_PIPELINE_TMP_PATH)/knoedler.pdf: $(GETTY_PIPELINE_TMP_PATH)/knoedler.dot
 
 #######################
 
+# in order to avoid polluting the history with formatting commits, only goupil will be formatted using black
+black: clean
+	isort --profile black pipeline/projects/goupil
+	black -l 120 pipeline/projects/goupil
+	black -l 120 goupil.py
+
 upload:
 	./upload_to_arches.py
 

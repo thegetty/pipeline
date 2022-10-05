@@ -1,16 +1,46 @@
-import settings
-import bonobo
 import csv
+import functools
 import sys
-from pipeline.projects import PersonIdentity, PipelineBase, UtilityHelper
-from pipeline.util import MatchingFiles, strip_key_prefix
-from pipeline.projects.knoedler import add_crom_price
+import timeit
+from collections import defaultdict
+
+import bonobo
+from bonobo.config import Configurable, Option, Service
+from cromulent import model, vocab
+
+import settings
 from pipeline.io.csv import CurriedCSVReader
+from pipeline.io.file import MergingFileWriter
+from pipeline.io.memory import MergingMemoryWriter
+from pipeline.linkedart import (
+    MakeLinkedArtHumanMadeObject,
+    MakeLinkedArtLinguisticObject,
+    MakeLinkedArtOrganization,
+    MakeLinkedArtPerson,
+    add_crom_data,
+)
 from pipeline.nodes.basic import KeyManagement, RecordCounter
+from pipeline.projects import PersonIdentity, PipelineBase, UtilityHelper
+from pipeline.projects.knoedler import add_crom_price
+from pipeline.util import (
+    ExtractKeyedValue,
+    ExtractKeyedValues,
+    MatchingFiles,
+    strip_key_prefix,
+)
 
 
 class GoupilPersonIdentity(PersonIdentity):
     pass
+
+
+def record_id(data):
+    no = data["no"]
+    gno = data["gno"]
+    page = data["pg"]
+    row = data["row"]
+
+    return (no, gno, page, row)
 
 
 class GoupilUtilityHelper(UtilityHelper):
@@ -23,6 +53,40 @@ class GoupilUtilityHelper(UtilityHelper):
         self.person_identity = GoupilPersonIdentity(
             make_shared_uri=self.make_shared_uri, make_proj_uri=self.make_proj_uri
         )
+
+    def make_object_uri(self, pi_rec_no, *uri_key):
+        uri_key = list(uri_key)
+        uri = self.make_proj_uri(*uri_key)
+        return uri
+
+
+class AddBooks(Configurable):
+    helper = Option(required=True)
+    make_la_lo = Service("make_la_lo")
+    make_la_hmo = Service("make_la_hmo")
+    static_instances = Option(default="static_instances")
+
+    def __call__(self, data: dict, make_la_lo, make_la_hmo):
+        books = data.get("_book_records", [])
+
+        for seq_no, b_data in enumerate(books):
+            book_id, gno, page, row = record_id(b_data)
+
+            book_type = model.Type(ident="http://vocab.getty.edu/aat/300028051", label="Book")
+            book_type.classified_as = model.Type(ident="http://vocab.getty.edu/aat/300444970", label="Form")
+
+            book = {
+                "uri": self.helper.make_proj_uri("Text", "Book", book_id),
+                "object_type": vocab.AccountBookText,
+                "classified_as": [book_type],
+                "label": f"Goupil Stock Book {book_id}",
+                "identifiers": [self.helper.goupil_number_id(book_id, id_class=vocab.BookNumber)],
+            }
+
+            make_la_lo(book)
+            b_data.update(book)
+
+        return data
 
 
 class GoupilPipeline(PipelineBase):
@@ -38,6 +102,9 @@ class GoupilPipeline(PipelineBase):
         helper.static_instaces = self.static_instances
 
         # register project specific vocab here
+        vocab.register_vocab_class(
+            "BookNumber", {"parent": model.Identifier, "id": "300445021", "label": "Book Number"}
+        )
 
         self.graph = None
         self.models = kwargs.get("models", settings.arches_models)
@@ -53,6 +120,17 @@ class GoupilPipeline(PipelineBase):
 
     def setup_services(self):
         services = super().setup_services()
+        services.update(
+            {
+                # to avoid constructing new MakeLinkedArtPerson objects millions of times, this
+                # is passed around as a service to the functions and classes that require it.
+                "make_la_person": MakeLinkedArtPerson(),
+                "make_la_lo": MakeLinkedArtLinguisticObject(),
+                "make_la_hmo": MakeLinkedArtHumanMadeObject(),
+                "make_la_org": MakeLinkedArtOrganization(),
+                "counts": defaultdict(int),
+            }
+        )
         return services
 
     def add_sales_chain(self, graph, records, services, serialize=True):
@@ -64,7 +142,7 @@ class GoupilPipeline(PipelineBase):
                 operations=[
                     {
                         "group_repeating": {
-                            "book_records": {
+                            "_book_records": {
                                 "rename_keys": {
                                     "stock_book_no": "no",
                                     "stock_book_gno": "gno",
@@ -244,11 +322,30 @@ class GoupilPipeline(PipelineBase):
                     }
                 ],
             ),
-            # RecordCounter(name='records', verbose=self.debug),
+            RecordCounter(name="records", verbose=self.debug),
             _input=records.output,
         )
 
+        books = self.add_book_chain(graph, sales_records)
+
         return sales_records
+
+    def add_book_chain(self, graph, sales_records, serialize=True):
+        books = graph.add_chain(
+            # add_book,
+            AddBooks(static_instances=self.static_instances, helper=self.helper),
+            _input=sales_records.output,
+        )
+        # phys = graph.add_chain(ExtractKeyedValue(key="_physical_book"), _input=books.output)
+
+        text = graph.add_chain(ExtractKeyedValues(key="_book_records"), _input=books.output)
+
+        if serialize:
+            # self.add_serialization_chain(graph, act.output, model=self.models['ProvenanceEntry'])
+            # self.add_serialization_chain(graph, phys.output, model=self.models["HumanMadeObject"])
+            self.add_serialization_chain(graph, text.output, model=self.models["LinguisticObject"])
+
+        return books
 
     def _construct_graph(self, services=None):
         """
@@ -299,4 +396,68 @@ class GoupilPipeline(PipelineBase):
 
 
 class GoupilFilePipeline(GoupilPipeline):
-    pass
+    """
+    Goupil pipeline with serialization to files based on Arches model and resource UUID.
+
+    If in `debug` mode, JSON serialization will use pretty-printing. Otherwise,
+    serialization will be compact.
+    """
+
+    def __init__(self, input_path, data, **kwargs):
+        super().__init__(input_path, data, **kwargs)
+        self.writers = []
+        self.output_path = kwargs.get("output_path")
+
+    def serializer_nodes_for_model(self, *args, model=None, use_memory_writer=True, **kwargs):
+        nodes = []
+        print(self.output_path)
+        if self.debug:
+            if use_memory_writer:
+                w = MergingMemoryWriter(
+                    directory=self.output_path,
+                    partition_directories=True,
+                    compact=False,
+                    model=model,
+                )
+            else:
+                w = MergingFileWriter(
+                    directory=self.output_path,
+                    partition_directories=True,
+                    compact=False,
+                    model=model,
+                )
+            nodes.append(w)
+        else:
+            if use_memory_writer:
+                w = MergingMemoryWriter(
+                    directory=self.output_path,
+                    partition_directories=True,
+                    compact=True,
+                    model=model,
+                )
+            else:
+                w = MergingFileWriter(
+                    directory=self.output_path,
+                    partition_directories=True,
+                    compact=True,
+                    model=model,
+                )
+            nodes.append(w)
+        self.writers += nodes
+        return nodes
+
+    def run(self, **options):
+        """Run the Goupil bonobo pipeline."""
+        start = timeit.default_timer()
+        services = self.get_services(**options)
+        super().run(services=services, **options)
+        print(f"Pipeline runtime: {timeit.default_timer() - start}", file=sys.stderr)
+
+        count = len(self.writers)
+        for seq_no, w in enumerate(self.writers):
+            print("[%d/%d] writers being flushed" % (seq_no + 1, count))
+            if isinstance(w, MergingMemoryWriter):
+                w.flush()
+
+        print("====================================================")
+        print("Total runtime: ", timeit.default_timer() - start)

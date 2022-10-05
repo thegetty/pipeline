@@ -961,6 +961,15 @@ class UtilityHelper:
 		k_id.assigned_by = assignment
 		return k_id
 
+	def goupil_number_id(self, content, id_class=None):
+		if id_class is None:
+			id_class = vocab.LocalNumber
+		g_id = id_class(ident='', content=content)
+		# assignment = model.AttributeAssignment(ident='')
+		# assignment.carried_out_by = self.static_instances.get_instance('Group', 'Goupil')
+		# g_id.assigned_by = assignment
+		return g_id
+		
 	def add_group(self, data, **kwargs):
 		return self.person_identity.add_group(data, **kwargs)
 

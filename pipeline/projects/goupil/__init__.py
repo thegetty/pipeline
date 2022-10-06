@@ -18,6 +18,7 @@ from pipeline.linkedart import (
     MakeLinkedArtOrganization,
     MakeLinkedArtPerson,
     add_crom_data,
+    get_crom_object,
 )
 from pipeline.nodes.basic import KeyManagement, RecordCounter
 from pipeline.projects import PersonIdentity, PipelineBase, UtilityHelper
@@ -25,6 +26,7 @@ from pipeline.projects.knoedler import add_crom_price
 from pipeline.util import (
     ExtractKeyedValue,
     ExtractKeyedValues,
+    GraphListSource,
     MatchingFiles,
     strip_key_prefix,
 )
@@ -41,6 +43,23 @@ def record_id(data):
     row = data["row"]
 
     return (no, gno, page, row)
+
+
+class GoupilProvenance:
+    def add_goupil_creation_data(self, data: tuple):
+        thing_label, _ = data["label"]
+
+        goupil = self.helper.static_instances.get_instance("Group", "goupil")
+        # TODO does goupil also have a place?
+        # ny = self.helper.static_instances.get_instance('Place', 'newyork')
+
+        o = get_crom_object(data)
+        creation = model.Creation(ident="", label=f"Creation of {thing_label}")
+        creation.carried_out_by = goupil
+        # creation.took_place_at = ny
+        o.created_by = creation
+
+        return creation
 
 
 class GoupilUtilityHelper(UtilityHelper):
@@ -60,7 +79,7 @@ class GoupilUtilityHelper(UtilityHelper):
         return uri
 
 
-class AddBooks(Configurable):
+class AddBooks(Configurable, GoupilProvenance):
     helper = Option(required=True)
     make_la_lo = Service("make_la_lo")
     make_la_hmo = Service("make_la_hmo")
@@ -83,6 +102,7 @@ class AddBooks(Configurable):
             }
 
             make_la_lo(book)
+            self.add_goupil_creation_data(book)
             b_data.update(book)
 
         return data

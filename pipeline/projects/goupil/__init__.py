@@ -73,13 +73,12 @@ class AddBooks(Configurable):
             book_id, gno, page, row = record_id(b_data)
 
             book_type = model.Type(ident="http://vocab.getty.edu/aat/300028051", label="Book")
-            book_type.classified_as = model.Type(ident="http://vocab.getty.edu/aat/300444970", label="Form")
-
+            label = f"Goupil StockBook #{book_id}"
             book = {
                 "uri": self.helper.make_proj_uri("Text", "Book", book_id),
-                "object_type": vocab.AccountBookText,
+                "object_type": vocab.LinguisticObject,
                 "classified_as": [book_type],
-                "label": f"Goupil StockBook #{book_id}",
+                "label": (label, vocab.instances["english"]),
                 "identifiers": [self.helper.goupil_number_id(book_id, id_class=vocab.BookNumber)],
             }
 

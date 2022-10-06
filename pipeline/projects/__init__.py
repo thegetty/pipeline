@@ -975,9 +975,9 @@ class UtilityHelper:
 		if id_class is None:
 			id_class = vocab.LocalNumber
 		g_id = id_class(ident='', content=content)
-		# assignment = model.AttributeAssignment(ident='')
-		# assignment.carried_out_by = self.static_instances.get_instance('Group', 'goupil')
-		# g_id.assigned_by = assignment
+		assignment = model.AttributeAssignment(ident='')
+		assignment.carried_out_by = self.static_instances.get_instance('Group', 'goupil')
+		g_id.assigned_by = assignment
 		return g_id
 		
 	def add_group(self, data, **kwargs):

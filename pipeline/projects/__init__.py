@@ -543,12 +543,14 @@ class PipelineBase:
 		gri_ulan = 500115990
 		gci_ulan = 500115991
 		knoedler_ulan = 500304270
+		goupil_ulan = 500301793
 		GETTY_PSCP_URI = self.helper.make_shared_uri('STATIC', 'ORGANIZATION', 'Project for the Study of Collecting and Provenance')
 		GETTY_GPI_URI = self.helper.make_shared_uri('STATIC', 'ORGANIZATION', 'Getty Provenance Index')
 		GETTY_GRI_URI = self.helper.make_proj_uri('ORGANIZATION', 'LOCATION-CODE', 'JPGM')
 		GETTY_GCI_URI = self.helper.make_shared_uri('STATIC', 'ORGANIZATION', 'Getty Conservation Institute')
 		LUGT_URI = self.helper.make_proj_uri('PERSON', 'ULAN', lugt_ulan)
 		KNOEDLER_URI = self.helper.make_shared_uri('ORGANIZATION', 'ULAN', str(knoedler_ulan))
+		GOUPIL_URI = self.helper.make_shared_uri('ORGANIZATION', 'ULAN', str(goupil_ulan))
 		NEWYORK_URI = self.helper.make_shared_uri('PLACE', 'USA', 'NY', 'New York')
 
 		gci = model.Group(ident=GETTY_GCI_URI, label='Getty Conservation Institute')
@@ -574,6 +576,11 @@ class PipelineBase:
 		knoedler.identified_by = vocab.PrimaryName(ident='', content=knoedler_name)
 		knoedler.exact_match = model.BaseResource(ident=f'http://vocab.getty.edu/ulan/{knoedler_ulan}')
 
+		goupil_name = 'Goupil Gallery Ltd.'
+		goupil = model.Group(ident=GOUPIL_URI, label=goupil_name)
+		goupil.identified_by = vocab.PrimaryName(ident='', content=goupil_name)
+		goupil.exact_match = model.BaseResource(ident=f'http://vocab.getty.edu/ulan/{goupil_ulan}')
+		
 		newyork_name = 'New York, NY'
 		newyork = model.Place(ident=NEWYORK_URI, label=newyork_name)
 		newyork.identified_by = vocab.PrimaryName(ident='', content=newyork_name)
@@ -589,6 +596,7 @@ class PipelineBase:
 		
 		db_people = self.static_db_instance('PEOPLE', name='STAR Person Authority Database', creator=gpi)
 		db_knoedler = self.static_db_instance('Knoedler', name='STAR Knoedler Database', creator=gpi)
+		db_goupil = self.static_db_instance('Goupil', name='STAR Goupil Database', creator=gpi)
 		db_sales_events = self.static_db_instance('Sales', 'Descriptions', name='STAR Sales Catalogue Database', creator=gpi)
 		db_sales_catalogs = self.static_db_instance('Sales', 'Catalogue', name='STAR Physical Sales Catalogue Database', creator=gpi)
 		db_sales_contents = self.static_db_instance('Sales', 'Contents', name='STAR Sales Contents Database', creator=gpi)
@@ -601,13 +609,15 @@ class PipelineBase:
 				'db-sales_events': db_sales_events,
 				'db-sales_catalogs': db_sales_catalogs,
 				'db-sales_contents': db_sales_contents,
+				'db-goupil' : db_goupil
 			},
 			'Group': {
 				'gci': gci,
 				'pscp': pscp,
 				'gri': gri,
 				'gpi': gpi,
-				'knoedler': knoedler
+				'knoedler': knoedler,
+				'goupil' : goupil
 			},
 			'Person': {
 				'lugt': lugt
@@ -966,7 +976,7 @@ class UtilityHelper:
 			id_class = vocab.LocalNumber
 		g_id = id_class(ident='', content=content)
 		# assignment = model.AttributeAssignment(ident='')
-		# assignment.carried_out_by = self.static_instances.get_instance('Group', 'Goupil')
+		# assignment.carried_out_by = self.static_instances.get_instance('Group', 'goupil')
 		# g_id.assigned_by = assignment
 		return g_id
 		

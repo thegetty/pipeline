@@ -2,6 +2,7 @@ import csv
 import functools
 import sys
 import timeit
+import warnings
 from collections import defaultdict
 
 import bonobo
@@ -30,6 +31,10 @@ from pipeline.util import (
     MatchingFiles,
     strip_key_prefix,
 )
+
+
+def filter_empty_book(data: dict, _):
+    return data if data.get("no") else None
 
 
 class GoupilPersonIdentity(PersonIdentity):
@@ -122,15 +127,18 @@ class AddPages(Configurable, GoupilProvenance):
             book_id, _, page, _ = record_id(b_data)
 
             if not page:
+                warnings.warn(
+                    f"Record with id {data['pi_record_no']}, has book with id {book_id} but no page assosiated with it."
+                )
                 continue
 
-            book_type = model.Type(ident="http://vocab.getty.edu/aat/300194222", label="Page")
+            page_type = model.Type(ident="http://vocab.getty.edu/aat/300194222", label="Page")
             label = f"Goupil StockBook #{book_id}, Page #{page}"
 
             page = {
                 "uri": self.helper.make_proj_uri("Text", "Book", book_id, "Page", page),
                 "object_type": vocab.LinguisticObject,
-                "classified_as": [book_type],
+                "classified_as": [page_type],
                 "label": (label, vocab.instances["english"]),
                 "identifiers": [self.helper.goupil_number_id(page, id_class=vocab.PageNumber)],
             }
@@ -138,6 +146,43 @@ class AddPages(Configurable, GoupilProvenance):
             make_la_lo(page)
             data["_text_pages"].append(page)
             self.add_goupil_creation_data(page)
+
+        return data
+
+
+class AddRows(Configurable, GoupilProvenance):
+    helper = Option(required=True)
+    make_la_lo = Service("make_la_lo")
+    make_la_hmo = Service("make_la_hmo")
+    static_instances = Option(default="static_instances")
+
+    def __call__(self, data: dict, make_la_lo, make_la_hmo):
+        books = data.get("_book_records", [])
+        data.setdefault("_text_rows", [])
+
+        for seq_no, b_data in enumerate(books):
+            book_id, _, page, row = record_id(b_data)
+
+            if not row:
+                warnings.warn(
+                    f"Record with id {data['pi_record_no']}, has book with id {book_id} but no row assosiated with it."
+                )
+                continue
+
+            row_type = model.Type(ident="http://vocab.getty.edu/aat/300438434", label="Page")
+            label = f"Goupil StockBook #{book_id}, Page #{page}, Row #{row}"
+
+            row = {
+                "uri": self.helper.make_proj_uri("Text", "Book", book_id, "Page", page, "Row", row),
+                "object_type": vocab.LinguisticObject,
+                "classified_as": [row_type],
+                "label": (label, vocab.instances["english"]),
+                "identifiers": [self.helper.goupil_number_id(page, id_class=vocab.RowNumber)],
+            }
+
+            make_la_lo(row)
+            data["_text_rows"].append(row)
+            self.add_goupil_creation_data(row)
 
         return data
 
@@ -156,11 +201,15 @@ class GoupilPipeline(PipelineBase):
 
         # register project specific vocab here
         vocab.register_vocab_class(
-            "BookNumber", {"parent": model.Identifier, "id": "300445021", "label": "Book Number"}
+            "BookNumber", {"parent": model.Identifier, "id": "300445021", "label": "Book Numbers"}
         )
 
         vocab.register_vocab_class(
-            "PageNumber", {"parent": model.Identifier, "id": "300445022", "label": "Page Number"}
+            "PageNumber", {"parent": model.Identifier, "id": "300445022", "label": "Page Numbers"}
+        )
+
+        vocab.register_vocab_class(
+            "RowNumber", {"parent": model.Identifier, "id": "300445023", "label": "Entry Numbers"}
         )
 
         self.graph = None
@@ -207,6 +256,7 @@ class GoupilPipeline(PipelineBase):
                                     "stock_book_row": "row",
                                 },
                                 "prefixes": ("stock_book_no", "stock_book_gno", "stock_book_pg", "stock_book_row"),
+                                "postprocess": [filter_empty_book],
                             },
                             "artists": {
                                 "rename_keys": {
@@ -385,6 +435,7 @@ class GoupilPipeline(PipelineBase):
 
         books = self.add_books_chain(graph, sales_records)
         pages = self.add_pages_chain(graph, books)
+        rows = self.add_rows_chain(graph, pages)
 
         return sales_records
 
@@ -416,6 +467,16 @@ class GoupilPipeline(PipelineBase):
             self.add_serialization_chain(graph, textual_works.output, model=self.models["LinguisticObject"])
 
         return pages
+
+    def add_rows_chain(self, graph, pages, serialize=True):
+        rows = graph.add_chain(AddRows(static_instances=self.static_instances, helper=self.helper), _input=pages.output)
+
+        textual_works = graph.add_chain(ExtractKeyedValues(key="_text_rows"), _input=rows.output)
+
+        if serialize:
+            self.add_serialization_chain(graph, textual_works.output, model=self.models["LinguisticObject"])
+
+        return rows
 
     def _construct_graph(self, services=None):
         """

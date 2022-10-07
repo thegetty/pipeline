@@ -212,7 +212,7 @@ class GoupilPipeline(PipelineBase):
         )
 
         vocab.register_vocab_class(
-            "RowNumber", {"parent": model.Identifier, "id": "300445023", "label": "Entry Numbers"}
+            "RowNumber", {"parent": model.Identifier, "id": "300445023", "label": "Entry Number"}
         )
 
         self.graph = None

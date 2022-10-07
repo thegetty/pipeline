@@ -345,11 +345,11 @@ class GoupilPipeline(PipelineBase):
             _input=records.output,
         )
 
-        books = self.add_book_chain(graph, sales_records)
+        books = self.add_books_chain(graph, sales_records)
 
         return sales_records
 
-    def add_book_chain(self, graph, sales_records, serialize=True):
+    def add_books_chain(self, graph, sales_records, serialize=True):
         books = graph.add_chain(
             # add_book,
             AddBooks(static_instances=self.static_instances, helper=self.helper),

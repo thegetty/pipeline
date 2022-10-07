@@ -178,7 +178,11 @@ class AddRows(Configurable, GoupilProvenance):
                 "classified_as": [row_type],
                 "label": (label, vocab.instances["english"]),
                 "identifiers": [
-                    self.helper.goupil_number_id(page, id_class=vocab.RowNumber),
+                    self.helper.goupil_number_id(
+                        page,
+                        id_class=vocab.RowNumber,
+                        assignment_label="Entry Number Attribution by Goupil Gallery Ltd.",
+                    ),
                     self.helper.gpi_number_id(data["pi_record_no"], vocab.StarNumber),
                 ],
             }

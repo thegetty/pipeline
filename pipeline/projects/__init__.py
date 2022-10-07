@@ -971,11 +971,11 @@ class UtilityHelper:
 		k_id.assigned_by = assignment
 		return k_id
 
-	def goupil_number_id(self, content, id_class=None):
+	def goupil_number_id(self, content, id_class=None, assignment_label=None):
 		if id_class is None:
 			id_class = vocab.LocalNumber
 		g_id = id_class(ident='', content=content)
-		assignment = model.AttributeAssignment(ident='')
+		assignment = model.AttributeAssignment(ident='', label=assignment_label)
 		assignment.carried_out_by = self.static_instances.get_instance('Group', 'goupil')
 		g_id.assigned_by = assignment
 		return g_id

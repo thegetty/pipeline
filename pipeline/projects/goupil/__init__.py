@@ -177,7 +177,10 @@ class AddRows(Configurable, GoupilProvenance):
                 "object_type": vocab.LinguisticObject,
                 "classified_as": [row_type],
                 "label": (label, vocab.instances["english"]),
-                "identifiers": [self.helper.goupil_number_id(page, id_class=vocab.RowNumber)],
+                "identifiers": [
+                    self.helper.goupil_number_id(page, id_class=vocab.RowNumber),
+                    self.helper.gpi_number_id(data["pi_record_no"], vocab.StarNumber),
+                ],
             }
 
             make_la_lo(row)

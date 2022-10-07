@@ -97,7 +97,7 @@ class AddBooks(Configurable, GoupilProvenance):
             book_id, gno, page, row = record_id(b_data)
 
             book_type = model.Type(ident="http://vocab.getty.edu/aat/300028051", label="Book")
-            label = f"Goupil StockBook #{book_id}"
+            label = f"Goupil Stock Book {book_id}"
             book = {
                 "uri": self.helper.make_proj_uri("Text", "Book", book_id),
                 "object_type": vocab.LinguisticObject,
@@ -133,7 +133,7 @@ class AddPages(Configurable, GoupilProvenance):
                 continue
 
             page_type = model.Type(ident="http://vocab.getty.edu/aat/300194222", label="Page")
-            label = f"Goupil StockBook #{book_id}, Page #{page}"
+            label = f"Goupil Stock Book {book_id}, Page {page}"
 
             page = {
                 "uri": self.helper.make_proj_uri("Text", "Book", book_id, "Page", page),
@@ -170,7 +170,7 @@ class AddRows(Configurable, GoupilProvenance):
                 continue
 
             row_type = model.Type(ident="http://vocab.getty.edu/aat/300438434", label="Page")
-            label = f"Goupil StockBook #{book_id}, Page #{page}, Row #{row}"
+            label = f"Goupil Stock Book {book_id}, Page {page}, Row {row}"
 
             row = {
                 "uri": self.helper.make_proj_uri("Text", "Book", book_id, "Page", page, "Row", row),

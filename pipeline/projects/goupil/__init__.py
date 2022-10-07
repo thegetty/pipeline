@@ -396,12 +396,12 @@ class GoupilPipeline(PipelineBase):
         )
         # phys = graph.add_chain(ExtractKeyedValue(key="_physical_book"), _input=books.output)
 
-        text = graph.add_chain(ExtractKeyedValues(key="_book_records"), _input=books.output)
+        textual_works = graph.add_chain(ExtractKeyedValues(key="_book_records"), _input=books.output)
 
         if serialize:
             # self.add_serialization_chain(graph, act.output, model=self.models['ProvenanceEntry'])
             # self.add_serialization_chain(graph, phys.output, model=self.models["HumanMadeObject"])
-            self.add_serialization_chain(graph, text.output, model=self.models["LinguisticObject"])
+            self.add_serialization_chain(graph, textual_works.output, model=self.models["LinguisticObject"])
 
         return books
 

@@ -143,7 +143,13 @@ class AddPages(Configurable, GoupilProvenance):
                 "identifiers": [self.helper.goupil_number_id(page, id_class=vocab.PageNumber)],
             }
 
+            page.update({k: v for k, v in b_data.items() if k in ("no", "gno", "pg", "row")})
             make_la_lo(page)
+
+            o_book = get_crom_object(b_data)
+            o_page = get_crom_object(page)
+            o_page.part_of = o_book
+
             data["_text_pages"].append(page)
             self.add_goupil_creation_data(page)
 
@@ -157,15 +163,15 @@ class AddRows(Configurable, GoupilProvenance):
     static_instances = Option(default="static_instances")
 
     def __call__(self, data: dict, make_la_lo, make_la_hmo):
-        books = data.get("_book_records", [])
+        pages = data.get("_text_pages", [])
         data.setdefault("_text_rows", [])
 
-        for seq_no, b_data in enumerate(books):
-            book_id, _, page, row = record_id(b_data)
+        for seq_no, p_data in enumerate(pages):
+            book_id, _, page, row = record_id(p_data)
 
             if not row:
                 warnings.warn(
-                    f"Record with id {data['pi_record_no']}, has book with id {book_id} but no row assosiated with it."
+                    f"Record with id {data['pi_record_no']}, has page with number {page} but no row assosiated with it."
                 )
                 continue
 
@@ -188,6 +194,11 @@ class AddRows(Configurable, GoupilProvenance):
             }
 
             make_la_lo(row)
+
+            o_page = get_crom_object(p_data)
+            o_row = get_crom_object(row)
+            o_row.part_of = o_page
+
             data["_text_rows"].append(row)
             self.add_goupil_creation_data(row)
 

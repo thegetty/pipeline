@@ -108,6 +108,40 @@ class AddBooks(Configurable, GoupilProvenance):
         return data
 
 
+class AddPages(Configurable, GoupilProvenance):
+    helper = Option(required=True)
+    make_la_lo = Service("make_la_lo")
+    make_la_hmo = Service("make_la_hmo")
+    static_instances = Option(default="static_instances")
+
+    def __call__(self, data: dict, make_la_lo, make_la_hmo):
+        books = data.get("_book_records", [])
+        data.setdefault("_text_pages", [])
+
+        for seq_no, b_data in enumerate(books):
+            book_id, _, page, _ = record_id(b_data)
+
+            if not page:
+                continue
+
+            book_type = model.Type(ident="http://vocab.getty.edu/aat/300194222", label="Page")
+            label = f"Goupil StockBook #{book_id}, Page #{page}"
+
+            page = {
+                "uri": self.helper.make_proj_uri("Text", "Book", book_id, "Page", page),
+                "object_type": vocab.LinguisticObject,
+                "classified_as": [book_type],
+                "label": (label, vocab.instances["english"]),
+                "identifiers": [self.helper.goupil_number_id(page, id_class=vocab.PageNumber)],
+            }
+
+            make_la_lo(page)
+            data["_text_pages"].append(page)
+            self.add_goupil_creation_data(page)
+
+        return data
+
+
 class GoupilPipeline(PipelineBase):
     """Bonobo-based pipeline for transforming goupil data from CSV into JSON-LD."""
 
@@ -123,6 +157,10 @@ class GoupilPipeline(PipelineBase):
         # register project specific vocab here
         vocab.register_vocab_class(
             "BookNumber", {"parent": model.Identifier, "id": "300445021", "label": "Book Number"}
+        )
+
+        vocab.register_vocab_class(
+            "PageNumber", {"parent": model.Identifier, "id": "300445022", "label": "Page Number"}
         )
 
         self.graph = None
@@ -346,6 +384,7 @@ class GoupilPipeline(PipelineBase):
         )
 
         books = self.add_books_chain(graph, sales_records)
+        pages = self.add_pages_chain(graph, books)
 
         return sales_records
 
@@ -365,6 +404,18 @@ class GoupilPipeline(PipelineBase):
             self.add_serialization_chain(graph, text.output, model=self.models["LinguisticObject"])
 
         return books
+
+    def add_pages_chain(self, graph, books, serialize=True):
+        pages = graph.add_chain(
+            AddPages(static_instances=self.static_instances, helper=self.helper), _input=books.output
+        )
+
+        textual_works = graph.add_chain(ExtractKeyedValues(key="_text_pages"), _input=pages.output)
+
+        if serialize:
+            self.add_serialization_chain(graph, textual_works.output, model=self.models["LinguisticObject"])
+
+        return pages
 
     def _construct_graph(self, services=None):
         """

@@ -183,7 +183,7 @@ class AddRows(Configurable, GoupilProvenance):
                 )
                 continue
 
-            row_type = model.Type(ident="http://vocab.getty.edu/aat/300438434", label="Page")
+            row_type = model.Type(ident="http://vocab.getty.edu/aat/300438434", label="Row")
             label = f"Goupil Stock Book {book_id}, Page {page}, Row {row}"
 
             row = {

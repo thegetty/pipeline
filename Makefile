@@ -269,6 +269,7 @@ black: clean
 	isort --profile black pipeline/projects/goupil
 	black -l 120 pipeline/projects/goupil
 	black -l 120 goupil.py
+	black -l 120 tests/*_goupil_*.py
 
 upload:
 	./upload_to_arches.py

@@ -100,7 +100,7 @@ class AddBooks(Configurable, GoupilProvenance):
             label = f"Goupil Stock Book {book_id}"
             book = {
                 "uri": self.helper.make_proj_uri("Text", "Book", book_id),
-                "object_type": vocab.LinguisticObject,
+                "object_type": vocab.AccountBookText,
                 "classified_as": [book_type],
                 "label": (label, vocab.instances["english"]),
                 "identifiers": [self.helper.goupil_number_id(book_id, id_class=vocab.BookNumber)],
@@ -166,6 +166,14 @@ class AddRows(Configurable, GoupilProvenance):
         pages = data.get("_text_pages", [])
         data.setdefault("_text_rows", [])
 
+        notes = []
+        for k in ("working_note", "verbatim_notes", "editor notes", "no_name_notes"):
+            if data["object"].get(k):
+                notes.append(vocab.Note(ident="", content=data["object"][k]))
+
+        if data["object"].get("rosetta_handle"):
+            notes.append(vocab.WebPage(ident=data["object"]["rosetta_handle"], label=data["object"]["rosetta_handle"]))
+
         for seq_no, p_data in enumerate(pages):
             book_id, _, page, row = record_id(p_data)
 
@@ -191,6 +199,7 @@ class AddRows(Configurable, GoupilProvenance):
                     ),
                     self.helper.gpi_number_id(data["pi_record_no"], vocab.StarNumber),
                 ],
+                "referred_to_by": notes,
             }
 
             make_la_lo(row)
@@ -410,22 +419,11 @@ class GoupilPipeline(PipelineBase):
                                     "object_type",
                                     "materials",
                                     "dimensions",
-                                )
-                            },
-                            "object": {
-                                "properties": (
-                                    "title",
-                                    "description",
-                                    "subject",
-                                    "genre",
-                                    "object_type",
-                                    "materials",
-                                    "dimensions",
                                     "working_note",
                                     "verbatim_notes",
                                     "editor_notes",
                                     "no_name_notes",
-                                    "resetta_handle",
+                                    "rosetta_handle",
                                     "sale_location",
                                     "previous_owner",
                                     "previous_sale",

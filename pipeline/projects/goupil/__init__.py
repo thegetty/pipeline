@@ -97,7 +97,9 @@ class AddBooks(Configurable, GoupilProvenance):
             book_id, gno, page, row = record_id(b_data)
 
             book_type = model.Type(ident="http://vocab.getty.edu/aat/300028051", label="Book")
+            book_type.classified_as = model.Type(ident="http://vocab.getty.edu/aat/300444970", label="Form")
             label = f"Goupil Stock Book {book_id}"
+
             book = {
                 "uri": self.helper.make_proj_uri("Text", "Book", book_id),
                 "object_type": vocab.AccountBookText,
@@ -133,11 +135,12 @@ class AddPages(Configurable, GoupilProvenance):
                 continue
 
             page_type = model.Type(ident="http://vocab.getty.edu/aat/300194222", label="Page")
+            page_type.classified_as = model.Type(ident="http://vocab.getty.edu/aat/300444970", label="Form")
             label = f"Goupil Stock Book {book_id}, Page {page}"
 
             page = {
                 "uri": self.helper.make_proj_uri("Text", "Book", book_id, "Page", page),
-                "object_type": vocab.LinguisticObject,
+                "object_type": vocab.AccountBookText,
                 "classified_as": [page_type],
                 "label": (label, vocab.instances["english"]),
                 "identifiers": [self.helper.goupil_number_id(page, id_class=vocab.PageNumber)],
@@ -183,12 +186,13 @@ class AddRows(Configurable, GoupilProvenance):
                 )
                 continue
 
-            row_type = model.Type(ident="http://vocab.getty.edu/aat/300438434", label="Row")
+            row_type = model.Type(ident="http://vocab.getty.edu/aat/300438434", label="Entry")
+            row_type.classified_as = model.Type(ident="http://vocab.getty.edu/aat/300444970", label="Form")
             label = f"Goupil Stock Book {book_id}, Page {page}, Row {row}"
 
             row = {
                 "uri": self.helper.make_proj_uri("Text", "Book", book_id, "Page", page, "Row", row),
-                "object_type": vocab.LinguisticObject,
+                "object_type": vocab.AccountBookText,
                 "classified_as": [row_type],
                 "label": (label, vocab.instances["english"]),
                 "identifiers": [

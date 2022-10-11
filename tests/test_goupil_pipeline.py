@@ -7,7 +7,7 @@ import json
 import uuid
 import pprint
 
-from tests import TestWriter, GoupilTestPipeline, MODELS, classification_sets
+from tests import TestWriter, GoupilTestPipeline, MODELS, classification_tree
 from cromulent import vocab
 
 vocab.add_attribute_assignment_check()
@@ -62,28 +62,68 @@ class TestGoupilPipelineOutput(unittest.TestCase):
         lo3 = los["tag:getty.edu,2019:digital:pipeline:REPLACE-WITH-UUID:goupil#Text,Book,15,Page,63,Row,3"]
         lo4 = los["tag:getty.edu,2019:digital:pipeline:REPLACE-WITH-UUID:goupil#Text,Book,14"]
 
-        self.assertEqual(classification_sets(lo1), {"Account Book", "Book"})
-        self.assertEqual(
-            classification_sets(lo1, key="id"),
-            {"http://vocab.getty.edu/aat/300027483", "http://vocab.getty.edu/aat/300028051"},
+        # import pdb
+
+        # pdb.set_trace()
+
+        self.assertDictEqual(
+            classification_tree(lo1),
+            {
+                "Account Book": {"Type of Work": {}},
+                "Book": {"Form": {}},
+            },
+        )
+        self.assertDictEqual(
+            classification_tree(lo1, key="id"),
+            {
+                "http://vocab.getty.edu/aat/300027483": {"http://vocab.getty.edu/aat/300435443": {}},
+                "http://vocab.getty.edu/aat/300028051": {"http://vocab.getty.edu/aat/300444970": {}},
+            },
         )
 
-        self.assertEqual(classification_sets(lo4), {"Account Book", "Book"})
-        self.assertEqual(
-            classification_sets(lo4, key="id"),
-            {"http://vocab.getty.edu/aat/300027483", "http://vocab.getty.edu/aat/300028051"},
+        self.assertDictEqual(
+            classification_tree(lo4),
+            {
+                "Account Book": {"Type of Work": {}},
+                "Book": {"Form": {}},
+            },
+        )
+        self.assertDictEqual(
+            classification_tree(lo4, key="id"),
+            {
+                "http://vocab.getty.edu/aat/300027483": {"http://vocab.getty.edu/aat/300435443": {}},
+                "http://vocab.getty.edu/aat/300028051": {"http://vocab.getty.edu/aat/300444970": {}},
+            },
         )
 
-        self.assertEqual(classification_sets(lo2), {"Page"})
-        self.assertEqual(
-            classification_sets(lo2, key="id"),
-            {"http://vocab.getty.edu/aat/300194222"},
+        self.assertDictEqual(
+            classification_tree(lo2),
+            {
+                "Account Book": {"Type of Work": {}},
+                "Page": {"Form": {}},
+            },
+        )
+        self.assertDictEqual(
+            classification_tree(lo2, key="id"),
+            {
+                "http://vocab.getty.edu/aat/300027483": {"http://vocab.getty.edu/aat/300435443": {}},
+                "http://vocab.getty.edu/aat/300194222": {"http://vocab.getty.edu/aat/300444970": {}},
+            },
         )
 
-        self.assertEqual(classification_sets(lo3), {"Row"})
-        self.assertEqual(
-            classification_sets(lo3, key="id"),
-            {"http://vocab.getty.edu/aat/300438434"},
+        self.assertDictEqual(
+            classification_tree(lo3),
+            {
+                "Account Book": {"Type of Work": {}},
+                "Entry": {"Form": {}},
+            },
+        )
+        self.assertDictEqual(
+            classification_tree(lo3, key="id"),
+            {
+                "http://vocab.getty.edu/aat/300027483": {"http://vocab.getty.edu/aat/300435443": {}},
+                "http://vocab.getty.edu/aat/300438434": {"http://vocab.getty.edu/aat/300444970": {}},
+            },
         )
 
         self.assertEqual(len(lo3["referred_to_by"]), 1)

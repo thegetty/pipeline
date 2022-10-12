@@ -26,6 +26,7 @@ from pipeline.linkedart import (
 from pipeline.nodes.basic import KeyManagement, RecordCounter
 from pipeline.projects import PersonIdentity, PipelineBase, UtilityHelper
 from pipeline.projects.knoedler import add_crom_price
+from pipeline.provenance import ProvenanceBase
 from pipeline.util import (
     ExtractKeyedValue,
     ExtractKeyedValues,
@@ -69,6 +70,47 @@ class GoupilProvenance:
 
         return creation
 
+    def model_object_artists(self, data: dict, artists: dict):
+
+        for seq_no, a_data in enumerate(artists):
+            auth_name = a_data.get("auth_name")
+            ulan = a_data.get("ulan_id")
+            name = a_data.get("name")
+            nationality = a_data.get("nationality")
+
+            a_data.update({"ulan": ulan, "label": auth_name, "role_label": "artist"})
+
+            artist = self.helper.add_person(a_data, record=auth_name, relative_id=f"artist-{seq_no}")
+
+    def model_artists_with_modifers(self, data: dict, hmo: dict):
+        # mofifiers are not yet to be modelled but we leave this function here as a placeholder
+
+        artists = data.get("_artists", [])
+        for a in artists:
+            # might update the dict here
+            pass
+
+        self.model_object_artists(data, artists)
+
+        return data
+
+
+class AddArtists(Configurable, GoupilProvenance):
+    helper = Option(required=True)
+    make_la_person = Service("make_la_person")
+
+    def add_properties(self, data: dict, a: dict):
+        pass
+
+    def __call__(self, data: dict, *, make_la_person):
+        hmo = get_crom_object(data["_object"])
+
+        # nice trick, might keep
+        data["_record"] = data["_object"]
+
+        self.model_artists_with_modifers(data, hmo)
+        return data
+
 
 class GoupilUtilityHelper(UtilityHelper):
     """
@@ -86,6 +128,11 @@ class GoupilUtilityHelper(UtilityHelper):
         uri_key = list(uri_key)
         uri = self.make_proj_uri(*uri_key)
         return uri
+
+    def add_person(self, data, record: None, relative_id, **kwargs):
+        self.person_identity.add_uri(data, record_id=relative_id)
+        person = super().add_person(data, relative_id=relative_id, **kwargs)
+        return person
 
 
 class PopulateGoupilObject(Configurable, PopulateObject):
@@ -359,13 +406,14 @@ class GoupilPipeline(PipelineBase):
                                 "prefixes": ("stock_book_no", "stock_book_gno", "stock_book_pg", "stock_book_row"),
                                 "postprocess": [filter_empty_book],
                             },
-                            "artists": {
+                            "_artists": {
                                 "rename_keys": {
                                     "artist_name": "name",
                                     "art_authority": "auth_name",
                                     "attribution_mod": "attrib_mod",
                                     "attribution_auth_mod": "attrib_mod_auth",
                                     "artist_ulan_id": "ulan_id",
+                                    "nationality": "nationality",
                                 },
                                 "prefixes": (
                                     "artist_name",
@@ -373,6 +421,7 @@ class GoupilPipeline(PipelineBase):
                                     "attribution_mod",
                                     "attribution_auth_mod",
                                     "artist_ulan_id",
+                                    "nationality",
                                 ),
                             },
                             "prices": {
@@ -532,12 +581,16 @@ class GoupilPipeline(PipelineBase):
         return sales_records
 
     def add_objects_chain(self, graph, rows, serialize=True):
-        objects = graph.add_chain(PopulateGoupilObject(helper=self.helper), _input=rows.output)
+        objects = graph.add_chain(
+            PopulateGoupilObject(helper=self.helper), AddArtists(helper=self.helper), _input=rows.output
+        )
 
         odata = graph.add_chain(ExtractKeyedValue(key="_object"), _input=objects.output)
+        artists = graph.add_chain(ExtractKeyedValues(key="_artists"), _input=objects.output)
 
         if serialize:
-            self.add_person_or_group_chain(graph, odata, key="_organizations")
+            self.add_person_or_group_chain(graph, odata, key="_organizations")  # organizations are groups too!
+            self.add_person_or_group_chain(graph, artists)
 
         return objects
 

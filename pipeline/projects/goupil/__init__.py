@@ -4,6 +4,7 @@ import sys
 import timeit
 import warnings
 from collections import defaultdict
+from contextlib import suppress
 
 import bonobo
 from bonobo.config import Configurable, Option, Service
@@ -18,12 +19,14 @@ from pipeline.linkedart import (
     MakeLinkedArtLinguisticObject,
     MakeLinkedArtOrganization,
     MakeLinkedArtPerson,
+    PopulateObject,
     add_crom_data,
     get_crom_object,
 )
 from pipeline.nodes.basic import KeyManagement, RecordCounter
 from pipeline.projects import PersonIdentity, PipelineBase, UtilityHelper
 from pipeline.projects.knoedler import add_crom_price
+from pipeline.provenance import ProvenanceBase
 from pipeline.util import (
     ExtractKeyedValue,
     ExtractKeyedValues,
@@ -31,6 +34,7 @@ from pipeline.util import (
     MatchingFiles,
     strip_key_prefix,
 )
+from pipeline.util.cleaners import parse_location_name
 
 
 def filter_empty_book(data: dict, _):
@@ -66,6 +70,47 @@ class GoupilProvenance:
 
         return creation
 
+    def model_object_artists(self, data: dict, artists: dict):
+
+        for seq_no, a_data in enumerate(artists):
+            auth_name = a_data.get("auth_name")
+            ulan = a_data.get("ulan_id")
+            name = a_data.get("name")
+            nationality = a_data.get("nationality")
+
+            a_data.update({"ulan": ulan, "label": auth_name, "role_label": "artist"})
+
+            artist = self.helper.add_person(a_data, record=auth_name, relative_id=f"artist-{seq_no}")
+
+    def model_artists_with_modifers(self, data: dict, hmo: dict):
+        # mofifiers are not yet to be modelled but we leave this function here as a placeholder
+
+        artists = data.get("_artists", [])
+        for a in artists:
+            # might update the dict here
+            pass
+
+        self.model_object_artists(data, artists)
+
+        return data
+
+
+class AddArtists(Configurable, GoupilProvenance):
+    helper = Option(required=True)
+    make_la_person = Service("make_la_person")
+
+    def add_properties(self, data: dict, a: dict):
+        pass
+
+    def __call__(self, data: dict, *, make_la_person):
+        hmo = get_crom_object(data["_object"])
+
+        # nice trick, might keep
+        data["_record"] = data["_object"]
+
+        self.model_artists_with_modifers(data, hmo)
+        return data
+
 
 class GoupilUtilityHelper(UtilityHelper):
     """
@@ -77,11 +122,83 @@ class GoupilUtilityHelper(UtilityHelper):
         self.person_identity = GoupilPersonIdentity(
             make_shared_uri=self.make_shared_uri, make_proj_uri=self.make_proj_uri
         )
+        self.uid_tag_prefix = self.proj_prefix
 
     def make_object_uri(self, pi_rec_no, *uri_key):
         uri_key = list(uri_key)
         uri = self.make_proj_uri(*uri_key)
         return uri
+
+    def add_person(self, data, record: None, relative_id, **kwargs):
+        self.person_identity.add_uri(data, record_id=relative_id)
+        person = super().add_person(data, relative_id=relative_id, **kwargs)
+        return person
+
+
+class PopulateGoupilObject(Configurable, PopulateObject):
+    helper = Option(required=True)
+    make_la_org = Service("make_la_or")
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+
+    def __call__(self, data: dict, *, make_la_org):
+        data.setdefault("_object", {})
+        data["_object"].setdefault("_organizations", [])
+        odata = data["object"]
+        data["_object"].update({k: v for k, v in odata.items() if k in ("present_location")})
+
+        self._populate_object_present_location(data["_object"])
+
+        return data
+
+    def _populate_object_present_location(self, data: dict):
+        present_location = data.get("present_location")
+
+        if present_location:
+            loc = present_location.get("geog")
+
+            if loc:
+                current = parse_location_name(loc, uri_base=self.helper.uid_tag_prefix)
+                inst = present_location.get("inst")
+                if inst:
+                    ulan = None
+                    # TODO remove the following in time
+                    ulan_id = present_location.get("ulan_id")
+                    with suppress(ValueError, KeyError):
+                        if ulan_id:
+                            ulan = int(present_location.get("ulan_id"))
+
+                    label = f"{inst} ({loc})"
+                    uri = (
+                        self.helper.make_proj_uri("ORG", "ULAN", ulan)
+                        if ulan
+                        else self.helper.make_proj_uri("ORG", "NAME", inst, "PLACE", loc)
+                    )
+                else:
+                    import pprint
+
+                    warnings.warn(
+                        f"*** Object present location data has a location, but not an institution: {pprint.pformat(data)}"
+                    )
+                    label = "(Anonymous organization)"
+                    uri = self.helper.make_proj_uri("ORG", "CURR-OWN", loc)
+
+                org_data = {
+                    "label": label,
+                    "uri": uri,
+                    "identifiers": [vocab.PrimaryName(ident="", content=inst)],
+                    "ulan": ulan,
+                }
+
+                make_la_org = MakeLinkedArtOrganization()
+                org_data = make_la_org(org_data)
+
+                # TODO org place?
+
+                data["_organizations"].append(org_data)
+            else:
+                pass
 
 
 class AddBooks(Configurable, GoupilProvenance):
@@ -289,13 +406,14 @@ class GoupilPipeline(PipelineBase):
                                 "prefixes": ("stock_book_no", "stock_book_gno", "stock_book_pg", "stock_book_row"),
                                 "postprocess": [filter_empty_book],
                             },
-                            "artists": {
+                            "_artists": {
                                 "rename_keys": {
                                     "artist_name": "name",
                                     "art_authority": "auth_name",
                                     "attribution_mod": "attrib_mod",
                                     "attribution_auth_mod": "attrib_mod_auth",
                                     "artist_ulan_id": "ulan_id",
+                                    "nationality": "nationality",
                                 },
                                 "prefixes": (
                                     "artist_name",
@@ -303,6 +421,7 @@ class GoupilPipeline(PipelineBase):
                                     "attribution_mod",
                                     "attribution_auth_mod",
                                     "artist_ulan_id",
+                                    "nationality",
                                 ),
                             },
                             "prices": {
@@ -414,6 +533,16 @@ class GoupilPipeline(PipelineBase):
                                     "cost_number",
                                 ),
                             },
+                            "present_location": {
+                                "postprocess": lambda x, _: strip_key_prefix("present_loc_", x),
+                                "properties": (
+                                    "present_loc_geog",
+                                    "present_loc_inst",
+                                    "present_loc_acc",
+                                    "present_loc_note",
+                                    "present_loc_ulan_id",
+                                ),
+                            },
                             "object": {
                                 "properties": (
                                     "title",
@@ -433,17 +562,8 @@ class GoupilPipeline(PipelineBase):
                                     "previous_sale",
                                     "post_owner",
                                     "post_sale",
+                                    "present_location",
                                 )
-                            },
-                            "present_location": {
-                                "postprocess": lambda x, _: strip_key_prefix("present_loc_", x),
-                                "properties": (
-                                    "present_loc_geog",
-                                    "present_loc_inst",
-                                    "present_loc_acc",
-                                    "present_loc_note",
-                                    "present_loc_ulan_id",
-                                ),
                             },
                         },
                     }
@@ -456,8 +576,23 @@ class GoupilPipeline(PipelineBase):
         books = self.add_books_chain(graph, sales_records)
         pages = self.add_pages_chain(graph, books)
         rows = self.add_rows_chain(graph, pages)
+        objects = self.add_objects_chain(graph, rows)
 
         return sales_records
+
+    def add_objects_chain(self, graph, rows, serialize=True):
+        objects = graph.add_chain(
+            PopulateGoupilObject(helper=self.helper), AddArtists(helper=self.helper), _input=rows.output
+        )
+
+        odata = graph.add_chain(ExtractKeyedValue(key="_object"), _input=objects.output)
+        artists = graph.add_chain(ExtractKeyedValues(key="_artists"), _input=objects.output)
+
+        if serialize:
+            self.add_person_or_group_chain(graph, odata, key="_organizations")  # organizations are groups too!
+            self.add_person_or_group_chain(graph, artists)
+
+        return objects
 
     def add_books_chain(self, graph, sales_records, serialize=True):
         books = graph.add_chain(

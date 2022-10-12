@@ -573,11 +573,16 @@ class TestGoupilPipelineOutput(unittest.TestCase):
 		data = self.data.copy()
 		
 		tests_path = Path(f'tests/data/goupil/{test_name}')
-		files = list(tests_path.rglob('goupil_ar*'))
+		
+		files = list(tests_path.rglob('goupil_[!0]*'))
+		headers = list(tests_path.rglob('goupil_0*'))
 		
 		if files:
-			data['files_pattern'] = str(tests_path / 'goupil_ar*')
-
+			data['files_pattern'] = str(tests_path / 'goupil_[!0]*')
+		
+		if headers:
+			data['header_file'] = str(headers[0])
+		
 		writer = TestWriter()
 		pipeline = GoupilTestPipeline(
 				writer,

@@ -22,6 +22,7 @@ from pipeline.linkedart import (
     PopulateObject,
     add_crom_data,
     get_crom_object,
+    get_crom_objects
 )
 from pipeline.nodes.basic import KeyManagement, RecordCounter
 from pipeline.projects import PersonIdentity, PipelineBase, UtilityHelper
@@ -80,7 +81,7 @@ class GoupilProvenance:
 
             a_data.update({"ulan": ulan, "label": auth_name, "role_label": "artist"})
 
-            artist = self.helper.add_person(a_data, record=auth_name, relative_id=f"artist-{seq_no}")
+            artist = self.helper.add_person(a_data, record=get_crom_objects(data['_text_rows']), relative_id=f"artist-{seq_no}")
 
     def model_artists_with_modifers(self, data: dict, hmo: dict):
         # mofifiers are not yet to be modelled but we leave this function here as a placeholder
@@ -112,7 +113,7 @@ class GoupilProvenance:
             auth_name = p_data.get("auth_name")
             ulan = p_data.get("ulan_id")
             p_data.update({"ulan": ulan})
-            person = self.helper.add_person(p_data, record=auth_name, relative_id=f"person-{seq_no}")
+            person = self.helper.add_person(p_data, record=get_crom_objects(data['_text_rows']), relative_id=f"person-{seq_no}")
             add_crom_data(p_data, person)
             data["_people"].append(p_data)
 
@@ -198,7 +199,7 @@ class GoupilUtilityHelper(UtilityHelper):
 
     def add_person(self, data, record: None, relative_id, **kwargs):
         self.person_identity.add_uri(data, record_id=relative_id)
-        person = super().add_person(data, relative_id=relative_id, **kwargs)
+        person = super().add_person(data, record=record, relative_id=relative_id, **kwargs)
         return person
 
     def copy_source_information(self, dst: dict, src: dict):

@@ -21,6 +21,12 @@ def get_crom_object(data: dict):
 		return None
 	return data.get('_LOD_OBJECT')
 
+def get_crom_objects(data: list):
+	r = list()
+	for d in data:
+		r.append(d.get('_LOD_OBJECT'))
+	return r
+	
 def remove_crom_object(data: dict):
 	with suppress(KeyError):
 		del data['_LOD_OBJECT']

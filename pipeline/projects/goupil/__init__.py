@@ -22,7 +22,7 @@ from pipeline.linkedart import (
     PopulateObject,
     add_crom_data,
     get_crom_object,
-    get_crom_objects
+    get_crom_objects,
 )
 from pipeline.nodes.basic import KeyManagement, RecordCounter
 from pipeline.projects import PersonIdentity, PipelineBase, UtilityHelper
@@ -78,10 +78,18 @@ class GoupilProvenance:
             ulan = a_data.get("ulan_id")
             name = a_data.get("name")
             nationality = a_data.get("nationality")
+            places = []
+            if a_data.get("location"):
+                places.append(a_data.get("location"))
 
-            a_data.update({"ulan": ulan, "label": auth_name, "role_label": "artist"})
+            if a_data.get("auth_location"):
+                places.append(a_data.get("auth_location"))
 
-            artist = self.helper.add_person(a_data, record=get_crom_objects(data['_text_rows']), relative_id=f"artist-{seq_no}")
+            a_data.update({"ulan": ulan, "label": auth_name, "role_label": "artist", "places": places})
+
+            artist = self.helper.add_person(
+                a_data, record=get_crom_objects(data["_text_rows"]), relative_id=f"artist-{seq_no}"
+            )
 
     def model_artists_with_modifers(self, data: dict, hmo: dict):
         # mofifiers are not yet to be modelled but we leave this function here as a placeholder
@@ -112,8 +120,18 @@ class GoupilProvenance:
         for seq_no, p_data in enumerate(participants):
             auth_name = p_data.get("auth_name")
             ulan = p_data.get("ulan_id")
-            p_data.update({"ulan": ulan})
-            person = self.helper.add_person(p_data, record=get_crom_objects(data['_text_rows']), relative_id=f"person-{seq_no}")
+            places = [p_data.get("location"), p_data.get("auth_location")]
+            places = []
+            if p_data.get("location"):
+                places.append(p_data.get("location"))
+
+            if p_data.get("auth_location"):
+                places.append(p_data.get("auth_location"))
+
+            p_data.update({"ulan": ulan, "places": places})
+            person = self.helper.add_person(
+                p_data, record=get_crom_objects(data["_text_rows"]), relative_id=f"person-{seq_no}"
+            )
             add_crom_data(p_data, person)
             data["_people"].append(p_data)
 

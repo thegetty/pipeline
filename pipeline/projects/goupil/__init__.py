@@ -94,13 +94,80 @@ class GoupilProvenance:
 
         return data
 
+    def _prov_entry(
+        self,
+        data,
+        date_key,
+        participants,
+        price_info=None,
+        knoedler_price_part=None,
+        shared_people=None,
+        incoming=False,
+        purpose=None,
+        buy_sell_modifiers=None,
+    ):
+        data.setdefault("_people", [])
+
+        for seq_no, p_data in enumerate(participants):
+            auth_name = p_data.get("auth_name")
+            ulan = p_data.get("ulan_id")
+            p_data.update({"ulan": ulan})
+            person = self.helper.add_person(p_data, record=auth_name, relative_id=f"person-{seq_no}")
+            add_crom_data(p_data, person)
+            data["_people"].append(p_data)
+
+    def add_incoming_tx(self, data, buy_sell_modifiers):
+        price_info = data.get("purchase")
+        sellers = data["sellers"]
+        for person in sellers:
+            self.helper.copy_source_information(person, data)
+
+        tx = self._prov_entry(data, "entry_date", sellers)
+
+    def add_outging_tx(self, data, buy_sell_modifiers):
+        price_info = data.get("purchase")
+        buyers = data["buyers"]
+
+        for person in buyers:
+            self.helper.copy_source_information(person, data)
+
+        tx = self._prov_entry(data, "entry_date", buyers)
+
+    def model_prev_owners(self, data, prev_owners, tx, lot_object_key):
+        pass
+
+
+class ModelSale(Configurable, GoupilProvenance):
+    """ """
+
+    helper = Option(required=True)
+    make_la_person = Service("make_la_person")
+
+    def __call__(self, data: dict, make_la_person, buy_sell_modifiers=None, in_tx=None, out_tx=None):
+        sellers = data["sellers"]
+        buyers = data["buyers"]
+
+        if not in_tx:
+            if len(sellers):
+                in_tx = self.add_incoming_tx(data, buy_sell_modifiers)
+            else:
+                pass
+
+        if not out_tx:
+            if len(buyers):
+                out_tx = self.add_outging_tx(data, buy_sell_modifiers)
+            else:
+                pass
+
+        yield data
+
 
 class AddArtists(Configurable, GoupilProvenance):
     helper = Option(required=True)
     make_la_person = Service("make_la_person")
 
     def add_properties(self, data: dict, a: dict):
-        pass
+        a.update({"pi_record_no": data["pi_record_no"]})
 
     def __call__(self, data: dict, *, make_la_person):
         hmo = get_crom_object(data["_object"])
@@ -133,6 +200,14 @@ class GoupilUtilityHelper(UtilityHelper):
         self.person_identity.add_uri(data, record_id=relative_id)
         person = super().add_person(data, relative_id=relative_id, **kwargs)
         return person
+
+    def copy_source_information(self, dst: dict, src: dict):
+        if not dst or not isinstance(dst, dict):
+            return dst
+        for k in ["pi_record_no"]:
+            with suppress(KeyError):
+                dst[k] = src[k]
+        return dst
 
 
 class PopulateGoupilObject(Configurable, PopulateObject):
@@ -463,19 +538,17 @@ class GoupilPipeline(PipelineBase):
                                 "rename_keys": {
                                     "buyer_name": "name",
                                     "buyer_loc": "location",
-                                    "buyer_mod": "mod",
                                     "buy_auth_name": "auth_name",
                                     "buy_auth_addr": "auth_location",
-                                    "buy_mod_auth": "auth_mod",
+                                    "buy_auth_mod": "auth_mod",
                                     "buyer_ulan_id": "ulan_id",
                                 },
                                 "prefixes": (
                                     "buyer_name",
                                     "buyer_loc",
-                                    "buyer_mod",
                                     "buy_auth_name",
                                     "buy_auth_addr",
-                                    "buy_mod_auth",
+                                    "buy_auth_mod",
                                     "buyer_ulan_id",
                                 ),
                             },
@@ -578,7 +651,15 @@ class GoupilPipeline(PipelineBase):
         rows = self.add_rows_chain(graph, pages)
         objects = self.add_objects_chain(graph, rows)
 
-        return sales_records
+        return objects
+
+    def add_transaction_chains(self, graph, tx, services, serialize=True):
+        sale = graph.add_chain(ModelSale(helper=self.helper), _input=tx.output)
+
+        people = graph.add_chain(ExtractKeyedValues(key="_people"), _input=sale.output)
+
+        if serialize:
+            self.add_person_or_group_chain(graph, people)
 
     def add_objects_chain(self, graph, rows, serialize=True):
         objects = graph.add_chain(
@@ -643,7 +724,9 @@ class GoupilPipeline(PipelineBase):
             MatchingFiles(path="/", pattern=self.files_pattern, fs="fs.data.goupil"),
             CurriedCSVReader(fs="fs.data.goupil", limit=self.limit, field_names=self.headers),
         )
+
         sales = self.add_sales_chain(g, contents_records, services, serialize=True)
+        self.add_transaction_chains(g, sales, services)
 
         self.graph = g
         return sales

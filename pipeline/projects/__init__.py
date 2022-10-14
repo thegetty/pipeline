@@ -144,7 +144,10 @@ class PersonIdentity:
 		else:
 			self.make_la_person(a)
 		p = get_crom_object(a)
-		if record:
+		if isinstance(record, list):
+			for r in record:
+				p.referred_to_by = r
+		elif record:
 			p.referred_to_by = record
 		return p
 
@@ -403,7 +406,10 @@ class PersonIdentity:
 				role_label = f'{role} “{auth_name}”'
 			data.setdefault('label', auth_name)
 			pname = vocab.make_multitype_obj(*name_types, ident='', content=auth_name) # NOTE: most of these are also vocab.SortName, but not 100%, so witholding that assertion for now
-			if referrer:
+			if isinstance(referrer, list):
+				for r in referrer:
+					pname.referred_to_by = r
+			elif referrer:
 				pname.referred_to_by = referrer
 			data['identifiers'].append(pname)
 
@@ -424,7 +430,9 @@ class PersonIdentity:
 			name_kwargs = {}
 # 			name_kwargs['classified_as'] = model.Type(ident='http://vocab.getty.edu/aat/300266386', label='Personal Name')
 			name_kwargs['classified_as'] = personalNameType
-			if referrer:
+			if isinstance(referrer, list):
+				name_kwargs['referred_to_by'] = referrer
+			elif referrer:
 				name_kwargs['referred_to_by'] = [referrer]
 			data['names'].append((name, name_kwargs))
 			data.setdefault('label', name)

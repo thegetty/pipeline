@@ -128,7 +128,11 @@ class GoupilProvenance:
             if p_data.get("auth_location"):
                 places.append(p_data.get("auth_location"))
 
-            p_data.update({"ulan": ulan, "places": places})
+            mods_note = None
+            if p_data.get("auth_mod"):
+                mods_note = vocab.Note(content=p_data.get("auth_mod"))
+
+            p_data.update({"ulan": ulan, "places": places, "referred_to_by": [mods_note]})
             person = self.helper.add_person(
                 p_data, record=get_crom_objects(data["_text_rows"]), relative_id=f"person-{seq_no}"
             )

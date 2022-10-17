@@ -23,7 +23,7 @@ vocab.add_attribute_assignment_check()
 class PIRModelingTest_AR185(TestGoupilPipelineOutput):
     def test_modeling_ar185(self):
         """
-        AR-185 : Add modelling for Goupil Artists
+        AR-185 : Add person modelling for Goupil Artists
         """
         output = self.run_pipeline("ar185")
         artists = output["model-person"]
@@ -49,7 +49,7 @@ class PIRModelingTest_AR185(TestGoupilPipelineOutput):
 
     def test_modeling_ar185_2(self):
         """
-        AR-185 : Add modelling for Sellers and Buyers
+        AR-185 : Add person modelling for Sellers and Buyers
         """
         output = self.run_pipeline("ar185")
         people = output["model-person"]
@@ -89,6 +89,32 @@ class PIRModelingTest_AR185(TestGoupilPipelineOutput):
 
         self.assertEqual(len(buyer2["exact_match"]), 1)  # has ulan link
         self.assertEqual(buyer2["exact_match"][0]["id"], "http://vocab.getty.edu/ulan/500447929")
+
+    def test_modeling_ar185_3(self):
+        """
+        AR-185 : Add person modelling for prev and post buyers
+        """
+        output = self.run_pipeline("ar185")
+        people = output["model-person"]
+
+        # easy to test wait feedback
+        pass
+
+    def test_modeling_ar185_4(self):
+        """
+        AR-185 : Add person modelling for joint ownership
+        """
+        output = self.run_pipeline("ar185")
+        people = output["model-person"]
+
+        person1 = people["tag:getty.edu,2019:digital:pipeline:REPLACE-WITH-UUID:goupil#PERSON,PI,G-43741,shared-own_1"]
+        person2 = people["tag:getty.edu,2019:digital:pipeline:REPLACE-WITH-UUID:goupil#PERSON,PI,G-42810,shared-own_1"]
+
+        self.assertEqual(person1["_label"], "G. Petit")
+        self.assertEqual(person1["referred_to_by"][0]["_label"], "Goupil Stock Book 15, Page 332, Row 3")
+
+        self.assertEqual(person2["_label"], "Allard")
+        self.assertEqual(person2["referred_to_by"][0]["_label"], "Goupil Stock Book 15, Page 264, Row 2")
 
 
 if __name__ == "__main__":

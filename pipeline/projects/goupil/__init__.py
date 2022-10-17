@@ -97,7 +97,7 @@ class GoupilProvenance:
                     "ulan": ulan,
                     "label": auth_name,
                     "role_label": "artist",
-                    "places": places,
+                    # "places": places,
                     "referred_to_by": mod_notes,
                 }
             )
@@ -147,12 +147,30 @@ class GoupilProvenance:
             if p_data.get("auth_mod"):
                 mods_note = vocab.Note(content=p_data.get("auth_mod"))
 
-            p_data.update({"ulan": ulan, "places": places, "referred_to_by": [mods_note]})
+            p_data.update(
+                {
+                    "ulan": ulan,
+                    "referred_to_by": [mods_note],
+                }
+            )
             person = self.helper.add_person(
                 p_data, record=get_crom_objects(data["_text_rows"]), relative_id=f"person-{seq_no}"
             )
             add_crom_data(p_data, person)
             data["_people"].append(p_data)
+
+        if shared_people == None:
+            shared_people = []
+
+        if shared_people:
+            for i, p in enumerate(shared_people):
+                role = "shared-own"
+                p_data = self.helper.copy_source_information(p, data)
+                person = self.helper.add_person(
+                    p_data, record=get_crom_objects(data["_text_rows"]), relative_id=f"{role}_{i+1}"
+                )
+                add_crom_data(p_data, person)
+                data["_people"].append(p_data)
 
     def add_incoming_tx(self, data, buy_sell_modifiers):
         price_info = data.get("purchase")
@@ -160,7 +178,12 @@ class GoupilProvenance:
         for person in sellers:
             self.helper.copy_source_information(person, data)
 
-        tx = self._prov_entry(data, "entry_date", sellers)
+        tx = self._prov_entry(data, "entry_date", sellers, shared_people=data.get("co_owners", []))
+
+        prev_owner = data.get("prev_own")
+
+        if prev_owner:
+            self.model_prev_post_owners(data, [prev_owner], tx, "prev_own")
 
     def add_outging_tx(self, data, buy_sell_modifiers):
         price_info = data.get("purchase")
@@ -171,8 +194,17 @@ class GoupilProvenance:
 
         tx = self._prov_entry(data, "entry_date", buyers)
 
-    def model_prev_owners(self, data, prev_owners, tx, lot_object_key):
-        pass
+        post_owner = data.get("post_own")
+
+        if post_owner:
+            self.model_prev_post_owners(data, [post_owner], tx, "post_own")
+
+    def model_prev_post_owners(self, data, owners, tx, role, lot_object_key=None):
+        for i, p in enumerate(owners):
+            p_data = self.helper.copy_source_information(p, data)
+            person = self.helper.add_person(p_data, record=None, relative_id=f"{role}_{i+1}")
+            add_crom_data(p_data, person)
+            data["_people"].append(p_data)
 
 
 class ModelSale(Configurable, GoupilProvenance):
@@ -566,9 +598,9 @@ class GoupilPipeline(PipelineBase):
                             },
                             "co_owners": {
                                 "rename_keys": {
-                                    "joint_own": "co_owner_name",
-                                    "joint_own_sh": "co_owner_share",
-                                    "joint_ulan_id": "co_owner_ulan_id",
+                                    "joint_own": "name",
+                                    "joint_own_sh": "share",
+                                    "joint_ulan_id": "ulan_id",
                                 },
                                 "prefixes": ("joint_own", "joint_own_sh", "joint_ulan_id"),
                             },
@@ -606,6 +638,26 @@ class GoupilPipeline(PipelineBase):
                                     "sale_date_year",
                                     "sale_date_month",
                                     "sale_date_day",
+                                ),
+                            },
+                            "prev_own": {
+                                "rename_keys": {
+                                    "previous_owner": "name",
+                                    "previous_sales": "sales",
+                                },
+                                "properties": (
+                                    "previous_owner",
+                                    "previous_sales",
+                                ),
+                            },
+                            "post_own": {
+                                "rename_keys": {
+                                    "post_owner": "name",
+                                    "post_sales": "sales",
+                                },
+                                "properties": (
+                                    "post_owner",
+                                    "post_sales",
                                 ),
                             },
                             "purchase": {
@@ -669,10 +721,6 @@ class GoupilPipeline(PipelineBase):
                                     "no_name_notes",
                                     "rosetta_handle",
                                     "sale_location",
-                                    "previous_owner",
-                                    "previous_sale",
-                                    "post_owner",
-                                    "post_sale",
                                     "present_location",
                                 )
                             },

@@ -85,7 +85,22 @@ class GoupilProvenance:
             if a_data.get("auth_location"):
                 places.append(a_data.get("auth_location"))
 
-            a_data.update({"ulan": ulan, "label": auth_name, "role_label": "artist", "places": places})
+            mod_notes = []
+            if a_data.get("attrib_mod"):
+                mod_notes.append(vocab.Note(content=a_data.get("attrib_mod")))
+
+            if a_data.get("attrib_mod_auth"):
+                mod_notes.append(vocab.Note(content=a_data.get("attrib_mod_auth")))
+
+            a_data.update(
+                {
+                    "ulan": ulan,
+                    "label": auth_name,
+                    "role_label": "artist",
+                    "places": places,
+                    "referred_to_by": mod_notes,
+                }
+            )
 
             artist = self.helper.add_person(
                 a_data, record=get_crom_objects(data["_text_rows"]), relative_id=f"artist-{seq_no}"

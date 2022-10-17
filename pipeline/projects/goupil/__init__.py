@@ -143,6 +143,11 @@ class GoupilProvenance:
             if p_data.get("auth_location"):
                 places.append(p_data.get("auth_location"))
 
+            for place in places:
+                current = parse_location_name(place, uri_base=self.helper.uid_tag_prefix)
+                place_data = self.helper.make_place(current)
+                data["_object"]["_locations"].append(place_data)
+
             mods_note = None
             if p_data.get("auth_mod"):
                 mods_note = vocab.Note(content=p_data.get("auth_mod"))
@@ -290,6 +295,7 @@ class PopulateGoupilObject(Configurable, PopulateObject):
     def __call__(self, data: dict, *, make_la_org):
         data.setdefault("_object", {})
         data["_object"].setdefault("_organizations", [])
+        data["_object"].setdefault("_locations", [])
         odata = data["object"]
         data["_object"].update({k: v for k, v in odata.items() if k in ("present_location")})
 
@@ -336,11 +342,14 @@ class PopulateGoupilObject(Configurable, PopulateObject):
                     "ulan": ulan,
                 }
 
+                current = parse_location_name(loc, uri_base=self.helper.uid_tag_prefix)
+                # link to hmo here
+                place_data = self.helper.make_place(current)
                 make_la_org = MakeLinkedArtOrganization()
                 org_data = make_la_org(org_data)
 
                 # TODO org place?
-
+                data["_locations"].append(place_data)
                 data["_organizations"].append(org_data)
             else:
                 pass
@@ -758,6 +767,7 @@ class GoupilPipeline(PipelineBase):
         if serialize:
             self.add_person_or_group_chain(graph, odata, key="_organizations")  # organizations are groups too!
             self.add_person_or_group_chain(graph, artists)
+            self.add_places_chain(graph, odata, key="_locations")
 
         return objects
 

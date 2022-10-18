@@ -284,7 +284,7 @@ class GoupilUtilityHelper(UtilityHelper):
 
 class PopulateGoupilObject(Configurable, PopulateObject):
     helper = Option(required=True)
-    make_la_org = Service("make_la_or")
+    make_la_org = Service("make_la_org")
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -295,12 +295,12 @@ class PopulateGoupilObject(Configurable, PopulateObject):
         odata = data["object"]
         data["_object"].update({k: v for k, v in odata.items() if k in ("present_location")})
 
-        self._populate_object_present_location(data["_object"])
+        self._populate_object_present_location(data, make_la_org)
 
         return data
 
-    def _populate_object_present_location(self, data: dict):
-        present_location = data.get("present_location")
+    def _populate_object_present_location(self, data: dict, make_la_org):
+        present_location = data["_object"].get("present_location")
 
         if present_location:
             loc = present_location.get("geog")
@@ -336,14 +336,14 @@ class PopulateGoupilObject(Configurable, PopulateObject):
                     "uri": uri,
                     "identifiers": [vocab.PrimaryName(ident="", content=inst)],
                     "ulan": ulan,
+                    "referred_to_by": get_crom_objects(data["_text_rows"]),
                 }
 
-                make_la_org = MakeLinkedArtOrganization()
                 org_data = make_la_org(org_data)
 
                 # TODO org place?
 
-                data["_organizations"].append(org_data)
+                data["_object"]["_organizations"].append(org_data)
             else:
                 pass
 

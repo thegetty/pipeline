@@ -14,6 +14,7 @@ from tests import (
     classified_identifiers,
     classification_tree,
     classified_identifiers,
+    classification_sets,
 )
 from cromulent import vocab
 
@@ -38,6 +39,10 @@ class PIRModelingTest_AR185(TestGoupilPipelineOutput):
 
         self.assertEqual(len(art1["exact_match"]), 1)  # has ulan link
         self.assertEqual(art1["exact_match"][0]["id"], "http://vocab.getty.edu/ulan/500014964")
+        self.assertIn(
+            "Goupil Stock Book 15, Page 264, Row 2",
+            classification_sets(art1, key="_label", classification_key="referred_to_by"),
+        )
 
         self.assertDictEqual(classification_tree(art2), {"French": {"Nationality": {}}})
         self.assertDictEqual(
@@ -46,6 +51,10 @@ class PIRModelingTest_AR185(TestGoupilPipelineOutput):
 
         self.assertEqual(len(art2["exact_match"]), 1)  # has ulan link
         self.assertEqual(art2["exact_match"][0]["id"], "http://vocab.getty.edu/ulan/500099755")
+        self.assertIn(
+            "Goupil Stock Book 15, Page 264, Row 2",
+            classification_sets(art2, key="_label", classification_key="referred_to_by"),
+        )
 
     def test_modeling_ar185_2(self):
         """
@@ -64,13 +73,20 @@ class PIRModelingTest_AR185(TestGoupilPipelineOutput):
 
         self.assertDictEqual(classification_tree(seller1), {})
         self.assertDictEqual(classified_identifiers(seller1), {"Personal Name": "S. Fabre"})
+        self.assertIn(
+            "Goupil Stock Book 15, Page 264, Row 2",
+            classification_sets(seller1, key="_label", classification_key="referred_to_by"),
+        )
 
         self.assertDictEqual(classification_tree(seller2), {})
         self.assertDictEqual(
             classified_identifiers(seller2),
             {"Personal Name": "C. F. Haseltine", "Primary Name": "Haseltine, Charles Field"},
         )
-
+        self.assertIn(
+            "Goupil Stock Book 14, Page 23, Row 6",
+            classification_sets(seller2, key="_label", classification_key="referred_to_by"),
+        )
         self.assertEqual(len(seller2["exact_match"]), 1)  # has ulan link
         self.assertEqual(seller2["exact_match"][0]["id"], "http://vocab.getty.edu/ulan/500447562")
 
@@ -78,7 +94,10 @@ class PIRModelingTest_AR185(TestGoupilPipelineOutput):
         self.assertDictEqual(
             classified_identifiers(buyer1), {"Personal Name": "G. Bergaud", "Primary Name": "Bergaud, Georges"}
         )
-
+        self.assertIn(
+            "Goupil Stock Book 14, Page 23, Row 6",
+            classification_sets(buyer1, key="_label", classification_key="referred_to_by"),
+        )
         self.assertEqual(len(buyer1["exact_match"]), 1)  # has ulan link
         self.assertEqual(buyer1["exact_match"][0]["id"], "http://vocab.getty.edu/ulan/500443432")
 
@@ -86,7 +105,10 @@ class PIRModelingTest_AR185(TestGoupilPipelineOutput):
         self.assertDictEqual(
             classified_identifiers(buyer2), {"Personal Name": "[for Georges Petit]", "Primary Name": "Petit, Georges"}
         )
-
+        self.assertIn(
+            "Goupil Stock Book 14, Page 23, Row 6",
+            classification_sets(buyer2, key="_label", classification_key="referred_to_by"),
+        )
         self.assertEqual(len(buyer2["exact_match"]), 1)  # has ulan link
         self.assertEqual(buyer2["exact_match"][0]["id"], "http://vocab.getty.edu/ulan/500447929")
 

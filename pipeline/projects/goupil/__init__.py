@@ -202,7 +202,9 @@ class GoupilProvenance:
     def model_prev_post_owners(self, data, owners, tx, role, lot_object_key=None):
         for i, p in enumerate(owners):
             p_data = self.helper.copy_source_information(p, data)
-            person = self.helper.add_person(p_data, record=None, relative_id=f"{role}_{i+1}")
+            person = self.helper.add_person(
+                p_data, record=get_crom_objects(data["_text_rows"]), relative_id=f"{role}_{i+1}"
+            )
             add_crom_data(p_data, person)
             data["_people"].append(p_data)
 

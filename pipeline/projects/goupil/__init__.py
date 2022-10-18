@@ -459,7 +459,7 @@ class AddRows(Configurable, GoupilProvenance):
                 "label": (label, vocab.instances["english"]),
                 "identifiers": [
                     self.helper.goupil_number_id(
-                        page,
+                        row,
                         id_class=vocab.RowNumber,
                         assignment_label=f"Entry Number Attribution by {self.static_instances.get_instance('Group', 'goupil')._label}",
                     ),

@@ -5,6 +5,7 @@ import timeit
 import warnings
 from collections import defaultdict
 from contextlib import suppress
+import pprint
 
 import bonobo
 from bonobo.config import Configurable, Option, Service
@@ -19,6 +20,7 @@ from pipeline.linkedart import (
     MakeLinkedArtLinguisticObject,
     MakeLinkedArtOrganization,
     MakeLinkedArtPerson,
+    MakeLinkedArtRecord,
     PopulateObject,
     add_crom_data,
     get_crom_object,
@@ -29,6 +31,7 @@ from pipeline.projects import PersonIdentity, PipelineBase, UtilityHelper
 from pipeline.projects.knoedler import add_crom_price
 from pipeline.provenance import ProvenanceBase
 from pipeline.util import (
+    truncate_with_ellipsis,
     ExtractKeyedValue,
     ExtractKeyedValues,
     GraphListSource,
@@ -53,6 +56,16 @@ def record_id(data):
     row = data["row"]
 
     return (no, gno, page, row)
+
+
+def record_id_dictionary(data):
+    identifiersDictionary = {}
+    identifiersDictionary["no"] = data["no"]
+    identifiersDictionary["gno"] = data["gno"]
+    identifiersDictionary["pg"] = data["pg"]
+    identifiersDictionary["row"] = data["row"]
+
+    return identifiersDictionary
 
 
 class GoupilProvenance:
@@ -109,9 +122,24 @@ class GoupilProvenance:
     def model_artists_with_modifers(self, data: dict, hmo: dict):
         # mofifiers are not yet to be modelled but we leave this function here as a placeholder
 
+        sales_record = get_crom_object(data["_record"])
+        data.setdefault("_organizations", [])
+        data.setdefault("_original_objects", [])
+
+        try:
+            hmo_label = f"{hmo._label}"
+        except AttributeError:
+            hmo_label = "object"
+
+        event_uri = hmo.id + "-Production"
+        prod_event = model.Production(
+            ident=event_uri, label=f"Production event for {hmo_label}"
+        )
+        hmo.produced_by = prod_event
+
         artists = data.get("_artists", [])
         for a in artists:
-            # might update the dict here
+            self.add_properties(data, a)
             pass
 
         self.model_object_artists(data, artists)
@@ -237,7 +265,17 @@ class AddArtists(Configurable, GoupilProvenance):
     make_la_person = Service("make_la_person")
 
     def add_properties(self, data: dict, a: dict):
-        a.update({"pi_record_no": data["pi_record_no"]})
+        sales_record = get_crom_object(data["_record"])
+        a.setdefault("referred_to_by", [])
+        a.update(
+            {
+                "pi_record_no": data["pi_record_no"],
+            }
+        )
+
+        if self.helper.person_identity.acceptable_person_auth_name(a.get("auth_name")):
+            a.setdefault("label", a.get("auth_name"))
+        a.setdefault("label", a.get("name"))
 
     def __call__(self, data: dict, *, make_la_person):
         hmo = get_crom_object(data["_object"])
@@ -271,6 +309,27 @@ class GoupilUtilityHelper(UtilityHelper):
         person = super().add_person(data, record=record, relative_id=relative_id, **kwargs)
         return person
 
+    def make_place(self, *args, sales_record=None, **kwargs):
+        """
+        Add a reference to the sales record in places that are modeled.
+        This will only add references to the most-specific place being modeled,
+        leaving the 'part_of' hierarchy remain un-referenced.
+        """
+        data = super().make_place(*args, **kwargs)
+        if sales_record:
+            p = get_crom_object(data)
+            p.referred_to_by = sales_record
+        return data
+
+    def title_value(self, title):
+        if not isinstance(title, str):
+            return
+
+        m = self.title_re.search(title)
+        if m:
+            return m.group(1)
+        return title
+
     def copy_source_information(self, dst: dict, src: dict):
         if not dst or not isinstance(dst, dict):
             return dst
@@ -279,71 +338,218 @@ class GoupilUtilityHelper(UtilityHelper):
                 dst[k] = src[k]
         return dst
 
+    def title_value(self, title):
+        if not isinstance(title, str):
+            return
+        else:
+            return title
+
+    def add_title_reference(self, data, title):
+        """
+        If the title matches the pattern indicating it was added by an editor and has
+        and associated source reference, return a `model.LinguisticObject` for that
+        reference.
+
+        If the reference can be modeled as a hierarchy of folios and books, that data
+        is added to the arrays in the `_physical_objects` and `_linguistic_objects` keys
+        of the `data` dict parameter.
+        """
+        if not isinstance(title, str):
+            return None
+        return None
+
 
 class PopulateGoupilObject(Configurable, PopulateObject):
     helper = Option(required=True)
     make_la_org = Service("make_la_or")
+    vocab_type_map = Service("vocab_type_map")
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
-    def __call__(self, data: dict, *, make_la_org):
-        data.setdefault("_object", {})
-        data["_object"].setdefault("_organizations", [])
+    def __call__(self, data: dict, *, vocab_type_map, make_la_org):
+        sales_record = get_crom_object(data["_record"])
+        data.setdefault("_physical_objects", [])
+        data.setdefault("_linguistic_objects", [])
+        data.setdefault("_people", [])
+
         odata = data["object"]
-        data["_object"].update({k: v for k, v in odata.items() if k in ("present_location")})
+
+        # split the title and reference in a value such as 「"Collecting her strength" title info from Sales Book 3, 1874-1879, f.252」
+        label = self.helper.title_value(odata["title"])
+        title_ref = self.helper.add_title_reference(data, odata["title"])
+
+        typestring = odata.get("object_type", "")
+        identifiers = []
+
+        title_refs = [sales_record]
+
+        if title_ref:
+            title_refs.append(title_ref)
+        title = [label, {"referred_to_by": title_refs}]
+        data["_object"] = {
+            "title": title,
+            "identifiers": identifiers,
+            "referred_to_by": [sales_record],
+            "_record": data["_record"],
+            "_locations": [],
+            "_organizations": [],
+            "_text_row": data["_text_row"],
+        }
+        self.helper.copy_source_information(data["_object"], data)
+        data["_object"].update(
+            {
+                k: v
+                for k, v in odata.items()
+                if k
+                in ("materials", "dimensions", "goupil_object_id", "present_location")
+            }
+        )
+
+        try:
+            stock_number = odata["goupil_object_id"]
+            identifiers.append(
+                self.helper.goupil_number_id(stock_number, vocab.StockNumber)
+            )
+        except:
+            pass
+
+        try:
+            stock_nook_gno = gno = data["identifiers"]["gno"]
+            uri_key = ("Object", stock_nook_gno)
+            identifiers.append(
+                self.helper.goupil_number_id(stock_nook_gno, vocab.StockNumber)
+            )
+        except:
+            uri_key = ("Object", "Internal", data["pi_record_no"])
+
+        uri_key = ("Object", "Internal", data["pi_record_no"])
+        uri = self.helper.make_object_uri(data["pi_record_no"], *uri_key)
+        data["_object"]["uri"] = uri
+        data["_object"]["uri_key"] = uri_key
+
+        if typestring in vocab_type_map:
+            clsname = vocab_type_map.get(typestring, None)
+            otype = getattr(vocab, clsname)
+            data["_object"]["object_type"] = otype
+        else:
+            data["_object"]["object_type"] = model.HumanMadeObject
+
+        mlao = MakeLinkedArtHumanMadeObject()
+        mlao(data["_object"])
 
         self._populate_object_present_location(data["_object"])
-
+        self._populate_object_visual_item(data["_object"], label)
+        self.populate_object_statements(data["_object"], default_unit="inches")
+        data["_physical_objects"].append(data["_object"])
         return data
 
     def _populate_object_present_location(self, data: dict):
-        present_location = data.get("present_location")
-
-        if present_location:
-            loc = present_location.get("geog")
+        sales_record = get_crom_object(data["_record"])
+        hmo = get_crom_object(data)
+        location = data.get("present_location")
+        if location:
+            loc = location.get("geog")
+            note = location.get("note")
 
             if loc:
+                # TODO: if `parse_location_name` fails, still preserve the location string somehow
                 current = parse_location_name(loc, uri_base=self.helper.uid_tag_prefix)
-                inst = present_location.get("inst")
+                inst = location.get("inst")
                 if inst:
+                    owner_data = {
+                        "label": f"{inst} ({loc})",
+                        "identifiers": [vocab.PrimaryName(ident="", content=inst)],
+                    }
                     ulan = None
-                    # TODO remove the following in time
-                    ulan_id = present_location.get("ulan_id")
-                    with suppress(ValueError, KeyError):
-                        if ulan_id:
-                            ulan = int(present_location.get("ulan_id"))
-
-                    label = f"{inst} ({loc})"
-                    uri = (
-                        self.helper.make_proj_uri("ORG", "ULAN", ulan)
-                        if ulan
-                        else self.helper.make_proj_uri("ORG", "NAME", inst, "PLACE", loc)
-                    )
+                    with suppress(ValueError, TypeError):
+                        ulan = int(location.get("ulan_id"))
+                    if ulan:
+                        owner_data["ulan"] = ulan
+                        owner_data["uri"] = self.helper.make_proj_uri(
+                            "ORG", "ULAN", ulan
+                        )
+                    else:
+                        owner_data["uri"] = self.helper.make_proj_uri(
+                            "ORG", "NAME", inst, "PLACE", loc
+                        )
                 else:
-                    import pprint
-
                     warnings.warn(
                         f"*** Object present location data has a location, but not an institution: {pprint.pformat(data)}"
                     )
-                    label = "(Anonymous organization)"
-                    uri = self.helper.make_proj_uri("ORG", "CURR-OWN", loc)
+                    owner_data = {
+                        "label": "(Anonymous organization)",
+                        "uri": self.helper.make_proj_uri("ORG", "CURR-OWN", *now_key),
+                    }
 
-                org_data = {
-                    "label": label,
-                    "uri": uri,
-                    "identifiers": [vocab.PrimaryName(ident="", content=inst)],
-                    "ulan": ulan,
-                }
+                # It's conceivable that there could be more than one "present location"
+                # for an object that is reconciled based on prev/post sale rewriting.
+                # Therefore, the place URI must not share a prefix with the object URI,
+                # otherwise all such places are liable to be merged during URI
+                # reconciliation as part of the prev/post sale rewriting.
+                base_uri = self.helper.prepend_uri_key(hmo.id, "PLACE")
+                place_data = self.helper.make_place(
+                    current, base_uri=base_uri, sales_record=sales_record
+                )
+                place = get_crom_object(place_data)
+                hmo.current_location = place
 
-                make_la_org = MakeLinkedArtOrganization()
-                org_data = make_la_org(org_data)
+                owner = None
+                if owner_data:
+                    make_la_org = MakeLinkedArtOrganization()
+                    owner_data = make_la_org(owner_data)
+                    owner = get_crom_object(owner_data)
+                    hmo.current_owner = owner
+                    owner.residence = place
 
-                # TODO org place?
+                if note:
+                    owner_data["note"] = note
+                    desc = vocab.Description(ident="", content=note)
+                    if owner:
+                        assignment = model.AttributeAssignment(ident="")
+                        assignment.carried_out_by = owner
+                        desc.assigned_by = assignment
+                    hmo.referred_to_by = desc
 
-                data["_organizations"].append(org_data)
+                acc = location.get("acc")
+                if acc:
+                    acc_number = vocab.AccessionNumber(ident="", content=acc)
+                    hmo.identified_by = acc_number
+                    assignment = model.AttributeAssignment(ident="")
+                    if owner:
+                        assignment.carried_out_by = owner
+                    acc_number.assigned_by = assignment
+
+                data["_locations"].append(place_data)
+
+                data["_organizations"].append(owner_data)
+                data["_final_org"] = owner_data
             else:
-                pass
+                pass  # there is no present location place string
+
+    def _populate_object_visual_item(self, data: dict, title):
+        sales_record = get_crom_object(data["_record"])
+        hmo = get_crom_object(data)
+        title = truncate_with_ellipsis(title, 100) or title
+
+        # The visual item URI is just the object URI with a suffix. When URIs are
+        # reconciled during prev/post sale rewriting, this will allow us to also reconcile
+        # the URIs for the visual items (of which there should only be one per object)
+        vi_uri = hmo.id + "-VisItem"
+        vi = model.VisualItem(
+            ident=vi_uri,
+        )
+        vi._label = f"Visual work of “{title}”"
+        vidata = {
+            "uri": vi_uri,
+            "referred_to_by": [sales_record],
+        }
+        if title:
+            vidata["label"] = f"Visual work of “{title}”"
+            sales_record = get_crom_object(data["_record"])
+            vidata["names"] = [(title, {"referred_to_by": [sales_record]})]
+        data["_visual_item"] = add_crom_data(data=vidata, what=vi)
+        hmo.shows = vi
 
 
 class AddBooks(Configurable, GoupilProvenance):
@@ -469,6 +675,10 @@ class AddRows(Configurable, GoupilProvenance):
             }
 
             make_la_lo(row)
+            data["_record"] = row
+            record = get_crom_object(row)
+            data["_text_row"] = row
+            data["identifiers"] = record_id_dictionary(p_data)
 
             o_page = get_crom_object(p_data)
             o_row = get_crom_object(row)
@@ -722,6 +932,7 @@ class GoupilPipeline(PipelineBase):
                                     "rosetta_handle",
                                     "sale_location",
                                     "present_location",
+                                    "goupil_object_id",
                                 )
                             },
                         },
@@ -749,16 +960,51 @@ class GoupilPipeline(PipelineBase):
 
     def add_objects_chain(self, graph, rows, serialize=True):
         objects = graph.add_chain(
-            PopulateGoupilObject(helper=self.helper), AddArtists(helper=self.helper), _input=rows.output
+            PopulateGoupilObject(helper=self.helper),
+            AddArtists(helper=self.helper),
+            _input=rows.output,
         )
 
+        hmos1 = graph.add_chain(
+            ExtractKeyedValues(key="_physical_objects"), _input=objects.output
+        )
         odata = graph.add_chain(ExtractKeyedValue(key="_object"), _input=objects.output)
-        artists = graph.add_chain(ExtractKeyedValues(key="_artists"), _input=objects.output)
+        artists = graph.add_chain(
+            ExtractKeyedValues(key="_artists"), _input=objects.output
+        )
+        groups1 = graph.add_chain(
+            ExtractKeyedValues(key="_organizations"), _input=objects.output
+        )
+        groups2 = graph.add_chain(
+            ExtractKeyedValues(key="_organizations"), _input=hmos1.output
+        )
+
+        owners = self.add_person_or_group_chain(
+            graph, hmos1, key="_other_owners", serialize=serialize
+        )
+        items = graph.add_chain(
+            ExtractKeyedValue(key="_visual_item"),
+            MakeLinkedArtRecord(),
+            _input=hmos1.output,
+        )
 
         if serialize:
-            self.add_person_or_group_chain(graph, odata, key="_organizations")  # organizations are groups too!
+            self.add_serialization_chain(
+                graph, items.output, model=self.models["VisualItem"]
+            )
+            self.add_serialization_chain(
+                graph, hmos1.output, model=self.models["HumanMadeObject"]
+            )
+            self.add_person_or_group_chain(
+                graph, odata, key="_organizations"
+            )  # organizations are groups too!
             self.add_person_or_group_chain(graph, artists)
-
+            self.add_person_or_group_chain(graph, groups1)
+            self.add_person_or_group_chain(graph, groups2)
+            self.add_person_or_group_chain(graph, owners)
+            _ = self.add_places_chain(
+                graph, odata, key="_locations", serialize=serialize, include_self=True
+            )
         return objects
 
     def add_books_chain(self, graph, sales_records, serialize=True):

@@ -96,6 +96,33 @@ class GoupilProvenance:
                 }
             )
 
+    def model_artists_with_modifers(self, data: dict, hmo: dict):
+        # mofifiers are not yet to be modelled but we leave this function here as a placeholder
+
+        sales_record = get_crom_object(data["_record"])
+        data.setdefault("_organizations", [])
+        data.setdefault("_original_objects", [])
+
+        try:
+            hmo_label = f"{hmo._label}"
+        except AttributeError:
+            hmo_label = "object"
+
+        event_uri = hmo.id + "-Production"
+        prod_event = model.Production(
+            ident=event_uri, label=f"Production event for {hmo_label}"
+        )
+        hmo.produced_by = prod_event
+
+        artists = data.get("_artists", [])
+        for a in artists:
+            self.add_properties(data, a)
+            pass
+
+        self.model_object_artists(data, artists)
+
+        return data
+
     def _prov_entry(
         self,
         data,
@@ -308,11 +335,12 @@ class PopulateGoupilObject(Configurable, PopulateObject):
     helper = Option(required=True)
     make_la_org = Service("make_la_or")
     vocab_type_map = Service("vocab_type_map")
+    subject_genre = Service('subject_genre')
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
-    def __call__(self, data: dict, *, vocab_type_map, make_la_org):
+    def __call__(self, data: dict, *, vocab_type_map, make_la_org, subject_genre):
         sales_record = get_crom_object(data["_record"])
         data.setdefault("_physical_objects", [])
         data.setdefault("_linguistic_objects", [])
@@ -347,7 +375,7 @@ class PopulateGoupilObject(Configurable, PopulateObject):
                 k: v
                 for k, v in odata.items()
                 if k
-                in ("materials", "dimensions", "goupil_object_id", "present_location")
+                in ("materials", "dimensions", "goupil_object_id", "present_location", "subject", "genre")
             }
         )
 
@@ -384,7 +412,7 @@ class PopulateGoupilObject(Configurable, PopulateObject):
         mlao(data["_object"])
 
         self._populate_object_present_location(data["_object"])
-        self._populate_object_visual_item(data["_object"], label)
+        self._populate_object_visual_item(data["_object"], label, subject_genre)
         self.populate_object_statements(data["_object"], default_unit="inches")
         data["_physical_objects"].append(data["_object"])
         
@@ -476,7 +504,7 @@ class PopulateGoupilObject(Configurable, PopulateObject):
             else:
                 pass  # there is no present location place string
 
-    def _populate_object_visual_item(self, data: dict, title):
+    def _populate_object_visual_item(self, data: dict, title, subject_genre):
         sales_record = get_crom_object(data["_record"])
         hmo = get_crom_object(data)
         title = truncate_with_ellipsis(title, 100) or title
@@ -492,11 +520,25 @@ class PopulateGoupilObject(Configurable, PopulateObject):
         vidata = {
             "uri": vi_uri,
             "referred_to_by": [sales_record],
+            'identifiers': [],
         }
         if title:
             vidata["label"] = f"Visual work of “{title}”"
             sales_record = get_crom_object(data["_record"])
-            vidata["names"] = [(title, {"referred_to_by": [sales_record]})]
+            titletype = vocab.Name
+            t = titletype(ident='', content=title)
+            t.classified_as = model.Type(ident='http://vocab.getty.edu/aat/300417193', label='Title')
+            t.referred_to_by = sales_record
+            vidata['identifiers'].append(t)
+        for key in ('genre', 'subject'):
+            if key in data:
+                values = [v.strip() for v in data[key].split(';')]
+                for value in values:
+                    for prop, mapping in subject_genre.items():
+                        if value in mapping:
+                            aat_url = mapping[value]
+                            type = model.Type(ident=aat_url, label=value)
+                            setattr(vi, prop, type)
         data["_visual_item"] = add_crom_data(data=vidata, what=vi)
         hmo.shows = vi
 

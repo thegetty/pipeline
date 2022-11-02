@@ -16,7 +16,7 @@ vocab.add_attribute_assignment_check()
 class PIRModelingTest_AR192(TestGoupilPipelineOutput):
     def test_modeling_ar192(self):
         """
-        AR-192 : Add physical object modelling for joint ownership
+        AR-192 : Add physical object modelling
         """
         output = self.run_pipeline("ar192")
         objects = output["model-object"]
@@ -66,6 +66,19 @@ class PIRModelingTest_AR192(TestGoupilPipelineOutput):
         self.assertEqual(
             production_sub_event["carried_out_by"][0]["_label"],
             "DELACROIX, EUGÈNE",
+        )
+
+    def test_modeling_ar192_2(self):
+        """
+        AR-192 : Add physical object modelling, test for relation linguistic object about physical object
+        """
+        output = self.run_pipeline("ar192")
+        linguisticObject = output["model-lo"][
+            "tag:getty.edu,2019:digital:pipeline:REPLACE-WITH-UUID:goupil#Text,Book,15,Page,264,Row,2"
+        ]
+
+        self.assertEqual(
+            linguisticObject["about"][0]["_label"], "Le petit puits[?] [rayé]"
         )
 
 

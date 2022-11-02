@@ -58,16 +58,6 @@ def record_id(data):
     return (no, gno, page, row)
 
 
-def record_id_dictionary(data):
-    identifiersDictionary = {}
-    identifiersDictionary["no"] = data["no"]
-    identifiersDictionary["gno"] = data["gno"]
-    identifiersDictionary["pg"] = data["pg"]
-    identifiersDictionary["row"] = data["row"]
-
-    return identifiersDictionary
-
-
 class GoupilProvenance:
     def add_goupil_creation_data(self, data: tuple):
         thing_label, _ = data["label"]
@@ -435,7 +425,7 @@ class PopulateGoupilObject(Configurable, PopulateObject):
             pass
 
         try:
-            stock_nook_gno = gno = data["identifiers"]["gno"]
+            stock_nook_gno = gno = data["identifiers"][1]
             uri_key = ("Object", stock_nook_gno)
             identifiers.append(
                 self.helper.goupil_number_id(stock_nook_gno, vocab.StockNumber)
@@ -462,6 +452,10 @@ class PopulateGoupilObject(Configurable, PopulateObject):
         self._populate_object_visual_item(data["_object"], label)
         self.populate_object_statements(data["_object"], default_unit="inches")
         data["_physical_objects"].append(data["_object"])
+        
+        _record = get_crom_object(data["_record"])
+        hmo = get_crom_object(data["_object"])
+        _record.about = hmo
         return data
 
     def _populate_object_present_location(self, data: dict):
@@ -698,7 +692,7 @@ class AddRows(Configurable, GoupilProvenance):
             data["_record"] = row
             record = get_crom_object(row)
             data["_text_row"] = row
-            data["identifiers"] = record_id_dictionary(p_data)
+            data["identifiers"] = record_id(p_data)
 
             o_page = get_crom_object(p_data)
             o_row = get_crom_object(row)
@@ -1007,8 +1001,11 @@ class GoupilPipeline(PipelineBase):
             MakeLinkedArtRecord(),
             _input=hmos1.output,
         )
+        textual_works = graph.add_chain(ExtractKeyedValues(key="_record"), _input=rows.output)          
 
         if serialize:
+            self.add_serialization_chain(graph, textual_works.output, model=self.models["LinguisticObject"])
+
             self.add_serialization_chain(
                 graph, items.output, model=self.models["VisualItem"]
             )

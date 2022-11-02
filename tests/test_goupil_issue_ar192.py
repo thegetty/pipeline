@@ -52,6 +52,22 @@ class PIRModelingTest_AR192(TestGoupilPipelineOutput):
             "American Art Association, 1919/04/25, lot 92, vendu comme Death of Polonius, pour $575 à Riefstah (Vente de la succession Narcisse-Virgile Diaz de la Peña 1877/01/25, lot 325, vendu comme Hamlet, 2700 francs, acheté par Brame)",
         )
 
+        production = object["produced_by"]
+        self.assertEqual(
+            production["_label"],
+            "Production event for Hamlet",
+        )
+
+        production_sub_event = production["part"][0]
+        self.assertEqual(
+            production_sub_event["_label"],
+            "Production sub-event for DELACROIX, EUGÈNE",
+        )
+        self.assertEqual(
+            production_sub_event["carried_out_by"][0]["_label"],
+            "DELACROIX, EUGÈNE",
+        )
+
 
 if __name__ == "__main__":
     unittest.main()

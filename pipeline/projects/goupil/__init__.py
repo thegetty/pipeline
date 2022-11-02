@@ -84,7 +84,17 @@ class GoupilProvenance:
 
         return creation
 
-    def model_object_artists(self, data: dict, artists: dict):
+    def model_object_artists(self, data: dict, artists: dict, hmo, prod_event):
+
+        event_uri = prod_event.id
+        # sales_record = get_crom_objects(data['_text_rows'])
+        sales_record = get_crom_object(data.get("_record"))
+
+        try:
+            hmo_label = f'{hmo._label}'
+        except AttributeError:
+            hmo_label = 'object'
+
 
         for seq_no, a_data in enumerate(artists):
             auth_name = a_data.get("auth_name")
@@ -114,10 +124,19 @@ class GoupilProvenance:
                     "referred_to_by": mod_notes,
                 }
             )
+            artist = self.helper.add_person(a_data, record=sales_record, relative_id=f'artist-{seq_no+1}', role="artist")
+            artist_label = a_data['label']
+            add_crom_data(a_data, artist)
+            artist_label = a_data.get('label')
+            subprod_path = self.helper.make_uri_path(*a_data["uri_keys"])
+            subevent_id = event_uri + f'-{subprod_path}'
+            subevent = model.Production(ident=subevent_id, label=f'Production sub-event for {artist_label}')
+            subevent.carried_out_by = artist
+            prod_event.part = subevent            
 
-            artist = self.helper.add_person(
-                a_data, record=get_crom_objects(data["_text_rows"]), relative_id=f"artist-{seq_no}"
-            )
+            # artist = self.helper.add_person(
+            #     a_data, record=get_crom_objects(data["_text_rows"]), relative_id=f"artist-{seq_no}"
+            # )
 
     def model_artists_with_modifers(self, data: dict, hmo: dict):
         # mofifiers are not yet to be modelled but we leave this function here as a placeholder
@@ -142,7 +161,8 @@ class GoupilProvenance:
             self.add_properties(data, a)
             pass
 
-        self.model_object_artists(data, artists)
+        data['_artists'] = artists
+        self.model_object_artists(data, artists, hmo, prod_event)
 
         return data
 
@@ -281,7 +301,7 @@ class AddArtists(Configurable, GoupilProvenance):
         hmo = get_crom_object(data["_object"])
 
         # nice trick, might keep
-        data["_record"] = data["_object"]
+        # data["_record"] = data["_object"]
 
         self.model_artists_with_modifers(data, hmo)
         return data

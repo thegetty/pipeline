@@ -269,6 +269,11 @@ class GoupilUtilityHelper(UtilityHelper):
     def add_person(self, data, record: None, relative_id, **kwargs):
         self.person_identity.add_uri(data, record_id=relative_id)
         person = super().add_person(data, record=record, relative_id=relative_id, **kwargs)
+        if data.get("auth_name"):
+            for identifier in person.identified_by:
+                if isinstance(identifier, vocab.PrimaryName):
+                    identifier.referred_to_by = []
+
         return person
 
     def copy_source_information(self, dst: dict, src: dict):

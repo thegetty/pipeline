@@ -44,12 +44,12 @@ class PIRModelingTest_AR192(TestGoupilPipelineOutput):
 
         self.assertEqual(
             object["current_location"]["_label"],
-            "Vente de la succession Narcisse-Virgile Diaz de la Peña 1877/01/25, lot 325, vendu comme Hamlet, 2700 francs, acheté par Brame",
+            "New York, NY, USA",
         )
 
         self.assertEqual(
             object["current_owner"][0]["_label"],
-            "American Art Association, 1919/04/25, lot 92, vendu comme Death of Polonius, pour $575 à Riefstah (Vente de la succession Narcisse-Virgile Diaz de la Peña 1877/01/25, lot 325, vendu comme Hamlet, 2700 francs, acheté par Brame)",
+            "Metropolitan Museum of Art (New York, NY, USA)",
         )
 
         production = object["produced_by"]
@@ -79,6 +79,23 @@ class PIRModelingTest_AR192(TestGoupilPipelineOutput):
 
         self.assertEqual(
             linguisticObject["about"][0]["_label"], "Le petit puits[?] [rayé]"
+        )
+
+    def test_modeling_ar192_3(self):
+        """
+        AR-192 : Add physical object modelling, test for relation linguistic object about physical object
+        """
+        output = self.run_pipeline("ar192")
+        object = output["model-object"][
+            "tag:getty.edu,2019:digital:pipeline:REPLACE-WITH-UUID:goupil#Object,Internal,G-42810"
+        ]
+
+        self.assertEqual(
+            object["produced_by"]["attributed_by"][0]["_label"], "Formerly attributed to BONHEUR, ROSA"
+        )
+
+        self.assertEqual(
+            object["produced_by"]["attributed_by"][0]["classified_as"][0]["_label"], "Obsolete"
         )
 
 

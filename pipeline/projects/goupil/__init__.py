@@ -37,6 +37,7 @@ from pipeline.util import (
     GraphListSource,
     MatchingFiles,
     strip_key_prefix,
+    CaseFoldingSet
 )
 from pipeline.util.cleaners import parse_location_name
 
@@ -74,22 +75,11 @@ class GoupilProvenance:
 
         return creation
 
-    def model_object_artists(self, data: dict, artists: dict, hmo, prod_event):
-
-        event_uri = prod_event.id
-        # sales_record = get_crom_objects(data['_text_rows'])
-        sales_record = get_crom_object(data.get("_record"))
-
-        try:
-            hmo_label = f'{hmo._label}'
-        except AttributeError:
-            hmo_label = 'object'
-
+    def model_object_artists_authority(self, artists: dict):
 
         for seq_no, a_data in enumerate(artists):
             auth_name = a_data.get("auth_name")
             ulan = a_data.get("ulan_id")
-            name = a_data.get("name")
             nationality = a_data.get("nationality")
             places = []
             if a_data.get("location"):
@@ -98,63 +88,13 @@ class GoupilProvenance:
             if a_data.get("auth_location"):
                 places.append(a_data.get("auth_location"))
 
-            mod_notes = []
-            if a_data.get("attrib_mod"):
-                mod_notes.append(vocab.Note(content=a_data.get("attrib_mod")))
-
-            if a_data.get("attrib_mod_auth"):
-                mod_notes.append(vocab.Note(content=a_data.get("attrib_mod_auth")))
-
             a_data.update(
                 {
                     "ulan": ulan,
                     "label": auth_name,
-                    "role_label": "artist",
                     # "places": places,
-                    "referred_to_by": mod_notes,
                 }
             )
-            artist = self.helper.add_person(a_data, record=sales_record, relative_id=f'artist-{seq_no+1}', role="artist")
-            artist_label = a_data['label']
-            add_crom_data(a_data, artist)
-            artist_label = a_data.get('label')
-            subprod_path = self.helper.make_uri_path(*a_data["uri_keys"])
-            subevent_id = event_uri + f'-{subprod_path}'
-            subevent = model.Production(ident=subevent_id, label=f'Production sub-event for {artist_label}')
-            subevent.carried_out_by = artist
-            prod_event.part = subevent            
-
-            # artist = self.helper.add_person(
-            #     a_data, record=get_crom_objects(data["_text_rows"]), relative_id=f"artist-{seq_no}"
-            # )
-
-    def model_artists_with_modifers(self, data: dict, hmo: dict):
-        # mofifiers are not yet to be modelled but we leave this function here as a placeholder
-
-        sales_record = get_crom_object(data["_record"])
-        data.setdefault("_organizations", [])
-        data.setdefault("_original_objects", [])
-
-        try:
-            hmo_label = f"{hmo._label}"
-        except AttributeError:
-            hmo_label = "object"
-
-        event_uri = hmo.id + "-Production"
-        prod_event = model.Production(
-            ident=event_uri, label=f"Production event for {hmo_label}"
-        )
-        hmo.produced_by = prod_event
-
-        artists = data.get("_artists", [])
-        for a in artists:
-            self.add_properties(data, a)
-            pass
-
-        data['_artists'] = artists
-        self.model_object_artists(data, artists, hmo, prod_event)
-
-        return data
 
     def _prov_entry(
         self,
@@ -270,9 +210,12 @@ class ModelSale(Configurable, GoupilProvenance):
         yield data
 
 
-class AddArtists(Configurable, GoupilProvenance):
+class AddArtists(ProvenanceBase, GoupilProvenance):
     helper = Option(required=True)
     make_la_person = Service("make_la_person")
+    attribution_modifiers = Service('attribution_modifiers')
+    attribution_group_types = Service('attribution_group_types')
+    attribution_group_names = Service('attribution_group_names')
 
     def add_properties(self, data: dict, a: dict):
         sales_record = get_crom_object(data["_record"])
@@ -280,6 +223,7 @@ class AddArtists(Configurable, GoupilProvenance):
         a.update(
             {
                 "pi_record_no": data["pi_record_no"],
+                'modifiers': self.modifiers(a),
             }
         )
 
@@ -287,13 +231,13 @@ class AddArtists(Configurable, GoupilProvenance):
             a.setdefault("label", a.get("auth_name"))
         a.setdefault("label", a.get("name"))
 
-    def __call__(self, data: dict, *, make_la_person):
+    def __call__(self, data:dict, *, make_la_person, attribution_modifiers, attribution_group_types, attribution_group_names):
         hmo = get_crom_object(data["_object"])
 
-        # nice trick, might keep
-        # data["_record"] = data["_object"]
+        #Add ulan information 
+        self.model_object_artists_authority(data.get('_artists', []))
 
-        self.model_artists_with_modifers(data, hmo)
+        self.model_artists_with_modifers(data, hmo, attribution_modifiers, attribution_group_types, attribution_group_names)
         return data
 
 
@@ -743,6 +687,18 @@ class GoupilPipeline(PipelineBase):
 
     def setup_services(self):
         services = super().setup_services()
+
+        # make these case-insensitive by wrapping the value lists in CaseFoldingSet
+        for name in ('attribution_modifiers',):
+            if name in services:
+                services[name] = {k: CaseFoldingSet(v) for k, v in services[name].items()}
+
+        if 'attribution_modifiers' in services:
+            attribution_modifiers = services['attribution_modifiers']
+            PROBABLY = attribution_modifiers['probably by']
+            POSSIBLY = attribution_modifiers['possibly by']
+            attribution_modifiers['uncertain'] = PROBABLY | POSSIBLY
+
         services.update(
             {
                 # to avoid constructing new MakeLinkedArtPerson objects millions of times, this

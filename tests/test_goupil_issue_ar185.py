@@ -62,7 +62,7 @@ class PIRModelingTest_AR185(TestGoupilPipelineOutput):
         output = self.run_pipeline("ar185")
         people = output["model-person"]
 
-        seller1 = people["tag:getty.edu,2019:digital:pipeline:REPLACE-WITH-UUID:goupil#PERSON,PI,G-42810,person-0"]
+        seller1 = people["tag:getty.edu,2019:digital:pipeline:REPLACE-WITH-UUID:goupil#PERSON,PI,G-42810,seller_1"]
         seller2 = people[
             "tag:getty.edu,2019:digital:pipeline:REPLACE-WITH-UUID:shared#PERSON,AUTH,Haseltine%2C%20Charles%20Field"
         ]
@@ -71,7 +71,11 @@ class PIRModelingTest_AR185(TestGoupilPipelineOutput):
         buyer2 = people["tag:getty.edu,2019:digital:pipeline:REPLACE-WITH-UUID:shared#PERSON,AUTH,Petit%2C%20Georges"]
 
         self.assertDictEqual(classification_tree(seller1), {})
-        self.assertDictEqual(classified_identifiers(seller1), {"Personal Name": "S. Fabre"})
+
+        # self.assertDictEqual(classified_identifiers(seller1), {"Personal Name": "S. Fabre"})
+        # When the transaction is: "Returned" both Name and Personal Name are created
+        self.assertDictEqual(classified_identifiers(seller1), {"Personal Name": "S. Fabre", None: "S. Fabre"})
+
         self.assertIn(
             "Goupil Stock Book 15, Page 264, Row 2",
             classification_sets(seller1, key="_label", classification_key="referred_to_by"),
@@ -128,26 +132,28 @@ class PIRModelingTest_AR185(TestGoupilPipelineOutput):
         output = self.run_pipeline("ar185")
         people = output["model-person"]
 
-        person1 = people["tag:getty.edu,2019:digital:pipeline:REPLACE-WITH-UUID:goupil#PERSON,PI,G-43741,shared-own_1"]
-        person2 = people["tag:getty.edu,2019:digital:pipeline:REPLACE-WITH-UUID:goupil#PERSON,PI,G-42810,shared-own_1"]
+        person1 = people[
+            "tag:getty.edu,2019:digital:pipeline:REPLACE-WITH-UUID:goupil#PERSON,PI,G-43741,shared-buyer_1"
+        ]
+
+        # When the transaction is: "Returned" the shared-buyer entity is not created
+        # person2 = people["tag:getty.edu,2019:digital:pipeline:REPLACE-WITH-UUID:goupil#PERSON,PI,G-42810,shared-own_1"]
 
         self.assertEqual(person1["_label"], "G. Petit")
         self.assertEqual(person1["referred_to_by"][0]["_label"], "Goupil Stock Book 15, Page 332, Row 3")
 
-        self.assertEqual(person2["_label"], "Allard")
-        self.assertEqual(person2["referred_to_by"][0]["_label"], "Goupil Stock Book 15, Page 264, Row 2")
+        # self.assertEqual(person2["_label"], "Allard")
+        # self.assertEqual(person2["referred_to_by"][0]["_label"], "Goupil Stock Book 15, Page 264, Row 2")
 
-    def test_modeling_ar192_4(self):
+    def test_modeling_ar185_5(self):
         """
         AR-185 : Authority names should not have name source reference
         """
         output = self.run_pipeline("ar185")
         people = output["model-person"]
 
-        person1 = people["tag:getty.edu,2019:digital:pipeline:REPLACE-WITH-UUID:shared#PERSON,AUTH,Wallis%20and%20Son"]
-        person2 = people["tag:getty.edu,2019:digital:pipeline:REPLACE-WITH-UUID:goupil#PERSON,PI,G-42810,shared-own_1"]
-        person3 = people["tag:getty.edu,2019:digital:pipeline:REPLACE-WITH-UUID:goupil#PERSON,PI,G-43741,person-0"]
-        person4 = people["tag:getty.edu,2019:digital:pipeline:REPLACE-WITH-UUID:goupil#PERSON,PI,G-23884,prev_own_1"]
+        authorityPeople = [y for x, y in people.items() if ",AUTH," in x]
+        print(authorityPeople)
 
         def preferred_name(data: dict):
             for identifier in data["identified_by"]:
@@ -155,10 +161,8 @@ class PIRModelingTest_AR185(TestGoupilPipelineOutput):
                     return identifier
             return []
 
-        self.assertNotIn("referred_to_by", preferred_name(person1))
-        self.assertNotIn("referred_to_by", preferred_name(person2))
-        self.assertNotIn("referred_to_by", preferred_name(person3))
-        self.assertNotIn("referred_to_by", preferred_name(person4))
+        for authorityPerson in authorityPeople:
+            self.assertNotIn("referred_to_by", preferred_name(authorityPerson))
 
 
 if __name__ == "__main__":

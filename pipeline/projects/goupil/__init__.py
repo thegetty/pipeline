@@ -6,10 +6,12 @@ import timeit
 import warnings
 from collections import defaultdict
 from contextlib import suppress
+from fractions import Fraction
 
 import bonobo
 from bonobo.config import Configurable, Option, Service
 from cromulent import model, vocab
+from cromulent.extract import extract_monetary_amount
 
 import settings
 from pipeline.io.csv import CurriedCSVReader
@@ -28,7 +30,11 @@ from pipeline.linkedart import (
 )
 from pipeline.nodes.basic import KeyManagement, RecordCounter
 from pipeline.projects import PersonIdentity, PipelineBase, UtilityHelper
-from pipeline.projects.knoedler import add_crom_price
+from pipeline.projects.knoedler import (
+    SharedUtilityHelper,
+    TransactionHandler,
+    prov_entry_label,
+)
 from pipeline.provenance import ProvenanceBase
 from pipeline.util import (
     CaseFoldingSet,
@@ -36,14 +42,36 @@ from pipeline.util import (
     ExtractKeyedValues,
     GraphListSource,
     MatchingFiles,
+    filter_empty_person,
+    implode_date,
     strip_key_prefix,
+    timespan_from_outer_bounds,
     truncate_with_ellipsis,
 )
 from pipeline.util.cleaners import parse_location_name
 
 
 def filter_empty_book(data: dict, _):
-    return data if data.get("no") else None
+    return data if data.get("stock_book_no") else None
+
+
+def add_crom_price(data, parent, services, add_citations=False):
+    """
+    Add modeling data for `MonetaryAmount` based on properties of the supplied `data` dict.
+    """
+    currencies = services["currencies"]
+    amt = data.get("amount", "")
+    if "[" in amt:
+        data["amount"] = amt.replace("[", "").replace("]", "")
+    amnt = extract_monetary_amount(
+        data, currency_mapping=currencies, add_citations=add_citations, truncate_label_digits=2
+    )
+    for key in ("code", "frame", "note", "uncertain"):
+        if data.get(key):
+            amnt.referred_to_by = vocab.Note(ident="", content=data[key])
+    if amnt:
+        add_crom_data(data=data, what=amnt)
+    return data
 
 
 class GoupilPersonIdentity(PersonIdentity):
@@ -51,10 +79,11 @@ class GoupilPersonIdentity(PersonIdentity):
 
 
 def record_id(data):
-    no = data["no"]
-    gno = data["gno"]
-    page = data["pg"]
-    row = data["row"]
+    # import pdb;pdb.set_trace()
+    no = data["stock_book_no"]
+    gno = data["stock_book_gno"]
+    page = data["page_number"]
+    row = data["row_number"]
 
     return (no, gno, page, row)
 
@@ -102,7 +131,7 @@ class GoupilProvenance:
         date_key,
         participants,
         price_info=None,
-        knoedler_price_part=None,
+        goupil_price_part=None,
         shared_people=None,
         incoming=False,
         purpose=None,
@@ -132,7 +161,7 @@ class GoupilProvenance:
                 }
             )
             person = self.helper.add_person(
-                p_data, record=get_crom_objects(data["_text_rows"]), relative_id=f"person-{seq_no}"
+                p_data, record=get_crom_objects(data["_records"]), relative_id=f"person-{seq_no}"
             )
             add_crom_data(p_data, person)
             data["_people"].append(p_data)
@@ -145,7 +174,7 @@ class GoupilProvenance:
                 role = "shared-own"
                 p_data = self.helper.copy_source_information(p, data)
                 person = self.helper.add_person(
-                    p_data, record=get_crom_objects(data["_text_rows"]), relative_id=f"{role}_{i+1}"
+                    p_data, record=get_crom_objects(data["_records"]), relative_id=f"{role}_{i+1}"
                 )
                 add_crom_data(p_data, person)
                 data["_people"].append(p_data)
@@ -181,35 +210,10 @@ class GoupilProvenance:
         for i, p in enumerate(owners):
             p_data = self.helper.copy_source_information(p, data)
             person = self.helper.add_person(
-                p_data, record=get_crom_objects(data["_text_rows"]), relative_id=f"{role}_{i+1}"
+                p_data, record=get_crom_objects(data["_records"]), relative_id=f"{role}_{i+1}"
             )
             add_crom_data(p_data, person)
             data["_people"].append(p_data)
-
-
-class ModelSale(Configurable, GoupilProvenance):
-    """ """
-
-    helper = Option(required=True)
-    make_la_person = Service("make_la_person")
-
-    def __call__(self, data: dict, make_la_person, buy_sell_modifiers=None, in_tx=None, out_tx=None):
-        sellers = data["sellers"]
-        buyers = data["buyers"]
-
-        if not in_tx:
-            if len(sellers):
-                in_tx = self.add_incoming_tx(data, buy_sell_modifiers)
-            else:
-                pass
-
-        if not out_tx:
-            if len(buyers):
-                out_tx = self.add_outging_tx(data, buy_sell_modifiers)
-            else:
-                pass
-
-        yield data
 
 
 class AddArtists(ProvenanceBase, GoupilProvenance):
@@ -239,13 +243,18 @@ class AddArtists(ProvenanceBase, GoupilProvenance):
         # Add ulan information
         self.model_object_artists_authority(data.get("_artists", []))
 
+        data["_record"] = data["_records"]
+
         self.model_artists_with_modifers(
             data, hmo, attribution_modifiers, attribution_group_types, attribution_group_names
         )
+
+        del data["_record"]
+
         return data
 
 
-class GoupilUtilityHelper(UtilityHelper):
+class GoupilUtilityHelper(SharedUtilityHelper):
     """
     Project-specific code for accessing and interpreting goupil data.
     """
@@ -256,11 +265,10 @@ class GoupilUtilityHelper(UtilityHelper):
             make_shared_uri=self.make_shared_uri, make_proj_uri=self.make_proj_uri
         )
         self.uid_tag_prefix = self.proj_prefix
+        self.csv_source_columns = ["pi_record_no"]
 
-    def make_object_uri(self, pi_rec_no, *uri_key):
-        uri_key = list(uri_key)
-        uri = self.make_proj_uri(*uri_key)
-        return uri
+    def stock_number_identifier(self, data, date):
+        return super().stock_number_identifier(data, date, stock_data_key="pi_record_no")
 
     def add_person(self, data, record: None, relative_id, **kwargs):
         self.person_identity.add_uri(data, record_id=relative_id)
@@ -280,18 +288,10 @@ class GoupilUtilityHelper(UtilityHelper):
         """
         data = super().make_place(*args, **kwargs)
         if sales_records:
+            p = get_crom_object(data)
             for sale_record in sales_records:
-                p = get_crom_object(data)
                 p.referred_to_by = sale_record
         return data
-
-    def copy_source_information(self, dst: dict, src: dict):
-        if not dst or not isinstance(dst, dict):
-            return dst
-        for k in ["pi_record_no"]:
-            with suppress(KeyError):
-                dst[k] = src[k]
-        return dst
 
     def title_value(self, title):
         if not isinstance(title, str):
@@ -313,6 +313,33 @@ class GoupilUtilityHelper(UtilityHelper):
             return None
         return None
 
+    def transaction_key_for_record(
+        self, data, incoming=False, purchase_share_key="purchase_knoedler_share", sale_share_key="sale_knoedler_share"
+    ):
+        """
+        Return a URI representing the prov entry which the object (identified by the
+        supplied data) is a part of. This may identify just the object being bought or
+        sold or, in the case of multiple objects being bought for a single price, a
+        single prov entry that encompasses multiple object acquisitions.
+        """
+        records = data["_records"]
+        book_id = page_id = row_id = ""
+
+        for rec in records:
+            # TODO: revisit this when the multiple inventorying events thing is resolved
+            book_id += rec["stock_book_no"]
+            page_id = rec["page_number"]
+            row_id = rec["row_number"]
+
+        dir = "In" if incoming else "Out"
+
+        price = data.get(purchase_share_key) if incoming else data.get(sale_share_key)
+        if price:
+            n = price.get("note")
+            if n and n.startswith("for numbers "):
+                return ("TX-MULTI", dir, n[12:])
+        return ("TX", dir, book_id, page_id, row_id)
+
 
 class PopulateGoupilObject(Configurable, PopulateObject):
     helper = Option(required=True)
@@ -324,12 +351,12 @@ class PopulateGoupilObject(Configurable, PopulateObject):
         super().__init__(*args, **kwargs)
 
     def __call__(self, data: dict, *, vocab_type_map, make_la_org, subject_genre):
-        sales_records = get_crom_objects(data["_text_rows"])
+        sales_records = get_crom_objects(data["_records"])
         data.setdefault("_physical_objects", [])
         data.setdefault("_linguistic_objects", [])
         data.setdefault("_people", [])
 
-        odata = data["object"]
+        odata = data["book_record"]
 
         # split the title and reference in a value such as 「"Collecting her strength" title info from Sales Book 3, 1874-1879, f.252」
         label = self.helper.title_value(odata["title"])
@@ -347,10 +374,10 @@ class PopulateGoupilObject(Configurable, PopulateObject):
             "title": title,
             "identifiers": identifiers,
             "referred_to_by": sales_records,
-            "_record": data["_text_rows"],
+            "_records": data["_records"],
             "_locations": [],
             "_organizations": [],
-            "_text_rows": data["_text_rows"],
+            "_records": data["_records"],
         }
         self.helper.copy_source_information(data["_object"], data)
         data["_object"].update(
@@ -366,15 +393,16 @@ class PopulateGoupilObject(Configurable, PopulateObject):
             uri_key = ("Object", goupil_id)
             identifiers.append(self.helper.goupil_pscp_number_id(goupil_id, vocab.StockNumber))
         except Exception as e:
-            warnings.warn(f"*** Object has no goupil object id: {pprint.pformat(data)}")
+            # warnings.warn(f"*** Object has no goupil object id: {pprint.pformat(data)}")
             uri_key = ("Object", "Internal", data["pi_record_no"])
 
-        for row in data["_text_rows"]:
+        for row in data["_records"]:
             try:
                 stock_nook_gno = gno = row["gno"]
                 identifiers.append(self.helper.goupil_number_id(stock_nook_gno, vocab.StockNumber))
             except:
-                warnings.warn(f"*** Object has no gno identifier: {pprint.pformat(data)}")
+                pass
+                # warnings.warn(f"*** Object has no gno identifier: {pprint.pformat(data)}")
 
         uri = self.helper.make_object_uri(data["pi_record_no"], *uri_key)
         data["_object"]["uri"] = uri
@@ -396,12 +424,12 @@ class PopulateGoupilObject(Configurable, PopulateObject):
         data["_physical_objects"].append(data["_object"])
 
         hmo = get_crom_object(data["_object"])
-        for _record in sales_records:
-            _record.about = hmo
+        for _records in sales_records:
+            _records.about = hmo
         return data
 
     def _populate_object_present_location(self, data: dict):
-        sales_records = get_crom_objects(data["_text_rows"])
+        sales_records = get_crom_objects(data["_records"])
         hmo = get_crom_object(data)
         location = data.get("present_location")
         if location:
@@ -481,7 +509,7 @@ class PopulateGoupilObject(Configurable, PopulateObject):
                 pass  # there is no present location place string
 
     def _populate_object_visual_item(self, data: dict, title, subject_genre):
-        sales_records = get_crom_objects(data["_text_rows"])
+        sales_records = get_crom_objects(data["_records"])
         hmo = get_crom_object(data)
         title = truncate_with_ellipsis(title, 100) or title
 
@@ -617,7 +645,13 @@ class AddPages(Configurable, GoupilProvenance):
                 ],
             }
 
-            page.update({k: v for k, v in b_data.items() if k in ("no", "gno", "pg", "row")})
+            page.update(
+                {
+                    k: v
+                    for k, v in b_data.items()
+                    if k in ("stock_book_no", "stock_book_gno", "page_number", "row_number")
+                }
+            )
             make_la_lo(page)
 
             o_book = get_crom_object(b_data)
@@ -634,21 +668,22 @@ class AddRows(Configurable, GoupilProvenance):
     helper = Option(required=True)
     make_la_lo = Service("make_la_lo")
     make_la_hmo = Service("make_la_hmo")
+    transaction_classification = Service("transaction_classification")
     static_instances = Option(default="static_instances")
 
-    def __call__(self, data: dict, make_la_lo, make_la_hmo):
+    def __call__(self, data: dict, make_la_lo, make_la_hmo, transaction_classification):
         pages = data.get("_text_pages", [])
-        data.setdefault("_text_rows", [])
+        data.setdefault("_records", [])
 
         notes = []
         for k in ("working_note", "verbatim_notes", "editor notes", "no_name_notes"):
-            if data["object"].get(k):
-                notes.append(vocab.Note(ident="", content=data["object"][k]))
+            if data["book_record"].get(k):
+                notes.append(vocab.Note(ident="", content=data["book_record"][k]))
 
-        if data["object"].get("rosetta_handle"):
-            page = vocab.DigitalImage(ident=data["object"]["rosetta_handle"], label=data["object"]["rosetta_handle"])
+        if data["book_record"].get("rosetta_handle"):
+            page = vocab.DigitalImage(ident=data["book_record"]["rosetta_handle"], label=data["book_record"]["rosetta_handle"])
             page._validate_range = False
-            page.access_point = [vocab.DigitalObject(ident=data["object"]["rosetta_handle"])]
+            page.access_point = [vocab.DigitalObject(ident=data["book_record"]["rosetta_handle"])]
             notes.append(page)
 
         for seq_no, p_data in enumerate(pages):
@@ -679,17 +714,493 @@ class AddRows(Configurable, GoupilProvenance):
                 ],
                 "referred_to_by": notes,
             }
-            row.update({k: v for k, v in p_data.items() if k in ("no", "gno", "pg", "row")})
+            row.update(
+                {
+                    k: v
+                    for k, v in p_data.items()
+                    if k in ("stock_book_no", "stock_book_gno", "page_number", "row_number")
+                }
+            )
             make_la_lo(row)
 
             o_page = get_crom_object(p_data)
             o_row = get_crom_object(row)
             o_row.part_of = o_page
 
-            data["_text_rows"].append(row)
+            transaction = data["book_record"]["transaction"]
+            tx_cl = transaction_classification.get(transaction)
+
+            if tx_cl:
+                label = tx_cl.get("label")
+                url = tx_cl.get("url")
+                o_row.about = model.Type(ident=url, label=label)
+            else:
+                warnings.warn(f"*** No classification found for transaction type: {transaction!r}")
+
+            data["_records"].append(row)
             self.add_goupil_creation_data(row)
-            data["_record"] = data["_text_rows"]
+            # TODO Uncomment the following lines in order to have date information for the text records
+            # creation = self.add_goupil_creation_data(row)
+            # date = implode_date(data['entry_date'])
+            # if date:
+            #     begin_date = implode_date(data['entry_date'], clamp='begin')
+            #     end_date = implode_date(data['entry_date'], clamp='end')
+            #     bounds = [begin_date, end_date]
+            #     ts = timespan_from_outer_bounds(*bounds, inclusive=True)
+            #     ts.identified_by = model.Name(ident='', content=date)
+            #     creation.timespan = ts
+
         return data
+
+
+class TransactionSwitch(Configurable):
+    """
+    @see pipeline/projects/knoedler/__init__.py#TransactionSwitch
+    """
+
+    transaction_classification = Service("transaction_classification")
+
+    def __call__(self, data: dict, transaction_classification):
+        rec = data["book_record"]
+        transaction = rec["transaction"]
+        tx = transaction_classification.get(transaction)
+        if tx:
+            rec["transaction_verbatim"] = transaction
+            rec["transaction"] = tx["label"]
+            yield {tx["label"]: data}
+        else:
+            warnings.warn(f"TODO: handle transaction type `{transaction}`")
+
+
+class GoupilTransactionHandler(TransactionHandler):
+    def _apprasing_assignment(self, data):
+        odata = data["_object"]
+        date = implode_date(data["entry_date"])
+
+        hmo = get_crom_object(odata)
+        sn_ident = self.helper.stock_number_identifier(odata, date)
+
+        sellers = data["purchase_seller"]
+        price_info = data.get("cost")
+        if price_info and not len(sellers):
+            # this inventorying has a "purchase" amount that is an evaluated worth amount
+            amnt = get_crom_object(price_info)
+            assignment = vocab.AppraisingAssignment(ident="", label=f"Evaluated worth of {sn_ident}")
+            assignment.carried_out_by = self.helper.static_instances.get_instance("Group", "goupil")
+            assignment.assigned_property = "dimension"
+            assignment.assigned = amnt
+            amnt.classified_as = model.Type(ident="http://vocab.getty.edu/aat/300412096", label="Valuation")
+            assignment.assigned_to = hmo
+            return assignment
+        return None
+
+    def _new_inventorying(self, data):
+        odata = data["_object"]
+        date = implode_date(data["entry_date"])
+
+        hmo = get_crom_object(odata)
+        sn_ident = self.helper.stock_number_identifier(odata, date)
+        inv_label = f"Goupil Inventorying of {sn_ident}"
+
+        for rec in data["_book_records"]:
+            book_id, _, page_id, row_id = record_id(rec)
+
+            inv_uri = self.helper.make_proj_uri("INV", book_id, page_id, row_id)
+            inv = vocab.Inventorying(ident=inv_uri, label=inv_label)
+            inv.identified_by = model.Name(ident="", content=inv_label)
+            inv.encountered = hmo
+            self.set_date(inv, data, "entry_date")
+
+        return inv
+
+    def _empty_tx(self, data, incoming=False, purpose=None):
+        tx_uri = self.helper.transaction_uri_for_record(data, incoming)
+        tx_type = data.get("book_record", {}).get("transaction", "Sold")
+        if purpose == "returning":
+            tx = vocab.make_multitype_obj(vocab.SaleAsReturn, vocab.ProvenanceEntry, ident=tx_uri)
+        else:
+            tx = vocab.ProvenanceEntry(ident=tx_uri)
+        sales_records = get_crom_objects(data["_records"])
+
+        for sales_record in sales_records:
+            tx.referred_to_by = sales_record
+
+        return tx
+
+    def _add_prov_entry_acquisition(
+        self, data: dict, tx, from_people, from_agents, to_people, to_agents, date, incoming, purpose=None
+    ):
+        rec = data["book_record"]
+
+        hmo = get_crom_object(data["_object"])
+        sn_ident = self.helper.stock_number_identifier(data["_object"], date)
+
+        dir = "In" if incoming else "Out"
+        if purpose == "returning":
+            dir_label = "Goupil return"
+        else:
+            dir_label = "Goupil Purchase" if incoming else "Goupil Sale"
+        acq_id = self.helper.make_proj_uri("ACQ", dir, rec["goupil_object_id"])
+        acq = model.Acquisition(ident=acq_id)
+
+        sn_ident = self.helper.stock_number_identifier(data["_object"], date)
+        name = f"{dir_label} of {sn_ident}"
+        tx.identified_by = model.Name(ident="", content=name)
+        tx._label = name
+        acq._label = name
+        acq.identified_by = model.Name(ident="", content=name)
+        acq.transferred_title_of = hmo
+
+        for p in from_people:
+            acq.transferred_title_from = p
+        for p in from_agents:
+            # when an agent is acting on behalf of the seller, model their involvement in a sub-activity
+            subacq = model.Activity(ident="", label="Seller's agent's role in acquisition")
+            subacq.classified_as = vocab.instances["SellersAgent"]
+            subacq.carried_out_by = p
+            acq.part = subacq
+        for p in to_people:
+            acq.transferred_title_to = p
+        for p in to_agents:
+            # when an agent is acting on behalf of the buyer, model their involvement in a sub-activity
+            subacq = model.Activity(ident="", label="Buyer's agent's role in acquisition")
+            subacq.classified_as = vocab.instances["BuyersAgent"]
+            subacq.carried_out_by = p
+            acq.part = subacq
+
+        tx.part = acq
+
+    def _add_prov_entry_payment(
+        self,
+        data: dict,
+        tx,
+        goupil_price_part,
+        price_info,
+        people,
+        people_agents,
+        shared_people,
+        shared_people_agents,
+        date,
+        incoming,
+    ):
+        goupil = self.helper.static_instances.get_instance("Group", "goupil")
+        goupil_group = [goupil]
+
+        sales_records = get_crom_objects(data["_records"])
+        hmo = get_crom_object(data["_object"])
+        sn_ident = self.helper.stock_number_identifier(data["_object"], date)
+
+        price_data = {}
+        if price_info and "currency" in price_info:
+            price_data["currency"] = price_info["currency"]
+
+        amnt = get_crom_object(price_info)
+        goupil_price_part_amnt = get_crom_object(goupil_price_part)
+
+        price_amount = None
+        with suppress(AttributeError):
+            price_amount = amnt.value
+        parts = [(goupil, goupil_price_part_amnt)]
+        if shared_people:
+            role = "shared-buyer" if incoming else "shared-seller"
+            for i, p in enumerate(shared_people):
+                person_dict = self.helper.copy_source_information(p, data)
+                person = self.helper.add_person(person_dict, record=sales_records, relative_id=f"{role}_{i+1}")
+                goupil_group.append(person)
+
+        paym = None
+        if amnt:
+            tx_uri = tx.id
+            payment_id = tx_uri + "-Payment"
+            paym = model.Payment(ident=payment_id, label=f"Payment for {sn_ident}")
+            paym.paid_amount = amnt
+            tx.part = paym
+            for kp in goupil_group:
+                if incoming:
+                    paym.paid_from = kp
+                else:
+                    paym.paid_to = kp
+            for p in shared_people_agents:
+                # when an agent is acting on behalf of the buyer/seller, model their involvement in a sub-activity
+                subpaym_role = "Buyer" if incoming else "Seller"
+                subpaym = model.Activity(ident="", label=f"{subpaym_role}'s agent's role in payment")
+                subpaym.classified_as = vocab.instances[f"{subpaym_role}sAgent"]
+                subpaym.carried_out_by = p
+                paym.part = subpaym
+
+            for i, partdata in enumerate(parts):
+                person, part_amnt = partdata
+                # add the part is there are multiple parts (shared tx), or if
+                # this is the single part we know about, but its value is not
+                # the same as the whole tx amount
+                different_amount = False
+                with suppress(AttributeError):
+                    if amnt.value != part_amnt.value:
+                        different_amount = True
+                if len(parts) > 1 or different_amount:
+                    shared_payment_id = tx_uri + f"-Payment-{i}-share"
+                    shared_paym = model.Payment(
+                        ident=shared_payment_id, label=f"{person._label} share of payment for {sn_ident}"
+                    )
+                    if part_amnt:
+                        shared_paym.paid_amount = part_amnt
+                    if incoming:
+                        shared_paym.paid_from = person
+                    else:
+                        shared_paym.paid_to = person
+
+                    paym.part = shared_paym
+
+        for person in people:
+            if paym:
+                if incoming:
+                    paym.paid_to = person
+                else:
+                    paym.paid_from = person
+        for p in people_agents:
+            # when an agent is acting on behalf of the buyer/seller, model their involvement in a sub-activity
+            if paym:
+                subpaym_role = "Seller" if incoming else "Buyer"
+                subpaym = model.Activity(ident="", label=f"{subpaym_role}'s agent's role in payment")
+                subpaym.classified_as = vocab.instances[f"{subpaym_role}sAgent"]
+                subpaym.carried_out_by = p
+                paym.part = subpaym
+
+    def _add_prov_entry_rights(self, data: dict, tx, shared_people, incoming):
+        goupil = self.helper.static_instances.get_instance("Group", "knoedler")
+        sales_records = get_crom_objects(data["_records"])
+
+        hmo = get_crom_object(data["_object"])
+        object_label = f"“{hmo._label}”"
+
+        # this is the group of people along with Knoedler that made the purchase/sale (len > 1 when there is shared ownership)
+        goupil_group = [goupil]
+        if shared_people:
+            people = []
+            rights = []
+            role = "shared-buyer" if incoming else "shared-seller"
+            remaining = Fraction(1, 1)
+            for i, p in enumerate(shared_people):
+                person_dict = self.helper.copy_source_information(p, data)
+                person = self.helper.add_person(person_dict, record=sales_records, relative_id=f"{role}_{i+1}")
+                name = p.get("name", p.get("auth_name", "(anonymous)"))
+                share = p.get("share", "1/1")
+                try:
+                    share_frac = Fraction(share)
+                    remaining -= share_frac
+
+                    right = self.ownership_right(share_frac, person)
+
+                    rights.append(right)
+                    people.append(person_dict)
+                    goupil_group.append(person)
+                except ValueError as e:
+                    warnings.warn(f"ValueError while handling shared rights ({e}): {pprint.pformat(p)}")
+                    raise
+
+            g_right = self.ownership_right(remaining, goupil)
+            rights.insert(0, g_right)
+
+            total_right = vocab.OwnershipRight(ident="", label=f"Total Right of Ownership of {object_label}")
+            total_right.applies_to = hmo
+            for right in rights:
+                total_right.part = right
+
+            racq = model.RightAcquisition(ident="")
+            racq.establishes = total_right
+            tx.part = racq
+
+            data["_people"].extend(people)
+
+    def _prov_entry(
+        self,
+        data,
+        date_key,
+        participants,
+        price_info=None,
+        goupil_price_part=None,
+        shared_people=None,
+        incoming=False,
+        purpose=None,
+        buy_sell_modifiers=None,
+    ):
+        THROUGH = CaseFoldingSet(buy_sell_modifiers["through"])
+        FOR = CaseFoldingSet(buy_sell_modifiers["for"])
+
+        if shared_people is None:
+            shared_people = []
+
+        for k in ("_prov_entries", "_people"):
+            data.setdefault(k, [])
+
+        date = implode_date(data[date_key]) if date_key in data else None
+
+        odata = data["_object"]
+        sales_records = get_crom_objects(data["_records"])
+
+        tx = self._empty_tx(data, incoming, purpose=purpose)
+        tx_uri = tx.id
+
+        tx_data = add_crom_data(data={"uri": tx_uri}, what=tx)
+        if date_key:
+            self.set_date(tx, data, date_key)
+
+        role = "seller" if incoming else "buyer"
+
+        people_data = [self.helper.copy_source_information(p, data) for p in participants]
+
+        people = []
+        people_agents = []
+        for i, p_data in enumerate(people_data):
+            mod = self.modifiers(p_data, "auth_mod")
+            person = self.helper.add_person(p_data, record=sales_records, relative_id=f"{role}_{i+1}")
+            if THROUGH.intersects(mod):
+                people_agents.append(person)
+            else:
+                people.append(person)
+
+        goupil_group = [self.helper.static_instances.get_instance("Group", "goupil")]
+        goupil_group_agents = []
+        if shared_people:
+            # these are the people that joined Knoedler in the purchase/sale
+            role = "shared-buyer" if incoming else "shared-seller"
+            for i, p_data in enumerate(shared_people):
+                mod = self.modifiers(p_data, "auth_mod")
+                person_dict = self.helper.copy_source_information(p_data, data)
+                person = self.helper.add_person(person_dict, record=sales_records, relative_id=f"{role}_{i+1}")
+                if THROUGH.intersects(mod):
+                    goupil_group_agents.append(person)
+                else:
+                    goupil_group.append(person)
+
+        from_people = []
+        from_agents = []
+        to_people = []
+        to_agents = []
+        if incoming:
+            from_people = people
+            from_agents = people_agents
+            to_people = goupil_group
+            to_agents = goupil_group_agents
+        else:
+            from_people = goupil_group
+            from_agents = goupil_group_agents
+            to_people = people
+            to_agents = people_agents
+
+        if incoming:
+            self._add_prov_entry_rights(data, tx, shared_people, incoming)
+        self._add_prov_entry_payment(
+            data,
+            tx,
+            goupil_price_part,
+            price_info,
+            people,
+            people_agents,
+            shared_people,
+            goupil_group_agents,
+            date,
+            incoming,
+        )
+        self._add_prov_entry_acquisition(
+            data, tx, from_people, from_agents, to_people, to_agents, date, incoming, purpose=purpose
+        )
+
+        data["_prov_entries"].append(tx_data)
+        data["_people"].extend(people_data)
+        return tx
+
+    def add_incoming_tx(self, data, buy_sell_modifiers):
+        price_info = data.get("purchase")
+        # shared_people = data.get('purchase_buyer')
+        sellers = data["purchase_seller"]
+
+        for p in sellers:
+            self.helper.copy_source_information(p, data)
+        tx = self._prov_entry(
+            data, "entry_date", sellers, price_info, incoming=True, buy_sell_modifiers=buy_sell_modifiers
+        )
+
+        prev_owners = data.get("prev_own", [])
+        lot_object_key = self.helper.transaction_key_for_record(data, incoming=True)
+        # if prev_owners:
+        #     self.model_prev_owners(data, prev_owners, tx, lot_object_key)
+
+        return tx
+
+
+class ModelInventorying(GoupilTransactionHandler):
+    helper = Option(required=True)
+    make_la_person = Service("make_la_person")
+    buy_sell_modifiers = Service("buy_sell_modifiers")
+
+    def __call__(self, data: dict, make_la_person, buy_sell_modifiers):
+        odata = data["_object"]
+        date = implode_date(data["entry_date"])
+        for k in ("_prov_entries", "_people"):
+            data.setdefault(k, [])
+
+        sellers = data["purchase_seller"]
+        if len(sellers) > 0:
+            # if there are sellers in this record (and it is "Unsold" by design of the caller),
+            # then this is not an actual Inventorying event, and handled in ModelUnsoldPurchases
+            return
+
+        hmo = get_crom_object(odata)
+        object_label = f"“{hmo._label}”"
+
+        sn_ident = self.helper.stock_number_identifier(odata, date)
+
+        inv = self._new_inventorying(data)
+        appraisal = self._apprasing_assignment(data)
+        inv_label = inv._label
+
+        tx_out = self._empty_tx(data, incoming=False)
+        tx_out._label = inv_label
+        tx_out.identified_by = model.Name(ident="", content=inv_label)
+
+        inv_uri = self.helper.make_proj_uri("INV", odata["goupil_object_id"])
+        inv = vocab.Inventorying(ident=inv_uri, label=inv_label)
+        inv.identified_by = model.Name(ident="", content=inv_label)
+        inv.encountered = hmo
+        inv.carried_out_by = self.helper.static_instances.get_instance("Group", "goupil")
+
+        self.set_date(inv, data, "entry_date")
+        self.set_date(tx_out, data, "entry_date")
+
+        tx_out.part = inv
+
+        if appraisal:
+            tx_out.part = appraisal
+
+        tx_out_data = add_crom_data(data={"uri": tx_out.id, "label": inv_label}, what=tx_out)
+
+        data["_prov_entries"].append(tx_out_data)
+
+        yield data
+
+
+class ModelUnsoldPurchases(GoupilTransactionHandler):
+    helper = Option(required=True)
+    make_la_person = Service("make_la_person")
+    buy_sell_modifiers = Service("buy_sell_modifiers")
+
+    def __call__(self, data: dict, make_la_person, buy_sell_modifiers):
+        odata = data["_object"]
+        date = implode_date(data["entry_date"])
+
+        sellers = data["purchase_seller"]
+        if len(sellers) == 0:
+            return
+
+        hmo = get_crom_object(odata)
+        object_label = f"“{hmo._label}”"
+
+        sn_ident = self.helper.stock_number_identifier(odata, date)
+
+        in_tx = self.add_incoming_tx(data, buy_sell_modifiers)
+
+        yield data
 
 
 class GoupilPipeline(PipelineBase):
@@ -705,6 +1216,13 @@ class GoupilPipeline(PipelineBase):
         helper.static_instaces = self.static_instances
 
         # register project specific vocab here
+        vocab.register_vocab_class(
+            "SaleAsReturn", {"parent": model.Activity, "id": "300445014", "label": "Sale (Return to Original Owner)"}
+        )
+        vocab.register_vocab_class(
+            "AppraisingAssignment", {"parent": model.AttributeAssignment, "id": "300054622", "label": "Appraising"}
+        )
+
         vocab.register_vocab_class(
             "ConstructedTitle", {"parent": model.Name, "id": "300417205", "label": "Constructed Title"}
         )
@@ -734,6 +1252,13 @@ class GoupilPipeline(PipelineBase):
 
     def setup_services(self):
         services = super().setup_services()
+
+        same_objects = services.get("objects_same", {}).get("objects", [])
+        services["same_objects_map"] = {}
+
+        different_objects = services.get("objects_different", {}).get("knoedler_numbers", [])
+        services["different_objects"] = different_objects
+        services["people_groups"] = {}
 
         # make these case-insensitive by wrapping the value lists in CaseFoldingSet
         for name in ("attribution_modifiers",):
@@ -770,10 +1295,10 @@ class GoupilPipeline(PipelineBase):
                         "group_repeating": {
                             "_book_records": {
                                 "rename_keys": {
-                                    "stock_book_no": "no",
-                                    "stock_book_gno": "gno",
-                                    "stock_book_pg": "pg",
-                                    "stock_book_row": "row",
+                                    "stock_book_no": "stock_book_no",
+                                    "stock_book_gno": "stock_book_gno",
+                                    "stock_book_pg": "page_number",
+                                    "stock_book_row": "row_number",
                                 },
                                 "prefixes": ("stock_book_no", "stock_book_gno", "stock_book_pg", "stock_book_row"),
                                 "postprocess": [filter_empty_book],
@@ -796,24 +1321,22 @@ class GoupilPipeline(PipelineBase):
                                     "nationality",
                                 ),
                             },
-                            "prices": {
-                                "rename_keys": {
-                                    "price_amount": "amount",
-                                    "price_code": "code",
-                                    "price_currency": "currency",
-                                    "price_note": "note",
-                                },
-                                "prefixes": ("price_amount", "price_code", "price_currency", "price_note"),
-                            },
-                            "sellers": {
-                                "rename_keys": {
-                                    "seller_name": "name",
-                                    "seller_loc": "location",
-                                    "sell_auth_name": "auth_name",
-                                    "sell_auth_loc": "auth_location",
-                                    "sell_auth_mod": "auth_mod",
-                                    "seller_ulan_id": "ulan_id",
-                                },
+                            # remove sale from group repeating and move it to group until the price_amount_2 semantic meaning is decided
+                            # "sale": {
+                            #     "rename_keys": {
+                            #         "price_amount": "amount",
+                            #         "price_code": "code",
+                            #         "price_currency": "currency",
+                            #         "price_note": "note",
+                            #     },
+                            #     "prefixes": ("price_amount", "price_code", "price_currency", "price_note"),
+                            # },
+                            "purchase_seller": {
+                                "postprocess": [
+                                    filter_empty_person,
+                                    lambda x, _: strip_key_prefix("seller_", x),
+                                    lambda x, _: strip_key_prefix("sell_", x),
+                                ],
                                 "prefixes": (
                                     "seller_name",
                                     "seller_loc",
@@ -823,7 +1346,7 @@ class GoupilPipeline(PipelineBase):
                                     "seller_ulan_id",
                                 ),
                             },
-                            "co_owners": {
+                            "purchase_buyer": {
                                 "rename_keys": {
                                     "joint_own": "name",
                                     "joint_own_sh": "share",
@@ -831,12 +1354,12 @@ class GoupilPipeline(PipelineBase):
                                 },
                                 "prefixes": ("joint_own", "joint_own_sh", "joint_ulan_id"),
                             },
-                            "buyers": {
+                            "sale_buyer": {
                                 "rename_keys": {
                                     "buyer_name": "name",
-                                    "buyer_loc": "location",
+                                    "buyer_loc": "loc",
                                     "buy_auth_name": "auth_name",
-                                    "buy_auth_addr": "auth_location",
+                                    "buy_auth_addr": "auth_addr",
                                     "buy_auth_mod": "auth_mod",
                                     "buyer_ulan_id": "ulan_id",
                                 },
@@ -887,6 +1410,20 @@ class GoupilPipeline(PipelineBase):
                                     "post_sales",
                                 ),
                             },
+                            "sale_goupil_share": {
+                                "rename_keys": {
+                                    "price_amount_1": "amount",
+                                    "price_code_1": "code",
+                                    "price_currency_1": "currency",
+                                    "price_note_1": "note",
+                                },
+                                "postprocess": [
+                                    lambda d, p: add_crom_price(d, p, services),
+                                    # lambda d, p: add_crom_price(d, p, services)
+                                    # TODO handle price code
+                                ],
+                                "properties": ("price_amount_1", "price_code_1", "price_currency_1", "price_note_1"),
+                            },
                             "purchase": {
                                 "rename_keys": {
                                     "purch_amount": "amount",
@@ -897,8 +1434,10 @@ class GoupilPipeline(PipelineBase):
                                     "purch_ques": "uncertain",
                                     "purch_loc": "location",
                                     "purch_loc_note": "location_note",
+                                    # TODO create purchase location place
                                 },
                                 "postprocess": [
+                                    lambda d, p: add_crom_price(d, p, services),
                                     # lambda d, p: add_crom_price(d, p, services)
                                 ],  # use the one from knoedler for the time being
                                 "properties": (
@@ -913,7 +1452,17 @@ class GoupilPipeline(PipelineBase):
                                 ),
                             },
                             "cost": {
-                                "postprocess": lambda x, _: strip_key_prefix("cost_", x),
+                                "postprocess": [
+                                    lambda d, p: add_crom_price(d, p, services),
+                                ],
+                                "rename_keys": {
+                                    "cost_code": "code",
+                                    "cost_translation": "amount",
+                                    "cost_currency": "currency",
+                                    "cost_frame": "frame",
+                                    "cost_description": "note",
+                                    "cost_number": "uncertain",
+                                },
                                 "properties": (
                                     "cost_code",
                                     "cost_translation",
@@ -933,7 +1482,7 @@ class GoupilPipeline(PipelineBase):
                                     "present_loc_ulan_id",
                                 ),
                             },
-                            "object": {
+                            "book_record": {
                                 "properties": (
                                     "title",
                                     "description",
@@ -951,7 +1500,8 @@ class GoupilPipeline(PipelineBase):
                                     "present_location",
                                     "goupil_object_id",
                                     "goupil_event_ord",  # TODO: for future reference only, semantics uknown at this point
-                                )
+                                    "transaction",
+                                ),
                             },
                         },
                     }
@@ -966,15 +1516,73 @@ class GoupilPipeline(PipelineBase):
         rows = self.add_rows_chain(graph, pages)
         objects = self.add_objects_chain(graph, rows)
 
-        return objects
+        tx = graph.add_chain(TransactionSwitch(), _input=objects.output)
+        return tx
 
     def add_transaction_chains(self, graph, tx, services, serialize=True):
-        sale = graph.add_chain(ModelSale(helper=self.helper), _input=tx.output)
+        inventorying = graph.add_chain(
+            ExtractKeyedValue(key="Inventorying"),
+            ModelInventorying(helper=self.helper),
+            _input=tx.output,
+        )
 
-        people = graph.add_chain(ExtractKeyedValues(key="_people"), _input=sale.output)
+        unsold_purchases = graph.add_chain(
+            ExtractKeyedValue(key="Inventorying"),
+            ModelUnsoldPurchases(helper=self.helper),
+            _input=tx.output,
+        )
 
+        # sale = graph.add_chain(
+        #     ExtractKeyedValue(key="Purchase"),
+        #     ModelSale(helper=self.helper),
+        #     _input=tx.output,
+        # )
+
+        # returned = graph.add_chain(
+        #     ExtractKeyedValue(key="Returned"),
+        #     ModelReturn(helper=self.helper),
+        #     _input=tx.output,
+        # )
+
+        # destruction = graph.add_chain(
+        #     ExtractKeyedValue(key="Destroyed"),
+        #     ModelDestruction(helper=self.helper),
+        #     _input=tx.output,
+        # )
+
+        # theft = graph.add_chain(
+        #     ExtractKeyedValue(key="Stolen"),
+        #     ModelTheftOrLoss(helper=self.helper),
+        #     _input=tx.output,
+        # )
+
+        # loss = graph.add_chain(
+        #     ExtractKeyedValue(key="Lost"),
+        #     ModelTheftOrLoss(helper=self.helper),
+        #     _input=tx.output,
+        # )
+
+        # activities are specific to the inventorying chain
+        activities = graph.add_chain(ExtractKeyedValues(key="_activities"), _input=inventorying.output)
         if serialize:
-            self.add_person_or_group_chain(graph, people)
+            self.add_serialization_chain(graph, activities.output, model=self.models["Inventorying"])
+
+        # # people and prov entries can come from any of these chains:
+        for branch in (
+            # sale,
+            # destruction,
+            # theft,
+            # loss,
+            inventorying,
+            unsold_purchases,
+            # returned,
+        ):
+            prov_entry = graph.add_chain(ExtractKeyedValues(key="_prov_entries"), _input=branch.output)
+            people = graph.add_chain(ExtractKeyedValues(key="_people"), _input=branch.output)
+
+            if serialize:
+                self.add_serialization_chain(graph, prov_entry.output, model=self.models["ProvenanceEntry"])
+                self.add_person_or_group_chain(graph, people)
 
     def add_objects_chain(self, graph, rows, serialize=True):
         objects = graph.add_chain(
@@ -982,15 +1590,20 @@ class GoupilPipeline(PipelineBase):
             AddArtists(helper=self.helper),
             _input=rows.output,
         )
-
+        people = graph.add_chain(ExtractKeyedValues(key="_people"), _input=objects.output)
         hmos1 = graph.add_chain(ExtractKeyedValues(key="_physical_objects"), _input=objects.output)
         hmos2 = graph.add_chain(ExtractKeyedValues(key="_original_objects"), _input=objects.output)
+        texts = graph.add_chain(ExtractKeyedValues(key="_linguistic_objects"), _input=objects.output)
         odata = graph.add_chain(ExtractKeyedValue(key="_object"), _input=objects.output)
+        # final_sale = graph.add_chain(ModelFinalSale(helper=self.helper), _input=objects.output)
+        # prov_entry = graph.add_chain(ExtractKeyedValues(key="_prov_entries"), _input=final_sale.output)
+        # people2 = graph.add_chain(ExtractKeyedValues(key="_people"), _input=final_sale.output)
+
         artists = graph.add_chain(ExtractKeyedValues(key="_artists"), _input=objects.output)
         groups1 = graph.add_chain(ExtractKeyedValues(key="_organizations"), _input=objects.output)
         groups2 = graph.add_chain(ExtractKeyedValues(key="_organizations"), _input=hmos1.output)
-
         owners = self.add_person_or_group_chain(graph, hmos1, key="_other_owners", serialize=serialize)
+
         items = graph.add_chain(
             ExtractKeyedValue(key="_visual_item"),
             MakeLinkedArtRecord(),
@@ -998,15 +1611,21 @@ class GoupilPipeline(PipelineBase):
         )
 
         if serialize:
+            self.add_serialization_chain(graph, texts.output, model=self.models["LinguisticObject"])
 
             self.add_serialization_chain(graph, items.output, model=self.models["VisualItem"])
             self.add_serialization_chain(graph, hmos1.output, model=self.models["HumanMadeObject"])
             self.add_serialization_chain(graph, hmos2.output, model=self.models['HumanMadeObject'])
             self.add_person_or_group_chain(graph, odata, key="_organizations")  # organizations are groups too!
+            self.add_serialization_chain(graph, hmos2.output, model=self.models["HumanMadeObject"])
+            self.add_serialization_chain(graph, texts.output, model=self.models["LinguisticObject"])
             self.add_person_or_group_chain(graph, artists)
             self.add_person_or_group_chain(graph, groups1)
             self.add_person_or_group_chain(graph, groups2)
+            self.add_person_or_group_chain(graph, people)
+            # self.add_person_or_group_chain(graph, people2)
             self.add_person_or_group_chain(graph, owners)
+            # self.add_serialization_chain(graph, prov_entry.output, model=self.models["ProvenanceEntry"])
             _ = self.add_places_chain(graph, odata, key="_locations", serialize=serialize, include_self=True)
         return objects
 
@@ -1042,7 +1661,7 @@ class GoupilPipeline(PipelineBase):
     def add_rows_chain(self, graph, pages, serialize=True):
         rows = graph.add_chain(AddRows(static_instances=self.static_instances, helper=self.helper), _input=pages.output)
 
-        textual_works = graph.add_chain(ExtractKeyedValues(key="_text_rows"), _input=rows.output)
+        textual_works = graph.add_chain(ExtractKeyedValues(key="_records"), _input=rows.output)
 
         if serialize:
             self.add_serialization_chain(graph, textual_works.output, model=self.models["LinguisticObject"])

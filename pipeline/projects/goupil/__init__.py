@@ -956,11 +956,9 @@ class GoupilPipeline(PipelineBase):
             ExtractKeyedValue(key="_visual_item"),
             MakeLinkedArtRecord(),
             _input=hmos1.output,
-        )
-        textual_works = graph.add_chain(ExtractKeyedValues(key="_record"), _input=rows.output)          
+        )    
 
         if serialize:
-            self.add_serialization_chain(graph, textual_works.output, model=self.models["LinguisticObject"])
 
             self.add_serialization_chain(
                 graph, items.output, model=self.models["VisualItem"]

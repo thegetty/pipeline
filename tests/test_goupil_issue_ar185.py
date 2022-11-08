@@ -13,8 +13,6 @@ from tests import (
     MODELS,
     classified_identifiers,
     classification_tree,
-    classified_identifiers,
-    classification_sets,
 )
 from cromulent import vocab
 
@@ -137,6 +135,29 @@ class PIRModelingTest_AR185(TestGoupilPipelineOutput):
 
         self.assertEqual(person2["_label"], "Allard")
         self.assertEqual(person2["referred_to_by"][0]["_label"], "Goupil Stock Book 15, Page 264, Row 2")
+
+    def test_modeling_ar192_4(self):
+        """
+        AR-185 : Authority names should not have name source reference
+        """
+        output = self.run_pipeline("ar185")
+        people = output["model-person"]
+
+        person1 = people["tag:getty.edu,2019:digital:pipeline:REPLACE-WITH-UUID:shared#PERSON,AUTH,Wallis%20and%20Son"]
+        person2 = people["tag:getty.edu,2019:digital:pipeline:REPLACE-WITH-UUID:goupil#PERSON,PI,G-42810,shared-own_1"]
+        person3 = people["tag:getty.edu,2019:digital:pipeline:REPLACE-WITH-UUID:goupil#PERSON,PI,G-43741,person-0"]
+        person4 = people["tag:getty.edu,2019:digital:pipeline:REPLACE-WITH-UUID:goupil#PERSON,PI,G-23884,prev_own_1"]
+
+        def preferred_name(data: dict):
+            for identifier in data["identified_by"]:
+                if identifier["classified_as"][0]["id"] == "http://vocab.getty.edu/aat/300404670":
+                    return identifier
+            return []
+
+        self.assertNotIn("referred_to_by", preferred_name(person1))
+        self.assertNotIn("referred_to_by", preferred_name(person2))
+        self.assertNotIn("referred_to_by", preferred_name(person3))
+        self.assertNotIn("referred_to_by", preferred_name(person4))
 
 
 if __name__ == "__main__":

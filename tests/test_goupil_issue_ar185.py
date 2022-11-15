@@ -13,6 +13,7 @@ from tests import (
     MODELS,
     classified_identifiers,
     classification_tree,
+    classification_sets,
 )
 from cromulent import vocab
 

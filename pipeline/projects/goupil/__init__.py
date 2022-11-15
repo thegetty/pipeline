@@ -470,7 +470,7 @@ class AddRows(Configurable, GoupilProvenance):
                         id_class=vocab.RowNumber,
                         assignment_label=f"Entry Number Attribution by {self.static_instances.get_instance('Group', 'goupil')._label}",
                     ),
-                    self.helper.gpi_number_id(data["pi_record_no"], vocab.StarNumber),
+                    self.helper.goupil_gpi_number_id(data["pi_record_no"], vocab.StarNumber),
                 ],
                 "referred_to_by": notes,
             }

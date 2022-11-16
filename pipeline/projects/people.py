@@ -94,7 +94,7 @@ class PeopleUtilityHelper(UtilityHelper):
 			return None
 
 	def add_group(self, data, **kwargs):
-		g = super().add_group(data, **kwargs)
+		g = super().add_group(data, split_notes=False, **kwargs)
 		
 		# "people" records that are actually groups are recorded here, serialized, and
 		# then used in the Knoedler pipeline so that those records can be properly
@@ -304,7 +304,6 @@ class AddPerson(Configurable):
 				a = self.helper.person_identity.professional_activity(name, classified_as=[vocab.ActiveOccupation], **active_args)
 				data['events'].append(a)
 				
-			
 			if self.helper.add_group(data):
 				yield data
 		else:

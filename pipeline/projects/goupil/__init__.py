@@ -275,15 +275,6 @@ class GoupilUtilityHelper(UtilityHelper):
             p.referred_to_by = sales_record
         return data
 
-    def title_value(self, title):
-        if not isinstance(title, str):
-            return
-
-        m = self.title_re.search(title)
-        if m:
-            return m.group(1)
-        return title
-
     def copy_source_information(self, dst: dict, src: dict):
         if not dst or not isinstance(dst, dict):
             return dst

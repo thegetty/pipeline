@@ -30,6 +30,11 @@ class PIRModelingTest_AR184(TestGoupilPipelineOutput):
             classified_identifiers(org), {"Primary Name": "Metropolitan Museum of Art"}
         )  # has name and its primary
 
+        self.assertEqual(
+            org["referred_to_by"][0]["id"],
+            "tag:getty.edu,2019:digital:pipeline:REPLACE-WITH-UUID:goupil#Text,Book,6,Page,173,Row,8",
+        )
+
 
 if __name__ == "__main__":
     unittest.main()

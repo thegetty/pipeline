@@ -207,7 +207,9 @@ class GoupilProvenance:
     def model_prev_post_owners(self, data, owners, tx, role, lot_object_key=None):
         for i, p in enumerate(owners):
             p_data = self.helper.copy_source_information(p, data)
-            person = self.helper.add_person(p_data, record=None, relative_id=f"{role}_{i+1}")
+            person = self.helper.add_person(
+                p_data, record=get_crom_objects(data["_text_rows"]), relative_id=f"{role}_{i+1}"
+            )
             add_crom_data(p_data, person)
             data["_people"].append(p_data)
 
@@ -288,6 +290,11 @@ class GoupilUtilityHelper(UtilityHelper):
     def add_person(self, data, record: None, relative_id, **kwargs):
         self.person_identity.add_uri(data, record_id=relative_id)
         person = super().add_person(data, record=record, relative_id=relative_id, **kwargs)
+        if data.get("auth_name"):
+            for identifier in person.identified_by:
+                if isinstance(identifier, vocab.PrimaryName):
+                    identifier.referred_to_by = []
+
         return person
 
     def make_place(self, *args, sales_record=None, **kwargs):
@@ -457,8 +464,10 @@ class PopulateGoupilObject(Configurable, PopulateObject):
                     owner_data = {
                         "label": "(Anonymous organization)",
                         "uri": self.helper.make_proj_uri("ORG", "CURR-OWN", *now_key),
+                        # "referred_to_by": [sales_record],
                     }
 
+                owner_data["referred_to_by"] = [sales_record]
                 # It's conceivable that there could be more than one "present location"
                 # for an object that is reconciled based on prev/post sale rewriting.
                 # Therefore, the place URI must not share a prefix with the object URI,
@@ -660,7 +669,7 @@ class AddRows(Configurable, GoupilProvenance):
                         id_class=vocab.RowNumber,
                         assignment_label=f"Entry Number Attribution by {self.static_instances.get_instance('Group', 'goupil')._label}",
                     ),
-                    self.helper.gpi_number_id(data["pi_record_no"], vocab.StarNumber),
+                    self.helper.goupil_gpi_number_id(data["pi_record_no"], vocab.StarNumber),
                 ],
                 "referred_to_by": notes,
             }

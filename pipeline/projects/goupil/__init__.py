@@ -385,6 +385,9 @@ class PopulateGoupilObject(Configurable, PopulateObject):
                 in ("materials", "dimensions", "goupil_object_id", "present_location", "subject", "genre")
             }
         )
+        if "dimensions" in data["_object"]:
+            data["_object"]["dimensions"] = data["_object"]["dimensions"].lower()
+        
 
         try:
             stock_number = odata["goupil_object_id"]

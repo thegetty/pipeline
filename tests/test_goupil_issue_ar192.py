@@ -34,6 +34,8 @@ class PIRModelingTest_AR192(TestGoupilPipelineOutput):
 
         self.assertEqual(object["dimension"][0]["type"], "Dimension")
         self.assertEqual(object["dimension"][0]["value"], 39)
+        self.assertEqual(object["dimension"][1]["type"], "Dimension")
+        self.assertEqual(object["dimension"][1]["value"], 54)
         self.assertEqual(
             object["shows"][0]["_label"], "Visual work of “Le petit puits[?] [rayé]”"
         )

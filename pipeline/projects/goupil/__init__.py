@@ -389,7 +389,7 @@ class PopulateGoupilObject(Configurable, PopulateObject):
         try:
             stock_number = odata["goupil_object_id"]
             identifiers.append(
-                self.helper.goupil_number_id(stock_number, vocab.StockNumber)
+                self.helper.goupil_pscp_number_id(stock_number, vocab.StockNumber)
             )
         except:
             pass

@@ -7,7 +7,7 @@ import json
 import uuid
 import pprint
 
-from tests import TestWriter, TestGoupilPipelineOutput, MODELS, classified_identifiers
+from tests import TestWriter, TestGoupilPipelineOutput, MODELS, classified_identifiers, classification_tree, classification_sets
 from cromulent import vocab
 
 vocab.add_attribute_assignment_check()
@@ -29,41 +29,27 @@ class PIRModelingTest_AR191(TestGoupilPipelineOutput):
             "Visual work of “Hamlet”",
         )    
 
-        # Classification of the visual work with ulan id
-        self.assertEqual(
-            visual_item["classified_as"][0]["id"],
-            "http://vocab.getty.edu/aat/300033898",
-        )
+        self.assertDictEqual(classification_tree(visual_item), {'Historie': {}})
+        self.assertDictEqual(classified_identifiers(visual_item), {'Title': 'Hamlet'})
+        self.assertEqual(classification_sets(visual_item, key='id'), {'http://vocab.getty.edu/aat/300033898'})
 
-        # Label of the classification
-        self.assertEqual(
-            visual_item["classified_as"][0]["_label"],
-            "Historie",
-        )
+
+        # Classification of Identifiers
+        self.assertDictEqual(classification_tree(visual_item["identified_by"][0]), {'Title': {}})
 
         # Reference to visual work by the textual work
-        self.assertEqual(
-            visual_item["referred_to_by"][0]["id"],
-            "tag:getty.edu,2019:digital:pipeline:REPLACE-WITH-UUID:goupil#Text,Book,10,Page,185,Row,15",
-        )
+        textualWorkReferences = []
+        for references in visual_item.get("referred_to_by"):
+            textualWorkReferences.append(references.get("id"))
 
-        # Type of the identifier
-        self.assertEqual(
-            visual_item["identified_by"][0]["classified_as"][0]["id"],
-            "http://vocab.getty.edu/aat/300417193",
-        )
+        # Reference to the title of the visual work by the textual work
+        for identifiers in visual_item.get("identified_by"):
+            for references in identifiers.get("referred_to_by"):
+                textualWorkReferences.append(references.get("id"))
 
-        # Reference to visual work by the textual work
-        self.assertEqual(
-            visual_item["identified_by"][0]["referred_to_by"][0]["id"],
-            "tag:getty.edu,2019:digital:pipeline:REPLACE-WITH-UUID:goupil#Text,Book,10,Page,185,Row,15",
-        )
 
-        # Title of the visual work
-        self.assertEqual(
-            visual_item["identified_by"][0]["content"],
-            "Hamlet",
-        )
+        self.assertTrue(len(textualWorkReferences)==2)
+        self.assertTrue(textualWorkReferences[0] == textualWorkReferences[1] == "tag:getty.edu,2019:digital:pipeline:REPLACE-WITH-UUID:goupil#Text,Book,10,Page,185,Row,15")
 
 
 if __name__ == "__main__":

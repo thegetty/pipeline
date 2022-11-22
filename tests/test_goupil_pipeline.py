@@ -54,7 +54,7 @@ class TestGoupilPipelineOutput(unittest.TestCase):
         # pdb.set_trace()
 
         self.assertEqual(len(los), 4)
-        self.assertEqual(len(groups), 2)
+        self.assertEqual(len(groups), 3)
         goupil = groups["tag:getty.edu,2019:digital:pipeline:REPLACE-WITH-UUID:shared#ORGANIZATION,ULAN,500067127"]
         self.assertEqual(goupil["_label"], "Goupil & Cie.")
 

@@ -7,7 +7,7 @@ import json
 import uuid
 import pprint
 
-from tests import TestWriter, TestGoupilPipelineOutput, MODELS, classified_identifiers
+from tests import TestWriter, TestGoupilPipelineOutput, MODELS, classified_identifiers, classification_sets
 from cromulent import vocab
 
 vocab.add_attribute_assignment_check()
@@ -111,6 +111,34 @@ class PIRModelingTest_AR192(TestGoupilPipelineOutput):
             for identifier in object["identified_by"]:
                 if "g-object" in identifier["content"]:
                     self.assertEqual(identifier["assigned_by"][0]["carried_out_by"][0]["id"], "tag:getty.edu,2019:digital:pipeline:REPLACE-WITH-UUID:shared#STATIC,ORGANIZATION,Project%20for%20the%20Study%20of%20Collecting%20and%20Provenance")
+
+    def test_modeling_ar192_5(self):
+        """
+        AR-192 : Add physical object modelling, multiple records in one row
+        """
+        output = self.run_pipeline("ar192")
+        object = output["model-object"]['tag:getty.edu,2019:digital:pipeline:REPLACE-WITH-UUID:goupil#Object,Internal,G-19117']
+
+        # Test if physical object is referred_to_by both records
+        self.assertEqual(len(object["referred_to_by"]), 3)
+
+        # Test if dimension statement is referred_to_by both records
+        self.assertEqual(len(object["referred_to_by"][2]["referred_to_by"]), 2)
+        for dimension in object["dimension"]:
+            self.assertEqual(len(dimension["referred_to_by"]), 2)
+
+        # Test if Material statement is referred_to_by both records
+        object = output["model-object"]['tag:getty.edu,2019:digital:pipeline:REPLACE-WITH-UUID:goupil#Object,Internal,G-2678']
+        self.assertEqual(classification_sets(object["referred_to_by"][2]), {'Material Statement'})
+        self.assertEqual(len(object["referred_to_by"][2]["referred_to_by"]), 2)
+
+        person = output["model-person"]['tag:getty.edu,2019:digital:pipeline:REPLACE-WITH-UUID:shared#PERSON,AUTH,ENFANTIN']
+
+        # Test if physical object is referred_to_by both records
+        self.assertEqual(len(person["referred_to_by"]), 2)
+
+        # Test if identifier is referred_to_by both records
+        self.assertEqual(len(person["identified_by"][1]["referred_to_by"]), 2)
 
 
 if __name__ == "__main__":

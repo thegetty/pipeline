@@ -96,32 +96,6 @@ class GoupilProvenance:
                 }
             )
 
-    def model_artists_with_modifers(self, data: dict, hmo: dict):
-        # mofifiers are not yet to be modelled but we leave this function here as a placeholder
-
-        sales_record = get_crom_object(data["_record"])
-        data.setdefault("_organizations", [])
-        data.setdefault("_original_objects", [])
-
-        try:
-            hmo_label = f"{hmo._label}"
-        except AttributeError:
-            hmo_label = "object"
-
-        event_uri = hmo.id + "-Production"
-        prod_event = model.Production(
-            ident=event_uri, label=f"Production event for {hmo_label}"
-        )
-        hmo.produced_by = prod_event
-
-        artists = data.get("_artists", [])
-        for a in artists:
-            self.add_properties(data, a)
-            pass
-
-        self.model_object_artists(data, artists)
-
-        return data
 
     def _prov_entry(
         self,
@@ -247,7 +221,6 @@ class AddArtists(ProvenanceBase, GoupilProvenance):
     attribution_group_names = Service('attribution_group_names')
 
     def add_properties(self, data: dict, a: dict):
-        sales_record = get_crom_object(data["_record"])
         a.setdefault("referred_to_by", [])
         a.update(
             {
@@ -262,7 +235,6 @@ class AddArtists(ProvenanceBase, GoupilProvenance):
 
     def __call__(self, data:dict, *, make_la_person, attribution_modifiers, attribution_group_types, attribution_group_names):
         hmo = get_crom_object(data["_object"])
-
         #Add ulan information 
         self.model_object_artists_authority(data.get('_artists', []))
 
@@ -297,16 +269,17 @@ class GoupilUtilityHelper(UtilityHelper):
 
         return person
 
-    def make_place(self, *args, sales_record=None, **kwargs):
+    def make_place(self, *args, sales_records=None, **kwargs):
         """
         Add a reference to the sales record in places that are modeled.
         This will only add references to the most-specific place being modeled,
         leaving the 'part_of' hierarchy remain un-referenced.
         """
         data = super().make_place(*args, **kwargs)
-        if sales_record:
-            p = get_crom_object(data)
-            p.referred_to_by = sales_record
+        if sales_records:
+            for sale_record in sales_records:
+                p = get_crom_object(data)
+                p.referred_to_by = sale_record
         return data
 
     def copy_source_information(self, dst: dict, src: dict):
@@ -348,7 +321,7 @@ class PopulateGoupilObject(Configurable, PopulateObject):
         super().__init__(*args, **kwargs)
 
     def __call__(self, data: dict, *, vocab_type_map, make_la_org, subject_genre):
-        sales_record = get_crom_object(data["_record"])
+        sales_records = get_crom_objects(data["_text_rows"])
         data.setdefault("_physical_objects", [])
         data.setdefault("_linguistic_objects", [])
         data.setdefault("_people", [])
@@ -362,19 +335,19 @@ class PopulateGoupilObject(Configurable, PopulateObject):
         typestring = odata.get("object_type", "")
         identifiers = []
 
-        title_refs = [sales_record]
+        title_refs = [sales_records]
 
         if title_ref:
             title_refs.append(title_ref)
-        title = [label, {"referred_to_by": title_refs}]
+        title = [label, {"referred_to_by": sales_records}]
         data["_object"] = {
             "title": title,
             "identifiers": identifiers,
-            "referred_to_by": [sales_record],
-            "_record": data["_record"],
+            "referred_to_by": sales_records,
+            "_record": data["_text_rows"],
             "_locations": [],
             "_organizations": [],
-            "_text_row": data["_text_row"],
+            "_text_rows": data["_text_rows"],
         }
         self.helper.copy_source_information(data["_object"], data)
         data["_object"].update(
@@ -395,16 +368,19 @@ class PopulateGoupilObject(Configurable, PopulateObject):
                 self.helper.goupil_pscp_number_id(stock_number, vocab.StockNumber)
             )
         except:
-            pass
-
-        try:
-            stock_nook_gno = gno = data["identifiers"][1]
-            uri_key = ("Object", stock_nook_gno)
-            identifiers.append(
-                self.helper.goupil_number_id(stock_nook_gno, vocab.StockNumber)
-            )
-        except:
-            uri_key = ("Object", "Internal", data["pi_record_no"])
+            warnings.warn(
+                f"*** Object has no gno identifier: {pprint.pformat(data)}"
+                    )
+        for row in data["_text_rows"]:
+            try:
+                stock_nook_gno = gno = row["gno"]
+                identifiers.append(
+                    self.helper.goupil_number_id(stock_nook_gno, vocab.StockNumber)
+                )
+            except:
+                warnings.warn(
+                    f"*** Object has no gno identifier: {pprint.pformat(data)}"
+                        )
 
         uri_key = ("Object", "Internal", data["pi_record_no"])
         uri = self.helper.make_object_uri(data["pi_record_no"], *uri_key)
@@ -426,13 +402,13 @@ class PopulateGoupilObject(Configurable, PopulateObject):
         self.populate_object_statements(data["_object"], default_unit="inches")
         data["_physical_objects"].append(data["_object"])
         
-        _record = get_crom_object(data["_record"])
         hmo = get_crom_object(data["_object"])
-        _record.about = hmo
+        for _record in sales_records:
+            _record.about = hmo
         return data
 
     def _populate_object_present_location(self, data: dict):
-        sales_record = get_crom_object(data["_record"])
+        sales_records = get_crom_objects(data["_text_rows"])
         hmo = get_crom_object(data)
         location = data.get("present_location")
         if location:
@@ -470,15 +446,16 @@ class PopulateGoupilObject(Configurable, PopulateObject):
                         # "referred_to_by": [sales_record],
                     }
 
-                owner_data["referred_to_by"] = [sales_record]
+                owner_data["referred_to_by"] = sales_records
                 # It's conceivable that there could be more than one "present location"
                 # for an object that is reconciled based on prev/post sale rewriting.
                 # Therefore, the place URI must not share a prefix with the object URI,
                 # otherwise all such places are liable to be merged during URI
                 # reconciliation as part of the prev/post sale rewriting.
                 base_uri = self.helper.prepend_uri_key(hmo.id, "PLACE")
+                
                 place_data = self.helper.make_place(
-                    current, base_uri=base_uri, sales_record=sales_record
+                    current, base_uri=base_uri, sales_records=sales_records
                 )
                 place = get_crom_object(place_data)
                 hmo.current_location = place
@@ -517,7 +494,7 @@ class PopulateGoupilObject(Configurable, PopulateObject):
                 pass  # there is no present location place string
 
     def _populate_object_visual_item(self, data: dict, title, subject_genre):
-        sales_record = get_crom_object(data["_record"])
+        sales_records = get_crom_objects(data["_text_rows"])
         hmo = get_crom_object(data)
         title = truncate_with_ellipsis(title, 100) or title
 
@@ -531,16 +508,16 @@ class PopulateGoupilObject(Configurable, PopulateObject):
         vi._label = f"Visual work of “{title}”"
         vidata = {
             "uri": vi_uri,
-            "referred_to_by": [sales_record],
+            "referred_to_by": sales_records,
             'identifiers': [],
         }
         if title:
             vidata["label"] = f"Visual work of “{title}”"
-            sales_record = get_crom_object(data["_record"])
             titletype = vocab.Name
             t = titletype(ident='', content=title)
             t.classified_as = model.Type(ident='http://vocab.getty.edu/aat/300417193', label='Title')
-            t.referred_to_by = sales_record
+            for sale_record in sales_records:
+                t.referred_to_by = sale_record
             vidata['identifiers'].append(t)
         for key in ('genre', 'subject'):
             if key in data:
@@ -676,12 +653,8 @@ class AddRows(Configurable, GoupilProvenance):
                 ],
                 "referred_to_by": notes,
             }
-
+            row.update({k: v for k, v in p_data.items() if k in ("no", "gno", "pg", "row")})
             make_la_lo(row)
-            data["_record"] = row
-            record = get_crom_object(row)
-            data["_text_row"] = row
-            data["identifiers"] = record_id(p_data)
 
             o_page = get_crom_object(p_data)
             o_row = get_crom_object(row)
@@ -689,7 +662,7 @@ class AddRows(Configurable, GoupilProvenance):
 
             data["_text_rows"].append(row)
             self.add_goupil_creation_data(row)
-
+            data["_record"] = data["_text_rows"]
         return data
 
 
@@ -706,6 +679,7 @@ class GoupilPipeline(PipelineBase):
         helper.static_instaces = self.static_instances
 
         # register project specific vocab here
+        vocab.register_vocab_class('ConstructedTitle', {'parent': model.Name, 'id': '300417205', 'label': 'Constructed Title'})
         vocab.register_vocab_class(
             "BookNumber", {"parent": model.Identifier, "id": "300445021", "label": "Book Numbers"}
         )

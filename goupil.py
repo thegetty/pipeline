@@ -19,10 +19,12 @@ if __name__ == "__main__":
     else:
         LIMIT = int(os.environ.get("GETTY_PIPELINE_LIMIT", 10000000))
 
+    # fmt: off
     data = {
-        "header_file": "goupil_0.csv",
-        "files_pattern": "goupil.csv",
+        'header_file': 'goupil_0.csv',
+        'files_pattern': 'goupil.csv',
     }
+    # fmt: on
 
     # 	factory.production_mode()
     vocab.conceptual_only_parts()

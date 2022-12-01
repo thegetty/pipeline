@@ -598,13 +598,13 @@ class TestGoupilPipelineOutput(unittest.TestCase):
 
 ##########################################################################################
 
-def classified_identifiers(data, key='identified_by'):
+def classified_identifiers(data, member='_label', key='identified_by'):
 	classified_identifiers = {}
 	identifiers = [(i['content'], i.get('classified_as', [])) for i in data.get(key, [])]
 	for (content, classification) in identifiers:
 		if len(classification):
 			for cl in classification:
-				label = cl['_label']
+				label = cl[member]
 				classified_identifiers[label] = content
 		else:
 			classified_identifiers[None] = content

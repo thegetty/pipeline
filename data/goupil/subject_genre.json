@@ -1,115 +1,242 @@
 {
     "classified_as": {
-        "Animaux": {
-            "animal art": "http://vocab.getty.edu/aat/300386044"
+        "animaux": {
+            "animal art": {
+                "metatype": "http://vocab.getty.edu/aat/300435443",
+                "type": "http://vocab.getty.edu/aat/300386044"
+            }
         },
-        "Architecture, Paysage": {
-            "architecture (object genre)": "http://vocab.getty.edu/aat/300263552",
-            "landscapes (representations)": "http://vocab.getty.edu/aat/300015636"
+        "architecture, paysage": {
+            "architecture (object genre)": {
+                "metatype": "http://vocab.getty.edu/aat/300435443",
+                "type": "http://vocab.getty.edu/aat/300263552"
+            },
+            "landscapes (representations)": {
+                "metatype": "http://vocab.getty.edu/aat/300435443",
+                "type": "http://vocab.getty.edu/aat/300015636"
+            }
         },
-        "Architecture; Intérieurs, Genre": {
-            "genre pictures": "http://vocab.getty.edu/aat/300139140",
-            "interior views": "http://vocab.getty.edu/aat/300124520"
+        "architecture; intérieurs, genre": {
+            "genre pictures": {
+                "metatype": "http://vocab.getty.edu/aat/300435443",
+                "type": "http://vocab.getty.edu/aat/300139140"
+            },
+            "interior views": {
+                "metatype": "http://vocab.getty.edu/aat/300435443",
+                "type": "http://vocab.getty.edu/aat/300124520"
+            }
         },
-        "Batailles, Historie": {
-            "histories (visual works)": "http://vocab.getty.edu/aat/300386045"
+        "batailles, historie": {
+            "histories (visual works)": {
+                "metatype": "http://vocab.getty.edu/aat/300435443",
+                "type": "http://vocab.getty.edu/aat/300386045"
+            }
         },
-        "Genre": {
-            "genre pictures": "http://vocab.getty.edu/aat/300139140"
+        "genre": {
+            "genre pictures": {
+                "metatype": "http://vocab.getty.edu/aat/300435443",
+                "type": "http://vocab.getty.edu/aat/300139140"
+            }
         },
-        "Historie": {
-            "histories (visual works)": "http://vocab.getty.edu/aat/300386045"
+        "historie": {
+            "histories (visual works)": {
+                "metatype": "http://vocab.getty.edu/aat/300435443",
+                "type": "http://vocab.getty.edu/aat/300386045"
+            }
         },
-        "Intérieurs, Genre": {
-            "genre pictures": "http://vocab.getty.edu/aat/300139140",
-            "interior views": "http://vocab.getty.edu/aat/300124520"
+        "intérieurs, genre": {
+            "genre pictures": {
+                "metatype": "http://vocab.getty.edu/aat/300435443",
+                "type": "http://vocab.getty.edu/aat/300139140"
+            },
+            "interior views": {
+                "metatype": "http://vocab.getty.edu/aat/300435443",
+                "type": "http://vocab.getty.edu/aat/300124520"
+            }
         },
-        "Marines, Paysage": {
-            "landscapes (representations)": "http://vocab.getty.edu/aat/300015636",
-            "marines (visual works)": "http://vocab.getty.edu/aat/300235692",
-            "seascapes": "http://vocab.getty.edu/aat/300117546"
+        "marines, paysage": {
+            "landscapes (representations)": {
+                "metatype": "http://vocab.getty.edu/aat/300435443",
+                "type": "http://vocab.getty.edu/aat/300015636"
+            },
+            "marines (visual works)": {
+                "metatype": "http://vocab.getty.edu/aat/300435443",
+                "type": "http://vocab.getty.edu/aat/300235692"
+            },
+            "seascapes": {
+                "metatype": "http://vocab.getty.edu/aat/300435443",
+                "type": "http://vocab.getty.edu/aat/300117546"
+            }
         },
-        "Militaire, Genre": {
-            "genre pictures": "http://vocab.getty.edu/aat/300139140"
+        "militaire, genre": {
+            "genre pictures": {
+                "metatype": "http://vocab.getty.edu/aat/300435443",
+                "type": "http://vocab.getty.edu/aat/300139140"
+            }
         },
-        "Militaire, Historie": {
-            "histories (visual works)": "http://vocab.getty.edu/aat/300386045"
+        "militaire, historie": {
+            "histories (visual works)": {
+                "metatype": "http://vocab.getty.edu/aat/300435443",
+                "type": "http://vocab.getty.edu/aat/300386045"
+            }
         },
-        "Militaire, Paysage": {
-            "landscapes (representations)": "http://vocab.getty.edu/aat/300015636"
+        "militaire, paysage": {
+            "landscapes (representations)": {
+                "metatype": "http://vocab.getty.edu/aat/300435443",
+                "type": "http://vocab.getty.edu/aat/300015636"
+            }
         },
-        "Military, Genre": {
-            "genre pictures": "http://vocab.getty.edu/aat/300139140"
+        "military, genre": {
+            "genre pictures": {
+                "metatype": "http://vocab.getty.edu/aat/300435443",
+                "type": "http://vocab.getty.edu/aat/300139140"
+            }
         },
-        "Mythologie (figures), Historie": {
-            "histories (visual works)": "http://vocab.getty.edu/aat/300386045",
-            "mythology (literary genre)": "http://vocab.getty.edu/aat/300055985"
+        "mythologie (figures), historie": {
+            "histories (visual works)": {
+                "metatype": "http://vocab.getty.edu/aat/300435443",
+                "type": "http://vocab.getty.edu/aat/300386045"
+            },
+            "mythology (literary genre)": {
+                "metatype": "http://vocab.getty.edu/aat/300435443",
+                "type": "http://vocab.getty.edu/aat/300055985"
+            }
         },
-        "Mythologie (narratif), Historie": {
-            "histories (visual works)": "http://vocab.getty.edu/aat/300386045",
-            "narrative art": "http://vocab.getty.edu/aat/300410510"
+        "mythologie (narratif), historie": {
+            "histories (visual works)": {
+                "metatype": "http://vocab.getty.edu/aat/300435443",
+                "type": "http://vocab.getty.edu/aat/300386045"
+            },
+            "narrative art": {
+                "metatype": "http://vocab.getty.edu/aat/300435443",
+                "type": "http://vocab.getty.edu/aat/300410510"
+            }
         },
-        "Nature Morte": {
-            "still lifes": "http://vocab.getty.edu/aat/300015638"
+        "nature morte": {
+            "still lifes": {
+                "metatype": "http://vocab.getty.edu/aat/300435443",
+                "type": "http://vocab.getty.edu/aat/300015638"
+            }
         },
-        "Paysage": {
-            "landscapes (representations)": "http://vocab.getty.edu/aat/300015636"
+        "paysage": {
+            "landscapes (representations)": {
+                "metatype": "http://vocab.getty.edu/aat/300435443",
+                "type": "http://vocab.getty.edu/aat/300015636"
+            }
         },
-        "Paysage avec figures, Paysage": {
-            "landscapes (representations)": "http://vocab.getty.edu/aat/300015636"
+        "paysage avec figures, paysage": {
+            "landscapes (representations)": {
+                "metatype": "http://vocab.getty.edu/aat/300435443",
+                "type": "http://vocab.getty.edu/aat/300015636"
+            }
         },
-        "Portrait": {
-            "portraits": "http://vocab.getty.edu/aat/300015637"
+        "portrait": {
+            "portraits": {
+                "metatype": "http://vocab.getty.edu/aat/300435443",
+                "type": "http://vocab.getty.edu/aat/300015637"
+            }
         },
-        "Religieux (figures), Historie": {
-            "histories (visual works)": "http://vocab.getty.edu/aat/300386045",
-            "religious visual works": "http://vocab.getty.edu/aat/300234093"
+        "religieux (figures), historie": {
+            "histories (visual works)": {
+                "metatype": "http://vocab.getty.edu/aat/300435443",
+                "type": "http://vocab.getty.edu/aat/300386045"
+            },
+            "religious visual works": {
+                "metatype": "http://vocab.getty.edu/aat/300435443",
+                "type": "http://vocab.getty.edu/aat/300234093"
+            }
         },
-        "Religieux (narratif), Historie": {
-            "histories (visual works)": "http://vocab.getty.edu/aat/300386045",
-            "narrative art": "http://vocab.getty.edu/aat/300410510",
-            "religious visual works": "http://vocab.getty.edu/aat/300234093"
+        "religieux (narratif), historie": {
+            "histories (visual works)": {
+                "metatype": "http://vocab.getty.edu/aat/300435443",
+                "type": "http://vocab.getty.edu/aat/300386045"
+            },
+            "narrative art": {
+                "metatype": "http://vocab.getty.edu/aat/300435443",
+                "type": "http://vocab.getty.edu/aat/300410510"
+            },
+            "religious visual works": {
+                "metatype": "http://vocab.getty.edu/aat/300435443",
+                "type": "http://vocab.getty.edu/aat/300234093"
+            }
         },
-        "Religious (narrative), Historie": {
-            "histories (visual works)": "http://vocab.getty.edu/aat/300386045",
-            "narrative art": "http://vocab.getty.edu/aat/300410510",
-            "religious visual works": "http://vocab.getty.edu/aat/300234093"
+        "religious (narrative), historie": {
+            "histories (visual works)": {
+                "metatype": "http://vocab.getty.edu/aat/300435443",
+                "type": "http://vocab.getty.edu/aat/300386045"
+            },
+            "narrative art": {
+                "metatype": "http://vocab.getty.edu/aat/300435443",
+                "type": "http://vocab.getty.edu/aat/300410510"
+            },
+            "religious visual works": {
+                "metatype": "http://vocab.getty.edu/aat/300435443",
+                "type": "http://vocab.getty.edu/aat/300234093"
+            }
         },
-        "Ruines, Paysage": {
-            "landscapes (representations)": "http://vocab.getty.edu/aat/300015636"
+        "ruines, paysage": {
+            "landscapes (representations)": {
+                "metatype": "http://vocab.getty.edu/aat/300435443",
+                "type": "http://vocab.getty.edu/aat/300015636"
+            }
         },
-        "Sporting, Genre": {
-            "genre pictures": "http://vocab.getty.edu/aat/300139140"
+        "sporting, genre": {
+            "genre pictures": {
+                "metatype": "http://vocab.getty.edu/aat/300435443",
+                "type": "http://vocab.getty.edu/aat/300139140"
+            }
         },
-        "Vues topographiques, Paysage": {
-            "landscapes (representations)": "http://vocab.getty.edu/aat/300015636",
-            "views (visual works)": "http://vocab.getty.edu/aat/300015424"
+        "vues topographiques, paysage": {
+            "landscapes (representations)": {
+                "metatype": "http://vocab.getty.edu/aat/300435443",
+                "type": "http://vocab.getty.edu/aat/300015636"
+            },
+            "views (visual works)": {
+                "metatype": "http://vocab.getty.edu/aat/300435443",
+                "type": "http://vocab.getty.edu/aat/300015424"
+            }
         }
     },
     "represents_instance_of_type": {
-        "Architecture, Paysage": {
-            "buildings (structures)": "http://vocab.getty.edu/aat/300004792"
+        "architecture, paysage": {
+            "buildings (structures)": {
+                "type": "http://vocab.getty.edu/aat/300004792"
+            }
         },
-        "Batailles, Historie": {
-            "battles": "http://vocab.getty.edu/aat/300185692"
+        "batailles, historie": {
+            "battles": {
+                "type": "http://vocab.getty.edu/aat/300185692"
+            }
         },
-        "Militaire, Genre": {
-            "military personnel": "http://vocab.getty.edu/aat/300025450"
+        "militaire, genre": {
+            "military personnel": {
+                "type": "http://vocab.getty.edu/aat/300025450"
+            }
         },
-        "Mythologie (figures), Historie": {
-            "figures (representations)": "http://vocab.getty.edu/aat/300189808"
+        "mythologie (figures), historie": {
+            "figures (representations)": {
+                "type": "http://vocab.getty.edu/aat/300189808"
+            }
         },
-        "Paysage avec figures, Paysage": {
-            "figures (representations)": "http://vocab.getty.edu/aat/300189808"
+        "paysage avec figures, paysage": {
+            "figures (representations)": {
+                "type": "http://vocab.getty.edu/aat/300189808"
+            }
         },
-        "Portrait": {
-            "historical figures": "http://vocab.getty.edu/aat/300386296"
+        "portrait": {
+            "historical figures": {
+                "type": "http://vocab.getty.edu/aat/300386296"
+            }
         },
-        "Religieux (figures), Historie": {
-            "figures (representations)": "http://vocab.getty.edu/aat/300189808"
+        "religieux (figures), historie": {
+            "figures (representations)": {
+                "type": "http://vocab.getty.edu/aat/300189808"
+            }
         },
-        "Ruines, Paysage": {
-            "ruins": "http://vocab.getty.edu/aat/300008057"
+        "ruines, paysage": {
+            "ruins": {
+                "type": "http://vocab.getty.edu/aat/300008057"
+            }
         }
     }
 }

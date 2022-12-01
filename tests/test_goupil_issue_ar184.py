@@ -23,7 +23,9 @@ class PIRModelingTest_AR184(TestGoupilPipelineOutput):
 
         self.assertEqual(len(groups), 4)
         org = groups["tag:getty.edu,2019:digital:pipeline:REPLACE-WITH-UUID:goupil#ORG,ULAN,500125157"]
-        org2 = groups["tag:getty.edu,2019:digital:pipeline:REPLACE-WITH-UUID:shared#STATIC,ORGANIZATION,Project%20for%20the%20Study%20of%20Collecting%20and%20Provenance"]
+        org2 = groups[
+            "tag:getty.edu,2019:digital:pipeline:REPLACE-WITH-UUID:shared#STATIC,ORGANIZATION,Project%20for%20the%20Study%20of%20Collecting%20and%20Provenance"
+        ]
 
         self.assertEqual(len(org["exact_match"]), 1)  # has ulan link
         self.assertEqual(org["exact_match"][0]["id"], "http://vocab.getty.edu/ulan/500125157")
@@ -31,7 +33,7 @@ class PIRModelingTest_AR184(TestGoupilPipelineOutput):
             classified_identifiers(org), {"Primary Name": "Metropolitan Museum of Art"}
         )  # has name and its primary
         self.assertEqual(
-            classified_identifiers(org2), {'Primary Name': 'Project for the Study of Collecting and Provenance'}
+            classified_identifiers(org2), {"Primary Name": "Project for the Study of Collecting and Provenance"}
         )  # has name and its primary
 
         self.assertEqual(

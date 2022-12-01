@@ -21,9 +21,7 @@ class PIRModelingTest_AR192(TestGoupilPipelineOutput):
         output = self.run_pipeline("ar192")
         objects = output["model-object"]
 
-        object = objects[
-            "tag:getty.edu,2019:digital:pipeline:REPLACE-WITH-UUID:goupil#Object,g-object-23908"
-        ]
+        object = objects["tag:getty.edu,2019:digital:pipeline:REPLACE-WITH-UUID:goupil#Object,g-object-23908"]
 
         self.assertEqual(len(object["identified_by"]), 3)
 
@@ -36,13 +34,9 @@ class PIRModelingTest_AR192(TestGoupilPipelineOutput):
         self.assertEqual(object["dimension"][0]["value"], 39)
         self.assertEqual(object["dimension"][1]["type"], "Dimension")
         self.assertEqual(object["dimension"][1]["value"], 54)
-        self.assertEqual(
-            object["shows"][0]["_label"], "Visual work of “Le petit puits[?] [rayé]”"
-        )
+        self.assertEqual(object["shows"][0]["_label"], "Visual work of “Le petit puits[?] [rayé]”")
 
-        object = objects[
-            "tag:getty.edu,2019:digital:pipeline:REPLACE-WITH-UUID:goupil#Object,g-object-7694"
-        ]
+        object = objects["tag:getty.edu,2019:digital:pipeline:REPLACE-WITH-UUID:goupil#Object,g-object-7694"]
 
         self.assertEqual(
             object["current_location"]["_label"],
@@ -79,9 +73,7 @@ class PIRModelingTest_AR192(TestGoupilPipelineOutput):
             "tag:getty.edu,2019:digital:pipeline:REPLACE-WITH-UUID:goupil#Text,Book,15,Page,264,Row,2"
         ]
 
-        self.assertEqual(
-            linguisticObject["about"][0]["_label"], "Le petit puits[?] [rayé]"
-        )
+        self.assertEqual(linguisticObject["about"][0]["_label"], "Le petit puits[?] [rayé]")
 
     def test_modeling_ar192_3(self):
         """
@@ -92,13 +84,9 @@ class PIRModelingTest_AR192(TestGoupilPipelineOutput):
             "tag:getty.edu,2019:digital:pipeline:REPLACE-WITH-UUID:goupil#Object,g-object-23908"
         ]
 
-        self.assertEqual(
-            object["produced_by"]["attributed_by"][0]["_label"], "Formerly attributed to BONHEUR, ROSA"
-        )
+        self.assertEqual(object["produced_by"]["attributed_by"][0]["_label"], "Formerly attributed to BONHEUR, ROSA")
 
-        self.assertEqual(
-            object["produced_by"]["attributed_by"][0]["classified_as"][0]["_label"], "Obsolete"
-        )
+        self.assertEqual(object["produced_by"]["attributed_by"][0]["classified_as"][0]["_label"], "Obsolete")
 
     def test_modeling_ar192_4(self):
         """
@@ -110,14 +98,19 @@ class PIRModelingTest_AR192(TestGoupilPipelineOutput):
         for object in objects.values():
             for identifier in object["identified_by"]:
                 if "g-object" in identifier["content"]:
-                    self.assertEqual(identifier["assigned_by"][0]["carried_out_by"][0]["id"], "tag:getty.edu,2019:digital:pipeline:REPLACE-WITH-UUID:shared#STATIC,ORGANIZATION,Project%20for%20the%20Study%20of%20Collecting%20and%20Provenance")
+                    self.assertEqual(
+                        identifier["assigned_by"][0]["carried_out_by"][0]["id"],
+                        "tag:getty.edu,2019:digital:pipeline:REPLACE-WITH-UUID:shared#STATIC,ORGANIZATION,Project%20for%20the%20Study%20of%20Collecting%20and%20Provenance",
+                    )
 
     def test_modeling_ar192_5(self):
         """
         AR-192 : Add physical object modelling, multiple records in one row
         """
         output = self.run_pipeline("ar192")
-        object = output["model-object"]['tag:getty.edu,2019:digital:pipeline:REPLACE-WITH-UUID:goupil#Object,g-object-3433']
+        object = output["model-object"][
+            "tag:getty.edu,2019:digital:pipeline:REPLACE-WITH-UUID:goupil#Object,g-object-3433"
+        ]
 
         # Test if physical object is referred_to_by both records
         self.assertEqual(len(object["referred_to_by"]), 3)
@@ -128,11 +121,15 @@ class PIRModelingTest_AR192(TestGoupilPipelineOutput):
             self.assertEqual(len(dimension["referred_to_by"]), 2)
 
         # Test if Material statement is referred_to_by both records
-        object = output["model-object"]['tag:getty.edu,2019:digital:pipeline:REPLACE-WITH-UUID:goupil#Object,Internal,G-2678']
-        self.assertEqual(classification_sets(object["referred_to_by"][2]), {'Material Statement'})
+        object = output["model-object"][
+            "tag:getty.edu,2019:digital:pipeline:REPLACE-WITH-UUID:goupil#Object,Internal,G-2678"
+        ]
+        self.assertEqual(classification_sets(object["referred_to_by"][2]), {"Material Statement"})
         self.assertEqual(len(object["referred_to_by"][2]["referred_to_by"]), 2)
 
-        person = output["model-person"]['tag:getty.edu,2019:digital:pipeline:REPLACE-WITH-UUID:shared#PERSON,AUTH,ENFANTIN']
+        person = output["model-person"][
+            "tag:getty.edu,2019:digital:pipeline:REPLACE-WITH-UUID:shared#PERSON,AUTH,ENFANTIN"
+        ]
 
         # Test if physical object is referred_to_by both records
         self.assertEqual(len(person["referred_to_by"]), 2)

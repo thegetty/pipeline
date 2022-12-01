@@ -1,11 +1,11 @@
 import csv
 import functools
+import pprint
 import sys
 import timeit
 import warnings
 from collections import defaultdict
 from contextlib import suppress
-import pprint
 
 import bonobo
 from bonobo.config import Configurable, Option, Service
@@ -31,13 +31,13 @@ from pipeline.projects import PersonIdentity, PipelineBase, UtilityHelper
 from pipeline.projects.knoedler import add_crom_price
 from pipeline.provenance import ProvenanceBase
 from pipeline.util import (
-    truncate_with_ellipsis,
+    CaseFoldingSet,
     ExtractKeyedValue,
     ExtractKeyedValues,
     GraphListSource,
     MatchingFiles,
     strip_key_prefix,
-    CaseFoldingSet
+    truncate_with_ellipsis,
 )
 from pipeline.util.cleaners import parse_location_name
 
@@ -95,7 +95,6 @@ class GoupilProvenance:
                     # "places": places,
                 }
             )
-
 
     def _prov_entry(
         self,
@@ -216,16 +215,16 @@ class ModelSale(Configurable, GoupilProvenance):
 class AddArtists(ProvenanceBase, GoupilProvenance):
     helper = Option(required=True)
     make_la_person = Service("make_la_person")
-    attribution_modifiers = Service('attribution_modifiers')
-    attribution_group_types = Service('attribution_group_types')
-    attribution_group_names = Service('attribution_group_names')
+    attribution_modifiers = Service("attribution_modifiers")
+    attribution_group_types = Service("attribution_group_types")
+    attribution_group_names = Service("attribution_group_names")
 
     def add_properties(self, data: dict, a: dict):
         a.setdefault("referred_to_by", [])
         a.update(
             {
                 "pi_record_no": data["pi_record_no"],
-                'modifiers': self.modifiers(a),
+                "modifiers": self.modifiers(a),
             }
         )
 
@@ -233,12 +232,16 @@ class AddArtists(ProvenanceBase, GoupilProvenance):
             a.setdefault("label", a.get("auth_name"))
         a.setdefault("label", a.get("name"))
 
-    def __call__(self, data:dict, *, make_la_person, attribution_modifiers, attribution_group_types, attribution_group_names):
+    def __call__(
+        self, data: dict, *, make_la_person, attribution_modifiers, attribution_group_types, attribution_group_names
+    ):
         hmo = get_crom_object(data["_object"])
-        #Add ulan information 
-        self.model_object_artists_authority(data.get('_artists', []))
+        # Add ulan information
+        self.model_object_artists_authority(data.get("_artists", []))
 
-        self.model_artists_with_modifers(data, hmo, attribution_modifiers, attribution_group_types, attribution_group_names)
+        self.model_artists_with_modifers(
+            data, hmo, attribution_modifiers, attribution_group_types, attribution_group_names
+        )
         return data
 
 
@@ -315,7 +318,7 @@ class PopulateGoupilObject(Configurable, PopulateObject):
     helper = Option(required=True)
     make_la_org = Service("make_la_or")
     vocab_type_map = Service("vocab_type_map")
-    subject_genre = Service('subject_genre')
+    subject_genre = Service("subject_genre")
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -354,35 +357,25 @@ class PopulateGoupilObject(Configurable, PopulateObject):
             {
                 k: v
                 for k, v in odata.items()
-                if k
-                in ("materials", "dimensions", "goupil_object_id", "present_location", "subject", "genre")
+                if k in ("materials", "dimensions", "goupil_object_id", "present_location", "subject", "genre")
             }
         )
         if "dimensions" in data["_object"]:
             data["_object"]["dimensions"] = data["_object"]["dimensions"].lower()
-        
 
         try:
-            stock_number = odata["goupil_object_id"]
-            uri_key	= ('Object', stock_number)
-            identifiers.append(
-                self.helper.goupil_pscp_number_id(stock_number, vocab.StockNumber)
-            )
-        except:
-            warnings.warn(
-                f"*** Object has no goupil object id: {pprint.pformat(data)}"
-                    )
-            uri_key = ('Object', 'Internal', data['pi_record_no'])
+            goupil_id = odata["goupil_object_id"]
+            uri_key = ("Object", goupil_id)
+            identifiers.append(self.helper.goupil_pscp_number_id(goupil_id, vocab.StockNumber))
+        except Exception as e:
+            warnings.warn(f"*** Object has no goupil object id: {pprint.pformat(data)}")
+            uri_key = ("Object", "Internal", data["pi_record_no"])
         for row in data["_text_rows"]:
             try:
                 stock_nook_gno = gno = row["gno"]
-                identifiers.append(
-                    self.helper.goupil_number_id(stock_nook_gno, vocab.StockNumber)
-                )
+                identifiers.append(self.helper.goupil_number_id(stock_nook_gno, vocab.StockNumber))
             except:
-                warnings.warn(
-                    f"*** Object has no gno identifier: {pprint.pformat(data)}"
-                        )
+                warnings.warn(f"*** Object has no gno identifier: {pprint.pformat(data)}")
 
         uri = self.helper.make_object_uri(data["pi_record_no"], *uri_key)
         data["_object"]["uri"] = uri
@@ -402,7 +395,7 @@ class PopulateGoupilObject(Configurable, PopulateObject):
         self._populate_object_visual_item(data["_object"], label, subject_genre)
         self.populate_object_statements(data["_object"], default_unit="inches")
         data["_physical_objects"].append(data["_object"])
-        
+
         hmo = get_crom_object(data["_object"])
         for _record in sales_records:
             _record.about = hmo
@@ -430,13 +423,9 @@ class PopulateGoupilObject(Configurable, PopulateObject):
                         ulan = int(location.get("ulan_id"))
                     if ulan:
                         owner_data["ulan"] = ulan
-                        owner_data["uri"] = self.helper.make_proj_uri(
-                            "ORG", "ULAN", ulan
-                        )
+                        owner_data["uri"] = self.helper.make_proj_uri("ORG", "ULAN", ulan)
                     else:
-                        owner_data["uri"] = self.helper.make_proj_uri(
-                            "ORG", "NAME", inst, "PLACE", loc
-                        )
+                        owner_data["uri"] = self.helper.make_proj_uri("ORG", "NAME", inst, "PLACE", loc)
                 else:
                     warnings.warn(
                         f"*** Object present location data has a location, but not an institution: {pprint.pformat(data)}"
@@ -454,10 +443,8 @@ class PopulateGoupilObject(Configurable, PopulateObject):
                 # otherwise all such places are liable to be merged during URI
                 # reconciliation as part of the prev/post sale rewriting.
                 base_uri = self.helper.prepend_uri_key(hmo.id, "PLACE")
-                
-                place_data = self.helper.make_place(
-                    current, base_uri=base_uri, sales_records=sales_records
-                )
+
+                place_data = self.helper.make_place(current, base_uri=base_uri, sales_records=sales_records)
                 place = get_crom_object(place_data)
                 hmo.current_location = place
 
@@ -506,29 +493,44 @@ class PopulateGoupilObject(Configurable, PopulateObject):
         vi = model.VisualItem(
             ident=vi_uri,
         )
-        vi._label = f"Visual work of “{title}”"
+        vi._label = f"Visual Work of “{title}”"
         vidata = {
             "uri": vi_uri,
             "referred_to_by": sales_records,
-            'identifiers': [],
+            "identifiers": [],
         }
         if title:
-            vidata["label"] = f"Visual work of “{title}”"
+            vidata["label"] = f"Visual Work of “{title}”"
             titletype = vocab.Name
-            t = titletype(ident='', content=title)
-            t.classified_as = model.Type(ident='http://vocab.getty.edu/aat/300417193', label='Title')
+            t = titletype(ident="", content=title)
+            t.classified_as = model.Type(ident="http://vocab.getty.edu/aat/300417193", label="Title")
             for sale_record in sales_records:
                 t.referred_to_by = sale_record
-            vidata['identifiers'].append(t)
-        for key in ('genre', 'subject'):
-            if key in data:
-                values = [v.strip() for v in data[key].split(';')]
-                for value in values:
-                    for prop, mapping in subject_genre.items():
-                        if value in mapping:
-                            aat_url = mapping[value]
-                            type = model.Type(ident=aat_url, label=value)
-                            setattr(vi, prop, type)
+            vidata["identifiers"].append(t)
+
+        # TODO: refactor when AR-164 is merged
+        objgenre = data.get("genre")
+        objsubject = data.get("subject")
+
+        if objgenre and objsubject:
+            key = ", ".join((objsubject.strip(), objgenre.strip())).lower()
+        elif objgenre:
+            key = objgenre.strip().lower()
+        elif objsubject:
+            key = objsubject.strip().lower()
+        else:
+            key = None
+
+        for prop, mappings in subject_genre.items():
+            if key in mappings:
+                for label, types in mappings[key].items():
+                    type = model.Type(ident=types["type"], label=label)
+
+                    if "metatype" in types:
+                        metatype = model.Type(ident=types["metatype"], label="Styles")
+                        setattr(type, prop, metatype)
+
+                    setattr(vi, prop, type)
         data["_visual_item"] = add_crom_data(data=vidata, what=vi)
         hmo.shows = vi
 
@@ -680,7 +682,9 @@ class GoupilPipeline(PipelineBase):
         helper.static_instaces = self.static_instances
 
         # register project specific vocab here
-        vocab.register_vocab_class('ConstructedTitle', {'parent': model.Name, 'id': '300417205', 'label': 'Constructed Title'})
+        vocab.register_vocab_class(
+            "ConstructedTitle", {"parent": model.Name, "id": "300417205", "label": "Constructed Title"}
+        )
         vocab.register_vocab_class(
             "BookNumber", {"parent": model.Identifier, "id": "300445021", "label": "Book Numbers"}
         )
@@ -709,15 +713,15 @@ class GoupilPipeline(PipelineBase):
         services = super().setup_services()
 
         # make these case-insensitive by wrapping the value lists in CaseFoldingSet
-        for name in ('attribution_modifiers',):
+        for name in ("attribution_modifiers",):
             if name in services:
                 services[name] = {k: CaseFoldingSet(v) for k, v in services[name].items()}
 
-        if 'attribution_modifiers' in services:
-            attribution_modifiers = services['attribution_modifiers']
-            PROBABLY = attribution_modifiers['probably by']
-            POSSIBLY = attribution_modifiers['possibly by']
-            attribution_modifiers['uncertain'] = PROBABLY | POSSIBLY
+        if "attribution_modifiers" in services:
+            attribution_modifiers = services["attribution_modifiers"]
+            PROBABLY = attribution_modifiers["probably by"]
+            POSSIBLY = attribution_modifiers["possibly by"]
+            attribution_modifiers["uncertain"] = PROBABLY | POSSIBLY
 
         services.update(
             {
@@ -955,47 +959,29 @@ class GoupilPipeline(PipelineBase):
             _input=rows.output,
         )
 
-        hmos1 = graph.add_chain(
-            ExtractKeyedValues(key="_physical_objects"), _input=objects.output
-        )
+        hmos1 = graph.add_chain(ExtractKeyedValues(key="_physical_objects"), _input=objects.output)
         odata = graph.add_chain(ExtractKeyedValue(key="_object"), _input=objects.output)
-        artists = graph.add_chain(
-            ExtractKeyedValues(key="_artists"), _input=objects.output
-        )
-        groups1 = graph.add_chain(
-            ExtractKeyedValues(key="_organizations"), _input=objects.output
-        )
-        groups2 = graph.add_chain(
-            ExtractKeyedValues(key="_organizations"), _input=hmos1.output
-        )
+        artists = graph.add_chain(ExtractKeyedValues(key="_artists"), _input=objects.output)
+        groups1 = graph.add_chain(ExtractKeyedValues(key="_organizations"), _input=objects.output)
+        groups2 = graph.add_chain(ExtractKeyedValues(key="_organizations"), _input=hmos1.output)
 
-        owners = self.add_person_or_group_chain(
-            graph, hmos1, key="_other_owners", serialize=serialize
-        )
+        owners = self.add_person_or_group_chain(graph, hmos1, key="_other_owners", serialize=serialize)
         items = graph.add_chain(
             ExtractKeyedValue(key="_visual_item"),
             MakeLinkedArtRecord(),
             _input=hmos1.output,
-        )    
+        )
 
         if serialize:
 
-            self.add_serialization_chain(
-                graph, items.output, model=self.models["VisualItem"]
-            )
-            self.add_serialization_chain(
-                graph, hmos1.output, model=self.models["HumanMadeObject"]
-            )
-            self.add_person_or_group_chain(
-                graph, odata, key="_organizations"
-            )  # organizations are groups too!
+            self.add_serialization_chain(graph, items.output, model=self.models["VisualItem"])
+            self.add_serialization_chain(graph, hmos1.output, model=self.models["HumanMadeObject"])
+            self.add_person_or_group_chain(graph, odata, key="_organizations")  # organizations are groups too!
             self.add_person_or_group_chain(graph, artists)
             self.add_person_or_group_chain(graph, groups1)
             self.add_person_or_group_chain(graph, groups2)
             self.add_person_or_group_chain(graph, owners)
-            _ = self.add_places_chain(
-                graph, odata, key="_locations", serialize=serialize, include_self=True
-            )
+            _ = self.add_places_chain(graph, odata, key="_locations", serialize=serialize, include_self=True)
         return objects
 
     def add_books_chain(self, graph, sales_records, serialize=True):

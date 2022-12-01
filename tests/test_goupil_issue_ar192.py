@@ -22,7 +22,7 @@ class PIRModelingTest_AR192(TestGoupilPipelineOutput):
         objects = output["model-object"]
 
         object = objects[
-            "tag:getty.edu,2019:digital:pipeline:REPLACE-WITH-UUID:goupil#Object,Internal,G-42810"
+            "tag:getty.edu,2019:digital:pipeline:REPLACE-WITH-UUID:goupil#Object,g-object-23908"
         ]
 
         self.assertEqual(len(object["identified_by"]), 3)
@@ -41,7 +41,7 @@ class PIRModelingTest_AR192(TestGoupilPipelineOutput):
         )
 
         object = objects[
-            "tag:getty.edu,2019:digital:pipeline:REPLACE-WITH-UUID:goupil#Object,Internal,G-23884"
+            "tag:getty.edu,2019:digital:pipeline:REPLACE-WITH-UUID:goupil#Object,g-object-7694"
         ]
 
         self.assertEqual(
@@ -89,7 +89,7 @@ class PIRModelingTest_AR192(TestGoupilPipelineOutput):
         """
         output = self.run_pipeline("ar192")
         object = output["model-object"][
-            "tag:getty.edu,2019:digital:pipeline:REPLACE-WITH-UUID:goupil#Object,Internal,G-42810"
+            "tag:getty.edu,2019:digital:pipeline:REPLACE-WITH-UUID:goupil#Object,g-object-23908"
         ]
 
         self.assertEqual(
@@ -117,7 +117,7 @@ class PIRModelingTest_AR192(TestGoupilPipelineOutput):
         AR-192 : Add physical object modelling, multiple records in one row
         """
         output = self.run_pipeline("ar192")
-        object = output["model-object"]['tag:getty.edu,2019:digital:pipeline:REPLACE-WITH-UUID:goupil#Object,Internal,G-19117']
+        object = output["model-object"]['tag:getty.edu,2019:digital:pipeline:REPLACE-WITH-UUID:goupil#Object,g-object-3433']
 
         # Test if physical object is referred_to_by both records
         self.assertEqual(len(object["referred_to_by"]), 3)

@@ -20,8 +20,8 @@ class PIRModelingTest_AR191(TestGoupilPipelineOutput):
         """
         output = self.run_pipeline("ar191")
         visual_item = output["model-visual-item"][
-            "tag:getty.edu,2019:digital:pipeline:REPLACE-WITH-UUID:goupil#Object,Internal,G-23884-VisItem"
-        ]
+            'tag:getty.edu,2019:digital:pipeline:REPLACE-WITH-UUID:goupil#Object,g-object-7694-VisItem']
+        
 
         # Title of the visual work
         self.assertEqual(

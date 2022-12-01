@@ -364,13 +364,15 @@ class PopulateGoupilObject(Configurable, PopulateObject):
 
         try:
             stock_number = odata["goupil_object_id"]
+            uri_key	= ('Object', stock_number)
             identifiers.append(
                 self.helper.goupil_pscp_number_id(stock_number, vocab.StockNumber)
             )
         except:
             warnings.warn(
-                f"*** Object has no gno identifier: {pprint.pformat(data)}"
+                f"*** Object has no goupil object id: {pprint.pformat(data)}"
                     )
+            uri_key = ('Object', 'Internal', data['pi_record_no'])
         for row in data["_text_rows"]:
             try:
                 stock_nook_gno = gno = row["gno"]
@@ -382,7 +384,6 @@ class PopulateGoupilObject(Configurable, PopulateObject):
                     f"*** Object has no gno identifier: {pprint.pformat(data)}"
                         )
 
-        uri_key = ("Object", "Internal", data["pi_record_no"])
         uri = self.helper.make_object_uri(data["pi_record_no"], *uri_key)
         data["_object"]["uri"] = uri
         data["_object"]["uri_key"] = uri_key

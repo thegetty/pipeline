@@ -543,6 +543,8 @@ class AddBooks(Configurable, GoupilProvenance):
 
     def __call__(self, data: dict, make_la_lo, make_la_hmo):
         books = data.get("_book_records", [])
+        data.setdefault("_physical_books", [])
+        physical_objects = data.get("_physical_books")
 
         for seq_no, b_data in enumerate(books):
             book_id, gno, page, row = record_id(b_data)
@@ -559,9 +561,22 @@ class AddBooks(Configurable, GoupilProvenance):
                 "identifiers": [self.helper.goupil_number_id(book_id, id_class=vocab.BookNumber)],
             }
 
+            physical_book = {
+                "uri": self.helper.make_proj_uri("Book", book_id),
+                "object_type": vocab.Book,
+                "label": (label, vocab.instances["english"]),
+                "identifiers": [self.helper.goupil_number_id(book_id, id_class=vocab.BookNumber)],
+                # "carries": [book],
+            }
+
             make_la_lo(book)
+            make_la_hmo(physical_book)
+            o_book = get_crom_object(book)
+            p_book = get_crom_object(physical_book)
+            o_book.about = p_book
             self.add_goupil_creation_data(book)
             b_data.update(book)
+            physical_objects.append(physical_book)
 
         return data
 
@@ -993,10 +1008,10 @@ class GoupilPipeline(PipelineBase):
         # phys = graph.add_chain(ExtractKeyedValue(key="_physical_book"), _input=books.output)
 
         textual_works = graph.add_chain(ExtractKeyedValues(key="_book_records"), _input=books.output)
-
+        physical_objects = graph.add_chain(ExtractKeyedValues(key="_physical_books"), _input=books.output)
         if serialize:
             # self.add_serialization_chain(graph, act.output, model=self.models['ProvenanceEntry'])
-            # self.add_serialization_chain(graph, phys.output, model=self.models["HumanMadeObject"])
+            self.add_serialization_chain(graph, physical_objects.output, model=self.models["HumanMadeObject"])
             self.add_serialization_chain(graph, textual_works.output, model=self.models["LinguisticObject"])
 
         return books

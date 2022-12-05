@@ -21,6 +21,78 @@ class PIRModelingTest_AR192(TestGoupilPipelineOutput):
         output = self.run_pipeline("ar192")
         objects = output["model-object"]
 
+        objs = [
+            {
+                "id": "tag:getty.edu,2019:digital:pipeline:REPLACE-WITH-UUID:goupil#Object,g-object-23908",
+                "title": "Le petit puits[?] [rayé]",
+                "from": ["Goupil Stock Book 15, Page 264, Row 2"],
+                "classification": {"http://vocab.getty.edu/aat/300015636"},
+                "depicts": {},
+            },
+            {
+                "id": "tag:getty.edu,2019:digital:pipeline:REPLACE-WITH-UUID:goupil#Object,g-object-14679",
+                "title": "Porte de Bourgogne",
+                "from": [
+                    "Goupil Stock Book 14, Page 23, Row 6",
+                    # "Goupil Stock Book 13" TODO how to handle cases like these
+                ],
+                "classification": {"http://vocab.getty.edu/aat/300015636"},
+                "depicts": {},
+            },
+            {
+                "id": "tag:getty.edu,2019:digital:pipeline:REPLACE-WITH-UUID:goupil#Object,g-object-23434",
+                "title": "Le coup de vent Ancien 18583",
+                "from": ["Goupil Stock Book 15, Page 235, Row 13"],
+                "classification": {"http://vocab.getty.edu/aat/300139140"},
+                "depicts": {},
+            },
+            {
+                "id": "tag:getty.edu,2019:digital:pipeline:REPLACE-WITH-UUID:goupil#Object,g-object-24935",
+                "title": "Un herbage dominant des maisons au bord de la mer (Environs du Havre) Robaut n. 1348 Cl. 883",
+                "from": ["Goupil Stock Book 15, Page 332, Row 3"],
+                "classification": {"http://vocab.getty.edu/aat/300015636"},
+                "depicts": {},
+            },
+            {
+                "id": "tag:getty.edu,2019:digital:pipeline:REPLACE-WITH-UUID:goupil#Object,g-object-7694",
+                "title": "Hamlet",
+                "from": ["Goupil Stock Book 10, Page 185, Row 15"],
+                "classification": {"http://vocab.getty.edu/aat/300386045"},
+                "depicts": {},
+            },
+            {
+                "id": "tag:getty.edu,2019:digital:pipeline:REPLACE-WITH-UUID:goupil#Object,g-object-24373",
+                "title": "Vaches au pâturage Ancien 14619",
+                "from": ["Goupil Stock Book 15, Page 292, Row 5"],
+                "classification": {"http://vocab.getty.edu/aat/300015636"},
+                "depicts": {},
+            },
+            {
+                "id": "tag:getty.edu,2019:digital:pipeline:REPLACE-WITH-UUID:goupil#Object,g-object-12669",
+                "title": "L'attelage Nivernais",
+                "from": ["Goupil Stock Book 1, Page 93, Row 5", "Goupil Stock Book 2, Page 25, Row 4"],
+                "classification": {"http://vocab.getty.edu/aat/300139140"},
+                "depicts": {},
+            },
+            {
+                "id": "tag:getty.edu,2019:digital:pipeline:REPLACE-WITH-UUID:goupil#Object,g-object-13776",
+                "title": "Les fortifications Effet de neige",
+                "from": ["Goupil Stock Book 12, Page 192, Row 14"],
+                "classification": {"http://vocab.getty.edu/aat/300015636"},
+                "depicts": {},
+            },
+            {
+                "id": "tag:getty.edu,2019:digital:pipeline:REPLACE-WITH-UUID:goupil#Object,g-object-22904",
+                "title": "Scène militaire",
+                "from": ["Goupil Stock Book 15, Page 203, Row 14"],
+                "classification": {"http://vocab.getty.edu/aat/300139140"},
+                "depicts": {"http://vocab.getty.edu/aat/300025450"},
+            },
+        ]
+
+        for o in objs:
+            self.assertIsNotNone(objects.get(o["id"], None))
+
         object = objects["tag:getty.edu,2019:digital:pipeline:REPLACE-WITH-UUID:goupil#Object,g-object-23908"]
 
         self.assertEqual(len(object["identified_by"]), 3)
@@ -34,7 +106,7 @@ class PIRModelingTest_AR192(TestGoupilPipelineOutput):
         self.assertEqual(object["dimension"][0]["value"], 39)
         self.assertEqual(object["dimension"][1]["type"], "Dimension")
         self.assertEqual(object["dimension"][1]["value"], 54)
-        self.assertEqual(object["shows"][0]["_label"], "Visual work of “Le petit puits[?] [rayé]”")
+        self.assertEqual(object["shows"][0]["_label"], "Visual Work of “Le petit puits[?] [rayé]”")
 
         object = objects["tag:getty.edu,2019:digital:pipeline:REPLACE-WITH-UUID:goupil#Object,g-object-7694"]
 

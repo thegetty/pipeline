@@ -942,6 +942,7 @@ class GoupilPipeline(PipelineBase):
                                     "sale_location",
                                     "present_location",
                                     "goupil_object_id",
+                                    "goupil_event_ord",  # TODO: for future reference only, semantics uknown at this point
                                 )
                             },
                         },

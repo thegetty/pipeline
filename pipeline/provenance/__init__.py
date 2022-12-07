@@ -15,7 +15,7 @@ from pipeline.util import \
 		implode_date, \
 		CaseFoldingSet
 from pipeline.util.cleaners import parse_location_name
-from pipeline.linkedart import add_crom_data, get_crom_object
+from pipeline.linkedart import add_crom_data, get_crom_object, get_crom_objects
 
 
 class ProvenanceBase(Configurable):
@@ -254,7 +254,10 @@ class ProvenanceBase(Configurable):
 		GROUP_MODS = {k for k, v in attribution_group_types.items() if v in GROUP_TYPES}
 
 		non_artist_assertions = people
-		sales_record = get_crom_object(data['_record'])
+		if isinstance(data['_record'], list):
+			sales_record = get_crom_objects(data['_record'])
+		else:
+			sales_record = get_crom_object(data['_record'])
 
 		try:
 			hmo_label = f'{hmo._label}'
@@ -345,7 +348,10 @@ class ProvenanceBase(Configurable):
 		ATTRIBUTED_TO = attribution_modifiers['attributed to']
 
 		event_uri = prod_event.id
-		sales_record = get_crom_object(data['_record'])
+		if isinstance(data['_record'], list):
+			sales_record = get_crom_objects(data['_record'])
+		else:
+			sales_record = get_crom_object(data['_record'])
 		artists = [p for p in people if not self.is_or_anon(p)]
 		or_anon_records = any([self.is_or_anon(a) for a in people])
 		if or_anon_records:
@@ -445,7 +451,7 @@ class ProvenanceBase(Configurable):
 
 	def model_artists_with_modifers(self, data:dict, hmo, attribution_modifiers, attribution_group_types, attribution_group_names):
 		'''Add modeling for artists as people involved in the production of an object'''
-		sales_record = get_crom_object(data['_record'])
+		# sales_record = get_crom_object(data['_record'])
 
 		data.setdefault('_organizations', [])
 		data.setdefault('_original_objects', [])

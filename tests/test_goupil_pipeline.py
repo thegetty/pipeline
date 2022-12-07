@@ -54,7 +54,7 @@ class TestGoupilPipelineOutput(unittest.TestCase):
         # pdb.set_trace()
 
         self.assertEqual(len(los), 4)
-        self.assertEqual(len(groups), 2)
+        self.assertEqual(len(groups), 3)
         goupil = groups["tag:getty.edu,2019:digital:pipeline:REPLACE-WITH-UUID:shared#ORGANIZATION,ULAN,500067127"]
         self.assertEqual(goupil["_label"], "Goupil & Cie.")
 
@@ -137,6 +137,13 @@ class TestGoupilPipelineOutput(unittest.TestCase):
         self.assertEqual(lo2.get("created_by").get("carried_out_by")[0]["id"], goupil["id"])
         self.assertEqual(lo3.get("created_by").get("carried_out_by")[0]["id"], goupil["id"])
         self.assertEqual(lo4.get("created_by").get("carried_out_by")[0]["id"], goupil["id"])
+
+        self.assertEqual(
+            lo1.get("about")[0]["id"], "tag:getty.edu,2019:digital:pipeline:REPLACE-WITH-UUID:goupil#Book,15"
+        )
+        self.assertEqual(
+            lo4.get("about")[0]["id"], "tag:getty.edu,2019:digital:pipeline:REPLACE-WITH-UUID:goupil#Book,14"
+        )
 
 
 if __name__ == "__main__":

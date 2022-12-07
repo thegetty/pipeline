@@ -705,31 +705,51 @@ class PopulateObject:
 	@staticmethod
 	def populate_object_statements(data:dict, default_unit=None):
 		hmo = get_crom_object(data)
-		sales_record = get_crom_object(data.get('_record'))
+		record = data.get('_record')
+		if isinstance(record, list):
+			sales_record = get_crom_objects(data.get('_record'))
+		else:
+			sales_record = get_crom_object(data.get('_record'))
 
 		format = data.get('format')
 		if format:
 			formatstmt = vocab.PhysicalStatement(ident='', content=format)
 			if sales_record:
-				formatstmt.referred_to_by = sales_record
+				if isinstance(sales_record, list):
+					for record in sales_record:
+						formatstmt.referred_to_by = record
+				else: 
+					formatstmt.referred_to_by = sales_record
 			hmo.referred_to_by = formatstmt
 
 		materials = data.get('materials')
 		if materials:
 			matstmt = vocab.MaterialStatement(ident='', content=materials)
 			if sales_record:
-				matstmt.referred_to_by = sales_record
+				if isinstance(sales_record, list):
+					for record in sales_record:
+						matstmt.referred_to_by = record
+				else: 
+					matstmt.referred_to_by = sales_record
 			hmo.referred_to_by = matstmt
 
 		dimstr = data.get('dimensions')
 		if dimstr:
 			dimstmt = vocab.DimensionStatement(ident='', content=dimstr)
 			if sales_record:
-				dimstmt.referred_to_by = sales_record
+				if isinstance(sales_record, list):
+					for record in sales_record:
+						dimstmt.referred_to_by = record
+				else: 
+					dimstmt.referred_to_by = sales_record
 			hmo.referred_to_by = dimstmt
 			for dim in extract_physical_dimensions(dimstr, default_unit=default_unit):
 				if sales_record:
-					dim.referred_to_by = sales_record
+					if isinstance(sales_record, list):
+						for record in sales_record:
+							dim.referred_to_by = record
+					else: 
+						dim.referred_to_by = sales_record
 				hmo.dimension = dim
 		else:
 			pass

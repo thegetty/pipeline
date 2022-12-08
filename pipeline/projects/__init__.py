@@ -552,13 +552,14 @@ class PipelineBase:
 		gci_ulan = 500115991
 		knoedler_ulan = 500304270
 		goupil_ulan = 500067127
+		goupil_name = 'Goupil et Cie.'
 		GETTY_PSCP_URI = self.helper.make_shared_uri('STATIC', 'ORGANIZATION', 'Project for the Study of Collecting and Provenance')
 		GETTY_GPI_URI = self.helper.make_shared_uri('STATIC', 'ORGANIZATION', 'Getty Provenance Index')
 		GETTY_GRI_URI = self.helper.make_proj_uri('ORGANIZATION', 'LOCATION-CODE', 'JPGM')
 		GETTY_GCI_URI = self.helper.make_shared_uri('STATIC', 'ORGANIZATION', 'Getty Conservation Institute')
 		LUGT_URI = self.helper.make_proj_uri('PERSON', 'ULAN', lugt_ulan)
 		KNOEDLER_URI = self.helper.make_shared_uri('ORGANIZATION', 'ULAN', str(knoedler_ulan))
-		GOUPIL_URI = self.helper.make_shared_uri('ORGANIZATION', 'ULAN', str(goupil_ulan))
+		GOUPIL_URI = self.helper.make_shared_uri('PERSON', 'AUTH', goupil_name) # produce a uri which is the same as the one produced from the people database
 		NEWYORK_URI = self.helper.make_shared_uri('PLACE', 'USA', 'NY', 'New York')
 
 		gci = model.Group(ident=GETTY_GCI_URI, label='Getty Conservation Institute')
@@ -584,7 +585,6 @@ class PipelineBase:
 		knoedler.identified_by = vocab.PrimaryName(ident='', content=knoedler_name)
 		knoedler.exact_match = model.BaseResource(ident=f'http://vocab.getty.edu/ulan/{knoedler_ulan}')
 
-		goupil_name = 'Goupil & Cie.'
 		goupil = model.Group(ident=GOUPIL_URI, label=goupil_name)
 		goupil.identified_by = vocab.PrimaryName(ident='', content=goupil_name)
 		goupil.exact_match = model.BaseResource(ident=f'http://vocab.getty.edu/ulan/{goupil_ulan}')

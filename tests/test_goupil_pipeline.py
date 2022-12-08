@@ -55,8 +55,8 @@ class TestGoupilPipelineOutput(unittest.TestCase):
 
         self.assertEqual(len(los), 4)
         self.assertEqual(len(groups), 3)
-        goupil = groups["tag:getty.edu,2019:digital:pipeline:REPLACE-WITH-UUID:shared#ORGANIZATION,ULAN,500067127"]
-        self.assertEqual(goupil["_label"], "Goupil & Cie.")
+        goupil = groups["tag:getty.edu,2019:digital:pipeline:REPLACE-WITH-UUID:shared#PERSON,AUTH,Goupil%20et%20Cie."]
+        self.assertEqual(goupil["_label"], "Goupil et Cie.")
 
         lo1 = los["tag:getty.edu,2019:digital:pipeline:REPLACE-WITH-UUID:goupil#Text,Book,15"]
         lo2 = los["tag:getty.edu,2019:digital:pipeline:REPLACE-WITH-UUID:goupil#Text,Book,15,Page,63"]

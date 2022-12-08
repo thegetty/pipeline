@@ -123,21 +123,6 @@ class PIRModelingTest_AR192(TestGoupilPipelineOutput):
 
             # TODO complete tests with production attribution modifiers
 
-    # def test_modeling_ar192_4(self):
-    #     """
-    #     AR-192 : Add physical object modelling, goupil object id attibute assignement by pscp
-    #     """
-    #     output = self.run_pipeline("ar192")
-    #     objects = output["model-object"]
-
-    #     for object in objects.values():
-    #         for identifier in object["identified_by"]:
-    #             if "g-object" in identifier["content"]:
-    #                 self.assertEqual(
-    #                     identifier["assigned_by"][0]["carried_out_by"][0]["id"],
-    #                     "tag:getty.edu,2019:digital:pipeline:REPLACE-WITH-UUID:shared#STATIC,ORGANIZATION,Project%20for%20the%20Study%20of%20Collecting%20and%20Provenance",
-    #                 )
-
 
 if __name__ == "__main__":
     unittest.main()

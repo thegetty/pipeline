@@ -1002,7 +1002,7 @@ class UtilityHelper:
 			id_class = vocab.LocalNumber
 		g_id = id_class(ident='', content=content)
 		assignment = model.AttributeAssignment(ident='', label=assignment_label)
-		assignment.carried_out_by = self.static_instances.get_instance('Group', 'pscp')
+		assignment.carried_out_by = self.static_instances.get_instance('Group', 'gri')
 		g_id.assigned_by = assignment
 		return g_id
 		

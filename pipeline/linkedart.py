@@ -703,7 +703,7 @@ class PopulateObject:
 	object records.
 	'''
 	@staticmethod
-	def populate_object_statements(data:dict, default_unit=None):
+	def populate_object_statements(data:dict, default_unit=None, strip_comments=False):
 		hmo = get_crom_object(data)
 		record = data.get('_record')
 		if isinstance(record, list):
@@ -743,7 +743,7 @@ class PopulateObject:
 				else: 
 					dimstmt.referred_to_by = sales_record
 			hmo.referred_to_by = dimstmt
-			for dim in extract_physical_dimensions(dimstr, default_unit=default_unit):
+			for dim in extract_physical_dimensions(dimstr, default_unit=default_unit, strip_comments=strip_comments):
 				if sales_record:
 					if isinstance(sales_record, list):
 						for record in sales_record:

@@ -368,7 +368,7 @@ class PopulateGoupilObject(Configurable, PopulateObject):
         except Exception as e:
             warnings.warn(f"*** Object has no goupil object id: {pprint.pformat(data)}")
             uri_key = ("Object", "Internal", data["pi_record_no"])
-        
+
         for row in data["_text_rows"]:
             try:
                 stock_nook_gno = gno = row["gno"]
@@ -392,7 +392,7 @@ class PopulateGoupilObject(Configurable, PopulateObject):
 
         self._populate_object_present_location(data["_object"])
         self._populate_object_visual_item(data["_object"], label, subject_genre)
-        self.populate_object_statements(data["_object"], default_unit="inches")
+        self.populate_object_statements(data["_object"], default_unit="inches", strip_comments=True)
         data["_physical_objects"].append(data["_object"])
 
         hmo = get_crom_object(data["_object"])

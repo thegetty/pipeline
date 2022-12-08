@@ -360,8 +360,6 @@ class PopulateGoupilObject(Configurable, PopulateObject):
                 if k in ("materials", "dimensions", "goupil_object_id", "present_location", "subject", "genre")
             }
         )
-        if "dimensions" in data["_object"]:
-            data["_object"]["dimensions"] = data["_object"]["dimensions"].lower()
 
         try:
             goupil_id = odata["goupil_object_id"]
@@ -370,6 +368,7 @@ class PopulateGoupilObject(Configurable, PopulateObject):
         except Exception as e:
             warnings.warn(f"*** Object has no goupil object id: {pprint.pformat(data)}")
             uri_key = ("Object", "Internal", data["pi_record_no"])
+        
         for row in data["_text_rows"]:
             try:
                 stock_nook_gno = gno = row["gno"]
@@ -527,7 +526,7 @@ class PopulateGoupilObject(Configurable, PopulateObject):
                     type = model.Type(ident=types["type"], label=label)
 
                     if "metatype" in types:
-                        metatype = model.Type(ident=types["metatype"], label="Styles")
+                        metatype = model.Type(ident=types["metatype"], label="object/work type")
                         setattr(type, prop, metatype)
 
                     setattr(vi, prop, type)

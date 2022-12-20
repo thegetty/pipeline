@@ -564,7 +564,10 @@ class AddBooks(Configurable, GoupilProvenance):
                 "uri": self.helper.make_proj_uri("Book", book_id),
                 "object_type": vocab.Book,
                 "label": (label, vocab.instances["english"]),
-                "identifiers": [self.helper.goupil_number_id(book_id, id_class=vocab.BookNumber)],
+                "identifiers": [
+                    self.helper.goupil_number_id(book_id, id_class=vocab.BookNumber),
+                    self.helper.goupil_gpi_number_id(data["pi_record_no"], vocab.StarNumber),
+                ],
                 # "carries": [book],
             }
 
@@ -608,7 +611,10 @@ class AddPages(Configurable, GoupilProvenance):
                 "object_type": vocab.AccountBookText,
                 "classified_as": [page_type],
                 "label": (label, vocab.instances["english"]),
-                "identifiers": [self.helper.goupil_number_id(page, id_class=vocab.PageNumber)],
+                "identifiers": [
+                    self.helper.goupil_number_id(page, id_class=vocab.PageNumber),
+                    self.helper.goupil_gpi_number_id(data["pi_record_no"], vocab.StarNumber),
+                ],
             }
 
             page.update({k: v for k, v in b_data.items() if k in ("no", "gno", "pg", "row")})

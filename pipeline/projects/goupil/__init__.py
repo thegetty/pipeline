@@ -675,7 +675,7 @@ class AddRows(Configurable, GoupilProvenance):
 
             o_page = get_crom_object(p_data)
             o_row = get_crom_object(row)
-            o_row.part_of = o_page
+            o_row.referred_to_by = o_page
 
             data["_text_rows"].append(row)
             self.add_goupil_creation_data(row)

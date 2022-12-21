@@ -568,7 +568,7 @@ class AddBooks(Configurable, GoupilProvenance):
                     self.helper.goupil_number_id(book_id, id_class=vocab.BookNumber),
                     self.helper.goupil_gpi_number_id(data["pi_record_no"], vocab.StarNumber),
                 ],
-                # "carries": [book],
+                "carries": [book],
             }
 
             make_la_lo(book)

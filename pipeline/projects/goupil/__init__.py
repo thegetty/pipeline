@@ -981,6 +981,7 @@ class GoupilPipeline(PipelineBase):
         )
 
         hmos1 = graph.add_chain(ExtractKeyedValues(key="_physical_objects"), _input=objects.output)
+        hmos2 = graph.add_chain(ExtractKeyedValues(key="_original_objects"), _input=objects.output)
         odata = graph.add_chain(ExtractKeyedValue(key="_object"), _input=objects.output)
         artists = graph.add_chain(ExtractKeyedValues(key="_artists"), _input=objects.output)
         groups1 = graph.add_chain(ExtractKeyedValues(key="_organizations"), _input=objects.output)
@@ -997,6 +998,7 @@ class GoupilPipeline(PipelineBase):
 
             self.add_serialization_chain(graph, items.output, model=self.models["VisualItem"])
             self.add_serialization_chain(graph, hmos1.output, model=self.models["HumanMadeObject"])
+            self.add_serialization_chain(graph, hmos2.output, model=self.models['HumanMadeObject'])
             self.add_person_or_group_chain(graph, odata, key="_organizations")  # organizations are groups too!
             self.add_person_or_group_chain(graph, artists)
             self.add_person_or_group_chain(graph, groups1)

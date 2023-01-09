@@ -743,7 +743,11 @@ class PopulateObject:
 				else: 
 					dimstmt.referred_to_by = sales_record
 			hmo.referred_to_by = dimstmt
-			for dim in extract_physical_dimensions(dimstr, default_unit=default_unit, strip_comments=strip_comments):
+			if strip_comments:
+				import re;
+				dimstr = re.sub(r"\[.*\]", '', dimstr).strip()
+			dimstr = dimstr.replace("X", "x")
+			for dim in extract_physical_dimensions(dimstr, default_unit=default_unit):
 				if sales_record:
 					if isinstance(sales_record, list):
 						for record in sales_record:

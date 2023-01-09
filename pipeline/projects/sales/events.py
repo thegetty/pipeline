@@ -196,7 +196,7 @@ class PopulateAuctionEvent(Configurable):
 				if url.startswith('http'):
 					page = vocab.WebPage(ident='', label=label)
 					page._validate_range = False
-					page.access_point = [vocab.DigitalObject(ident=url)]
+					page.access_point = vocab.DigitalObject(ident=url, label=url)
 					if description:
 						page.referred_to_by = vocab.Note(ident='', content=description)
 					event_record.referred_to_by = page

@@ -130,6 +130,16 @@
                 "type": "http://vocab.getty.edu/aat/300015636"
             }
         },
+        "paysage; animaux": {
+            "animal art": {
+                "metatype": "http://vocab.getty.edu/aat/300435443",
+                "type": "http://vocab.getty.edu/aat/300386044"
+            },
+            "landscapes (representations)": {
+                "metatype": "http://vocab.getty.edu/aat/300435443",
+                "type": "http://vocab.getty.edu/aat/300015636"
+            }
+        },
         "portrait": {
             "portraits": {
                 "metatype": "http://vocab.getty.edu/aat/300435443",

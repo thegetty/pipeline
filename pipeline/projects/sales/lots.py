@@ -50,7 +50,7 @@ class AddAuctionOfLot(ProvenanceBase):
 			warnings.warn(f'*** No place URI found for lot in catalog {cno}')
 
 	@staticmethod
-	def set_lot_date(lot, auction_data, event_dates):
+	def set_lot_date(lot, auction_data, event_dates, auction_uses_following_days_style):
 		'''Associate a timespan with the auction lot.'''
 		date = implode_date(auction_data, 'lot_sale_')
 		if date:
@@ -73,6 +73,15 @@ class AddAuctionOfLot(ProvenanceBase):
 					bounds[1] = None
 			ts = timespan_from_outer_bounds(*bounds)
 			label = label_for_timespan_range(*bounds)
+			
+			# We re-set the label here because it might have changed based on the modifiers
+			# In that case, we have inherited an end date that is a guess, and so the label
+			# shouldn't include the end, but instead have the '[DATE] onwards' style label.
+			if auction_data.get('lot_sale_mod') and auction_uses_following_days_style:
+				# Here we change the label to be a in the '[DATE] onwards' style.
+				label = label_for_timespan_range(bounds[0], None)
+				ts._label = label
+			
 			ts.identified_by = model.Name(ident='', content=label)
 			lot.timespan = ts
 
@@ -123,10 +132,7 @@ class AddAuctionOfLot(ProvenanceBase):
 
 		event_dates = event_properties['auction_dates'].get(cno)
 		if event_dates:
-			_, begin, end = event_dates
-			ts = timespan_from_outer_bounds(begin, end)
-			label = label_for_timespan_range(begin, end)
-			ts.identified_by = model.Name(ident='', content=label)
+			ts, begin, end, uses_following_days_style = event_dates
 			creation.timespan = ts
 		coll.created_by = creation
 
@@ -236,8 +242,9 @@ class AddAuctionOfLot(ProvenanceBase):
 		auction, _, _ = self.helper.sale_event_for_catalog_number(cno, sale_type, date_label=event_date_label)
 		if transaction not in WITHDRAWN:
 			lot.part_of = auction
+			uses_following_days_style = False
 			if event_dates:
-				_, begin, end = event_dates
+				_, begin, end, uses_following_days_style = event_dates
 				event_range = (begin, end)
 			else:
 				event_range = None
@@ -249,7 +256,7 @@ class AddAuctionOfLot(ProvenanceBase):
 
 			self.set_lot_auction_houses(lot, cno, auction_houses)
 			self.set_lot_location(lot, cno, auction_locations)
-			self.set_lot_date(lot, auction_data, event_range)
+			self.set_lot_date(lot, auction_data, event_range, uses_following_days_style)
 			self.set_lot_notes(lot, auction_data, sale_type, non_auctions)
 
 			tx_uri = self.helper.transaction_uri_for_lot(auction_data, data)

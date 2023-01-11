@@ -1,0 +1,128 @@
+{
+    "classified_as": {
+        "Genre": {
+            "Genre Pictures": "http://vocab.getty.edu/aat/300139140"
+        },
+        "Animals": {
+            "Animal Art ": "http://vocab.getty.edu/aat/300386044"
+        },
+        "Landscape": {
+            "Landscapes (representations)": "http://vocab.getty.edu/aat/300015636"
+        },
+        "Portrait": {
+            "Portraits": "http://vocab.getty.edu/aat/300015637"
+        },
+        "History": {
+            "Histories (visual works)": "http://vocab.getty.edu/aat/300386045"
+        },
+        "Still Life": {
+            "Still Lifes": "http://vocab.getty.edu/aat/300015638"
+        },
+        "Sporting, Genre": {
+            "Genre Pictures ": "http://vocab.getty.edu/aat/300139140"
+        },
+        "Marines, Landscape": {
+            "Marines (visual works)": "http://vocab.getty.edu/aat/300235692",
+            "Seascapes": "http://vocab.getty.edu/aat/300117546",
+            "Landscapes (representations)": "http://vocab.getty.edu/aat/300015636"
+        },
+        "Topographical views, Landscape": {
+            "Views (visual works)": "http://vocab.getty.edu/aat/300015424",
+            "Landscapes (representations)": "http://vocab.getty.edu/aat/300015636"
+        },
+        "Religious (figures), History": {
+            "Religious Visual Works": "http://vocab.getty.edu/aat/300234093",
+            "Histories (visual works)": "http://vocab.getty.edu/aat/300386045"
+        },
+        "Military, Genre": {
+            "Genre Pictures": "http://vocab.getty.edu/aat/300139140"
+        },
+        "Religious (narrative), History": {
+            "Histories (visual works)": "http://vocab.getty.edu/aat/300386045",
+            "Narrative Art": "http://vocab.getty.edu/aat/300410510",
+            "Religious Visual Works ": "http://vocab.getty.edu/aat/300234093"
+        },
+        "Interiors, Genre": {
+            "Genre Pictures": "http://vocab.getty.edu/aat/300139140",
+            "Interior Views ": "http://vocab.getty.edu/aat/300124520"
+        },
+        "Architecture, Landscape": {
+            "Landscapes (representations)": "http://vocab.getty.edu/aat/300015636"
+        },
+        "Landscapes with figures, Landscape": {
+            "Landscapes (representations)": "http://vocab.getty.edu/aat/300015636"
+        },
+        "Mythology (figures), History": {
+            "Histories (visual works)": "http://vocab.getty.edu/aat/300386045",
+            "Mythology (literary genre)": "http://vocab.getty.edu/aat/300055985"
+        },
+        "Battles, History": {
+            "Histories (visual works)": "http://vocab.getty.edu/aat/300386045"
+        },
+        "Figure studies, Genre": {
+            "Genre Pictures": "http://vocab.getty.edu/aat/300139140"
+        },
+        "Mythology (narrative), History": {
+            "Histories (visual works)": "http://vocab.getty.edu/aat/300386045",
+            "Narrative Art": "http://vocab.getty.edu/aat/300410510"
+        },
+        "Literature, History": {
+            "Histories (visual works)": "http://vocab.getty.edu/aat/300386045"
+        },
+        "Ruins, Landscape": {
+            "Landscapes (representations)": "http://vocab.getty.edu/aat/300015636"
+        },
+        "Allegory, History": {
+            "Histories (visual works)": "http://vocab.getty.edu/aat/300386045",
+            "Allegories (literary works)": "http://vocab.getty.edu/aat/300202507"
+        },
+        "Sporting, Landscape": {
+            "Landscapes (representations)": "http://vocab.getty.edu/aat/300015636"
+        },
+        "Topographical views, Genre": {
+            "Genre Pictures": "http://vocab.getty.edu/aat/300139140",
+            "Views (visual works)": "http://vocab.getty.edu/aat/300015424"
+        },
+        "Military, Portrait": {
+            "Portraits": "http://vocab.getty.edu/aat/300015637"
+        },
+        "Military, Landscape": {
+            "Landscapes (representations)": "http://vocab.getty.edu/aat/300015636"
+        },
+        "Military; Sporting, Genre": {
+            "Genre Pictures": "http://vocab.getty.edu/aat/300139140"
+        }
+    },
+    "represents_instance_of_type": {
+        "Portrait": {
+            "Historical Figures": "http://vocab.getty.edu/aat/300386296"
+        },
+        "Religious (figures), History": {
+            "Figures (representations) ": "http://vocab.getty.edu/aat/300189808"
+        },
+        "Military, Genre": {
+            "Military Personnel": "http://vocab.getty.edu/aat/300025450"
+        },
+        "Architecture, Landscape": {
+            "Buildings (structures)": "http://vocab.getty.edu/aat/300004792"
+        },
+        "Landscapes with figures, Landscape": {
+            "Figures (representations) ": "http://vocab.getty.edu/aat/300189808"
+        },
+        "Mythology (figures), History": {
+            "Figures (representations) ": "http://vocab.getty.edu/aat/300189808"
+        },
+        "Battles, History": {
+            "Battles": "http://vocab.getty.edu/aat/300185692"
+        },
+        "Figure studies, Genre": {
+            "Figures (representations) ": "http://vocab.getty.edu/aat/300189808"
+        },
+        "Ruins, Landscape": {
+            "Ruins": "http://vocab.getty.edu/aat/300008057"
+        },
+        "Military, Portrait": {
+            "Military Personnel": "http://vocab.getty.edu/aat/300025450"
+        }
+    }
+}

@@ -512,11 +512,13 @@ class PopulateKnoedlerObject(Configurable, pipeline.linkedart.PopulateObject):
 	helper = Option(required=True)
 	make_la_org = Service('make_la_org')
 	vocab_type_map = Service('vocab_type_map')
+	subject_genre = Service('subject_genre')
+	subject_genre_style = Service('subject_genre_style')
 
 	def __init__(self, *args, **kwargs):
 		super().__init__(*args, **kwargs)
 
-	def _populate_object_visual_item(self, data:dict, title):
+	def _populate_object_visual_item(self, data:dict, object_data, title, subject_genre, subject_genre_style):
 		sales_record = get_crom_object(data['_record'])
 		hmo = get_crom_object(data)
 		title = truncate_with_ellipsis(title, 100) or title
@@ -534,10 +536,35 @@ class PopulateKnoedlerObject(Configurable, pipeline.linkedart.PopulateObject):
 			vidata['label'] = f'Visual work of “{title}”'
 			sales_record = get_crom_object(data['_record'])
 			vidata['names'] = [(title,{'referred_to_by': [sales_record]})]
+
+		objgenre = object_data['genre'] if 'genre' in object_data else None
+		objsubject = object_data['subject'] if 'subject' in object_data else None
+		
+		for prop, mapping in subject_genre.items():
+			key = ', '.join((objsubject,objgenre)) if objsubject else objgenre
+			try:
+				aat_terms = mapping[key]
+				for label, aat_url in aat_terms.items():
+					t = model.Type(ident=aat_url, label=label)
+					setattr(vi, prop, t)
+			except:
+				pass
+
+		for prop, mapping in subject_genre_style.items():
+			key = ', '.join((objsubject,objgenre)) if objsubject else objgenre
+			try:
+				aat_terms = mapping[key]
+				for label, aat_url in aat_terms.items():
+					t = model.Type(ident=aat_url, label=label)
+					t.classified_as = model.Type(ident='http://vocab.getty.edu/aat/300015646', label='Styles and Periods (hierarchy name)')
+					setattr(vi, prop, t)
+			except:
+				pass
+
 		data['_visual_item'] = add_crom_data(data=vidata, what=vi)
 		hmo.shows = vi
 
-	def __call__(self, data:dict, *, vocab_type_map, make_la_org):
+	def __call__(self, data:dict, *, vocab_type_map, make_la_org, subject_genre, subject_genre_style):
 		sales_record = get_crom_object(data['_record'])
 		data.setdefault('_physical_objects', [])
 		data.setdefault('_linguistic_objects', [])
@@ -611,7 +638,7 @@ class PopulateKnoedlerObject(Configurable, pipeline.linkedart.PopulateObject):
 		mlao(data['_object'])
 
 		self._populate_object_present_location(data['_object'])
-		self._populate_object_visual_item(data['_object'], label)
+		self._populate_object_visual_item(data['_object'], odata, label, subject_genre, subject_genre_style)
 		self.populate_object_statements(data['_object'], default_unit='inches')
 		data['_physical_objects'].append(data['_object'])
 		return data

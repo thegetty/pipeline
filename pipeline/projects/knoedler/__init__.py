@@ -870,19 +870,36 @@ class TransactionHandler(ProvenanceBase):
 					relative_id=f'{role}_{i+1}'
 				)
 				knoedler_group.append(person)
+		# Check if a joint owner is either a seller or a buyer
+		people_ids = set([x.id for x in people])
+		knoedler_group_ids = set([x.id for x in knoedler_group])
+		joint_owner_also_seller_or_buyer_id = people_ids.intersection(knoedler_group_ids)
 
 		paym = None
 		if amnt:
 			tx_uri = tx.id
 			payment_id = tx_uri + '-Payment'
 			paym = model.Payment(ident=payment_id, label=f'Payment for {sn_ident}')
-			paym.paid_amount = amnt
 			tx.part = paym
-			for kp in knoedler_group:
-				if incoming:
-					paym.paid_from = kp
-				else:
-					paym.paid_to = kp
+			# If a joint owner is a seller or a buyer the payment node is empty and all the monetary ammount's information is moved to 
+			# AttributeAssignment -> Monetary Ammount
+			# P9->E13->p141->E97->P90->full_amount
+			# P9->E13->p141->E97->P180->currency
+			# P9->E13->p141->E97->p67i->E33->P190->note
+			if not joint_owner_also_seller_or_buyer_id:
+				paym.paid_amount = amnt
+				for kp in knoedler_group:
+					if incoming:
+						paym.paid_from = kp
+					else:
+						paym.paid_to = kp
+			else:
+				assignment_id = tx_uri + '-Attribute assignment'
+				assignment = model.AttributeAssignment(ident=assignment_id, label=f"Attribute assignment for {sn_ident}")
+				assignment.assigned = amnt
+				for kp in knoedler_group:
+					assignment.carried_out_by = kp
+				tx.part = assignment
 			for p in shared_people_agents:
 				# when an agent is acting on behalf of the buyer/seller, model their involvement in a sub-activity
 				subpaym_role = 'Buyer' if incoming else 'Seller'
@@ -907,17 +924,26 @@ class TransactionHandler(ProvenanceBase):
 						shared_paym.paid_amount = part_amnt
 					if incoming:
 						shared_paym.paid_from = person
+						# Partial payment of share from Knoedler to joint owner who is also the seller
+						if joint_owner_also_seller_or_buyer_id:
+							for purchase_buyer in people:
+								shared_paym.paid_to = purchase_buyer
 					else:
 						shared_paym.paid_to = person
-
+						# Partial payment of share to Knoedler from joint owner who is also the buyer
+						if joint_owner_also_seller_or_buyer_id:
+							for sale_buyer in people:
+								shared_paym.paid_from = sale_buyer
 					paym.part = shared_paym
-
-		for person in people:
-			if paym:
-				if incoming:
-					paym.paid_to = person
-				else:
-					paym.paid_from = person
+					
+		# If a joint owner is a seller or a buyer the payment node is empty
+		if not joint_owner_also_seller_or_buyer_id:
+			for person in people:
+				if paym:
+					if incoming:
+						paym.paid_to = person
+					else:
+						paym.paid_from = person
 		for p in people_agents:
 			# when an agent is acting on behalf of the buyer/seller, model their involvement in a sub-activity
 			if paym:

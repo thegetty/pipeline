@@ -329,7 +329,7 @@ class PersonIdentity:
 				return {'date_range': date_range, 'verbatim_active_period': data.get('century_active')}
 		return {}
 
-	def add_props(self, data:dict, role=None, **kwargs):
+	def add_props(self, data:dict, role=None, split_notes=True, **kwargs):
 		role = role if role else 'person'
 		auth_name = data.get('auth_name', '')
 		generic_name = data.get('generic_name', '')
@@ -358,7 +358,6 @@ class PersonIdentity:
 		notes_field_classification = {
 			'brief_notes': (vocab.BiographyStatement, vocab.External),
 			'text': (vocab.BiographyStatement, vocab.Internal),
-			'internal_notes': (vocab.BiographyStatement, vocab.Internal),
 			'working_notes': (vocab.ResearchStatement, vocab.Internal),
 		}
 		for key, note_classification in notes_field_classification.items():
@@ -369,7 +368,17 @@ class PersonIdentity:
 				for content in contents:
 					cite = vocab.make_multitype_obj(*note_classification, ident='', content=content)
 					data['referred_to_by'].append(cite)
-
+		
+		if split_notes:
+			if 'internal_notes' in data:
+				for content in [n.strip() for n in data['internal_notes'].split(';')]:
+					cite = vocab.make_multitype_obj(*(vocab.BiographyStatement, vocab.Internal), ident='', content=content)
+					data['referred_to_by'].append(cite)
+		else:
+			if 'internal_notes' in data:
+				cite = vocab.make_multitype_obj(*(vocab.BiographyStatement, vocab.Internal), ident='', content=data['internal_notes'])
+				data['referred_to_by'].append(cite)
+			
 		for key in ('name_cite', 'bibliography'):
 			if data.get(key):
 				cite = vocab.BibliographyStatement(ident='', content=data[key])

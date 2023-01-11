@@ -504,7 +504,6 @@ class AddBooks(Configurable, GoupilProvenance):
                 "label": (label, vocab.instances["english"]),
                 "identifiers": [
                     self.helper.goupil_number_id(book_id, id_class=vocab.BookNumber),
-                    self.helper.goupil_gpi_number_id(data["pi_record_no"], vocab.StarNumber),
                 ],
                 "carries": [book],
             }
@@ -513,7 +512,6 @@ class AddBooks(Configurable, GoupilProvenance):
             make_la_hmo(physical_book)
             o_book = get_crom_object(book)
             p_book = get_crom_object(physical_book)
-            o_book.about = p_book
             self.add_goupil_creation_data(book)
             b_data.update(book)
             physical_objects.append(physical_book)
@@ -529,6 +527,7 @@ class AddPages(Configurable, GoupilProvenance):
 
     def __call__(self, data: dict, make_la_lo, make_la_hmo):
         books = data.get("_book_records", [])
+        physical_books = data.get("_physical_books", [])
         data.setdefault("_text_pages", [])
 
         for seq_no, b_data in enumerate(books):
@@ -567,6 +566,8 @@ class AddPages(Configurable, GoupilProvenance):
             o_book = get_crom_object(b_data)
             o_page = get_crom_object(page)
             o_page.part_of = o_book
+            p_book = get_crom_object(physical_books[seq_no])
+            o_page.carried_by = p_book
 
             data["_text_pages"].append(page)
             self.add_goupil_creation_data(page)
@@ -638,6 +639,8 @@ class AddRows(Configurable, GoupilProvenance):
             o_page = get_crom_object(p_data)
             o_row = get_crom_object(row)
             o_row.part_of = o_page
+            if o_page.carried_by and o_row:
+                o_row.carried_by = o_page.carried_by[0]
 
             transaction = data["book_record"]["transaction"]
             tx_cl = transaction_classification.get(transaction)

@@ -93,7 +93,7 @@ class SalesUtilityHelper(UtilityHelper):
 		self.shared_lot_number_re = re.compile(r'(\[[a-z]\])')
 		self.ignore_house_authnames = CaseFoldingSet(('Anonymous', '[Anonymous]'))
 		self.csv_source_columns = ['pi_record_no', 'star_record_no', 'catalog_number']
-		self.problematic_record_uri = f'tag:getty.edu,2019:digital:pipeline:{project_name}:ProblematicRecord'
+		self.problematic_record_uri = f'https://data.getty.edu/local/thesaurus/problematic-record'
 		self.person_identity = SalesPersonIdentity(make_shared_uri=self.make_shared_uri, make_proj_uri=self.make_proj_uri)
 		self.uid_tag_prefix = UID_TAG_PREFIX
 

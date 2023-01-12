@@ -646,7 +646,10 @@ class AddRows(Configurable, GoupilProvenance):
                 notes.append(vocab.Note(ident="", content=data["object"][k]))
 
         if data["object"].get("rosetta_handle"):
-            notes.append(vocab.WebPage(ident=data["object"]["rosetta_handle"], label=data["object"]["rosetta_handle"]))
+            page = vocab.DigitalImage(ident=data["object"]["rosetta_handle"], label=data["object"]["rosetta_handle"])
+            page._validate_range = False
+            page.access_point = [vocab.DigitalObject(ident=data["object"]["rosetta_handle"])]
+            notes.append(page)
 
         for seq_no, p_data in enumerate(pages):
             book_id, _, page, row = record_id(p_data)

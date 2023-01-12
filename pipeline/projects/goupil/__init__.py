@@ -125,96 +125,6 @@ class GoupilProvenance:
                 }
             )
 
-    def _prov_entry(
-        self,
-        data,
-        date_key,
-        participants,
-        price_info=None,
-        goupil_price_part=None,
-        shared_people=None,
-        incoming=False,
-        purpose=None,
-        buy_sell_modifiers=None,
-    ):
-        data.setdefault("_people", [])
-
-        for seq_no, p_data in enumerate(participants):
-            auth_name = p_data.get("auth_name")
-            ulan = p_data.get("ulan_id")
-            places = [p_data.get("location"), p_data.get("auth_location")]
-            places = []
-            if p_data.get("location"):
-                places.append(p_data.get("location"))
-
-            if p_data.get("auth_location"):
-                places.append(p_data.get("auth_location"))
-
-            mods_note = None
-            if p_data.get("auth_mod"):
-                mods_note = vocab.Note(content=p_data.get("auth_mod"))
-
-            p_data.update(
-                {
-                    "ulan": ulan,
-                    "referred_to_by": [mods_note],
-                }
-            )
-            person = self.helper.add_person(
-                p_data, record=get_crom_objects(data["_records"]), relative_id=f"person-{seq_no}"
-            )
-            add_crom_data(p_data, person)
-            data["_people"].append(p_data)
-
-        if shared_people == None:
-            shared_people = []
-
-        if shared_people:
-            for i, p in enumerate(shared_people):
-                role = "shared-own"
-                p_data = self.helper.copy_source_information(p, data)
-                person = self.helper.add_person(
-                    p_data, record=get_crom_objects(data["_records"]), relative_id=f"{role}_{i+1}"
-                )
-                add_crom_data(p_data, person)
-                data["_people"].append(p_data)
-
-    def add_incoming_tx(self, data, buy_sell_modifiers):
-        price_info = data.get("purchase")
-        sellers = data["sellers"]
-        for person in sellers:
-            self.helper.copy_source_information(person, data)
-
-        tx = self._prov_entry(data, "entry_date", sellers, shared_people=data.get("co_owners", []))
-
-        prev_owner = data.get("prev_own")
-
-        if prev_owner:
-            self.model_prev_post_owners(data, [prev_owner], tx, "prev_own")
-
-    def add_outging_tx(self, data, buy_sell_modifiers):
-        price_info = data.get("purchase")
-        buyers = data["buyers"]
-
-        for person in buyers:
-            self.helper.copy_source_information(person, data)
-
-        tx = self._prov_entry(data, "entry_date", buyers)
-
-        post_owner = data.get("post_own")
-
-        if post_owner:
-            self.model_prev_post_owners(data, [post_owner], tx, "post_own")
-
-    def model_prev_post_owners(self, data, owners, tx, role, lot_object_key=None):
-        for i, p in enumerate(owners):
-            p_data = self.helper.copy_source_information(p, data)
-            person = self.helper.add_person(
-                p_data, record=get_crom_objects(data["_records"]), relative_id=f"{role}_{i+1}"
-            )
-            add_crom_data(p_data, person)
-            data["_people"].append(p_data)
-
 
 class AddArtists(ProvenanceBase, GoupilProvenance):
     helper = Option(required=True)
@@ -766,6 +676,29 @@ class TransactionSwitch(Configurable):
 
 
 class GoupilTransactionHandler(TransactionHandler):
+    def model_seller_buyer_authority(self, p_data: dict):
+        auth_name = p_data.get("auth_name")
+        ulan = p_data.get("ulan_id")
+
+        p_data.update(
+            {
+                "ulan": ulan,
+                "label": auth_name,
+            }
+        )
+
+    def model_prev_post_owners(self, data, owner:str, role):
+        sales_record = get_crom_objects(data["_records"])
+        splitOwners = [{k: v if k != "name" else x for k, v in owner.items()} for x in owner["name"].split("; ")]
+        for i, p in enumerate(splitOwners):
+            person_dict = self.helper.copy_source_information(p, data)
+            person = self.helper.add_person(
+                person_dict,
+                record=sales_record,
+                relative_id=f'{role}_{i+1}'
+            )
+            data['_people'].append(person_dict)
+
     def _apprasing_assignment(self, data):
         odata = data["_object"]
         date = implode_date(data["entry_date"])
@@ -774,6 +707,7 @@ class GoupilTransactionHandler(TransactionHandler):
         sn_ident = self.helper.stock_number_identifier(odata, date)
 
         sellers = data["purchase_seller"]
+        # TODO to be clarified if this should be the purchase or cost field, or both
         price_info = data.get("cost")
         if price_info and not len(sellers):
             # this inventorying has a "purchase" amount that is an evaluated worth amount
@@ -977,6 +911,8 @@ class GoupilTransactionHandler(TransactionHandler):
                 person_dict = self.helper.copy_source_information(p, data)
                 person = self.helper.add_person(person_dict, record=sales_records, relative_id=f"{role}_{i+1}")
                 name = p.get("name", p.get("auth_name", "(anonymous)"))
+                if p.get("share") == "":
+                    p["share"] = "1/1"
                 share = p.get("share", "1/1")
                 try:
                     share_frac = Fraction(share)
@@ -1022,8 +958,8 @@ class GoupilTransactionHandler(TransactionHandler):
 
         if shared_people is None:
             shared_people = []
-
-        for k in ("_prov_entries", "_people"):
+        # TODO UPDATE HERE:for k in ("_prov_entries", "_people", "_locations")
+        for k in ("_prov_entries", "_people", "_locations"):
             data.setdefault(k, [])
 
         date = implode_date(data[date_key]) if date_key in data else None
@@ -1046,7 +982,17 @@ class GoupilTransactionHandler(TransactionHandler):
         people_agents = []
         for i, p_data in enumerate(people_data):
             mod = self.modifiers(p_data, "auth_mod")
+            self.model_seller_buyer_authority(p_data)
             person = self.helper.add_person(p_data, record=sales_records, relative_id=f"{role}_{i+1}")
+            loc = p_data.get("auth_loc")
+            if loc:
+                for splitLocations in loc.split("; "):
+                    sales_records = get_crom_objects(data["_records"])
+                    current = parse_location_name(splitLocations, uri_base=self.helper.uid_tag_prefix)
+                    place_data = self.helper.make_place(current, sales_records=sales_records)
+                    place = get_crom_object(place_data) 
+                    person.residence = place 
+                    data["_locations"].append(place_data)              
             if THROUGH.intersects(mod):
                 people_agents.append(person)
             else:
@@ -1105,22 +1051,69 @@ class GoupilTransactionHandler(TransactionHandler):
 
     def add_incoming_tx(self, data, buy_sell_modifiers):
         price_info = data.get("purchase")
-        # shared_people = data.get('purchase_buyer')
+        shared_people = data.get('purchase_buyer')
         sellers = data["purchase_seller"]
 
         for p in sellers:
             self.helper.copy_source_information(p, data)
         tx = self._prov_entry(
-            data, "entry_date", sellers, price_info, incoming=True, buy_sell_modifiers=buy_sell_modifiers
+            data, "entry_date", sellers, price_info, shared_people=shared_people, incoming=True, buy_sell_modifiers=buy_sell_modifiers
         )
 
-        prev_owners = data.get("prev_own", [])
-        lot_object_key = self.helper.transaction_key_for_record(data, incoming=True)
-        # if prev_owners:
-        #     self.model_prev_owners(data, prev_owners, tx, lot_object_key)
+        post_own = data.get("post_own", {})
+        if post_own:
+            self.model_prev_post_owners(data, post_own, "post_own")
 
         return tx
 
+    def add_outgoing_tx(self, data, buy_sell_modifiers):
+        price_info = data.get('sale')
+        knoedler_price_part = data.get('sale_knoedler_share')
+        shared_people = data.get('purchase_buyer')
+        buyers = data['sale_buyer']
+        for p in buyers:
+            self.helper.copy_source_information(p, data)
+        tx =  self._prov_entry(data, 'sale_date', buyers, price_info, shared_people=shared_people , incoming=False, buy_sell_modifiers=buy_sell_modifiers)   
+        prev_owners = data.get("prev_own", {})
+        if prev_owners :
+            self.model_prev_post_owners(data, prev_owners, "prev_own")
+
+        return tx
+
+class ModelSale(GoupilTransactionHandler):
+    """ """
+
+    helper = Option(required=True)
+    make_la_person = Service("make_la_person")
+    buy_sell_modifiers = Service('buy_sell_modifiers')
+
+    def __call__(self, data: dict, make_la_person, buy_sell_modifiers=None, in_tx=None, out_tx=None):
+        sellers = data["purchase_seller"]
+
+        if not in_tx:
+            if len(sellers):
+                in_tx = self.add_incoming_tx(data, buy_sell_modifiers)
+            else:
+                # if there are no sellers, then this is an object that was previously unsold, and should be modeled as an inventory activity
+                inv = self._new_inventorying(data)
+                appraisal = self._apprasing_assignment(data)
+                inv_label = inv._label
+                in_tx = self._empty_tx(data, incoming=True)
+                in_tx.part = inv
+                if appraisal:
+                    in_tx.part = appraisal
+                in_tx.identified_by = model.Name(ident='', content=inv_label)
+                in_tx._label = inv_label
+                in_tx_data = add_crom_data(data={'uri': in_tx.id, 'label': inv_label}, what=in_tx)
+                data.setdefault('_prov_entries', [])
+                data['_prov_entries'].append(in_tx_data)
+
+        if not out_tx:
+            out_tx = self.add_outgoing_tx(data, buy_sell_modifiers)
+        in_tx.ends_before_the_start_of = out_tx
+        out_tx.starts_after_the_end_of = in_tx
+        
+        yield data
 
 class ModelInventorying(GoupilTransactionHandler):
     helper = Option(required=True)
@@ -1352,7 +1345,7 @@ class GoupilPipeline(PipelineBase):
                                     "buyer_name": "name",
                                     "buyer_loc": "loc",
                                     "buy_auth_name": "auth_name",
-                                    "buy_auth_addr": "auth_addr",
+                                    "buy_auth_addr": "auth_loc",
                                     "buy_auth_mod": "auth_mod",
                                     "buyer_ulan_id": "ulan_id",
                                 },
@@ -1403,7 +1396,7 @@ class GoupilPipeline(PipelineBase):
                                     "post_sales",
                                 ),
                             },
-                            "sale_goupil_share": {
+                            "sale": {
                                 "rename_keys": {
                                     "price_amount_1": "amount",
                                     "price_code_1": "code",
@@ -1525,11 +1518,11 @@ class GoupilPipeline(PipelineBase):
             _input=tx.output,
         )
 
-        # sale = graph.add_chain(
-        #     ExtractKeyedValue(key="Purchase"),
-        #     ModelSale(helper=self.helper),
-        #     _input=tx.output,
-        # )
+        sale = graph.add_chain(
+            ExtractKeyedValue(key="Purchase"),
+            ModelSale(helper=self.helper),
+            _input=tx.output,
+        )
 
         # returned = graph.add_chain(
         #     ExtractKeyedValue(key="Returned"),
@@ -1562,7 +1555,7 @@ class GoupilPipeline(PipelineBase):
 
         # # people and prov entries can come from any of these chains:
         for branch in (
-            # sale,
+            sale,
             # destruction,
             # theft,
             # loss,
@@ -1572,6 +1565,7 @@ class GoupilPipeline(PipelineBase):
         ):
             prov_entry = graph.add_chain(ExtractKeyedValues(key="_prov_entries"), _input=branch.output)
             people = graph.add_chain(ExtractKeyedValues(key="_people"), _input=branch.output)
+            _ = self.add_places_chain(graph, branch, key="_locations", serialize=serialize, include_self=True)
 
             if serialize:
                 self.add_serialization_chain(graph, prov_entry.output, model=self.models["ProvenanceEntry"])

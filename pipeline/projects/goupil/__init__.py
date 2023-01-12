@@ -683,6 +683,9 @@ class TransactionSwitch(Configurable):
 
 
 class GoupilTransactionHandler(TransactionHandler):
+    def modifiers(self, a:dict, key:str):
+        return {a.get(key, '').split(" ")[0]}
+
     def model_seller_buyer_authority(self, p_data: dict):
         auth_name = p_data.get("auth_name")
         ulan = p_data.get("ulan_id")
@@ -994,7 +997,6 @@ class GoupilTransactionHandler(TransactionHandler):
             loc = p_data.get("auth_loc")
             if loc:
                 for splitLocations in loc.split("; "):
-                    sales_records = get_crom_objects(data["_records"])
                     current = parse_location_name(splitLocations, uri_base=self.helper.uid_tag_prefix)
                     place_data = self.helper.make_place(current, sales_records=sales_records)
                     place = get_crom_object(place_data) 

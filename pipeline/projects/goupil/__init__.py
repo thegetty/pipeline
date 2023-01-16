@@ -238,8 +238,8 @@ class GoupilUtilityHelper(SharedUtilityHelper):
         for rec in records:
             # TODO: revisit this when the multiple inventorying events thing is resolved
             book_id += rec["stock_book_no"]
-            page_id = rec["page_number"]
-            row_id = rec["row_number"]
+            page_id += rec["page_number"]
+            row_id += rec["row_number"]
 
         dir = "In" if incoming else "Out"
 
@@ -690,6 +690,16 @@ class GoupilTransactionHandler(TransactionHandler):
             }
         )
 
+    def person_sojourn(self, p_data: dict, sojourn, sales_records):
+        label = 'Sojourn activity'
+        stype = model.Activity
+        act = stype(ident='', label=label)
+        act.classified_as= model.Type(ident='http://vocab.getty.edu/aat/300404670', label='Preferred Terms')
+        act.took_place_at = sojourn
+        p_data.carried_out = act
+        for record in sales_records:
+            act.referred_to_by = record
+
     def model_prev_post_owners(self, data, owner:str, role):
         sales_record = get_crom_objects(data["_records"])
         splitOwners = [{k: v if k != "name" else x for k, v in owner.items()} for x in owner["name"].split("; ")]
@@ -710,10 +720,8 @@ class GoupilTransactionHandler(TransactionHandler):
         sn_ident = self.helper.stock_number_identifier(odata, date)
 
         sellers = data["purchase_seller"]
-        # TODO to be clarified if this should be the purchase or cost field, or both
         price_info = data.get("cost")
         if price_info and not len(sellers):
-            # this inventorying has a "purchase" amount that is an evaluated worth amount
             amnt = get_crom_object(price_info)
             assignment = vocab.AppraisingAssignment(ident="", label=f"Evaluated worth of {sn_ident}")
             assignment.carried_out_by = self.helper.static_instances.get_instance("Group", "goupil")
@@ -732,16 +740,47 @@ class GoupilTransactionHandler(TransactionHandler):
         sn_ident = self.helper.stock_number_identifier(odata, date)
         inv_label = f"Goupil Inventorying of {sn_ident}"
 
-        for rec in data["_book_records"]:
-            book_id, _, page_id, row_id = record_id(rec)
+        records = data["_records"]
+        book_id = page_id = row_id = ""
 
-            inv_uri = self.helper.make_proj_uri("INV", book_id, page_id, row_id)
-            inv = vocab.Inventorying(ident=inv_uri, label=inv_label)
-            inv.identified_by = model.Name(ident="", content=inv_label)
-            inv.encountered = hmo
-            self.set_date(inv, data, "entry_date")
+        for rec in records:
+            # TODO: revisit this when the multiple inventorying events thing is resolved
+            book_id += rec["stock_book_no"]
+            page_id += rec["page_number"]
+            row_id += rec["row_number"]       
+
+        inv_uri = self.helper.make_proj_uri("INV", book_id, page_id, row_id)
+        inv = vocab.Inventorying(ident=inv_uri, label=inv_label)
+        inv.identified_by = model.Name(ident="", content=inv_label)
+        inv.encountered = hmo
+        inv.carried_out_by = self.helper.static_instances.get_instance("Group", "goupil")
+        self.set_date(inv, data, "entry_date")
 
         return inv
+
+    def _maintainance_activity(self, data, tx):
+        odata = data["_object"]
+        date = implode_date(data["entry_date"])
+
+        hmo = get_crom_object(odata)
+        sn_ident = self.helper.stock_number_identifier(odata, date)
+
+        # TODO to be clarified if this should be the purchase or cost field, or both
+        price_info = data.get("cost")
+        if price_info:
+            # this inventorying has a "Maintainance" expense
+            amnt = get_crom_object(price_info)
+            maintainance = vocab.Activity(ident="", label=f"Maintainance of {sn_ident}")
+            maintainance.carried_out_by = self.helper.static_instances.get_instance("Group", "goupil")
+            tx_uri = tx.id
+            payment_id = tx_uri + "-Payment"
+            paym = model.Payment(ident=payment_id, label=f"Payment for maintainance of {sn_ident}")
+            paym.paid_amount = amnt
+            tx.part = paym
+            amnt.classified_as = model.Type(ident="http://vocab.getty.edu/aat/300412096", label="Maintainance")
+            # maintainance.assigned_to = hmo
+            return maintainance
+        return None        
 
     def _empty_tx(self, data, incoming=False, purpose=None):
         tx_uri = self.helper.transaction_uri_for_record(data, incoming)
@@ -770,7 +809,9 @@ class GoupilTransactionHandler(TransactionHandler):
             dir_label = "Goupil return"
         else:
             dir_label = "Goupil Purchase" if incoming else "Goupil Sale"
-        acq_id = self.helper.make_proj_uri("ACQ", dir, rec["goupil_object_id"])
+        # We have a different way of creating the uri, becuases there are multiple rows in each entry and we don't want to create multiple Acquisition events
+        tx_uri = tx.id
+        acq_id = tx_uri + "-Acquisition"
         acq = model.Acquisition(ident=acq_id)
 
         sn_ident = self.helper.stock_number_identifier(data["_object"], date)
@@ -992,9 +1033,10 @@ class GoupilTransactionHandler(TransactionHandler):
                 for splitLocations in loc.split("; "):
                     current = parse_location_name(splitLocations, uri_base=self.helper.uid_tag_prefix)
                     place_data = self.helper.make_place(current, sales_records=sales_records)
-                    place = get_crom_object(place_data) 
-                    person.residence = place 
-                    data["_locations"].append(place_data)              
+                    place = get_crom_object(place_data)
+                    if "shared#PLACE" in place.id:
+                        self.person_sojourn(person, place, sales_records)
+                        data["_locations"].append(place_data)                                           
             if THROUGH.intersects(mod):
                 people_agents.append(person)
             else:
@@ -1006,13 +1048,11 @@ class GoupilTransactionHandler(TransactionHandler):
             # these are the people that joined Knoedler in the purchase/sale
             role = "shared-buyer" if incoming else "shared-seller"
             for i, p_data in enumerate(shared_people):
-                mod = self.modifiers(p_data, "auth_mod")
+                self.model_seller_buyer_authority(p_data)
                 person_dict = self.helper.copy_source_information(p_data, data)
+                if not p_data.get("label"):
+                    p_data["label"] = p_data.get("name")
                 person = self.helper.add_person(person_dict, record=sales_records, relative_id=f"{role}_{i+1}")
-                if THROUGH.intersects(mod):
-                    goupil_group_agents.append(person)
-                else:
-                    goupil_group.append(person)
 
         from_people = []
         from_agents = []
@@ -1061,10 +1101,9 @@ class GoupilTransactionHandler(TransactionHandler):
         tx = self._prov_entry(
             data, "entry_date", sellers, price_info, shared_people=shared_people, incoming=True, buy_sell_modifiers=buy_sell_modifiers
         )
-
-        post_own = data.get("post_own", {})
-        if post_own:
-            self.model_prev_post_owners(data, post_own, "post_own")
+        prev_owners = data.get("prev_own", {})
+        if prev_owners :
+            self.model_prev_post_owners(data, prev_owners, "prev_own")
 
         return tx
 
@@ -1076,9 +1115,9 @@ class GoupilTransactionHandler(TransactionHandler):
         for p in buyers:
             self.helper.copy_source_information(p, data)
         tx =  self._prov_entry(data, 'sale_date', buyers, price_info, shared_people=shared_people , incoming=False, buy_sell_modifiers=buy_sell_modifiers)   
-        prev_owners = data.get("prev_own", {})
-        if prev_owners :
-            self.model_prev_post_owners(data, prev_owners, "prev_own")
+        post_own = data.get("post_own", {})
+        if post_own:
+            self.model_prev_post_owners(data, post_own, "post_own")
 
         return tx
 
@@ -1095,8 +1134,8 @@ class ModelSale(GoupilTransactionHandler):
         if not in_tx:
             if len(sellers):
                 in_tx = self.add_incoming_tx(data, buy_sell_modifiers)
+            # if there are no sellers or there is a maintenance cost create an ivnentorying event
             else:
-                # if there are no sellers, then this is an object that was previously unsold, and should be modeled as an inventory activity
                 inv = self._new_inventorying(data)
                 appraisal = self._apprasing_assignment(data)
                 inv_label = inv._label
@@ -1133,7 +1172,7 @@ class ModelInventorying(GoupilTransactionHandler):
             # if there are sellers in this record (and it is "Unsold" by design of the caller),
             # then this is not an actual Inventorying event, and handled in ModelUnsoldPurchases
             return
-
+        # TO BAZW OLO AUTO SE MIA SUNARTHSH KAI TO KALW KAI GIA EDW KAI GIA TO SALE 
         hmo = get_crom_object(odata)
         object_label = f"“{hmo._label}”"
 
@@ -1146,14 +1185,6 @@ class ModelInventorying(GoupilTransactionHandler):
         tx_out = self._empty_tx(data, incoming=False)
         tx_out._label = inv_label
         tx_out.identified_by = model.Name(ident="", content=inv_label)
-
-        inv_uri = self.helper.make_proj_uri("INV", odata["goupil_object_id"])
-        inv = vocab.Inventorying(ident=inv_uri, label=inv_label)
-        inv.identified_by = model.Name(ident="", content=inv_label)
-        inv.encountered = hmo
-        inv.carried_out_by = self.helper.static_instances.get_instance("Group", "goupil")
-
-        self.set_date(inv, data, "entry_date")
         self.set_date(tx_out, data, "entry_date")
 
         tx_out.part = inv

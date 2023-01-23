@@ -1,0 +1,50 @@
+{
+	"Non vendu": {
+		"url": "http://vocab.getty.edu/aat/300077506",
+		"label": "Inventorying"
+	},
+	"Non Vendu": {
+		"url": "http://vocab.getty.edu/aat/300077506",
+		"label": "Inventorying"
+	},
+	"Vendu": {
+		"url": "http://vocab.getty.edu/aat/300417642",
+		"label": "Purchase"
+	},
+	"Echange": {
+		"url": "http://vocab.getty.edu/aat/300263427",
+		"label": "Exchange"
+	},
+	"Echangé": {
+		"url": "http://vocab.getty.edu/aat/300263427",
+		"label": "Exchange"
+	},
+	"Échange": {
+		"url": "http://vocab.getty.edu/aat/300263427",
+		"label": "Exchange"
+	},
+	"échange": {
+		"url": "http://vocab.getty.edu/aat/300263427",
+		"label": "Exchange"
+	},
+	"Repris": {
+		"url": "http://vocab.getty.edu/aat/300445014",
+		"label": "Returning"
+	},
+	"Annule": {
+		"url": "http://vocab.getty.edu/aat/300445014",
+		"label": "Returning"
+	},
+	"Annulé": {
+		"url": "http://vocab.getty.edu/aat/300445014",
+		"label": "Returning"
+	},
+	"Perdu": {
+		"url": "http://vocab.getty.edu/aat/300417655",
+		"label": "Lost"
+	},
+	"Donné": {
+		"url": "http://vocab.getty.edu/aat/300417637",
+		"label": "Gift"
+	}
+}

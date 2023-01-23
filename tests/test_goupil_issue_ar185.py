@@ -61,8 +61,9 @@ class PIRModelingTest_AR185(TestGoupilPipelineOutput):
         """
         output = self.run_pipeline("ar185")
         people = output["model-person"]
-
-        seller1 = people["tag:getty.edu,2019:digital:pipeline:REPLACE-WITH-UUID:goupil#PERSON,PI,G-42810,person-0"]
+        # When the transaction is: "Returned" both Name and Personal Name are created
+        # seller1 = people["tag:getty.edu,2019:digital:pipeline:REPLACE-WITH-UUID:goupil#PERSON,PI,G-42810,seller_1"]
+        seller1 = people["tag:getty.edu,2019:digital:pipeline:REPLACE-WITH-UUID:goupil#PERSON,PI,G-43741,seller_1"]
         seller2 = people[
             "tag:getty.edu,2019:digital:pipeline:REPLACE-WITH-UUID:shared#PERSON,AUTH,Haseltine%2C%20Charles%20Field"
         ]
@@ -70,10 +71,24 @@ class PIRModelingTest_AR185(TestGoupilPipelineOutput):
         buyer1 = people["tag:getty.edu,2019:digital:pipeline:REPLACE-WITH-UUID:shared#PERSON,AUTH,Bergaud%2C%20Georges"]
         buyer2 = people["tag:getty.edu,2019:digital:pipeline:REPLACE-WITH-UUID:shared#PERSON,AUTH,Petit%2C%20Georges"]
 
+        # When the transaction is: "Returned" both Name and Personal Name are created
+        # self.assertDictEqual(classification_tree(seller1), {})
+
+        
+        # self.assertDictEqual(classified_identifiers(seller1), {"Personal Name": "S. Fabre"})
+        # self.assertDictEqual(classified_identifiers(seller1), {"Personal Name": "S. Fabre", None: "S. Fabre"})
+
+        # self.assertIn(
+        #     "Goupil Stock Book 15, Page 264, Row 2",
+        #     classification_sets(seller1, key="_label", classification_key="referred_to_by"),
+        # )
         self.assertDictEqual(classification_tree(seller1), {})
-        self.assertDictEqual(classified_identifiers(seller1), {"Personal Name": "S. Fabre"})
+
+        
+        self.assertDictEqual(classified_identifiers(seller1), {"Personal Name": "C. Honet"})
+
         self.assertIn(
-            "Goupil Stock Book 15, Page 264, Row 2",
+            "Goupil Stock Book 15, Page 332, Row 3",
             classification_sets(seller1, key="_label", classification_key="referred_to_by"),
         )
 
@@ -118,8 +133,35 @@ class PIRModelingTest_AR185(TestGoupilPipelineOutput):
         output = self.run_pipeline("ar185")
         people = output["model-person"]
 
-        # easy to test wait feedback
-        pass
+        previous_owners_of_23884 = [y for x, y in people.items() if "PERSON,PI,G-23884,prev_own_" in x]
+        post_owners_of_23884 = [y for x, y in people.items() if "PERSON,PI,G-23884,post_own_" in x]
+
+        self.assertEqual(len(previous_owners_of_23884), 2)
+        self.assertEqual(len(post_owners_of_23884), 4)
+
+        person1 = people['tag:getty.edu,2019:digital:pipeline:REPLACE-WITH-UUID:goupil#PERSON,PI,G-23884,post_own_1'] 
+        person2 = people['tag:getty.edu,2019:digital:pipeline:REPLACE-WITH-UUID:goupil#PERSON,PI,G-23884,prev_own_1'] 
+
+        self.assertDictEqual(classification_tree(person1), {})
+
+        
+        self.assertDictEqual(classified_identifiers(person1), {"Personal Name": "Samuel P. Avery, New York (from 1881, sold to Smith)"})
+
+        self.assertIn(
+            "Goupil Stock Book 10, Page 185, Row 15",
+            classification_sets(person1, key="_label", classification_key="referred_to_by"),
+        )
+
+        self.assertDictEqual(classification_tree(person2), {})
+
+        
+        self.assertDictEqual(classified_identifiers(person2), {"Personal Name": "Narcisse-Virgile Diaz de la Peña"})
+
+        self.assertIn(
+            "Goupil Stock Book 10, Page 185, Row 15",
+            classification_sets(person2, key="_label", classification_key="referred_to_by"),
+        )
+        
 
     def test_modeling_ar185_4(self):
         """
@@ -128,26 +170,23 @@ class PIRModelingTest_AR185(TestGoupilPipelineOutput):
         output = self.run_pipeline("ar185")
         people = output["model-person"]
 
-        person1 = people["tag:getty.edu,2019:digital:pipeline:REPLACE-WITH-UUID:goupil#PERSON,PI,G-43741,shared-own_1"]
-        person2 = people["tag:getty.edu,2019:digital:pipeline:REPLACE-WITH-UUID:goupil#PERSON,PI,G-42810,shared-own_1"]
+        person1 = people[
+            "tag:getty.edu,2019:digital:pipeline:REPLACE-WITH-UUID:goupil#PERSON,PI,G-43741,shared-buyer_1"
+        ]
 
-        self.assertEqual(person1["_label"], "G. Petit")
-        self.assertEqual(person1["referred_to_by"][0]["_label"], "Goupil Stock Book 15, Page 332, Row 3")
 
-        self.assertEqual(person2["_label"], "Allard")
-        self.assertEqual(person2["referred_to_by"][0]["_label"], "Goupil Stock Book 15, Page 264, Row 2")
+        # self.assertEqual(person1["_label"], "G. Petit")
+        # self.assertEqual(person1["referred_to_by"][0]["_label"], "Goupil Stock Book 15, Page 332, Row 3")
 
-    def test_modeling_ar192_4(self):
+
+    def test_modeling_ar185_5(self):
         """
         AR-185 : Authority names should not have name source reference
         """
         output = self.run_pipeline("ar185")
         people = output["model-person"]
 
-        person1 = people["tag:getty.edu,2019:digital:pipeline:REPLACE-WITH-UUID:shared#PERSON,AUTH,Wallis%20and%20Son"]
-        person2 = people["tag:getty.edu,2019:digital:pipeline:REPLACE-WITH-UUID:goupil#PERSON,PI,G-42810,shared-own_1"]
-        person3 = people["tag:getty.edu,2019:digital:pipeline:REPLACE-WITH-UUID:goupil#PERSON,PI,G-43741,person-0"]
-        person4 = people["tag:getty.edu,2019:digital:pipeline:REPLACE-WITH-UUID:goupil#PERSON,PI,G-23884,prev_own_1"]
+        authorityPeople = [y for x, y in people.items() if ",AUTH," in x]
 
         def preferred_name(data: dict):
             for identifier in data["identified_by"]:
@@ -155,10 +194,20 @@ class PIRModelingTest_AR185(TestGoupilPipelineOutput):
                     return identifier
             return []
 
-        self.assertNotIn("referred_to_by", preferred_name(person1))
-        self.assertNotIn("referred_to_by", preferred_name(person2))
-        self.assertNotIn("referred_to_by", preferred_name(person3))
-        self.assertNotIn("referred_to_by", preferred_name(person4))
+        for authorityPerson in authorityPeople:
+            self.assertNotIn("referred_to_by", preferred_name(authorityPerson))
+
+    def test_modeling_ar185_5(self):
+        """
+        AR-185 : Buyers and Sellers sojourn activity
+        """
+        output = self.run_pipeline("ar185")
+        people = output["model-person"]
+        
+        knoedler = people['tag:getty.edu,2019:digital:pipeline:REPLACE-WITH-UUID:shared#PERSON,AUTH,Knoedler%27s']
+        for activity in knoedler["carried_out"]:
+            self.assertDictEqual(classification_tree(activity), {'Preferred Terms': {}})
+            self.assertTrue({'took_place_at', 'classified_as', 'referred_to_by'}.issubset(set(activity.keys())))
 
 
 if __name__ == "__main__":

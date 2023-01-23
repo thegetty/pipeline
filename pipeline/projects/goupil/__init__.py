@@ -591,7 +591,9 @@ class AddRows(Configurable, GoupilProvenance):
                 notes.append(vocab.Note(ident="", content=data["book_record"][k]))
 
         if data["book_record"].get("rosetta_handle"):
-            page = vocab.DigitalImage(ident=data["book_record"]["rosetta_handle"], label=data["book_record"]["rosetta_handle"])
+            page = vocab.DigitalImage(
+                ident=data["book_record"]["rosetta_handle"], label=data["book_record"]["rosetta_handle"]
+            )
             page._validate_range = False
             page.access_point = [vocab.DigitalObject(ident=data["book_record"]["rosetta_handle"])]
             notes.append(page)
@@ -683,8 +685,8 @@ class TransactionSwitch(Configurable):
 
 
 class GoupilTransactionHandler(TransactionHandler):
-    def modifiers(self, a:dict, key:str):
-        return {a.get(key, '').split(" ")[0]}
+    def modifiers(self, a: dict, key: str):
+        return {a.get(key, "").split(" ")[0]}
 
     def model_seller_buyer_authority(self, p_data: dict):
         auth_name = p_data.get("auth_name")
@@ -698,26 +700,22 @@ class GoupilTransactionHandler(TransactionHandler):
         )
 
     def person_sojourn(self, p_data: dict, sojourn, sales_records):
-        label = 'Sojourn activity'
+        label = "Sojourn activity"
         stype = model.Activity
-        act = stype(ident='', label=label)
-        act.classified_as= model.Type(ident='http://vocab.getty.edu/aat/300404670', label='Preferred Terms')
+        act = stype(ident="", label=label)
+        act.classified_as = model.Type(ident="http://vocab.getty.edu/aat/300404670", label="Preferred Terms")
         act.took_place_at = sojourn
         p_data.carried_out = act
         for record in sales_records:
             act.referred_to_by = record
 
-    def model_prev_post_owners(self, data, owner:str, role):
+    def model_prev_post_owners(self, data, owner: str, role):
         sales_record = get_crom_objects(data["_records"])
         splitOwners = [{k: v if k != "name" else x for k, v in owner.items()} for x in owner["name"].split("; ")]
         for i, p in enumerate(splitOwners):
             person_dict = self.helper.copy_source_information(p, data)
-            person = self.helper.add_person(
-                person_dict,
-                record=sales_record,
-                relative_id=f'{role}_{i+1}'
-            )
-            data['_people'].append(person_dict)
+            person = self.helper.add_person(person_dict, record=sales_record, relative_id=f"{role}_{i+1}")
+            data["_people"].append(person_dict)
 
     def _apprasing_assignment(self, data):
         odata = data["_object"]
@@ -754,7 +752,7 @@ class GoupilTransactionHandler(TransactionHandler):
             # TODO: revisit this when the multiple inventorying events thing is resolved
             book_id += rec["stock_book_no"]
             page_id += rec["page_number"]
-            row_id += rec["row_number"]       
+            row_id += rec["row_number"]
 
         inv_uri = self.helper.make_proj_uri("INV", book_id, page_id, row_id)
         inv = vocab.Inventorying(ident=inv_uri, label=inv_label)
@@ -787,7 +785,7 @@ class GoupilTransactionHandler(TransactionHandler):
             amnt.classified_as = model.Type(ident="http://vocab.getty.edu/aat/300412096", label="Maintainance")
             # maintainance.assigned_to = hmo
             return maintainance
-        return None        
+        return None
 
     def _empty_tx(self, data, incoming=False, purpose=None):
         tx_uri = self.helper.transaction_uri_for_record(data, incoming)
@@ -1043,7 +1041,7 @@ class GoupilTransactionHandler(TransactionHandler):
                     place = get_crom_object(place_data)
                     if "shared#PLACE" in place.id:
                         self.person_sojourn(person, place, sales_records)
-                        data["_locations"].append(place_data)                                           
+                        data["_locations"].append(place_data)
             if THROUGH.intersects(mod):
                 people_agents.append(person)
             else:
@@ -1100,40 +1098,55 @@ class GoupilTransactionHandler(TransactionHandler):
 
     def add_incoming_tx(self, data, buy_sell_modifiers):
         price_info = data.get("purchase")
-        shared_people = data.get('purchase_buyer')
+        shared_people = data.get("purchase_buyer")
         sellers = data["purchase_seller"]
 
         for p in sellers:
             self.helper.copy_source_information(p, data)
         tx = self._prov_entry(
-            data, "entry_date", sellers, price_info, shared_people=shared_people, incoming=True, buy_sell_modifiers=buy_sell_modifiers
+            data,
+            "entry_date",
+            sellers,
+            price_info,
+            shared_people=shared_people,
+            incoming=True,
+            buy_sell_modifiers=buy_sell_modifiers,
         )
         prev_owners = data.get("prev_own", {})
-        if prev_owners :
+        if prev_owners:
             self.model_prev_post_owners(data, prev_owners, "prev_own")
 
         return tx
 
     def add_outgoing_tx(self, data, buy_sell_modifiers):
-        price_info = data.get('sale')
-        knoedler_price_part = data.get('sale_knoedler_share')
-        shared_people = data.get('purchase_buyer')
-        buyers = data['sale_buyer']
+        price_info = data.get("sale")
+        knoedler_price_part = data.get("sale_knoedler_share")
+        shared_people = data.get("purchase_buyer")
+        buyers = data["sale_buyer"]
         for p in buyers:
             self.helper.copy_source_information(p, data)
-        tx =  self._prov_entry(data, 'sale_date', buyers, price_info, shared_people=shared_people , incoming=False, buy_sell_modifiers=buy_sell_modifiers)   
+        tx = self._prov_entry(
+            data,
+            "sale_date",
+            buyers,
+            price_info,
+            shared_people=shared_people,
+            incoming=False,
+            buy_sell_modifiers=buy_sell_modifiers,
+        )
         post_own = data.get("post_own", {})
         if post_own:
             self.model_prev_post_owners(data, post_own, "post_own")
 
         return tx
 
+
 class ModelSale(GoupilTransactionHandler):
     """ """
 
     helper = Option(required=True)
     make_la_person = Service("make_la_person")
-    buy_sell_modifiers = Service('buy_sell_modifiers')
+    buy_sell_modifiers = Service("buy_sell_modifiers")
 
     def __call__(self, data: dict, make_la_person, buy_sell_modifiers=None, in_tx=None, out_tx=None):
         sellers = data["purchase_seller"]
@@ -1150,18 +1163,19 @@ class ModelSale(GoupilTransactionHandler):
                 in_tx.part = inv
                 if appraisal:
                     in_tx.part = appraisal
-                in_tx.identified_by = model.Name(ident='', content=inv_label)
+                in_tx.identified_by = model.Name(ident="", content=inv_label)
                 in_tx._label = inv_label
-                in_tx_data = add_crom_data(data={'uri': in_tx.id, 'label': inv_label}, what=in_tx)
-                data.setdefault('_prov_entries', [])
-                data['_prov_entries'].append(in_tx_data)
+                in_tx_data = add_crom_data(data={"uri": in_tx.id, "label": inv_label}, what=in_tx)
+                data.setdefault("_prov_entries", [])
+                data["_prov_entries"].append(in_tx_data)
 
         if not out_tx:
             out_tx = self.add_outgoing_tx(data, buy_sell_modifiers)
         in_tx.ends_before_the_start_of = out_tx
         out_tx.starts_after_the_end_of = in_tx
-        
+
         yield data
+
 
 class ModelInventorying(GoupilTransactionHandler):
     helper = Option(required=True)
@@ -1179,7 +1193,7 @@ class ModelInventorying(GoupilTransactionHandler):
             # if there are sellers in this record (and it is "Unsold" by design of the caller),
             # then this is not an actual Inventorying event, and handled in ModelUnsoldPurchases
             return
-        # TO BAZW OLO AUTO SE MIA SUNARTHSH KAI TO KALW KAI GIA EDW KAI GIA TO SALE 
+        # TO BAZW OLO AUTO SE MIA SUNARTHSH KAI TO KALW KAI GIA EDW KAI GIA TO SALE
         hmo = get_crom_object(odata)
         object_label = f"“{hmo._label}”"
 
@@ -1642,7 +1656,7 @@ class GoupilPipeline(PipelineBase):
 
             self.add_serialization_chain(graph, items.output, model=self.models["VisualItem"])
             self.add_serialization_chain(graph, hmos1.output, model=self.models["HumanMadeObject"])
-            self.add_serialization_chain(graph, hmos2.output, model=self.models['HumanMadeObject'])
+            self.add_serialization_chain(graph, hmos2.output, model=self.models["HumanMadeObject"])
             self.add_person_or_group_chain(graph, odata, key="_organizations")  # organizations are groups too!
             self.add_serialization_chain(graph, hmos2.output, model=self.models["HumanMadeObject"])
             self.add_serialization_chain(graph, texts.output, model=self.models["LinguisticObject"])

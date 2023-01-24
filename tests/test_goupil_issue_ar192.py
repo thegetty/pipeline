@@ -7,7 +7,13 @@ import json
 import uuid
 import pprint
 
-from tests import TestWriter, TestGoupilPipelineOutput, MODELS, classified_identifiers, classification_sets
+from tests import (
+    TestWriter,
+    TestGoupilPipelineOutput,
+    MODELS,
+    classified_identifiers,
+    classification_sets,
+)
 from cromulent import vocab
 
 vocab.add_attribute_assignment_check()
@@ -82,7 +88,10 @@ class PIRModelingTest_AR192(TestGoupilPipelineOutput):
             {
                 "id": "tag:getty.edu,2019:digital:pipeline:REPLACE-WITH-UUID:goupil#Object,g-object-12669",
                 "title": "L'attelage Nivernais",
-                "from": ["Goupil Stock Book 1, Page 93, Row 5", "Goupil Stock Book 2, Page 25, Row 4"],
+                "from": [
+                    "Goupil Stock Book 1, Page 93, Row 5",
+                    "Goupil Stock Book 2, Page 25, Row 4",
+                ],
                 "dimension_statement": "",
                 "dimensions": [],
                 "location": "",
@@ -97,7 +106,9 @@ class PIRModelingTest_AR192(TestGoupilPipelineOutput):
             print(obj["id"])
 
             labels = [ref["_label"] for ref in po["referred_to_by"] if "_label" in ref]
-            contents = [ref["content"] for ref in po["referred_to_by"] if "content" in ref]
+            contents = [
+                ref["content"] for ref in po["referred_to_by"] if "content" in ref
+            ]
 
             for l in obj["from"]:
                 self.assertIn(l, labels)
@@ -122,6 +133,20 @@ class PIRModelingTest_AR192(TestGoupilPipelineOutput):
                 self.assertEqual(own[0], obj["current_owner"])
 
             # TODO complete tests with production attribution modifiers
+
+        physical_books = [
+            y
+            for x, y in objects.items()
+            if "tag:getty.edu,2019:digital:pipeline:REPLACE-WITH-UUID:goupil#Book," in x
+        ]
+
+        for physical_book in physical_books:
+            physical_book_number = physical_book["id"].split(",")[-1]
+            self.assertEqual(
+                physical_book["carries"][0]["id"],
+                "tag:getty.edu,2019:digital:pipeline:REPLACE-WITH-UUID:goupil#Text,Book,"
+                + physical_book_number,
+            )
 
 
 if __name__ == "__main__":

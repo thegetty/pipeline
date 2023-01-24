@@ -273,5 +273,19 @@
                 100
             ]
         ]
+    },
+    "bg francs": {
+        "auth_currency": "Belgian francs",
+        "currency_aat": "300412018",
+        "currency_key": "bg francs",
+        "currency_notes": "Used in Belgium from 1832-2002 (French francs had been used from 1797-1832)",
+        "decimal_conversion": "decimal",
+        "primary_unit": "francs",
+        "subunits": [
+            [
+                "centimes",
+                100
+            ]
+        ]
     }
 }

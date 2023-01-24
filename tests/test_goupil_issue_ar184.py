@@ -63,7 +63,7 @@ class PIRModelingTest_AR184(TestGoupilPipelineOutput):
             # The amount of references of textual works to identifiers must be equal to the amount of references of textual works to the group entity
             self.assertEqual(len(data.get("referred_to_by", [])), identifierTextualWorkReferencesCounter)
 
-        self.assertEqual(len(groups), 15)
+        self.assertEqual(len(groups), 16)
 
         for group in [y for x, y in groups.items() if "tag:getty.edu,2019:digital:pipeline:REPLACE-WITH-UUID:shared#PERSON,AUTH" in x]:
            primary_name_reference(group)

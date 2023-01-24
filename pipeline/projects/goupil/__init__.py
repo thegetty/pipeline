@@ -66,9 +66,10 @@ def add_crom_price(data, parent, services, add_citations=False):
     amnt = extract_monetary_amount(
         data, currency_mapping=currencies, add_citations=add_citations, truncate_label_digits=2
     )
-    for key in ("code", "frame", "note", "uncertain"):
-        if data.get(key):
-            amnt.referred_to_by = vocab.Note(ident="", content=data[key])
+    if amnt:
+        for key in ("code", "frame", "note", "uncertain"):
+            if data.get(key):
+                amnt.referred_to_by = vocab.Note(ident="", content=data[key])
     if amnt:
         add_crom_data(data=data, what=amnt)
     return data
@@ -202,14 +203,16 @@ class GoupilUtilityHelper(SharedUtilityHelper):
         auth_name = p_data.get("auth_name", "")
         if not auth_name in [x[2] for x in people_groups["group_keys"]]:
             person = self.add_person(
-                p_data, record=get_crom_objects(data["_text_rows"]), relative_id=relative_id)
+                p_data, record=get_crom_objects(data["_records"]), relative_id=relative_id)
             add_crom_data(p_data, person)
             data["_people"].append(p_data)
+            return person
         else:
-            org = self.add_group(
-                p_data, record=get_crom_objects(data["_text_rows"]))
-            add_crom_data(p_data, org)
+            group = self.add_group(
+                p_data, record=get_crom_objects(data["_records"]))
+            add_crom_data(p_data, group)
             data["_organizations"].append(p_data)
+            return group
 
     def make_place(self, *args, sales_records=None, **kwargs):
         """
@@ -751,8 +754,9 @@ class GoupilTransactionHandler(TransactionHandler):
             assignment = vocab.AppraisingAssignment(ident="", label=f"Evaluated worth of {sn_ident}")
             assignment.carried_out_by = self.helper.static_instances.get_instance("Group", "goupil")
             assignment.assigned_property = "dimension"
-            assignment.assigned = amnt
-            amnt.classified_as = model.Type(ident="http://vocab.getty.edu/aat/300412096", label="Valuation")
+            if amnt:
+                assignment.assigned = amnt
+                amnt.classified_as = model.Type(ident="http://vocab.getty.edu/aat/300412096", label="Valuation")
             assignment.assigned_to = hmo
             return assignment
         return None
@@ -1097,7 +1101,7 @@ class GoupilTransactionHandler(TransactionHandler):
             to_agents = people_agents
 
         if incoming:
-            self._add_prov_entry_rights(data, tx, shared_people, incoming)
+            self._add_prov_entry_rights(data, tx, shared_people, incoming, people_groups)
         self._add_prov_entry_payment(
             data,
             tx,
@@ -1251,8 +1255,9 @@ class ModelUnsoldPurchases(GoupilTransactionHandler):
     helper = Option(required=True)
     make_la_person = Service("make_la_person")
     buy_sell_modifiers = Service("buy_sell_modifiers")
+    people_groups = Service("people_groups")
 
-    def __call__(self, data: dict, make_la_person, buy_sell_modifiers):
+    def __call__(self, data: dict, make_la_person, buy_sell_modifiers, people_groups):
         odata = data["_object"]
         date = implode_date(data["entry_date"])
 
@@ -1265,7 +1270,7 @@ class ModelUnsoldPurchases(GoupilTransactionHandler):
 
         sn_ident = self.helper.stock_number_identifier(odata, date)
 
-        in_tx = self.add_incoming_tx(data, buy_sell_modifiers)
+        in_tx = self.add_incoming_tx(data, buy_sell_modifiers, people_groups)
 
         yield data
 
@@ -1327,7 +1332,6 @@ class GoupilPipeline(PipelineBase):
 
         different_objects = services.get("objects_different", {}).get("knoedler_numbers", [])
         services["different_objects"] = different_objects
-        services["people_groups"] = {}
 
         # make these case-insensitive by wrapping the value lists in CaseFoldingSet
         for name in ("attribution_modifiers",):

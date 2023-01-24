@@ -180,7 +180,14 @@ class PIRModelingTest_AR185(TestGoupilPipelineOutput):
         """
         output = self.run_pipeline("ar185")
         people = output["model-person"]
+        groups = output["model-groups"]
 
+        # This name is found in the people database and is classified as a Group
+        group1 = groups["tag:getty.edu,2019:digital:pipeline:REPLACE-WITH-UUID:shared#PERSON,AUTH,Wallis%20and%20Son"]
+        # The transaction is Repris no shared buyer is created
+        # person2 = people["tag:getty.edu,2019:digital:pipeline:REPLACE-WITH-UUID:goupil#PERSON,PI,G-42810,shared-own_1"]
+        person3 = people["tag:getty.edu,2019:digital:pipeline:REPLACE-WITH-UUID:goupil#PERSON,PI,G-43741,seller_1"]
+        person4 = people["tag:getty.edu,2019:digital:pipeline:REPLACE-WITH-UUID:goupil#PERSON,PI,G-23884,prev_own_1"]
         authorityPeople = [y for x, y in people.items() if ",AUTH," in x]
 
         def preferred_name(data: dict):
@@ -189,17 +196,20 @@ class PIRModelingTest_AR185(TestGoupilPipelineOutput):
                     return identifier
             return []
 
+        self.assertNotIn("referred_to_by", preferred_name(group1))
+        self.assertNotIn("referred_to_by", preferred_name(person3))
+        self.assertNotIn("referred_to_by", preferred_name(person4))
         for authorityPerson in authorityPeople:
             self.assertNotIn("referred_to_by", preferred_name(authorityPerson))
 
-    def test_modeling_ar185_5(self):
+    def test_modeling_ar185_6(self):
         """
         AR-185 : Buyers and Sellers sojourn activity
         """
         output = self.run_pipeline("ar185")
-        people = output["model-person"]
+        groups = output["model-groups"]
 
-        knoedler = people["tag:getty.edu,2019:digital:pipeline:REPLACE-WITH-UUID:shared#PERSON,AUTH,Knoedler%27s"]
+        knoedler = groups["tag:getty.edu,2019:digital:pipeline:REPLACE-WITH-UUID:shared#PERSON,AUTH,Knoedler%27s"]
         for activity in knoedler["carried_out"]:
             self.assertDictEqual(classification_tree(activity), {"Preferred Terms": {}})
             self.assertTrue({"took_place_at", "classified_as", "referred_to_by"}.issubset(set(activity.keys())))

@@ -157,7 +157,10 @@ class PersonIdentity:
 		self.add_props(a, **kwargs)
 		self.make_la_org(a)
 		g = get_crom_object(a)
-		if record:
+		if isinstance(record, list):
+			for r in record:
+				g.referred_to_by = r
+		elif record:
 			g.referred_to_by = record
 		return g
 

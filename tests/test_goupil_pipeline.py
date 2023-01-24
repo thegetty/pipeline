@@ -57,10 +57,9 @@ class TestGoupilPipelineOutput(unittest.TestCase):
 
         # more data produce more objects los, right? ;p
         self.assertEqual(len(los), 19)
-        self.assertEqual(len(groups), 4)
-        goupil = groups[
-            "tag:getty.edu,2019:digital:pipeline:REPLACE-WITH-UUID:shared#PERSON,AUTH,Goupil%20et%20Cie."
-        ]
+        self.assertEqual(len(groups), 7)
+        goupil = groups["tag:getty.edu,2019:digital:pipeline:REPLACE-WITH-UUID:shared#PERSON,AUTH,Goupil%20et%20Cie."]
+
         self.assertEqual(goupil["_label"], "Goupil et Cie.")
 
         lo1 = los[

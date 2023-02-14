@@ -31,9 +31,7 @@ class TestGoupilPipelineOutput(unittest.TestCase):
 
     def run_pipeline(self, models, input_path):
         writer = TestWriter()
-        pipeline = GoupilTestPipeline(
-            writer, input_path, data=self.data, models=models, limit=10, debug=True
-        )
+        pipeline = GoupilTestPipeline(writer, input_path, data=self.data, models=models, limit=10, debug=True)
         pipeline.run()
         return writer.processed_output()
 
@@ -62,18 +60,10 @@ class TestGoupilPipelineOutput(unittest.TestCase):
 
         self.assertEqual(goupil["_label"], "Goupil et Cie.")
 
-        lo1 = los[
-            "tag:getty.edu,2019:digital:pipeline:REPLACE-WITH-UUID:goupil#Text,Book,15"
-        ]
-        lo2 = los[
-            "tag:getty.edu,2019:digital:pipeline:REPLACE-WITH-UUID:goupil#Text,Book,15,Page,63"
-        ]
-        lo3 = los[
-            "tag:getty.edu,2019:digital:pipeline:REPLACE-WITH-UUID:goupil#Text,Book,15,Page,63,Row,3"
-        ]
-        lo4 = los[
-            "tag:getty.edu,2019:digital:pipeline:REPLACE-WITH-UUID:goupil#Text,Book,14"
-        ]
+        lo1 = los["tag:getty.edu,2019:digital:pipeline:REPLACE-WITH-UUID:goupil#Text,Book,15"]
+        lo2 = los["tag:getty.edu,2019:digital:pipeline:REPLACE-WITH-UUID:goupil#Text,Book,15,Page,63"]
+        lo3 = los["tag:getty.edu,2019:digital:pipeline:REPLACE-WITH-UUID:goupil#Text,Book,15,Page,63,Row,3"]
+        lo4 = los["tag:getty.edu,2019:digital:pipeline:REPLACE-WITH-UUID:goupil#Text,Book,14"]
 
         # import pdb
 
@@ -89,12 +79,8 @@ class TestGoupilPipelineOutput(unittest.TestCase):
         self.assertDictEqual(
             classification_tree(lo1, key="id"),
             {
-                "http://vocab.getty.edu/aat/300027483": {
-                    "http://vocab.getty.edu/aat/300435443": {}
-                },
-                "http://vocab.getty.edu/aat/300028051": {
-                    "http://vocab.getty.edu/aat/300444970": {}
-                },
+                "http://vocab.getty.edu/aat/300027483": {"http://vocab.getty.edu/aat/300435443": {}},
+                "http://vocab.getty.edu/aat/300028051": {"http://vocab.getty.edu/aat/300444970": {}},
             },
         )
 
@@ -108,12 +94,8 @@ class TestGoupilPipelineOutput(unittest.TestCase):
         self.assertDictEqual(
             classification_tree(lo4, key="id"),
             {
-                "http://vocab.getty.edu/aat/300027483": {
-                    "http://vocab.getty.edu/aat/300435443": {}
-                },
-                "http://vocab.getty.edu/aat/300028051": {
-                    "http://vocab.getty.edu/aat/300444970": {}
-                },
+                "http://vocab.getty.edu/aat/300027483": {"http://vocab.getty.edu/aat/300435443": {}},
+                "http://vocab.getty.edu/aat/300028051": {"http://vocab.getty.edu/aat/300444970": {}},
             },
         )
 
@@ -127,12 +109,8 @@ class TestGoupilPipelineOutput(unittest.TestCase):
         self.assertDictEqual(
             classification_tree(lo2, key="id"),
             {
-                "http://vocab.getty.edu/aat/300027483": {
-                    "http://vocab.getty.edu/aat/300435443": {}
-                },
-                "http://vocab.getty.edu/aat/300194222": {
-                    "http://vocab.getty.edu/aat/300444970": {}
-                },
+                "http://vocab.getty.edu/aat/300027483": {"http://vocab.getty.edu/aat/300435443": {}},
+                "http://vocab.getty.edu/aat/300194222": {"http://vocab.getty.edu/aat/300444970": {}},
             },
         )
 
@@ -146,12 +124,8 @@ class TestGoupilPipelineOutput(unittest.TestCase):
         self.assertDictEqual(
             classification_tree(lo3, key="id"),
             {
-                "http://vocab.getty.edu/aat/300027483": {
-                    "http://vocab.getty.edu/aat/300435443": {}
-                },
-                "http://vocab.getty.edu/aat/300438434": {
-                    "http://vocab.getty.edu/aat/300444970": {}
-                },
+                "http://vocab.getty.edu/aat/300027483": {"http://vocab.getty.edu/aat/300435443": {}},
+                "http://vocab.getty.edu/aat/300438434": {"http://vocab.getty.edu/aat/300444970": {}},
             },
         )
 
@@ -161,26 +135,14 @@ class TestGoupilPipelineOutput(unittest.TestCase):
         # row is part of page
         self.assertEqual(lo2["id"], lo3.get("part_of")[0]["id"])
 
-        self.assertEqual(
-            lo1.get("created_by").get("carried_out_by")[0]["id"], goupil["id"]
-        )
-        self.assertEqual(
-            lo2.get("created_by").get("carried_out_by")[0]["id"], goupil["id"]
-        )
-        self.assertEqual(
-            lo3.get("created_by").get("carried_out_by")[0]["id"], goupil["id"]
-        )
-        self.assertEqual(
-            lo4.get("created_by").get("carried_out_by")[0]["id"], goupil["id"]
-        )
+        self.assertEqual(lo1.get("created_by").get("carried_out_by")[0]["id"], goupil["id"])
+        self.assertEqual(lo2.get("created_by").get("carried_out_by")[0]["id"], goupil["id"])
+        self.assertEqual(lo3.get("created_by").get("carried_out_by")[0]["id"], goupil["id"])
+        self.assertEqual(lo4.get("created_by").get("carried_out_by")[0]["id"], goupil["id"])
 
-        physical_book_15_id = (
-            "tag:getty.edu,2019:digital:pipeline:REPLACE-WITH-UUID:goupil#Book,15"
-        )
+        physical_book_15_id = "tag:getty.edu,2019:digital:pipeline:REPLACE-WITH-UUID:goupil#Book,15"
         physical_book_15 = output["model-object"][physical_book_15_id]
-        physical_book_14_id = (
-            "tag:getty.edu,2019:digital:pipeline:REPLACE-WITH-UUID:goupil#Book,14"
-        )
+        physical_book_14_id = "tag:getty.edu,2019:digital:pipeline:REPLACE-WITH-UUID:goupil#Book,14"
         physical_book_14 = output["model-object"][physical_book_14_id]
         # Connection of lo book to physical book
         self.assertEqual(physical_book_15.get("carries")[0]["id"], lo1.get("id"))

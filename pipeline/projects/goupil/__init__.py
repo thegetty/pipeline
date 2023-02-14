@@ -202,14 +202,12 @@ class GoupilUtilityHelper(SharedUtilityHelper):
     def add_group_or_person(self, p_data, relative_id, people_groups, data):
         auth_name = p_data.get("auth_name", "")
         if not auth_name in [x[2] for x in people_groups["group_keys"]]:
-            person = self.add_person(
-                p_data, record=get_crom_objects(data["_records"]), relative_id=relative_id)
+            person = self.add_person(p_data, record=get_crom_objects(data["_records"]), relative_id=relative_id)
             add_crom_data(p_data, person)
             data["_people"].append(p_data)
             return person
         else:
-            group = self.add_group(
-                p_data, record=get_crom_objects(data["_records"]))
+            group = self.add_group(p_data, record=get_crom_objects(data["_records"]))
             add_crom_data(p_data, group)
             data["_organizations"].append(p_data)
             return group
@@ -739,7 +737,9 @@ class GoupilTransactionHandler(TransactionHandler):
         splitOwners = [{k: v if k != "name" else x for k, v in owner.items()} for x in owner["name"].split("; ")]
         for i, p in enumerate(splitOwners):
             person_dict = self.helper.copy_source_information(p, data)
-            person = self.helper.add_group_or_person(person_dict, relative_id=f"{role}_{i+1}", people_groups=people_groups, data=data)
+            person = self.helper.add_group_or_person(
+                person_dict, relative_id=f"{role}_{i+1}", people_groups=people_groups, data=data
+            )
             data["_people"].append(person_dict)
 
     def _apprasing_assignment(self, data):
@@ -884,7 +884,7 @@ class GoupilTransactionHandler(TransactionHandler):
         shared_people_agents,
         date,
         incoming,
-        people_groups
+        people_groups,
     ):
         goupil = self.helper.static_instances.get_instance("Group", "goupil")
         goupil_group = [goupil]
@@ -908,7 +908,9 @@ class GoupilTransactionHandler(TransactionHandler):
             role = "shared-buyer" if incoming else "shared-seller"
             for i, p in enumerate(shared_people):
                 person_dict = self.helper.copy_source_information(p, data)
-                person = self.helper.add_group_or_person(person_dict, relative_id=f"{role}_{i+1}", people_groups=people_groups, data=data)
+                person = self.helper.add_group_or_person(
+                    person_dict, relative_id=f"{role}_{i+1}", people_groups=people_groups, data=data
+                )
                 goupil_group.append(person)
 
         paym = None
@@ -985,7 +987,9 @@ class GoupilTransactionHandler(TransactionHandler):
             remaining = Fraction(1, 1)
             for i, p in enumerate(shared_people):
                 person_dict = self.helper.copy_source_information(p, data)
-                person = self.helper.add_group_or_person(person_dict, relative_id=f"{role}_{i+1}", people_groups=people_groups, data=data)
+                person = self.helper.add_group_or_person(
+                    person_dict, relative_id=f"{role}_{i+1}", people_groups=people_groups, data=data
+                )
                 name = p.get("name", p.get("auth_name", "(anonymous)"))
                 if p.get("share") == "":
                     p["share"] = "1/1"
@@ -1028,7 +1032,7 @@ class GoupilTransactionHandler(TransactionHandler):
         incoming=False,
         purpose=None,
         buy_sell_modifiers=None,
-        people_groups={}
+        people_groups={},
     ):
         THROUGH = CaseFoldingSet(buy_sell_modifiers["through"])
         FOR = CaseFoldingSet(buy_sell_modifiers["for"])
@@ -1060,7 +1064,9 @@ class GoupilTransactionHandler(TransactionHandler):
         for i, p_data in enumerate(people_data):
             mod = self.modifiers(p_data, "auth_mod")
             self.model_seller_buyer_authority(p_data)
-            person = self.helper.add_group_or_person(p_data, relative_id=f"{role}_{i+1}", people_groups=people_groups, data=data)
+            person = self.helper.add_group_or_person(
+                p_data, relative_id=f"{role}_{i+1}", people_groups=people_groups, data=data
+            )
             loc = p_data.get("auth_loc")
             if loc:
                 for splitLocations in loc.split("; "):
@@ -1085,7 +1091,9 @@ class GoupilTransactionHandler(TransactionHandler):
                 person_dict = self.helper.copy_source_information(p_data, data)
                 if not p_data.get("label"):
                     p_data["label"] = p_data.get("name")
-                person = self.helper.add_group_or_person(person_dict, relative_id=f"{role}_{i+1}", people_groups=people_groups, data=data)
+                person = self.helper.add_group_or_person(
+                    person_dict, relative_id=f"{role}_{i+1}", people_groups=people_groups, data=data
+                )
 
         from_people = []
         from_agents = []
@@ -1125,7 +1133,7 @@ class GoupilTransactionHandler(TransactionHandler):
         data["_people"].extend(people_data)
         return tx
 
-    def add_incoming_tx(self, data, buy_sell_modifiers, people_groups = {}):
+    def add_incoming_tx(self, data, buy_sell_modifiers, people_groups={}):
         price_info = data.get("purchase")
         shared_people = data.get("purchase_buyer")
         sellers = data["purchase_seller"]
@@ -1140,7 +1148,7 @@ class GoupilTransactionHandler(TransactionHandler):
             shared_people=shared_people,
             incoming=True,
             buy_sell_modifiers=buy_sell_modifiers,
-            people_groups=people_groups
+            people_groups=people_groups,
         )
         prev_owners = data.get("prev_own", {})
         if prev_owners:
@@ -1163,7 +1171,7 @@ class GoupilTransactionHandler(TransactionHandler):
             shared_people=shared_people,
             incoming=False,
             buy_sell_modifiers=buy_sell_modifiers,
-            people_groups=people_groups
+            people_groups=people_groups,
         )
         post_own = data.get("post_own", {})
         if post_own:
@@ -1179,7 +1187,6 @@ class ModelSale(GoupilTransactionHandler):
     make_la_person = Service("make_la_person")
     buy_sell_modifiers = Service("buy_sell_modifiers")
     people_groups = Service("people_groups")
-    
 
     def __call__(self, data: dict, make_la_person, people_groups, buy_sell_modifiers=None, in_tx=None, out_tx=None):
         sellers = data["purchase_seller"]
@@ -1312,7 +1319,10 @@ class GoupilPipeline(PipelineBase):
             "RowNumber", {"parent": model.Identifier, "id": "300445023", "label": "Entry Number"}
         )
 
-        vocab.register_vocab_class('UncertainMemberClosedGroup', {'parent': model.Group, 'id': '300448855', 'label': 'Closed Group Representing an Uncertain Person'})
+        vocab.register_vocab_class(
+            "UncertainMemberClosedGroup",
+            {"parent": model.Group, "id": "300448855", "label": "Closed Group Representing an Uncertain Person"},
+        )
 
         self.graph = None
         self.models = kwargs.get("models", settings.arches_models)

@@ -106,9 +106,7 @@ class PIRModelingTest_AR192(TestGoupilPipelineOutput):
             print(obj["id"])
 
             labels = [ref["_label"] for ref in po["referred_to_by"] if "_label" in ref]
-            contents = [
-                ref["content"] for ref in po["referred_to_by"] if "content" in ref
-            ]
+            contents = [ref["content"] for ref in po["referred_to_by"] if "content" in ref]
 
             for l in obj["from"]:
                 self.assertIn(l, labels)
@@ -135,17 +133,14 @@ class PIRModelingTest_AR192(TestGoupilPipelineOutput):
             # TODO complete tests with production attribution modifiers
 
         physical_books = [
-            y
-            for x, y in objects.items()
-            if "tag:getty.edu,2019:digital:pipeline:REPLACE-WITH-UUID:goupil#Book," in x
+            y for x, y in objects.items() if "tag:getty.edu,2019:digital:pipeline:REPLACE-WITH-UUID:goupil#Book," in x
         ]
 
         for physical_book in physical_books:
             physical_book_number = physical_book["id"].split(",")[-1]
             self.assertEqual(
                 physical_book["carries"][0]["id"],
-                "tag:getty.edu,2019:digital:pipeline:REPLACE-WITH-UUID:goupil#Text,Book,"
-                + physical_book_number,
+                "tag:getty.edu,2019:digital:pipeline:REPLACE-WITH-UUID:goupil#Text,Book," + physical_book_number,
             )
 
 

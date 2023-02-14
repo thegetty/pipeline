@@ -574,7 +574,6 @@ class AddPages(Configurable, GoupilProvenance):
                 "label": (label, vocab.instances["english"]),
                 "identifiers": [
                     self.helper.goupil_number_id(page, id_class=vocab.PageNumber),
-                    self.helper.goupil_gpi_number_id(data["pi_record_no"], vocab.StarNumber),
                 ],
             }
 

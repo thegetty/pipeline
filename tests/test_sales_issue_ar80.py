@@ -41,11 +41,12 @@ class PIRModelingTest_AR80(TestSalesPipelineOutput):
     def verifyReferences(self, record, expectedUrls):
         self.assertIn('referred_to_by', record)
         refs = record['referred_to_by']
-        self.assertEqual(len(refs), len(expectedUrls))
-        types = {r['type'] for r in refs}
-        self.assertEqual(types, {'DigitalObject'})
-        urls = {r['id'] for r in refs}
-        self.assertEqual(urls, expectedUrls)
+
+        for url in expectedUrls:
+            ref = [ref for ref in refs if 'id' in ref and ref['id'] == url]
+            self.assertEqual(len(ref), 1)
+            ref = ref[0]
+            self.assertEqual(ref['type'], 'DigitalObject')
 
 
 if __name__ == '__main__':

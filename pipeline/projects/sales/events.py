@@ -182,6 +182,12 @@ class PopulateAuctionEvent(Configurable):
 		if notes:
 			auction.referred_to_by = vocab.Note(ident='', content=notes)
 
+		sellers = { **data.get('auc_copy', {}), **data.get('other_seller', {}) }
+		for seller in sellers.values():
+			seller_description = vocab.SellerDescription(ident='', content=seller)
+			seller_description.referred_to_by = record
+			auction.referred_to_by = seller_description
+
 		if 'links' in data:
 			event_record = get_crom_object(data['_record'])
 			links = data['links']

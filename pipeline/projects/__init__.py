@@ -530,6 +530,8 @@ class PipelineBase:
 		vocab.register_vocab_class('ActiveOccupation', {"parent": model.Activity, "id":"300393177", "label": "Professional Activities", "metatype": "occupation"})
 		vocab.register_vocab_class('Database', {"parent": model.LinguisticObject, "id":"300028543", "label": "Database"})
 		vocab.register_vocab_class('Transcription', {"parent": model.LinguisticObject, "id":"300404333", "label": "Transcription", "metatype": "brief text"})
+		vocab.register_vocab_class('SellerDescription', {"parent": model.LinguisticObject, "id":"300445025", "label": "seller description", "metatype": "brief text"})
+		vocab.register_vocab_class('TitlePageText', {"parent": model.LinguisticObject, "id":"300445697", "label": "title page text", "metatype": "brief text"})
 		vocab.register_vocab_class('TranscriptionProcess', {"parent": model.Creation, "id":"300440752", "label": "Transcription Process"})
 
 		vocab.register_instance('BuyersAgent', {'parent': model.Type, 'id': '300448857', "label": "Buyer's Agent"})

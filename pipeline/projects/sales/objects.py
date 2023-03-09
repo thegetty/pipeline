@@ -108,15 +108,23 @@ class PopulateSalesObject(Configurable, pipeline.linkedart.PopulateObject):
 			t.referred_to_by = record
 			vidata['identifiers'].append(t)
 
-		for key in ('genre', 'subject'):
-			if key in data:
-				values = [v.strip() for v in data[key].split(';')]
-				for value in values:
-					for prop, mapping in subject_genre.items():
-						if value in mapping:
-							aat_url = mapping[value]
-							type = model.Type(ident=aat_url, label=value)
-							setattr(vi, prop, type)
+		objgenre = data.get('genre')
+		objsubject = data.get('subject')
+		
+		if objgenre and objsubject:
+			key = ', '.join((objsubject.strip(), objgenre.strip())).lower()
+		elif objgenre:
+			key = objgenre.strip().lower()
+		elif objsubject:
+			key = objsubject.strip().lower()
+		else:
+			key = None
+
+		for prop, mappings in subject_genre.items():
+			if key in mappings:
+				for label, aat_url in mappings[key].items():
+					type = model.Type(ident=aat_url, label=label)
+					setattr(vi, prop, type)
 		data['_visual_item'] = add_crom_data(data=vidata, what=vi)
 		hmo.shows = vi
 

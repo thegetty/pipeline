@@ -587,8 +587,6 @@ class AddPages(Configurable, GoupilProvenance):
             o_book = get_crom_object(b_data)
             o_page = get_crom_object(page)
             o_page.part_of = o_book
-            p_book = get_crom_object(physical_books[seq_no])
-            o_page.carried_by = p_book
 
             data["_text_pages"].append(page)
             self.add_goupil_creation_data(page)
@@ -660,8 +658,6 @@ class AddRows(Configurable, GoupilProvenance):
             o_page = get_crom_object(p_data)
             o_row = get_crom_object(row)
             o_row.part_of = o_page
-            if o_page.carried_by and o_row:
-                o_row.carried_by = o_page.carried_by[0]
 
             transaction = data["book_record"]["transaction"]
             tx_cl = transaction_classification.get(transaction)
@@ -727,7 +723,9 @@ class GoupilTransactionHandler(TransactionHandler):
         label = "Sojourn activity"
         stype = model.Activity
         act = stype(ident="", label=label)
-        act.classified_as = model.Type(ident="http://vocab.getty.edu/aat/300404670", label="Preferred Terms")
+        act.classified_as = model.Type(
+            ident="http://vocab.getty.edu/aat/300393212", label="establishment (action or condition)"
+        )
         act.took_place_at = sojourn
         p_data.carried_out = act
         for record in sales_records:
@@ -1523,7 +1521,6 @@ class GoupilPipeline(PipelineBase):
                                 },
                                 "postprocess": [
                                     lambda d, p: add_crom_price(d, p, services),
-                                    # lambda d, p: add_crom_price(d, p, services)
                                 ],  # use the one from knoedler for the time being
                                 "properties": (
                                     "purch_amount",

@@ -147,10 +147,6 @@ class TestGoupilPipelineOutput(unittest.TestCase):
         # Connection of lo book to physical book
         self.assertEqual(physical_book_15.get("carries")[0]["id"], lo1.get("id"))
         self.assertEqual(physical_book_14.get("carries")[0]["id"], lo4.get("id"))
-        # Connection of page to physical book
-        self.assertEqual(lo2.get("carried_by")[0]["id"], physical_book_15_id)
-        # Connection of entry to physical book
-        self.assertEqual(lo3.get("carried_by")[0]["id"], physical_book_15_id)
 
 
 if __name__ == "__main__":

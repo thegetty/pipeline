@@ -720,14 +720,13 @@ class GoupilTransactionHandler(TransactionHandler):
         )
 
     def person_sojourn(self, p_data: dict, sojourn, sales_records):
-        label = "Sojourn activity"
-        stype = model.Activity
-        act = stype(ident="", label=label)
+        act = model.Activity(ident=self.helper.make_proj_uri("ACT", p_data["label"]), label="Sojourn activity")
         act.classified_as = model.Type(
             ident="http://vocab.getty.edu/aat/300393212", label="establishment (action or condition)"
         )
         act.took_place_at = sojourn
-        p_data.carried_out = act
+        person = get_crom_object(p_data)
+        person.carried_out = act
         for record in sales_records:
             act.referred_to_by = record
 
@@ -1072,7 +1071,7 @@ class GoupilTransactionHandler(TransactionHandler):
                     place_data = self.helper.make_place(current, sales_records=sales_records)
                     place = get_crom_object(place_data)
                     if "shared#PLACE" in place.id:
-                        self.person_sojourn(person, place, sales_records)
+                        self.person_sojourn(p_data, place, sales_records)
                         data["_locations"].append(place_data)
             if THROUGH.intersects(mod):
                 people_agents.append(person)

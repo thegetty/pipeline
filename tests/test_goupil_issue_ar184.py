@@ -34,7 +34,7 @@ class PIRModelingTest_AR184(TestGoupilPipelineOutput):
             org["referred_to_by"][0]["id"],
             "tag:getty.edu,2019:digital:pipeline:REPLACE-WITH-UUID:goupil#Text,Book,6,Page,173,Row,8",
         )
-        
+
     def test_modeling_ar199(self):
         """
         AR-199 : Using the pscp_benchmark file, test the group entities
@@ -50,6 +50,7 @@ class PIRModelingTest_AR184(TestGoupilPipelineOutput):
                         self.assertNotIn("referred_to_by", identifier)
                 except:
                     pass
+
         # If the group has a corporate name, is referred by a textual work
         def corporate_name_reference(data: dict):
             identifierTextualWorkReferencesCounter = 0
@@ -65,10 +66,13 @@ class PIRModelingTest_AR184(TestGoupilPipelineOutput):
 
         self.assertEqual(len(groups), 16)
 
-        for group in [y for x, y in groups.items() if "tag:getty.edu,2019:digital:pipeline:REPLACE-WITH-UUID:shared#PERSON,AUTH" in x]:
-           primary_name_reference(group)
-           corporate_name_reference(group)
-
+        for group in [
+            y
+            for x, y in groups.items()
+            if "tag:getty.edu,2019:digital:pipeline:REPLACE-WITH-UUID:shared#PERSON,AUTH" in x
+        ]:
+            primary_name_reference(group)
+            corporate_name_reference(group)
 
 
 if __name__ == "__main__":

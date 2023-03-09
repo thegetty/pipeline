@@ -211,7 +211,7 @@ class PIRModelingTest_AR185(TestGoupilPipelineOutput):
 
         knoedler = groups["tag:getty.edu,2019:digital:pipeline:REPLACE-WITH-UUID:shared#PERSON,AUTH,Knoedler%27s"]
         for activity in knoedler["carried_out"]:
-            self.assertDictEqual(classification_tree(activity), {"Preferred Terms": {}})
+            self.assertDictEqual(classification_tree(activity), {"establishment (action or condition)": {}})
             self.assertTrue({"took_place_at", "classified_as", "referred_to_by"}.issubset(set(activity.keys())))
 
 

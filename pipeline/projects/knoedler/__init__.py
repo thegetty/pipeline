@@ -246,6 +246,12 @@ class KnoedlerUtilityHelper(UtilityHelper):
 		uri = self.make_proj_uri(*uri_key)
 		return uri
 
+def delete_sellers(data, parent, services):
+	sellers_to_be_deleted = services['sellers_to_be_deleted']
+	if parent["pi_record_no"] in sellers_to_be_deleted:
+		data = {k : [] for k in data}
+	return data
+
 
 def add_crom_price(data, parent, services, add_citations=False):
 	'''
@@ -1583,6 +1589,9 @@ class KnoedlerPipeline(PipelineBase):
 		different_objects = services.get('objects_different', {}).get('knoedler_numbers', [])
 		services['different_objects'] = different_objects
 
+		sellers_to_be_deleted = services.get('sellers_to_be_deleted', {}).get('pi_record_no', [])
+		services['sellers_to_be_deleted'] = sellers_to_be_deleted
+
 		# make these case-insensitive by wrapping the value lists in CaseFoldingSet
 		for name in ('attribution_modifiers',):
 			if name in services:
@@ -1650,6 +1659,7 @@ class KnoedlerPipeline(PipelineBase):
 							},
 							'purchase_seller': {
 								'postprocess': [
+									lambda d, p: delete_sellers(d, p, services),
 									filter_empty_person,
 									lambda x, _: strip_key_prefix('purchase_seller_', x),
 								],

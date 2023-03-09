@@ -67,7 +67,7 @@ def add_crom_price(data, parent, services, add_citations=False):
         data, currency_mapping=currencies, add_citations=add_citations, truncate_label_digits=2
     )
     if amnt:
-        for key in ("code", "frame", "note", "uncertain"):
+        for key in ("code", "frame", "uncertain"):
             if data.get(key):
                 amnt.referred_to_by = vocab.Note(ident="", content=data[key])
     if amnt:

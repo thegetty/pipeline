@@ -15,7 +15,7 @@ from pipeline.util import \
 		implode_date, \
 		CaseFoldingSet
 from pipeline.util.cleaners import parse_location_name
-from pipeline.linkedart import add_crom_data, get_crom_object, get_crom_objects
+from pipeline.linkedart import add_crom_data, get_crom_object, get_sales_record_crom
 
 
 class ProvenanceBase(Configurable):
@@ -216,8 +216,12 @@ class ProvenanceBase(Configurable):
 				formation = model.Formation(ident='', label=f'Formation of {group_label}')
 				formation.influenced_by = person
 				group.formed_by = formation
-				pi_record_no = data['pi_record_no']
-				group_uri_key = ('GROUP', 'PI', pi_record_no, f'{role}Group')
+				# preceed goupil_object_id, if found, over pi_record_no
+				if a.get('goupil_object_id'):
+					id_number = a['goupil_object_id']
+				else:
+					id_number = data['pi_record_no']
+				group_uri_key = ('GROUP', 'PI', id_number, f'{role}Group')
 				group_data = {
 					'uri': group_id,
 					'uri_keys': group_uri_key,
@@ -254,10 +258,7 @@ class ProvenanceBase(Configurable):
 		GROUP_MODS = {k for k, v in attribution_group_types.items() if v in GROUP_TYPES}
 
 		non_artist_assertions = people
-		if isinstance(data['_record'], list):
-			sales_record = get_crom_objects(data['_record'])
-		else:
-			sales_record = get_crom_object(data['_record'])
+		sales_record = get_sales_record_crom(data)
 
 		try:
 			hmo_label = f'{hmo._label}'
@@ -348,10 +349,7 @@ class ProvenanceBase(Configurable):
 		ATTRIBUTED_TO = attribution_modifiers['attributed to']
 
 		event_uri = prod_event.id
-		if isinstance(data['_record'], list):
-			sales_record = get_crom_objects(data['_record'])
-		else:
-			sales_record = get_crom_object(data['_record'])
+		sales_record = get_sales_record_crom(data)
 		artists = [p for p in people if not self.is_or_anon(p)]
 		or_anon_records = any([self.is_or_anon(a) for a in people])
 		if or_anon_records:

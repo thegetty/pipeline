@@ -139,6 +139,7 @@ class AddArtists(ProvenanceBase, GoupilProvenance):
         a.update(
             {
                 "pi_record_no": data["pi_record_no"],
+                "goupil_object_id": data["book_record"]["goupil_object_id"],
                 "modifiers": self.modifiers(a),
             }
         )
@@ -154,13 +155,9 @@ class AddArtists(ProvenanceBase, GoupilProvenance):
         # Add ulan information
         self.model_object_artists_authority(data.get("_artists", []))
 
-        data["_record"] = data["_records"]
-
         self.model_artists_with_modifers(
             data, hmo, attribution_modifiers, attribution_group_types, attribution_group_names
         )
-
-        del data["_record"]
 
         return data
 
@@ -330,11 +327,10 @@ class PopulateGoupilObject(Configurable, PopulateObject):
 
         for row in data["_records"]:
             try:
-                stock_nook_gno = gno = row["gno"]
-                identifiers.append(self.helper.goupil_number_id(stock_nook_gno, vocab.StockNumber))
+                stock_nook_gno = row["stock_book_gno"]
+                identifiers.append(self.helper.goupil_number_id(stock_nook_gno, vocab.LotNumber))
             except:
-                pass
-                # warnings.warn(f"*** Object has no gno identifier: {pprint.pformat(data)}")
+                warnings.warn(f"*** Object has no gno identifier: {pprint.pformat(data)}")
 
         uri = self.helper.make_object_uri(data["pi_record_no"], *uri_key)
         data["_object"]["uri"] = uri

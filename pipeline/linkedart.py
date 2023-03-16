@@ -26,7 +26,13 @@ def get_crom_objects(data: list):
 	for d in data:
 		r.append(d.get('_LOD_OBJECT'))
 	return r
-	
+
+def get_sales_record_crom(data: dict):
+	if data.get('_record'):
+		return get_crom_object(data['_record'])
+	else:
+		return get_crom_objects(data['_records'])
+
 def remove_crom_object(data: dict):
 	with suppress(KeyError):
 		del data['_LOD_OBJECT']
@@ -706,10 +712,14 @@ class PopulateObject:
 	def populate_object_statements(data:dict, default_unit=None, strip_comments=False):
 		hmo = get_crom_object(data)
 		record = data.get('_record')
+		
+		if not record:
+			record = data.get('_records')
+		
 		if isinstance(record, list):
-			sales_record = get_crom_objects(data.get('_record'))
+			sales_record = get_crom_objects(record)
 		else:
-			sales_record = get_crom_object(data.get('_record'))
+			sales_record = get_crom_object(record)
 
 		format = data.get('format')
 		if format:
@@ -734,6 +744,7 @@ class PopulateObject:
 			hmo.referred_to_by = matstmt
 
 		dimstr = data.get('dimensions')
+
 		if dimstr:
 			dimstmt = vocab.DimensionStatement(ident='', content=dimstr)
 			if sales_record:

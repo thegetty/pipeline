@@ -186,9 +186,6 @@ class AddArtists(ProvenanceBase, GoupilProvenance):
                 mod_uri = self.helper.make_shared_uri((hmo.id, "-Modification-By", artist_label))
                 modification = model.Modification(ident=mod_uri, label=f'Modification Event for {artist["label"]}')
                 modification.carried_out_by = person
-                import pdb
-
-                pdb.set_trace()
                 for mod in mods:
                     mod_name = model.Name(ident="", label=f"Modification sub-event for {artist_label}", content=mod)
                     mod_name.classified_as = model.Type(ident="http://vocab.getty.edu/aat/300404670", label="Name")

@@ -27,6 +27,7 @@ from pipeline.linkedart import (
     add_crom_data,
     get_crom_object,
     get_crom_objects,
+    get_sales_record_crom,
 )
 from pipeline.nodes.basic import KeyManagement, RecordCounter
 from pipeline.projects import PersonIdentity, PipelineBase, UtilityHelper
@@ -162,17 +163,32 @@ class AddArtists(ProvenanceBase, GoupilProvenance):
         hmo = get_crom_object(data["_object"])
         self.model_object_artists_authority(data.get("_artists", []))
 
-        for artist in data.get("_artists", []):
+        sales_record = get_sales_record_crom(data)
+
+        for seq_no, artist in enumerate(data.get("_artists", [])):
             mods = self.modifiers(artist)
             if not mods:
                 mods = artist.get("attrib_mod", "")
             if EDIT_BY.intersects(mods):
+                self.add_properties(data, artist)
+                a_data = self.model_person_or_group(
+                    data,
+                    artist,
+                    attribution_group_types,
+                    attribution_group_names,
+                    seq_no=seq_no,
+                    role="Artist",
+                    sales_record=sales_record,
+                )
                 artist_label = artist["label"]
-                person = get_crom_object(artist)
+                person = get_crom_object(a_data)
 
                 mod_uri = self.helper.make_shared_uri((hmo.id, "-Modification-By", artist_label))
                 modification = model.Modification(ident=mod_uri, label=f'Modification Event for {artist["label"]}')
                 modification.carried_out_by = person
+                import pdb
+
+                pdb.set_trace()
                 for mod in mods:
                     mod_name = model.Name(ident="", label=f"Modification sub-event for {artist_label}", content=mod)
                     mod_name.classified_as = model.Type(ident="http://vocab.getty.edu/aat/300404670", label="Name")

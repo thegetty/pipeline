@@ -139,6 +139,9 @@ class AddArtists(ProvenanceBase, GoupilProvenance):
         mod = a.get("attrib_mod_auth", "")
         if not mod:
             mod = a.get("attrib_mod", "")
+        # Matt:  as per George, semantics for 'or' are different in buyer/seller field than in artwork production role. The first does not to my knowledge exist in Goupil.
+        # basically treat or as attributed to!
+        mod = mod.replace('or', 'attributed to')
         mods = CaseFoldingSet({m.strip() for m in mod.split(";")} - {""})
         return mods
 

@@ -347,6 +347,7 @@ class ProvenanceBase(Configurable):
 		POSSIBLY = attribution_modifiers['possibly by']
 		UNCERTAIN = attribution_modifiers['uncertain']
 		ATTRIBUTED_TO = attribution_modifiers['attributed to']
+		EDIT_BY = attribution_modifiers['edit by']
 
 		event_uri = prod_event.id
 		sales_record = get_sales_record_crom(data)
@@ -403,12 +404,16 @@ class ProvenanceBase(Configurable):
 					person.member_of = artist_group
 		else:
 			for seq_no, a_data in enumerate(artists):
+				mods = a_data['modifiers']
+				if EDIT_BY.intersects(mods):
+					# goupil only attribution modifier that's modelled seperately and not a sub event of the production
+					continue
+
 				uncertain = all_uncertain
 				attribute_assignment_id = self.helper.prepend_uri_key(prod_event.id, f'ASSIGNMENT,Artist-{seq_no}')
 				a_data = self.model_person_or_group(data, a_data, attribution_group_types, attribution_group_names, seq_no=seq_no, role='Artist', sales_record=sales_record)
 				artist_label = a_data.get('label') # TODO: this may not be right for groups
 				person = get_crom_object(a_data)
-				mods = a_data['modifiers']
 				attrib_assignment_classes = [model.AttributeAssignment]
 				subprod_path = self.helper.make_uri_path(*a_data["uri_keys"])
 				subevent_id = event_uri + f'-{subprod_path}'

@@ -27,6 +27,7 @@ from pipeline.linkedart import (
     add_crom_data,
     get_crom_object,
     get_crom_objects,
+    get_sales_record_crom,
 )
 from pipeline.nodes.basic import KeyManagement, RecordCounter
 from pipeline.projects import PersonIdentity, PipelineBase, UtilityHelper
@@ -134,6 +135,16 @@ class AddArtists(ProvenanceBase, GoupilProvenance):
     attribution_group_types = Service("attribution_group_types")
     attribution_group_names = Service("attribution_group_names")
 
+    def modifiers(self, a: dict):
+        mod = a.get("attrib_mod_auth", "")
+        if not mod:
+            mod = a.get("attrib_mod", "")
+        # Matt:  as per George, semantics for 'or' are different in buyer/seller field than in artwork production role. The first does not to my knowledge exist in Goupil.
+        # basically treat or as attributed to!
+        mod = mod.replace('or', 'attributed to')
+        mods = CaseFoldingSet({m.strip() for m in mod.split(";")} - {""})
+        return mods
+
     def add_properties(self, data: dict, a: dict):
         a.setdefault("referred_to_by", [])
         a.update(
@@ -151,9 +162,40 @@ class AddArtists(ProvenanceBase, GoupilProvenance):
     def __call__(
         self, data: dict, *, make_la_person, attribution_modifiers, attribution_group_types, attribution_group_names
     ):
+        EDIT_BY = attribution_modifiers["edit by"]
         hmo = get_crom_object(data["_object"])
-        # Add ulan information
         self.model_object_artists_authority(data.get("_artists", []))
+
+        sales_record = get_sales_record_crom(data)
+
+        for seq_no, artist in enumerate(data.get("_artists", [])):
+            mods = self.modifiers(artist)
+            if not mods:
+                mods = artist.get("attrib_mod", "")
+            if EDIT_BY.intersects(mods):
+                self.add_properties(data, artist)
+                a_data = self.model_person_or_group(
+                    data,
+                    artist,
+                    attribution_group_types,
+                    attribution_group_names,
+                    seq_no=seq_no,
+                    role="Artist",
+                    sales_record=sales_record,
+                )
+                artist_label = artist["label"]
+                person = get_crom_object(a_data)
+
+                mod_uri = self.helper.make_shared_uri((hmo.id, "-Modification-By", artist_label))
+                modification = model.Modification(ident=mod_uri, label=f'Modification Event for {artist["label"]}')
+                modification.carried_out_by = person
+                for mod in mods:
+                    mod_name = model.Name(ident="", label=f"Modification sub-event for {artist_label}", content=mod)
+                    mod_name.classified_as = model.Type(ident="http://vocab.getty.edu/aat/300404670", label="Name")
+                    # for record in data.get("_records"):
+                    #     mod_name.referred_to_by = get_crom_object(record)
+                    modification.identified_by = mod_name
+                hmo.modified_by = modification
 
         self.model_artists_with_modifers(
             data, hmo, attribution_modifiers, attribution_group_types, attribution_group_names
@@ -320,7 +362,7 @@ class PopulateGoupilObject(Configurable, PopulateObject):
         try:
             goupil_id = odata["goupil_object_id"]
             uri_key = ("Object", goupil_id)
-            identifiers.append(self.helper.goupil_pscp_number_id(goupil_id, vocab.StockNumber))
+            identifiers.append(self.helper.goupil_pscp_number_id(goupil_id, vocab.StarNumber))
         except Exception as e:
             # warnings.warn(f"*** Object has no goupil object id: {pprint.pformat(data)}")
             uri_key = ("Object", "Internal", data["pi_record_no"])
@@ -328,7 +370,7 @@ class PopulateGoupilObject(Configurable, PopulateObject):
         for row in data["_records"]:
             try:
                 stock_nook_gno = row["stock_book_gno"]
-                identifiers.append(self.helper.goupil_number_id(stock_nook_gno, vocab.LotNumber))
+                identifiers.append(self.helper.goupil_number_id(stock_nook_gno, vocab.StockNumber))
             except:
                 warnings.warn(f"*** Object has no gno identifier: {pprint.pformat(data)}")
 
@@ -456,8 +498,7 @@ class PopulateGoupilObject(Configurable, PopulateObject):
         }
         if title:
             vidata["label"] = f"Visual Work of “{title}”"
-            titletype = vocab.Name
-            t = titletype(ident="", content=title)
+            t = vocab.Name(ident="", content=title)
             t.classified_as = model.Type(ident="http://vocab.getty.edu/aat/300417193", label="Title")
             for sale_record in sales_records:
                 t.referred_to_by = sale_record
@@ -1331,13 +1372,8 @@ class GoupilPipeline(PipelineBase):
 
     def setup_services(self):
         services = super().setup_services()
-
-        same_objects = services.get("objects_same", {}).get("objects", [])
         services["same_objects_map"] = {}
-
-        different_objects = services.get("objects_different", {}).get("knoedler_numbers", [])
-        services["different_objects"] = different_objects
-
+        services["different_objects"] = {}
         # make these case-insensitive by wrapping the value lists in CaseFoldingSet
         for name in ("attribution_modifiers",):
             if name in services:

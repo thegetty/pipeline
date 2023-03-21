@@ -362,7 +362,7 @@ class PopulateGoupilObject(Configurable, PopulateObject):
         try:
             goupil_id = odata["goupil_object_id"]
             uri_key = ("Object", goupil_id)
-            identifiers.append(self.helper.goupil_pscp_number_id(goupil_id, vocab.StockNumber))
+            identifiers.append(self.helper.goupil_pscp_number_id(goupil_id, vocab.StarNumber))
         except Exception as e:
             # warnings.warn(f"*** Object has no goupil object id: {pprint.pformat(data)}")
             uri_key = ("Object", "Internal", data["pi_record_no"])

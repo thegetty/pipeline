@@ -14,6 +14,7 @@ class PIRModelingTest_AR81(TestSalesPipelineOutput):
         '''
         output = self.run_pipeline('ar81')
         activities = output['model-sale-activity']
+        sets = output['model-set']
         
         # This event has an end-date modifier 'and following days'.
         # Its timespan label should indicate an open range, but the
@@ -32,6 +33,22 @@ class PIRModelingTest_AR81(TestSalesPipelineOutput):
         self.assertIn('end_of_the_end', ts)
         self.assertEqual(ts['begin_of_the_begin'], '1804-06-11T00:00:00Z')
         self.assertEqual(ts['end_of_the_end'], '1804-06-26T00:00:00Z')
+        
+        # This sale is part of an event with an end-date modifier 'and following days'.
+        # Its timespan should include an end-date matching the event.
+        sale = activities['tag:getty.edu,2019:digital:pipeline:REPLACE-WITH-UUID:sales#AUCTION,Br-A2042,0047,1794-05-12']
+        ts = sale['timespan']
+        self.assertIn('1794-05-12 onwards', classified_identifier_sets(ts)[None])
+        self.assertEqual(ts['_label'], f'1794-05-12 onwards')
+        self.assertIn('end_of_the_end', ts)
+        self.assertEqual(ts['begin_of_the_begin'], '1794-05-12T00:00:00Z')
+        self.assertEqual(ts['end_of_the_end'], '1794-05-27T00:00:00Z')
+        
+        # Ensure that the object set corresponding to the sale also has the same timespan identifier
+        objset = sets['tag:getty.edu,2019:digital:pipeline:REPLACE-WITH-UUID:sales#AUCTION,Br-A2042,0047,1794-05-12-Set']
+        creation = objset['created_by']
+        ts = creation['timespan']
+        self.assertIn('1794-05-12 onwards', classified_identifier_sets(ts)[None])
 
 
 if __name__ == '__main__':

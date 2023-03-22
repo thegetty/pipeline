@@ -19,19 +19,17 @@ class PIRModelingTest_AR102(TestKnoedlerPipelineOutput):
         entry = texts['tag:getty.edu,2019:digital:pipeline:REPLACE-WITH-UUID:knoedler#Text,Book,5,Page,190,Row,38']
         
         self.assertEqual(classification_sets(book, key='id'), {'http://vocab.getty.edu/aat/300028051', 'http://vocab.getty.edu/aat/300027483'})
-        self.assertEqual(classification_sets(page, key='id'), {'http://vocab.getty.edu/aat/300194222'})
-        self.assertEqual(classification_sets(entry, key='id'), {'http://vocab.getty.edu/aat/300438434'})
+        self.assertTrue(classification_sets(page, key='id').issuperset({'http://vocab.getty.edu/aat/300194222'}))
+        self.assertTrue(classification_sets(entry, key='id').issuperset({'http://vocab.getty.edu/aat/300438434'}))
         
         self.assertEqual(classification_tree(book, key='id'), {
         	'http://vocab.getty.edu/aat/300027483': {'http://vocab.getty.edu/aat/300435443': {}}, # Account Book => Type of Work
 			'http://vocab.getty.edu/aat/300028051': {'http://vocab.getty.edu/aat/300444970': {}}  # Book => Form
 		})
-        self.assertEqual(classification_tree(page, key='id'), {
-        	'http://vocab.getty.edu/aat/300194222': {'http://vocab.getty.edu/aat/300444970': {}}  # Page => Form
-        })
-        self.assertEqual(classification_tree(entry, key='id'), {
-        	'http://vocab.getty.edu/aat/300438434': {'http://vocab.getty.edu/aat/300444970': {}}  # Entry => Form
-        })
+        self.assertDictContainsSubset({'http://vocab.getty.edu/aat/300194222': {'http://vocab.getty.edu/aat/300444970': {}}  # Page => Form
+        }, classification_tree(page, key='id'))
+        self.assertDictContainsSubset({'http://vocab.getty.edu/aat/300438434': {'http://vocab.getty.edu/aat/300444970': {}}  # Entry => Form
+        }, classification_tree(entry, key='id'))
 
 
 if __name__ == '__main__':

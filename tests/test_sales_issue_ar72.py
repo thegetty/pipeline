@@ -16,7 +16,7 @@ class PIRModelingTest_AR72(TestSalesPipelineOutput):
         texts = output['model-lo']
         
         entry = texts['tag:getty.edu,2019:digital:pipeline:REPLACE-WITH-UUID:sales#CATALOG,D-1310,RECORD,1216255']
-        self.assertEqual(classification_tree(entry), {'Entry': {'Form': {}}})
+        self.assertDictContainsSubset({'Entry': {'Form': {}}}, classification_tree(entry))
         self.assertEqual(entry['_label'], 'Sale recorded in catalog: D-1310 0901 (1934-05-28) (record number 1216255)')
         entry_parents = entry['part_of']
         self.assertEqual(len(entry_parents), 1)
@@ -24,7 +24,7 @@ class PIRModelingTest_AR72(TestSalesPipelineOutput):
         self.assertIn(entry_parent['id'], texts)
         page = texts[entry_parent['id']]
 
-        self.assertEqual(classification_tree(page), {'Page': {'Form': {}}})
+        self.assertDictContainsSubset({'Page': {'Form': {}}}, classification_tree(page))
         self.assertEqual(page['_label'], 'Sale Catalog D-1310, Page 60')
         page_parents = page['part_of']
         self.assertEqual(len(page_parents), 1)

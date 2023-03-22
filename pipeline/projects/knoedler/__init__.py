@@ -43,7 +43,8 @@ from pipeline.util import \
 			ExtractKeyedValues, \
 			MatchingFiles, \
 			strip_key_prefix, \
-			rename_keys
+			rename_keys, \
+			filter_empty_person
 from pipeline.util.cleaners import \
 			parse_location_name, \
 			date_cleaner
@@ -75,7 +76,54 @@ from pipeline.provenance import ProvenanceBase
 class KnoedlerPersonIdentity(PersonIdentity):
 	pass
 
-class KnoedlerUtilityHelper(UtilityHelper):
+class SharedUtilityHelper(UtilityHelper):
+	'''
+	Knoedler specific originated code for accessing and interpreting sales data,
+	which however can may need to be used by knoedler like datasets, like goupil.
+	'''
+	def stock_number_identifier(self, data, date, stock_data_key = 'knoedler_number'):
+		stock_number = data.get(stock_data_key)
+		if stock_number:
+			ident = f'Stock Number {stock_number}'
+		else:
+			pi_num = data['pi_record_no']
+			ident = f'[GRI Number {pi_num}]'
+
+		if date:
+			ident += f' ({date})'
+		return ident
+
+	def transaction_uri_for_record(self, data, incoming=False):
+		'''
+		Return a URI representing the prov entry which the object (identified by the
+		supplied data) is a part of. This may identify just the object being bought or
+		sold or, in the case of multiple objects being bought for a single price, a
+		single prov entry that encompasses multiple object acquisitions.
+		'''
+		tx_key = self.transaction_key_for_record(data, incoming)
+		return self.make_proj_uri(*tx_key)
+
+	def copy_source_information(self, dst: dict, src: dict):
+		if not dst or not isinstance(dst, dict):
+			return dst
+		for k in self.csv_source_columns:
+			with suppress(KeyError):
+				dst[k] = src[k]
+		return dst
+
+	def make_object_uri(self, pi_rec_no, *uri_key):
+		uri_key = list(uri_key)
+		same_objects = self.services['same_objects_map']
+		different_objects = self.services['different_objects']
+		kn = uri_key[-1]
+		if kn in different_objects:
+			uri_key = uri_key[:-1] + ['flag-separated', kn, pi_rec_no]
+		elif kn in same_objects:
+			uri_key[-1] = same_objects[uri_key[-1]]
+		uri = self.make_proj_uri(*uri_key)
+		return uri
+			
+class KnoedlerUtilityHelper(SharedUtilityHelper):
 	'''
 	Project-specific code for accessing and interpreting sales data.
 	'''
@@ -90,16 +138,7 @@ class KnoedlerUtilityHelper(UtilityHelper):
 		self.uid_tag_prefix = self.proj_prefix
 
 	def stock_number_identifier(self, data, date):
-		stock_number = data.get('knoedler_number')
-		if stock_number:
-			ident = f'Stock Number {stock_number}'
-		else:
-			pi_num = data['pi_record_no']
-			ident = f'[GRI Number {pi_num}]'
-	
-		if date:
-			ident += f' ({date})'
-		return ident
+		return super().stock_number_identifier(data,date)
 
 	def add_person(self, data, record, relative_id, **kwargs):
 		self.person_identity.add_uri(data, record_id=relative_id)
@@ -194,16 +233,6 @@ class KnoedlerUtilityHelper(UtilityHelper):
 				return ('TX-MULTI', dir, n[12:])
 		return ('TX', dir, book_id, page_id, row_id)
 
-	def transaction_uri_for_record(self, data, incoming=False):
-		'''
-		Return a URI representing the prov entry which the object (identified by the
-		supplied data) is a part of. This may identify just the object being bought or
-		sold or, in the case of multiple objects being bought for a single price, a
-		single prov entry that encompasses multiple object acquisitions.
-		'''
-		tx_key = self.transaction_key_for_record(data, incoming)
-		return self.make_proj_uri(*tx_key)
-
 	@staticmethod
 	def transaction_multiple_object_label(data, incoming=False):
 		price = data.get('purchase_knoedler_share') if incoming else data.get('sale_knoedler_share')
@@ -246,6 +275,12 @@ class KnoedlerUtilityHelper(UtilityHelper):
 		uri = self.make_proj_uri(*uri_key)
 		return uri
 
+def delete_sellers(data, parent, services):
+	sellers_to_be_deleted = services['sellers_to_be_deleted']
+	if parent["pi_record_no"] in sellers_to_be_deleted:
+		data = {k : [] for k in data}
+	return data
+
 
 def add_crom_price(data, parent, services, add_citations=False):
 	'''
@@ -260,29 +295,6 @@ def add_crom_price(data, parent, services, add_citations=False):
 		add_crom_data(data=data, what=amnt)
 	return data
 
-
-# TODO: copied from provenance.util; refactor
-def filter_empty_person(data: dict, _):
-	'''
-	If all the values of the supplied dictionary are false (or false after int conversion
-	for keys ending with 'ulan'), return `None`. Otherwise return the dictionary.
-	'''
-	set_flags = []
-	for k, v in data.items():
-		if k.endswith('ulan'):
-			if v in ('', '0'):
-				s = False
-			else:
-				s = True
-		elif k in ('pi_record_no', 'star_rec_no'):
-			s = False
-		else:
-			s = bool(v)
-		set_flags.append(s)
-	if any(set_flags):
-		return data
-	else:
-		return None
 
 def record_id(data):
 	book = data['stock_book_no']
@@ -355,20 +367,38 @@ class AddBook(Configurable, KnoedlerProvenance):
 	make_la_lo = Service('make_la_lo')
 	make_la_hmo = Service('make_la_hmo')
 	static_instances = Option(default="static_instances")
+	link_types = Service('link_types')
 
-	def __call__(self, data:dict, make_la_lo, make_la_hmo):
+	def __call__(self, data:dict, make_la_lo, make_la_hmo, link_types):
 		book = data['book_record']
 		book_id, _, _ = record_id(book)
 
 		book_type = model.Type(ident='http://vocab.getty.edu/aat/300028051', label='Book')
 		book_type.classified_as = model.Type(ident='http://vocab.getty.edu/aat/300444970', label='Form')
 
+		notes = []
+		url = book.get('link')
+		if url:
+			link_data = link_types['link']
+			label = link_data.get('label', url)
+			description = link_data.get('field-description')
+			if url.startswith('http'):
+				page = vocab.DigitalImage(ident='', label=label)
+				page._validate_range = False
+				page.access_point = [vocab.DigitalObject(ident=url, label=url)]
+				if description:
+					page.referred_to_by = vocab.Note(ident='', content=description)
+				notes.append(page)
+			else:
+				warnings.warn(f'*** Link value does not appear to be a valid URL: {url}')
+				
 		data['_text_book'] = {
 			'uri': self.helper.make_proj_uri('Text', 'Book', book_id),
 			'object_type': vocab.AccountBookText,
 			'classified_as': [book_type],
 			'label': f'Knoedler Stock Book {book_id}',
 			'identifiers': [self.helper.knoedler_number_id(book_id, id_class=vocab.BookNumber)],
+			'referred_to_by': notes
 		}
 
 		data['_physical_book'] = {
@@ -395,10 +425,9 @@ class AddPage(Configurable, KnoedlerProvenance):
 	def __call__(self, data:dict, make_la_lo, make_la_hmo):
 		book = data['book_record']
 		book_id, page_id, _ = record_id(book)
-
 		data['_text_page'] = {
 			'uri': self.helper.make_proj_uri('Text', 'Book', book_id, 'Page', page_id),
-			'object_type': vocab.PageTextForm,
+			'object_type': [vocab.PageTextForm,vocab.AccountBookText],
 			'label': f'Knoedler Stock Book {book_id}, Page {page_id}',
 			'identifiers': [self.helper.knoedler_number_id(page_id, id_class=vocab.PageNumber)],
 			'referred_to_by': [],
@@ -452,7 +481,7 @@ class AddRow(Configurable, KnoedlerProvenance):
 		star_id = self.helper.gpi_number_id(rec_num, vocab.StarNumber)
 		data['_text_row'] = {
 			'uri': self.helper.make_proj_uri('Text', 'Book', book_id, 'Page', page_id, 'Row', row_id),
-			'object_type': vocab.EntryTextForm,
+			'object_type': [vocab.EntryTextForm,vocab.AccountBookText],
 			'label': f'Knoedler Stock Book {book_id}, Page {page_id}, Row {row_id}',
 			'identifiers': [self.helper.knoedler_number_id(row_id, id_class=vocab.EntryNumber), star_id],
 			'part_of': [data['_text_page']],
@@ -512,11 +541,13 @@ class PopulateKnoedlerObject(Configurable, pipeline.linkedart.PopulateObject):
 	helper = Option(required=True)
 	make_la_org = Service('make_la_org')
 	vocab_type_map = Service('vocab_type_map')
+	subject_genre = Service('subject_genre')
+	subject_genre_style = Service('subject_genre_style')
 
 	def __init__(self, *args, **kwargs):
 		super().__init__(*args, **kwargs)
 
-	def _populate_object_visual_item(self, data:dict, title):
+	def _populate_object_visual_item(self, data:dict, object_data, title, subject_genre, subject_genre_style):
 		sales_record = get_crom_object(data['_record'])
 		hmo = get_crom_object(data)
 		title = truncate_with_ellipsis(title, 100) or title
@@ -534,10 +565,35 @@ class PopulateKnoedlerObject(Configurable, pipeline.linkedart.PopulateObject):
 			vidata['label'] = f'Visual work of “{title}”'
 			sales_record = get_crom_object(data['_record'])
 			vidata['names'] = [(title,{'referred_to_by': [sales_record]})]
+
+		objgenre = object_data['genre'] if 'genre' in object_data else None
+		objsubject = object_data['subject'] if 'subject' in object_data else None
+		
+		for prop, mapping in subject_genre.items():
+			key = ', '.join((objsubject,objgenre)) if objsubject else objgenre
+			try:
+				aat_terms = mapping[key]
+				for label, aat_url in aat_terms.items():
+					t = model.Type(ident=aat_url, label=label)
+					setattr(vi, prop, t)
+			except:
+				pass
+
+		for prop, mapping in subject_genre_style.items():
+			key = ', '.join((objsubject,objgenre)) if objsubject else objgenre
+			try:
+				aat_terms = mapping[key]
+				for label, aat_url in aat_terms.items():
+					t = model.Type(ident=aat_url, label=label)
+					t.classified_as = model.Type(ident='http://vocab.getty.edu/aat/300015646', label='Styles and Periods (hierarchy name)')
+					setattr(vi, prop, t)
+			except:
+				pass
+
 		data['_visual_item'] = add_crom_data(data=vidata, what=vi)
 		hmo.shows = vi
 
-	def __call__(self, data:dict, *, vocab_type_map, make_la_org):
+	def __call__(self, data:dict, *, vocab_type_map, make_la_org, subject_genre, subject_genre_style):
 		sales_record = get_crom_object(data['_record'])
 		data.setdefault('_physical_objects', [])
 		data.setdefault('_linguistic_objects', [])
@@ -611,7 +667,7 @@ class PopulateKnoedlerObject(Configurable, pipeline.linkedart.PopulateObject):
 		mlao(data['_object'])
 
 		self._populate_object_present_location(data['_object'])
-		self._populate_object_visual_item(data['_object'], label)
+		self._populate_object_visual_item(data['_object'], odata, label, subject_genre, subject_genre_style)
 		self.populate_object_statements(data['_object'], default_unit='inches')
 		data['_physical_objects'].append(data['_object'])
 		return data
@@ -841,7 +897,7 @@ class TransactionHandler(ProvenanceBase):
 
 			data['_people'].extend(people)
 
-	def _add_prov_entry_payment(self, data:dict, tx, knoedler_price_part, price_info, people, shared_people, date, incoming):
+	def _add_prov_entry_payment(self, data:dict, tx, knoedler_price_part, price_info, people, people_agents, shared_people, shared_people_agents, date, incoming):
 		knoedler = self.helper.static_instances.get_instance('Group', 'knoedler')
 		knoedler_group = [knoedler]
 
@@ -883,6 +939,13 @@ class TransactionHandler(ProvenanceBase):
 					paym.paid_from = kp
 				else:
 					paym.paid_to = kp
+			for p in shared_people_agents:
+				# when an agent is acting on behalf of the buyer/seller, model their involvement in a sub-activity
+				subpaym_role = 'Buyer' if incoming else 'Seller'
+				subpaym = model.Activity(ident='', label=f"{subpaym_role}'s agent's role in payment")
+				subpaym.classified_as = vocab.instances[f'{subpaym_role}sAgent']
+				subpaym.carried_out_by = p
+				paym.part = subpaym
 
 			for i, partdata in enumerate(parts):
 				person, part_amnt = partdata
@@ -911,6 +974,14 @@ class TransactionHandler(ProvenanceBase):
 					paym.paid_to = person
 				else:
 					paym.paid_from = person
+		for p in people_agents:
+			# when an agent is acting on behalf of the buyer/seller, model their involvement in a sub-activity
+			if paym:
+				subpaym_role = 'Seller' if incoming else 'Buyer'
+				subpaym = model.Activity(ident='', label=f"{subpaym_role}'s agent's role in payment")
+				subpaym.classified_as = vocab.instances[f'{subpaym_role}sAgent']
+				subpaym.carried_out_by = p
+				paym.part = subpaym
 
 	def _add_prov_entry_acquisition(self, data:dict, tx, from_people, from_agents, to_people, to_agents, date, incoming, purpose=None):
 		rec = data['book_record']
@@ -943,11 +1014,19 @@ class TransactionHandler(ProvenanceBase):
 		for p in from_people:
 			acq.transferred_title_from = p
 		for p in from_agents:
-			acq.carried_out_by = p
+			# when an agent is acting on behalf of the seller, model their involvement in a sub-activity
+			subacq = model.Activity(ident='', label="Seller's agent's role in acquisition")
+			subacq.classified_as = vocab.instances['SellersAgent']
+			subacq.carried_out_by = p
+			acq.part = subacq
 		for p in to_people:
 			acq.transferred_title_to = p
 		for p in to_agents:
-			acq.carried_out_by = p
+			# when an agent is acting on behalf of the buyer, model their involvement in a sub-activity
+			subacq = model.Activity(ident='', label="Buyer's agent's role in acquisition")
+			subacq.classified_as = vocab.instances['BuyersAgent']
+			subacq.carried_out_by = p
+			acq.part = subacq
 
 		tx.part = acq
 
@@ -1034,7 +1113,7 @@ class TransactionHandler(ProvenanceBase):
 
 		if incoming:
 			self._add_prov_entry_rights(data, tx, shared_people, incoming)
-		self._add_prov_entry_payment(data, tx, knoedler_price_part, price_info, people, shared_people, date, incoming)
+		self._add_prov_entry_payment(data, tx, knoedler_price_part, price_info, people, people_agents, shared_people, knoedler_group_agents, date, incoming)
 		self._add_prov_entry_acquisition(data, tx, from_people, from_agents, to_people, to_agents, date, incoming, purpose=purpose)
 
 # 		print('People:')
@@ -1140,8 +1219,9 @@ class ModelDestruction(TransactionHandler):
 	helper = Option(required=True)
 	make_la_person = Service('make_la_person')
 	buy_sell_modifiers = Service('buy_sell_modifiers')
+	transaction_classification = Service('transaction_classification')
 
-	def __call__(self, data:dict, make_la_person, buy_sell_modifiers):
+	def __call__(self, data:dict, make_la_person, buy_sell_modifiers, transaction_classification):
 		rec = data['book_record']
 		date = implode_date(data['sale_date'])
 		hmo = get_crom_object(data['_object'])
@@ -1158,21 +1238,28 @@ class ModelDestruction(TransactionHandler):
 			d.referred_to_by = vocab.Note(ident='', content=rec['verbatim_notes'])
 		hmo.destroyed_by = d
 
-		self.add_incoming_tx(data, buy_sell_modifiers)
+		in_tx = self.add_incoming_tx(data, buy_sell_modifiers)
+		in_tx_cl = transaction_classification.get('Purchase')
+		in_tx.classified_as = model.Type(ident=in_tx_cl.get('url'), label=in_tx_cl.get('label'))
+
 		return data
 
 class ModelTheftOrLoss(TransactionHandler):
 	helper = Option(required=True)
 	make_la_person = Service('make_la_person')
 	buy_sell_modifiers = Service('buy_sell_modifiers')
+	transaction_classification = Service('transaction_classification')
 
-	def __call__(self, data:dict, make_la_person, buy_sell_modifiers):
+	def __call__(self, data:dict, make_la_person, buy_sell_modifiers, transaction_classification):
 		rec = data['book_record']
 		pi_rec = data['pi_record_no']
 		hmo = get_crom_object(data['_object'])
 		sn_ident = self.helper.stock_number_identifier(data['_object'], None)
 		
-		self.add_incoming_tx(data, buy_sell_modifiers)
+		in_tx = self.add_incoming_tx(data, buy_sell_modifiers)
+		in_tx_cl = transaction_classification.get('Purchase')
+		in_tx.classified_as = model.Type(ident=in_tx_cl.get('url'), label=in_tx_cl.get('label'))
+
 		tx_out = self._empty_tx(data, incoming=False)
 
 		tx_type = rec['transaction']
@@ -1184,7 +1271,16 @@ class ModelTheftOrLoss(TransactionHandler):
 			label_type = 'Theft'
 			transfer_class = vocab.Theft
 
+		tx_cl = transaction_classification.get(tx_type)
+		if tx_cl:
+			label = tx_cl.get('label')	
+			url = tx_cl.get('url')
+			tx_out.classified_as = model.Type(ident=url,label=label)
+		else:
+			warnings.warn(f'*** No classification found for transaction type: {tx_type!r}')
+
 		tx_out._label = f'{label_type} of {sn_ident}'
+		tx_out.identified_by = model.Name(ident='', content=tx_out._label)
 		tx_out_data = add_crom_data(data={'uri': tx_out.id, 'label': tx_out._label}, what=tx_out)
 
 		title = self.helper.title_value(data['_object'].get('title'))
@@ -1272,13 +1368,16 @@ class ModelSale(TransactionHandler):
 	helper = Option(required=True)
 	make_la_person = Service('make_la_person')
 	buy_sell_modifiers = Service('buy_sell_modifiers')
+	transaction_classification = Service('transaction_classification')
 
-	def __call__(self, data:dict, make_la_person, buy_sell_modifiers, in_tx=None, out_tx=None):
+	def __call__(self, data:dict, make_la_person, buy_sell_modifiers, transaction_classification, in_tx=None, out_tx=None):
 		sellers = data['purchase_seller']
 		if not in_tx:
 			if len(sellers):
 				# if there are sellers in this record, then model the incoming transaction.
 				in_tx = self.add_incoming_tx(data, buy_sell_modifiers)
+				tx_cl = transaction_classification.get('Purchase')
+				in_tx.classified_as = model.Type(ident=tx_cl.get('url'), label=tx_cl.get('label'))
 			else:
 				# if there are no sellers, then this is an object that was previously unsold, and should be modeled as an inventory activity
 				inv = self._new_inventorying(data)
@@ -1297,6 +1396,15 @@ class ModelSale(TransactionHandler):
 		if not out_tx:
 			out_tx = self.add_outgoing_tx(data, buy_sell_modifiers)
 
+			transaction = data['book_record']['transaction']
+			tx_cl = transaction_classification.get(transaction)
+			if tx_cl:
+				label = tx_cl.get('label')	
+				url = tx_cl.get('url')
+				out_tx.classified_as = model.Type(ident=url,label=label)
+			else:
+				warnings.warn(f'*** No classification found for transaction type: {transaction!r}')
+
 		in_tx.ends_before_the_start_of = out_tx
 		out_tx.starts_after_the_end_of = in_tx
 		yield data
@@ -1305,22 +1413,26 @@ class ModelReturn(ModelSale):
 	helper = Option(required=True)
 	make_la_person = Service('make_la_person')
 	buy_sell_modifiers = Service('buy_sell_modifiers')
+	transaction_classification = Service('transaction_classification')
 
-	def __call__(self, data:dict, make_la_person, buy_sell_modifiers):
+	def __call__(self, data:dict, make_la_person, buy_sell_modifiers, transaction_classification):
 		sellers = data.get('purchase_seller', [])
 		buyers = data.get('sale_buyer', [])
 		if not buyers:
 			buyers = sellers.copy()
 			data['sale_buyer'] = buyers
 		in_tx, out_tx = self.add_return_tx(data, buy_sell_modifiers)
-		yield from super().__call__(data, make_la_person, buy_sell_modifiers, in_tx=in_tx, out_tx=out_tx)
+		in_tx_cl = transaction_classification.get('Purchase')
+		in_tx.classified_as = model.Type(ident=in_tx_cl.get('url'), label=in_tx_cl.get('label'))
+		yield from super().__call__(data, make_la_person, buy_sell_modifiers, transaction_classification,in_tx=in_tx, out_tx=out_tx)
 
 class ModelUnsoldPurchases(TransactionHandler):
 	helper = Option(required=True)
 	make_la_person = Service('make_la_person')
 	buy_sell_modifiers = Service('buy_sell_modifiers')
+	transaction_classification = Service('transaction_classification')
 
-	def __call__(self, data:dict, make_la_person, buy_sell_modifiers):
+	def __call__(self, data:dict, make_la_person, buy_sell_modifiers, transaction_classification):
 		rec = data['book_record']
 		pi_rec = data['pi_record_no']
 		odata = data['_object']
@@ -1340,15 +1452,17 @@ class ModelUnsoldPurchases(TransactionHandler):
 		sn_ident = self.helper.stock_number_identifier(odata, date)
 
 		in_tx = self.add_incoming_tx(data, buy_sell_modifiers)
-
+		in_tx_cl = transaction_classification.get('Purchase')
+		in_tx.classified_as = model.Type(ident=in_tx_cl.get('url'), label=in_tx_cl.get('label'))
 		yield data
 
 class ModelInventorying(TransactionHandler):
 	helper = Option(required=True)
 	make_la_person = Service('make_la_person')
 	buy_sell_modifiers = Service('buy_sell_modifiers')
+	transaction_classification = Service('transaction_classification')
 
-	def __call__(self, data:dict, make_la_person, buy_sell_modifiers):
+	def __call__(self, data:dict, make_la_person, buy_sell_modifiers, transaction_classification):
 		rec = data['book_record']
 		pi_rec = data['pi_record_no']
 		odata = data['_object']
@@ -1376,6 +1490,15 @@ class ModelInventorying(TransactionHandler):
 		tx_out = self._empty_tx(data, incoming=False)
 		tx_out._label = inv_label
 		tx_out.identified_by = model.Name(ident='', content=inv_label)
+
+		transaction = rec['transaction']
+		tx_cl = transaction_classification.get(transaction)
+		if tx_cl:
+			label = tx_cl.get('label')
+			url = tx_cl.get('url')
+			tx_out.classified_as = model.Type(ident=url,label=label)
+		else:
+			warnings.warn(f'*** No classification found for transaction type: {transaction!r}')
 
 		inv_uri = self.helper.make_proj_uri('INV', book_id, page_id, row_id)
 		inv = vocab.Inventorying(ident=inv_uri, label=inv_label)
@@ -1489,6 +1612,9 @@ class KnoedlerPipeline(PipelineBase):
 		different_objects = services.get('objects_different', {}).get('knoedler_numbers', [])
 		services['different_objects'] = different_objects
 
+		sellers_to_be_deleted = services.get('sellers_to_be_deleted', {}).get('pi_record_no', [])
+		services['sellers_to_be_deleted'] = sellers_to_be_deleted
+
 		# make these case-insensitive by wrapping the value lists in CaseFoldingSet
 		for name in ('attribution_modifiers',):
 			if name in services:
@@ -1556,6 +1682,7 @@ class KnoedlerPipeline(PipelineBase):
 							},
 							'purchase_seller': {
 								'postprocess': [
+									lambda d, p: delete_sellers(d, p, services),
 									filter_empty_person,
 									lambda x, _: strip_key_prefix('purchase_seller_', x),
 								],

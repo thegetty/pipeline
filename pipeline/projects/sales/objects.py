@@ -94,7 +94,7 @@ class PopulateSalesObject(Configurable, pipeline.linkedart.PopulateObject):
 		vi.referred_to_by = record
 		vidata = {'uri': vi_uri, 'names': [], 'identifiers': []}
 		if title:
-			vidata['label'] = f'Visual work of “{title}”'
+			vidata['label'] = f'Visual Work of “{title}”'
 			sales_record = get_crom_object(data['_record'])
 			titletype = model.Name if modified_title else vocab.PrimaryName
 			t = titletype(ident='', content=title)
@@ -108,23 +108,33 @@ class PopulateSalesObject(Configurable, pipeline.linkedart.PopulateObject):
 			t.referred_to_by = record
 			vidata['identifiers'].append(t)
 
-		for key in ('genre', 'subject'):
-			if key in data:
-				values = [v.strip() for v in data[key].split(';')]
-				for value in values:
-					for prop, mapping in subject_genre.items():
-						if value in mapping:
-							aat_url = mapping[value]
-							type = model.Type(ident=aat_url, label=value)
-							setattr(vi, prop, type)
+		objgenre = data.get('genre')
+		objsubject = data.get('subject')
+		
+		if objgenre and objsubject:
+			key = ', '.join((objsubject.strip(), objgenre.strip())).lower()
+		elif objgenre:
+			key = objgenre.strip().lower()
+		elif objsubject:
+			key = objsubject.strip().lower()
+		else:
+			key = None
+
+		for prop, mappings in subject_genre.items():
+			if key in mappings:
+				for label, aat_url in mappings[key].items():
+					type = model.Type(ident=aat_url, label=label)
+					setattr(vi, prop, type)
 		data['_visual_item'] = add_crom_data(data=vidata, what=vi)
 		hmo.shows = vi
 
-	def _populate_object_catalog_record(self, data:dict, parent, lot, cno, rec_num, transaction_classification):
+	def _populate_object_catalog_record(self, data:dict, parent, lot, cno, rec_num, transaction_classification,non_auctions):
 		hmo = get_crom_object(data)
 
-		catalog_uri = self.helper.make_proj_uri('CATALOG', cno)
-		catalog = vocab.AuctionCatalogText(ident=catalog_uri, label=f'Sale Catalog {cno}')
+		sale_type = non_auctions.get(cno)
+		sale_type = sale_type or 'Auction'
+		catalog_type = self.helper.catalog_type(cno,sale_type)
+		catalog = self.helper.catalog_text(cno, sale_type)
 
 		record_uri = self.helper.make_proj_uri('CATALOG', cno, 'RECORD', rec_num)
 		lot_object_id = parent['lot_object_id']
@@ -139,8 +149,8 @@ class PopulateSalesObject(Configurable, pipeline.linkedart.PopulateObject):
 		creation.carried_out_by = self.helper.static_instances.get_instance('Group', 'gpi')
 		row.created_by = creation
 		row.identified_by = self.helper.gpi_number_id(rec_num, vocab.StarNumber)
-
-		record = vocab.EntryTextForm(ident=record_uri, label=f'Sale recorded in catalog: {lot_object_id} (record number {rec_num})')
+		
+		record = vocab.make_multitype_obj(catalog_type,vocab.EntryTextForm,ident=record_uri, label=f'Sale recorded in catalog: {lot_object_id} (record number {rec_num})')
 		record._validate_profile = False
 		record.features_are_also_found_on = row
 
@@ -403,7 +413,7 @@ class PopulateSalesObject(Configurable, pipeline.linkedart.PopulateObject):
 		data['_locations'] = []
 		data['_final_org'] = []
 		data['_events'] = []
-		record = self._populate_object_catalog_record(data, parent, lot, cno, parent['pi_record_no'], transaction_classification)
+		record = self._populate_object_catalog_record(data, parent, lot, cno, parent['pi_record_no'], transaction_classification,non_auctions)
 		self._populate_object_destruction(data, parent, destruction_types_map)
 		self.populate_object_statements(data)
 		self._populate_object_materials(data, materials_map)
@@ -642,6 +652,7 @@ class AddArtists(ProvenanceBase):
 				a_data = self.model_person_or_group(data, a_data, attribution_group_types, attribution_group_names, seq_no=seq_no, role='Artist', sales_record=sales_record)
 				person = get_crom_object(a_data)
 				mods = a_data['modifiers']
+				verbatim_mods = a_data.get('attrib_mod', '')
 				attrib_assignment_classes = [model.AttributeAssignment]
 				subprod_path = self.helper.make_uri_path(*a_data["uri_keys"])
 				subevent_id = event_uri + f'-{subprod_path}'
@@ -649,10 +660,14 @@ class AddArtists(ProvenanceBase):
 					if POSSIBLY.intersects(mods):
 						attrib_assignment_classes.append(vocab.PossibleAssignment)
 						assignment = vocab.make_multitype_obj(*attrib_assignment_classes, ident=attribute_assignment_id, label=f'Possibly attributed to {artist_label}')
+						assignment.used_specific_object = sales_record
 						assignment._label = f'Possibly by {artist_label}'
+						assignment.referred_to_by = vocab.Note(ident='', content=verbatim_mods)
 					else:
 						attrib_assignment_classes.append(vocab.ProbableAssignment)
 						assignment = vocab.make_multitype_obj(*attrib_assignment_classes, ident=attribute_assignment_id, label=f'Probably attributed to {artist_label}')
+						assignment.used_specific_object = sales_record
+						assignment.referred_to_by = vocab.Note(ident='', content=verbatim_mods)
 						assignment._label = f'Probably by {artist_label}'
 
 					# TODO: this assigns an uncertain carried_out_by property directly to the top-level production;
@@ -665,16 +680,20 @@ class AddArtists(ProvenanceBase):
 					if uncertain:
 						attrib_assignment_classes.append(vocab.PossibleAssignment)
 					assignment = vocab.make_multitype_obj(*attrib_assignment_classes, ident=attribute_assignment_id, label=f'Formerly attributed to {artist_label}')
+					assignment.used_specific_object = sales_record
 					prod_event.attributed_by = assignment
 					assignment.assigned_property = 'carried_out_by'
 					assignment.assigned = person
+					assignment.referred_to_by = vocab.Note(ident='', content=verbatim_mods)					
 				else:
 					if uncertain or ATTRIBUTED_TO.intersects(mods):
 						attrib_assignment_classes.append(vocab.PossibleAssignment)
 						assignment = vocab.make_multitype_obj(*attrib_assignment_classes, ident=attribute_assignment_id, label=f'Possibly attributed to {artist_label}')
+						assignment.used_specific_object = sales_record
 						prod_event.attributed_by = assignment
 						assignment.assigned_property = 'carried_out_by'
 						assignment.assigned = person
+						assignment.referred_to_by = vocab.Note(ident='', content=verbatim_mods)
 					else:
 						subevent = model.Production(ident=subevent_id, label=f'Production sub-event for {artist_label}')
 						subevent.carried_out_by = person
@@ -732,13 +751,16 @@ class AddArtists(ProvenanceBase):
 					uncertain = True
 					attrib_assignment_classes.append(vocab.PossibleAssignment)
 			
+			verbatim_mods = a_data.get('attrib_mod', '')
 			if STYLE_OF.intersects(mods):
 				attribute_assignment_id = self.helper.prepend_uri_key(prod_event.id, f'ASSIGNMENT,NonArtist-{seq_no}')
 				assignment = vocab.make_multitype_obj(*attrib_assignment_classes, ident=attribute_assignment_id, label=f'In the style of {artist_label}')
+				assignment.used_specific_object = sales_record
 				prod_event.attributed_by = assignment
 				assignment.assigned_property = 'influenced_by'
 				assignment.property_classified_as = vocab.instances['style of']
 				assignment.assigned = person
+				assignment.referred_to_by = vocab.Note(ident='', content=verbatim_mods)
 			elif COPY_AFTER.intersects(mods):
 				cls = type(hmo)
 				# The original object URI is just the object URI with a suffix. When URIs are
@@ -764,9 +786,11 @@ class AddArtists(ProvenanceBase):
 
 				if uncertain:
 					assignment = vocab.make_multitype_obj(*attrib_assignment_classes, ident=attribute_assignment_id, label=f'Possibly influenced by {person._label}')
+					assignment.used_specific_object = sales_record
 					prod_event.attributed_by = assignment
 					assignment.assigned_property = 'influenced_by'
 					assignment.assigned = original_hmo
+					assignment.referred_to_by = vocab.Note(ident='', content=verbatim_mods)
 				else:
 					prod_event.influenced_by = original_hmo
 				data['_original_objects'].append(add_crom_data(data={'uri': original_id}, what=original_hmo))

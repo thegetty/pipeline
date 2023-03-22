@@ -1,7 +1,11 @@
 {
-    "Unsold": {
+    "Unsold" : {
         "url": "http://vocab.getty.edu/aat/300077506",
         "label": "Inventorying"
+    },
+    "Purchase" : {
+        "url": "http://vocab.getty.edu/aat/300417642",
+        "label": "Purchase"
     },
     "Sold": {
         "url": "http://vocab.getty.edu/aat/300417642",

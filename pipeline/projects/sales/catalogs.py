@@ -141,6 +141,9 @@ class PopulateAuctionCatalog(Configurable):
 				warnings.warn(f'Setting empty identifier on {catalog.id}')
 			catalog.identified_by = self.lugt_number_id(lugt_no)
 
+		for seller_verbatim in parent.get('title_pg_sell', {}).values():
+			catalog.referred_to_by = vocab.TitlePageText(ident='', content=seller_verbatim)	
+
 		if not cno:
 			warnings.warn(f'Setting empty identifier on {catalog.id}')
 		
@@ -187,7 +190,7 @@ class AddAuctionCatalogEntry(Configurable):
 			idents.append(vocab.make_multitype_obj(vocab.PageNumber, vocab.OrderNumber, ident='', content=pdf_page_id, label=f'Page Order'))
 		data['_text_page'] = {
 			'uri': self.helper.make_proj_uri('CATALOG', cno, 'Page', page_id),
-			'object_type': vocab.PageTextForm,
+			'object_type': [vocab.PageTextForm,self.helper.catalog_type(cno,sale_type)],
 			'label': f'Sale Catalog {cno}, Page {page_id}',
 			'identifiers': idents,
 			'referred_to_by': [],
@@ -214,7 +217,7 @@ class AddPhysicalCatalogEntry(Configurable):
 		keys = [v for v in [cno, owner, copy] if v]
 		record_uri = self.helper.make_proj_uri('ENTRY', 'PHYS-CAT', *keys)
 		content = data['star_csv_data']
-
+		
 		catalog_label = self.helper.physical_catalog_label(cno, sale_type, owner, copy)
 		row_name = f'STAR Entry for Physical {catalog_label}'
 		row = vocab.EntryTextForm(ident=record_uri, content=content, label=row_name)
@@ -224,7 +227,9 @@ class AddPhysicalCatalogEntry(Configurable):
 		row.created_by = creation
 		row.identified_by = self.helper.gpi_number_id(rec_num, vocab.StarNumber)
 		row.identified_by = vocab.PrimaryName(ident='', content=row_name)
-
+		er_classification = model.Type(ident='http://vocab.getty.edu/aat/300379790', label='Electronic Records')
+		er_classification.classified_as = vocab.instances["object type"]
+		row.classified_as = er_classification
 		data['_catalog_record'] = add_crom_data({'uri': record_uri}, row)
 
 		yield data

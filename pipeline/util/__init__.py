@@ -230,6 +230,28 @@ def implode_date(data:dict, prefix:str='', clamp:str=None):
 	date_tuple = extract_date_tuple(data, prefix)
 	return implode_date_tuple(date_tuple, clamp)
 
+def filter_empty_person(data: dict, _):
+	'''
+	If all the values of the supplied dictionary are false (or false after int conversion
+	for keys ending with 'ulan'), return `None`. Otherwise return the dictionary.
+	'''
+	set_flags = []
+	for k, v in data.items():
+		if k.endswith('ulan'):
+			if v in ('', '0'):
+				s = False
+			else:
+				s = True
+		elif k in ('pi_record_no', 'star_rec_no'):
+			s = False
+		else:
+			s = bool(v)
+		set_flags.append(s)
+	if any(set_flags):
+		return data
+	else:
+		return None
+
 class ExclusiveValue(ContextDecorator):
 	_locks = {}
 	lock = Lock()
@@ -518,18 +540,28 @@ def make_ordinal(n):
 		suffix = 'th'
 	return f'{n}{suffix}'
 
-def timespan_for_century(century, narrow=False, inclusive=False, **kwargs):
+def timespan_for_century(begin, end=None, narrow=False, inclusive=False, **kwargs):
 	'''
-	Given a integer representing a century (e.g. 17 for the 17th century), return a
-	TimeSpan object for the bounds of that century.
-	
+	Given a integer representing a century (e.g. 17 for the 17th century) or a pair of integers
+	representing a century span (e.g. 17 and 19 for the 17th-19th), return a TimeSpan 
+	object for the bounds of that century/centuries.	
 	If `narrow` is True, the bounding properties will be `end_of_the_begin` and
 	`begin_of_the_end`; otherwise they will be `begin_of_the_begin` and `end_of_the_end`.
-	'''
-	ord = make_ordinal(century)
-	ts = model.TimeSpan(ident='', label=f'{ord} century')
-	from_year = 100 * (century-1)
-	to_year = from_year + 100
+	'''	
+	ord_begin = make_ordinal(begin)
+	from_year = 100 * (begin - 1)
+	multiple_century_span_range = False
+	
+	if end and begin != end:
+		ord_end = make_ordinal(end)
+		multiple_century_span_range = True
+		
+	if multiple_century_span_range:
+		ts = model.TimeSpan(ident='', label=f'from {ord_begin} to {ord_end} century')
+		to_year = 100 * end
+	else:
+		ts = model.TimeSpan(ident='', label=f'{ord_begin} century')
+		to_year = from_year + 100	
 	if narrow:
 		ts.end_of_the_begin = "%04d-%02d-%02dT%02d:%02d:%02dZ" % (from_year, 1, 1, 0, 0, 0)
 		ts.begin_of_the_end = "%04d-%02d-%02dT%02d:%02d:%02dZ" % (to_year, 1, 1, 0, 0, 0)
@@ -697,6 +729,7 @@ def timespan_from_bound_components(data:dict, date_modifiers:dict, begin_prefix:
 	
 	has_begin = False
 	has_end = False
+	uses_following_days_style = False
 	if uncertain_date:
 		begin = implode_uncertain_date_tuple(uncertain_tuple, clamp=begin_clamp)
 		end = implode_uncertain_date_tuple(uncertain_tuple, clamp=end_clamp)
@@ -737,6 +770,8 @@ def timespan_from_bound_components(data:dict, date_modifiers:dict, begin_prefix:
 			dt = datetime.datetime(*[int(v) for v in begin_tuple])
 			dt += datetime.timedelta(days=15)
 			ts.end_of_the_end = dt.strftime("%Y-%m-%dT%H:%M:%SZ")
+			end = dt.strftime("%Y-%m-%d")
+			uses_following_days_style = True
 
 
 	if uncertain_date:
@@ -758,7 +793,7 @@ def timespan_from_bound_components(data:dict, date_modifiers:dict, begin_prefix:
 		elif has_end:
 			ts.identified_by = model.Name(ident='', content=f'up to {end_label}')
 
-	return ts, begin, end
+	return ts, begin, end, uses_following_days_style
 
 def timespan_from_outer_bounds(begin=None, end=None, inclusive=False):
 	'''

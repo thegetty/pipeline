@@ -17,6 +17,7 @@ from pipeline.util import CromObjectMerger
 from pipeline.projects.sales import SalesPipeline
 from pipeline.projects.people import PeoplePipeline
 from pipeline.projects.knoedler import KnoedlerPipeline
+from pipeline.projects.goupil import GoupilPipeline
 from pipeline.projects.aata import AATAPipeline
 from pipeline.projects.sales.util import SalesTree
 from pipeline.nodes.basic import Serializer, AddArchesModel
@@ -524,13 +525,92 @@ class TestPeoplePipelineOutput(unittest.TestCase):
 
 ##########################################################################################
 
-def classified_identifiers(data, key='identified_by'):
+
+class GoupilTestPipeline(GoupilPipeline):
+	'''
+	Test Goupil pipeline subclass that allows using a custom Writer.
+	'''
+	def __init__(self, writer, input_path, data, **kwargs):
+		self.uid_tag_prefix	= 'tag:getty.edu,2019:digital:pipeline:TESTS:REPLACE-WITH-UUID#'
+		super().__init__(input_path, data, **kwargs)
+		self.writer = writer
+
+	def serializer_nodes_for_model(self, *args, model=None, **kwargs):
+		nodes = []
+		if model:
+			nodes.append(AddArchesModel(model=model))
+		nodes.append(Serializer(compact=False))
+		nodes.append(self.writer)
+		return nodes
+
+	def get_services(self):
+		services = super().get_services()
+		# setup rest of needed services here
+		return services
+
+	def run(self, **options):
+		vocab.conceptual_only_parts()
+		vocab.add_linked_art_boundary_check()
+		vocab.add_attribute_assignment_check()
+		services = self.get_services(**options)
+		super().run(services=services, **options)
+
+
+class TestGoupilPipelineOutput(unittest.TestCase):
+	'''
+	Parse test CSV data and run the Goupil pipeline with the in-memory TestWriter.
+	Then verify that the serializations in the TestWriter object are what was expected.
+	'''
+	def setUp(self):
+		settings.pipeline_common_service_files_path = os.environ.get('GETTY_PIPELINE_COMMON_SERVICE_FILES_PATH', str(pathlib.Path('data/common')))
+		settings.pipeline_service_files_base_path = os.environ.get('GETTY_PIPELINE_SERVICE_FILES_PATH', str(pathlib.Path('data')))
+
+		self.data = {
+			'header_file': 'tests/data/goupil/goupil_0.csv',
+			'files_pattern': 'goupil.csv',
+		}
+		os.environ['QUIET'] = '1'
+
+	def tearDown(self):
+		pass
+
+	def run_pipeline(self, test_name):
+		input_path = os.getcwd()
+		data = self.data.copy()
+		
+		tests_path = Path(f'tests/data/goupil/{test_name}')
+		
+		files = list(tests_path.rglob('goupil_[!0]*'))
+		headers = list(tests_path.rglob('goupil_0*'))
+		
+		if files:
+			data['files_pattern'] = str(tests_path / 'goupil_[!0]*')
+		
+		if headers:
+			data['header_file'] = str(headers[0])
+		
+		writer = TestWriter()
+		pipeline = GoupilTestPipeline(
+				writer,
+				input_path,
+				data=data,
+				models=MODELS,
+				limit=100,
+				debug=True
+		)
+		pipeline.run()
+		return writer.processed_output()
+
+
+##########################################################################################
+
+def classified_identifiers(data, member='_label', key='identified_by'):
 	classified_identifiers = {}
 	identifiers = [(i['content'], i.get('classified_as', [])) for i in data.get(key, [])]
 	for (content, classification) in identifiers:
 		if len(classification):
 			for cl in classification:
-				label = cl['_label']
+				label = cl[member]
 				classified_identifiers[label] = content
 		else:
 			classified_identifiers[None] = content

@@ -5,32 +5,10 @@ import uuid
 import json
 import warnings
 
-from pipeline.util import implode_date
+from pipeline.util import implode_date, filter_empty_person
 from pipeline.projects import UtilityHelper
 
 UID_TAG_PREFIX = 'tag:getty.edu,2019:digital:pipeline:REPLACE-WITH-UUID:sales#'
-
-def filter_empty_person(data: dict, _):
-	'''
-	If all the values of the supplied dictionary are false (or false after int conversion
-	for keys ending with 'ulan'), return `None`. Otherwise return the dictionary.
-	'''
-	set_flags = []
-	for k, v in data.items():
-		if k.endswith('ulan'):
-			if v in ('', '0'):
-				s = False
-			else:
-				s = True
-		elif k in ('pi_record_no', 'star_rec_no'):
-			s = False
-		else:
-			s = bool(v)
-		set_flags.append(s)
-	if any(set_flags):
-		return data
-	else:
-		return None
 
 def add_pir_record_ids(data, parent):
 	'''Copy identifying key-value pairs from `parent` to `data`, returning `data`'''

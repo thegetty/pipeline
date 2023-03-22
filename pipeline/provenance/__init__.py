@@ -15,7 +15,7 @@ from pipeline.util import \
 		implode_date, \
 		CaseFoldingSet
 from pipeline.util.cleaners import parse_location_name
-from pipeline.linkedart import add_crom_data, get_crom_object
+from pipeline.linkedart import add_crom_data, get_crom_object, get_crom_objects
 
 
 class ProvenanceBase(Configurable):
@@ -216,8 +216,12 @@ class ProvenanceBase(Configurable):
 				formation = model.Formation(ident='', label=f'Formation of {group_label}')
 				formation.influenced_by = person
 				group.formed_by = formation
-				pi_record_no = data['pi_record_no']
-				group_uri_key = ('GROUP', 'PI', pi_record_no, f'{role}Group')
+				# preceed goupil_object_id, if found, over pi_record_no
+				if a.get('goupil_object_id'):
+					id_number = a['goupil_object_id']
+				else:
+					id_number = data['pi_record_no']
+				group_uri_key = ('GROUP', 'PI', id_number, f'{role}Group')
 				group_data = {
 					'uri': group_id,
 					'uri_keys': group_uri_key,
@@ -254,8 +258,12 @@ class ProvenanceBase(Configurable):
 		GROUP_MODS = {k for k, v in attribution_group_types.items() if v in GROUP_TYPES}
 
 		non_artist_assertions = people
-		sales_record = get_crom_object(data['_record'])
 
+		if '_record' not in data:
+			sales_record = get_crom_objects(data.get('_records', []))
+		else:
+			sales_record = get_crom_object(data['_record'])
+			
 		try:
 			hmo_label = f'{hmo._label}'
 		except AttributeError:
@@ -306,7 +314,11 @@ class ProvenanceBase(Configurable):
 				assignment.assigned_property = 'influenced_by'
 				assignment.property_classified_as = vocab.instances['style of']
 				assignment.assigned = person
-				assignment.used_specific_object = sales_record
+				if isinstance(sales_record, list):
+					for sale in sales_record:
+						assignment.used_specific_object = sale
+				else:
+					assignment.used_specific_object = sales_record
 				assignment.referred_to_by = vocab.Note(ident='', content=verbatim_mod)
 				assignment.carried_out_by = self.helper.static_instances.get_instance('Group', 'knoedler')
 			elif COPY_AFTER.intersects(mods):
@@ -349,9 +361,15 @@ class ProvenanceBase(Configurable):
 		POSSIBLY = attribution_modifiers['possibly by']
 		UNCERTAIN = attribution_modifiers['uncertain']
 		ATTRIBUTED_TO = attribution_modifiers['attributed to']
+		EDIT_BY = attribution_modifiers['edit by']
 
 		event_uri = prod_event.id
-		sales_record = get_crom_object(data['_record'])
+
+		if '_record' not in data:
+			sales_record = get_crom_objects(data.get('_records', []))
+		else:
+			sales_record = get_crom_object(data['_record'])
+
 		artists = [p for p in people if not self.is_or_anon(p)]
 		or_anon_records = any([self.is_or_anon(a) for a in people])
 		if or_anon_records:
@@ -408,13 +426,17 @@ class ProvenanceBase(Configurable):
 					person.member_of = artist_group
 		else:
 			for seq_no, a_data in enumerate(artists):
+				mods = a_data['modifiers']
+				if EDIT_BY.intersects(mods):
+					# goupil only attribution modifier that's modelled seperately and not a sub event of the production
+					continue
+
 				uncertain = all_uncertain
 				verbatim_mods = a_data.get('attrib_mod_auth', '')
 				attribute_assignment_id = self.helper.prepend_uri_key(prod_event.id, f'ASSIGNMENT,Artist-{seq_no}')
 				a_data = self.model_person_or_group(data, a_data, attribution_group_types, attribution_group_names, seq_no=seq_no, role='Artist', sales_record=sales_record)
 				artist_label = a_data.get('label') # TODO: this may not be right for groups
 				person = get_crom_object(a_data)
-				mods = a_data['modifiers']
 				attrib_assignment_classes = [model.AttributeAssignment]
 				subprod_path = self.helper.make_uri_path(*a_data["uri_keys"])
 				subevent_id = event_uri + f'-{subprod_path}'
@@ -423,14 +445,22 @@ class ProvenanceBase(Configurable):
 						attrib_assignment_classes.append(vocab.PossibleAssignment)
 						assignment = vocab.make_multitype_obj(*attrib_assignment_classes, ident=attribute_assignment_id, label=f'Possibly attributed to {artist_label}')
 						assignment._label = f'Possibly by {artist_label}'
-						assignment.used_specific_object = sales_record
+						if isinstance(sales_record, list):
+							for sale in sales_record:
+								assignment.used_specific_object = sale
+						else:
+							assignment.used_specific_object = sales_record
 						assignment.referred_to_by = vocab.Note(ident='', content=verbatim_mods)
 						assignment.carried_out_by = self.helper.static_instances.get_instance('Group', 'knoedler')
 					else:
 						attrib_assignment_classes.append(vocab.ProbableAssignment)
 						assignment = vocab.make_multitype_obj(*attrib_assignment_classes, ident=attribute_assignment_id, label=f'Probably attributed to {artist_label}')
 						assignment._label = f'Probably by {artist_label}'
-						assignment.used_specific_object = sales_record
+						if isinstance(sales_record, list):
+							for sale in sales_record:
+								assignment.used_specific_object = sale
+						else:
+							assignment.used_specific_object = sales_record
 						assignment.referred_to_by = vocab.Note(ident='', content=verbatim_mods)
 						assignment.carried_out_by = self.helper.static_instances.get_instance('Group', 'knoedler')
 
@@ -447,7 +477,11 @@ class ProvenanceBase(Configurable):
 					prod_event.attributed_by = assignment
 					assignment.assigned_property = 'carried_out_by'
 					assignment.assigned = person
-					assignment.used_specific_object = sales_record
+					if isinstance(sales_record, list):
+						for sale in sales_record:
+							assignment.used_specific_object = sale
+					else:
+						assignment.used_specific_object = sales_record
 					assignment.referred_to_by = vocab.Note(ident='', content=verbatim_mods)
 					assignment.carried_out_by = self.helper.static_instances.get_instance('Group', 'knoedler')
 				else:
@@ -457,7 +491,11 @@ class ProvenanceBase(Configurable):
 						prod_event.attributed_by = assignment
 						assignment.assigned_property = 'carried_out_by'
 						assignment.assigned = person
-						assignment.used_specific_object = sales_record
+						if isinstance(sales_record, list):
+							for sale in sales_record:
+								assignment.used_specific_object = sale
+						else:
+							assignment.used_specific_object = sales_record
 						assignment.referred_to_by = vocab.Note(ident='', content=verbatim_mods)
 						assignment.carried_out_by = self.helper.static_instances.get_instance('Group', 'knoedler')
 					else:
@@ -467,7 +505,7 @@ class ProvenanceBase(Configurable):
 
 	def model_artists_with_modifers(self, data:dict, hmo, attribution_modifiers, attribution_group_types, attribution_group_names):
 		'''Add modeling for artists as people involved in the production of an object'''
-		sales_record = get_crom_object(data['_record'])
+		# sales_record = get_crom_object(data['_record'])
 
 		data.setdefault('_organizations', [])
 		data.setdefault('_original_objects', [])

@@ -244,6 +244,33 @@ $(GETTY_PIPELINE_TMP_PATH)/knoedler.pdf: $(GETTY_PIPELINE_TMP_PATH)/knoedler.dot
 
 #######################
 
+### Goupil
+
+goupil: goupildata jsonlist
+	cat $(GETTY_PIPELINE_TMP_PATH)/json_files.txt | PYTHONPATH=`pwd` $(PYTHON) ./scripts/generate_metadata_graph.py goupil
+
+goupildata: goupilpipeline goupilpostprocessing
+	find $(GETTY_PIPELINE_OUTPUT) -type d -empty -delete
+
+goupilpipeline:
+	mkdir -p $(GETTY_PIPELINE_TMP_PATH)/pipeline
+	QUIET=$(QUIET) GETTY_PIPELINE_DEBUG=$(DEBUG) GETTY_PIPELINE_LIMIT=$(LIMIT) $(PYTHON) ./goupil.py
+
+goupilpostprocessing: postprocessing_rewrite_uris
+	ls $(GETTY_PIPELINE_OUTPUT) | PYTHONPATH=`pwd` xargs -n 1 -P $(CONCURRENCY) -I '{}' $(PYTHON) ./scripts/coalesce_json.py "${GETTY_PIPELINE_OUTPUT}/{}"
+	PYTHONPATH=`pwd` $(PYTHON) ./scripts/remove_meaningless_ids.py
+	# Reorganizing JSON files...
+	find $(GETTY_PIPELINE_OUTPUT) -name '*.json' | PYTHONPATH=`pwd` xargs -n 256 -P $(CONCURRENCY) $(PYTHON) ./scripts/reorganize_json.py
+
+#######################
+
+# in order to avoid polluting the history with formatting commits, only goupil will be formatted using black
+black: clean
+	isort --profile black pipeline/projects/goupil
+	black -l 120 pipeline/projects/goupil
+	black -l 120 goupil.py
+	black -l 120 tests/*_goupil_*.py
+
 upload:
 	./upload_to_arches.py
 

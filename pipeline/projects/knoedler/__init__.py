@@ -43,7 +43,8 @@ from pipeline.util import \
 			ExtractKeyedValues, \
 			MatchingFiles, \
 			strip_key_prefix, \
-			rename_keys
+			rename_keys, \
+			filter_empty_person
 from pipeline.util.cleaners import \
 			parse_location_name, \
 			date_cleaner
@@ -75,7 +76,54 @@ from pipeline.provenance import ProvenanceBase
 class KnoedlerPersonIdentity(PersonIdentity):
 	pass
 
-class KnoedlerUtilityHelper(UtilityHelper):
+class SharedUtilityHelper(UtilityHelper):
+	'''
+	Knoedler specific originated code for accessing and interpreting sales data,
+	which however can may need to be used by knoedler like datasets, like goupil.
+	'''
+	def stock_number_identifier(self, data, date, stock_data_key = 'knoedler_number'):
+		stock_number = data.get(stock_data_key)
+		if stock_number:
+			ident = f'Stock Number {stock_number}'
+		else:
+			pi_num = data['pi_record_no']
+			ident = f'[GRI Number {pi_num}]'
+
+		if date:
+			ident += f' ({date})'
+		return ident
+
+	def transaction_uri_for_record(self, data, incoming=False):
+		'''
+		Return a URI representing the prov entry which the object (identified by the
+		supplied data) is a part of. This may identify just the object being bought or
+		sold or, in the case of multiple objects being bought for a single price, a
+		single prov entry that encompasses multiple object acquisitions.
+		'''
+		tx_key = self.transaction_key_for_record(data, incoming)
+		return self.make_proj_uri(*tx_key)
+
+	def copy_source_information(self, dst: dict, src: dict):
+		if not dst or not isinstance(dst, dict):
+			return dst
+		for k in self.csv_source_columns:
+			with suppress(KeyError):
+				dst[k] = src[k]
+		return dst
+
+	def make_object_uri(self, pi_rec_no, *uri_key):
+		uri_key = list(uri_key)
+		same_objects = self.services['same_objects_map']
+		different_objects = self.services['different_objects']
+		kn = uri_key[-1]
+		if kn in different_objects:
+			uri_key = uri_key[:-1] + ['flag-separated', kn, pi_rec_no]
+		elif kn in same_objects:
+			uri_key[-1] = same_objects[uri_key[-1]]
+		uri = self.make_proj_uri(*uri_key)
+		return uri
+			
+class KnoedlerUtilityHelper(SharedUtilityHelper):
 	'''
 	Project-specific code for accessing and interpreting sales data.
 	'''
@@ -90,16 +138,7 @@ class KnoedlerUtilityHelper(UtilityHelper):
 		self.uid_tag_prefix = self.proj_prefix
 
 	def stock_number_identifier(self, data, date):
-		stock_number = data.get('knoedler_number')
-		if stock_number:
-			ident = f'Stock Number {stock_number}'
-		else:
-			pi_num = data['pi_record_no']
-			ident = f'[GRI Number {pi_num}]'
-	
-		if date:
-			ident += f' ({date})'
-		return ident
+		return super().stock_number_identifier(data,date)
 
 	def add_person(self, data, record, relative_id, **kwargs):
 		self.person_identity.add_uri(data, record_id=relative_id)
@@ -194,16 +233,6 @@ class KnoedlerUtilityHelper(UtilityHelper):
 				return ('TX-MULTI', dir, n[12:])
 		return ('TX', dir, book_id, page_id, row_id)
 
-	def transaction_uri_for_record(self, data, incoming=False):
-		'''
-		Return a URI representing the prov entry which the object (identified by the
-		supplied data) is a part of. This may identify just the object being bought or
-		sold or, in the case of multiple objects being bought for a single price, a
-		single prov entry that encompasses multiple object acquisitions.
-		'''
-		tx_key = self.transaction_key_for_record(data, incoming)
-		return self.make_proj_uri(*tx_key)
-
 	@staticmethod
 	def transaction_multiple_object_label(data, incoming=False):
 		price = data.get('purchase_knoedler_share') if incoming else data.get('sale_knoedler_share')
@@ -266,29 +295,6 @@ def add_crom_price(data, parent, services, add_citations=False):
 		add_crom_data(data=data, what=amnt)
 	return data
 
-
-# TODO: copied from provenance.util; refactor
-def filter_empty_person(data: dict, _):
-	'''
-	If all the values of the supplied dictionary are false (or false after int conversion
-	for keys ending with 'ulan'), return `None`. Otherwise return the dictionary.
-	'''
-	set_flags = []
-	for k, v in data.items():
-		if k.endswith('ulan'):
-			if v in ('', '0'):
-				s = False
-			else:
-				s = True
-		elif k in ('pi_record_no', 'star_rec_no'):
-			s = False
-		else:
-			s = bool(v)
-		set_flags.append(s)
-	if any(set_flags):
-		return data
-	else:
-		return None
 
 def record_id(data):
 	book = data['stock_book_no']

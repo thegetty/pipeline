@@ -94,7 +94,7 @@ class PopulateSalesObject(Configurable, pipeline.linkedart.PopulateObject):
 		vi.referred_to_by = record
 		vidata = {'uri': vi_uri, 'names': [], 'identifiers': []}
 		if title:
-			vidata['label'] = f'Visual work of “{title}”'
+			vidata['label'] = f'Visual Work of “{title}”'
 			sales_record = get_crom_object(data['_record'])
 			titletype = model.Name if modified_title else vocab.PrimaryName
 			t = titletype(ident='', content=title)

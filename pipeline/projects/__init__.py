@@ -137,7 +137,10 @@ class PersonIdentity:
 		else:
 			self.make_la_person(a)
 		p = get_crom_object(a)
-		if record:
+		if isinstance(record, list):
+			for r in record:
+				p.referred_to_by = r
+		elif record:
 			p.referred_to_by = record
 		return p
 
@@ -147,7 +150,10 @@ class PersonIdentity:
 		self.add_props(a, **kwargs)
 		self.make_la_org(a)
 		g = get_crom_object(a)
-		if record:
+		if isinstance(record, list):
+			for r in record:
+				g.referred_to_by = r
+		elif record:
 			g.referred_to_by = record
 		return g
 
@@ -449,7 +455,10 @@ class PersonIdentity:
 				role_label = f'{role} “{auth_name}”'
 			data.setdefault('label', auth_name)
 			pname = vocab.make_multitype_obj(*name_types, ident='', content=auth_name) # NOTE: most of these are also vocab.SortName, but not 100%, so witholding that assertion for now
-			if referrer:
+			if isinstance(referrer, list):
+				for r in referrer:
+					pname.referred_to_by = r
+			elif referrer:
 				pname.referred_to_by = referrer
 			data['identifiers'].append(pname)
 
@@ -470,7 +479,9 @@ class PersonIdentity:
 			name_kwargs = {}
 # 			name_kwargs['classified_as'] = model.Type(ident='http://vocab.getty.edu/aat/300266386', label='Personal Name')
 			name_kwargs['classified_as'] = personalNameType
-			if referrer:
+			if isinstance(referrer, list):
+				name_kwargs['referred_to_by'] = referrer
+			elif referrer:
 				name_kwargs['referred_to_by'] = [referrer]
 			data['names'].append((name, name_kwargs))
 			data.setdefault('label', name)
@@ -592,12 +603,15 @@ class PipelineBase:
 		gri_ulan = 500115990
 		gci_ulan = 500115991
 		knoedler_ulan = 500304270
+		goupil_ulan = 500067127
+		goupil_name = 'Goupil et Cie.'
 		GETTY_PSCP_URI = self.helper.make_shared_uri('STATIC', 'ORGANIZATION', 'Project for the Study of Collecting and Provenance')
 		GETTY_GPI_URI = self.helper.make_shared_uri('STATIC', 'ORGANIZATION', 'Getty Provenance Index')
 		GETTY_GRI_URI = self.helper.make_proj_uri('ORGANIZATION', 'LOCATION-CODE', 'JPGM')
 		GETTY_GCI_URI = self.helper.make_shared_uri('STATIC', 'ORGANIZATION', 'Getty Conservation Institute')
 		LUGT_URI = self.helper.make_proj_uri('PERSON', 'ULAN', lugt_ulan)
 		KNOEDLER_URI = self.helper.make_shared_uri('ORGANIZATION', 'ULAN', str(knoedler_ulan))
+		GOUPIL_URI = self.helper.make_shared_uri('PERSON', 'AUTH', goupil_name) # produce a uri which is the same as the one produced from the people database
 		NEWYORK_URI = self.helper.make_shared_uri('PLACE', 'USA', 'NY', 'New York')
 
 		gci = model.Group(ident=GETTY_GCI_URI, label='Getty Conservation Institute')
@@ -623,6 +637,10 @@ class PipelineBase:
 		knoedler.identified_by = vocab.PrimaryName(ident='', content=knoedler_name)
 		knoedler.exact_match = model.BaseResource(ident=f'http://vocab.getty.edu/ulan/{knoedler_ulan}')
 
+		goupil = model.Group(ident=GOUPIL_URI, label=goupil_name)
+		goupil.identified_by = vocab.PrimaryName(ident='', content=goupil_name)
+		goupil.exact_match = model.BaseResource(ident=f'http://vocab.getty.edu/ulan/{goupil_ulan}')
+		
 		newyork_name = 'New York, NY'
 		newyork = model.Place(ident=NEWYORK_URI, label=newyork_name)
 		newyork.identified_by = vocab.PrimaryName(ident='', content=newyork_name)
@@ -638,6 +656,7 @@ class PipelineBase:
 		
 		db_people = self.static_db_instance('PEOPLE', name='STAR Person Authority Database', creator=gpi)
 		db_knoedler = self.static_db_instance('Knoedler', name='STAR Knoedler Database', creator=gpi)
+		db_goupil = self.static_db_instance('Goupil', name='STAR Goupil Database', creator=gpi)
 		db_sales_events = self.static_db_instance('Sales', 'Descriptions', name='STAR Sales Catalogue Database', creator=gpi)
 		db_sales_catalogs = self.static_db_instance('Sales', 'Catalogue', name='STAR Physical Sales Catalogue Database', creator=gpi)
 		db_sales_contents = self.static_db_instance('Sales', 'Contents', name='STAR Sales Contents Database', creator=gpi)
@@ -650,13 +669,15 @@ class PipelineBase:
 				'db-sales_events': db_sales_events,
 				'db-sales_catalogs': db_sales_catalogs,
 				'db-sales_contents': db_sales_contents,
+				'db-goupil' : db_goupil
 			},
 			'Group': {
 				'gci': gci,
 				'pscp': pscp,
 				'gri': gri,
 				'gpi': gpi,
-				'knoedler': knoedler
+				'knoedler': knoedler,
+				'goupil' : goupil
 			},
 			'Person': {
 				'lugt': lugt
@@ -1004,6 +1025,15 @@ class UtilityHelper:
 		catalog_id.assigned_by = assignment
 		return catalog_id
 
+	def goupil_gpi_number_id(self, content, id_class=None):
+		if id_class is None:
+			id_class = vocab.StarNumber
+		catalog_id = id_class(ident='', content=content)
+		assignment = model.AttributeAssignment(ident='')
+		assignment.carried_out_by = self.static_instances.get_instance('Group', 'gpi')
+		catalog_id.assigned_by = assignment
+		return catalog_id
+
 	def knoedler_number_id(self, content, id_class=None):
 		if id_class is None:
 			id_class = vocab.LocalNumber
@@ -1013,6 +1043,24 @@ class UtilityHelper:
 		k_id.assigned_by = assignment
 		return k_id
 
+	def goupil_number_id(self, content, id_class=None, assignment_label=None):
+		if id_class is None:
+			id_class = vocab.LocalNumber
+		g_id = id_class(ident='', content=content)
+		assignment = model.AttributeAssignment(ident='', label=assignment_label)
+		assignment.carried_out_by = self.static_instances.get_instance('Group', 'goupil')
+		g_id.assigned_by = assignment
+		return g_id
+
+	def goupil_pscp_number_id(self, content, id_class=None, assignment_label=None):
+		if id_class is None:
+			id_class = vocab.LocalNumber
+		g_id = id_class(ident='', content=content)
+		assignment = model.AttributeAssignment(ident='', label=assignment_label)
+		assignment.carried_out_by = self.static_instances.get_instance('Group', 'gri')
+		g_id.assigned_by = assignment
+		return g_id
+		
 	def add_group(self, data, **kwargs):
 		return self.person_identity.add_group(data, **kwargs)
 

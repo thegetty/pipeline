@@ -5,5 +5,6 @@
 	"copy after": ["d'après", "after", "copie", "copy", "copie d'apres", "copy after", "Kopie nach"],
 	"copy by": ["copy by"],
 	"possibly by": ["peut-être le", "possibly by"],
-	"probably by": ["probablement", "probably"]
+	"probably by": ["probablement", "probably"],
+	"edit by" : ["retouché par"]
 }

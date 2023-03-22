@@ -21,6 +21,13 @@ def get_crom_object(data: dict):
 		return None
 	return data.get('_LOD_OBJECT')
 
+def get_crom_objects(data: list):
+	r = list()
+	for d in data:
+		r.append(d.get('_LOD_OBJECT'))
+	return r
+
+
 def remove_crom_object(data: dict):
 	with suppress(KeyError):
 		del data['_LOD_OBJECT']
@@ -697,33 +704,62 @@ class PopulateObject:
 	object records.
 	'''
 	@staticmethod
-	def populate_object_statements(data:dict, default_unit=None):
+	def populate_object_statements(data:dict, default_unit=None, strip_comments=False):
 		hmo = get_crom_object(data)
-		sales_record = get_crom_object(data.get('_record'))
+		record = data.get('_record')
+		
+		if not record:
+			record = data.get('_records')
+		
+		if isinstance(record, list):
+			sales_record = get_crom_objects(record)
+		else:
+			sales_record = get_crom_object(record)
 
 		format = data.get('format')
 		if format:
 			formatstmt = vocab.PhysicalStatement(ident='', content=format)
 			if sales_record:
-				formatstmt.referred_to_by = sales_record
+				if isinstance(sales_record, list):
+					for record in sales_record:
+						formatstmt.referred_to_by = record
+				else: 
+					formatstmt.referred_to_by = sales_record
 			hmo.referred_to_by = formatstmt
 
 		materials = data.get('materials')
 		if materials:
 			matstmt = vocab.MaterialStatement(ident='', content=materials)
 			if sales_record:
-				matstmt.referred_to_by = sales_record
+				if isinstance(sales_record, list):
+					for record in sales_record:
+						matstmt.referred_to_by = record
+				else: 
+					matstmt.referred_to_by = sales_record
 			hmo.referred_to_by = matstmt
 
 		dimstr = data.get('dimensions')
+
 		if dimstr:
 			dimstmt = vocab.DimensionStatement(ident='', content=dimstr)
 			if sales_record:
-				dimstmt.referred_to_by = sales_record
+				if isinstance(sales_record, list):
+					for record in sales_record:
+						dimstmt.referred_to_by = record
+				else: 
+					dimstmt.referred_to_by = sales_record
 			hmo.referred_to_by = dimstmt
+			if strip_comments:
+				import re;
+				dimstr = re.sub(r"\[.*\]", '', dimstr).strip()
+			dimstr = dimstr.replace("X", "x")
 			for dim in extract_physical_dimensions(dimstr, default_unit=default_unit):
 				if sales_record:
-					dim.referred_to_by = sales_record
+					if isinstance(sales_record, list):
+						for record in sales_record:
+							dim.referred_to_by = record
+					else: 
+						dim.referred_to_by = sales_record
 				hmo.dimension = dim
 		else:
 			pass

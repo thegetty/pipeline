@@ -545,6 +545,7 @@ class PipelineBase:
 		vocab.register_vocab_class('SellerDescription', {"parent": model.LinguisticObject, "id":"300445025", "label": "seller description", "metatype": "brief text"})
 		vocab.register_vocab_class('TitlePageText', {"parent": model.LinguisticObject, "id":"300445697", "label": "title page text", "metatype": "brief text"})
 		vocab.register_vocab_class('TranscriptionProcess', {"parent": model.Creation, "id":"300440752", "label": "Transcription Process"})
+		vocab.register_vocab_class('AppraisingAssignment', {'parent': model.AttributeAssignment, 'id': '300054622', 'label': 'Appraising'})
 
 		vocab.register_instance('BuyersAgent', {'parent': model.Type, 'id': '300448857', "label": "Buyer's Agent"})
 		vocab.register_instance('SellersAgent', {'parent': model.Type, 'id': '300448856', "label": "Seller's Agent"})

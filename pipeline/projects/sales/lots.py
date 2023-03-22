@@ -140,6 +140,7 @@ class AddAuctionOfLot(ProvenanceBase):
 		est_price = data.get('estimated_price')
 		if est_price:
 			self.set_possible_attribute(coll, 'dimension', est_price)
+
 		start_price = data.get('start_price')
 		if start_price:
 			self.set_possible_attribute(coll, 'dimension', start_price)
@@ -168,13 +169,6 @@ class AddAuctionOfLot(ProvenanceBase):
 		cno, lno, date = lot_object_key
 		sale_type = non_auctions.get(cno, 'Auction')
 
-		ask_price = data.get('ask_price', {}).get('ask_price')
-		if ask_price:
-			# if there is an asking price/currency, it's a direct sale, not an auction;
-			# filter these out from subsequent modeling of auction lots.
-			warnings.warn(f'Skipping {cno} {lno} because it asserts an asking price')
-			return
-
 		if sale_type not in ('Auction', 'Private Contract Sale'):
 			# the records in this sales catalog do not represent auction sales, so the
 			# price data should not be asserted as a sale price, but instead as an
@@ -187,6 +181,8 @@ class AddAuctionOfLot(ProvenanceBase):
 					price = get_crom_object(price_data)
 					if price:
 						ma = vocab.add_classification(price, vocab.AskingPrice)
+						if data.get('ask_price'):
+							warnings.warn(f'*** Overwriting ask_price data on {lot_object_key}')
 						data['ask_price'] = add_crom_data(price_data, ma)
 
 		shared_lot_number = self.helper.shared_lot_number_from_lno(lno)
@@ -483,16 +479,31 @@ class AddAcquisitionOrBidding(ProvenanceBase):
 		mods = CaseFoldingSet({m.strip() for m in mod.split(';')} - {''})
 		return mods
 
-	def add_valuation(self, data:dict, amnt_data, lot_object_key, current_tx, buyers=None, valuation_type=None):
-		data.setdefault('seller', [])
+	def add_non_sale_valuations(self, data:dict, lot_object_key, current_tx):
+		est_price = data.get('estimated_price')
+		if est_price:
+			self.add_valuation(data, est_price, lot_object_key, current_tx, valuation_type=vocab.AppraisingAssignment, valuation_label='Appraising')
+
+		start_price = data.get('start_price')
+		if start_price:
+			self.add_valuation(data, start_price, lot_object_key, current_tx, valuation_type=vocab.AppraisingAssignment, valuation_label='Appraising')
+
+		ask_price = data.get('ask_price')
+		if ask_price:
+			self.add_valuation(data, ask_price, lot_object_key, current_tx, valuation_type=vocab.AppraisingAssignment, valuation_label='Appraising')
+		
+
+	def add_valuation(self, data:dict, amnt_data, lot_object_key, current_tx, buyers=None, valuation_type=None, valuation_label=None):
 		if valuation_type is None:
 			valuation_type = vocab.Bidding
+		if valuation_label is None:
+			valuation_label = 'Bidding'
 		if buyers is None:
 			buyers = []
 		cno, lno, date = lot_object_key
 		amnt = self.copy_object_with_new_id(get_crom_object(amnt_data))
 		attrib_assignment_classes = [model.AttributeAssignment, valuation_type]
-		assignment = vocab.make_multitype_obj(*attrib_assignment_classes, label=f'Bidding valuation of {cno} {lno} {date}')
+		assignment = vocab.make_multitype_obj(*attrib_assignment_classes, label=f'{valuation_label} valuation of {cno} {lno} {date}')
 		assignment.assigned_property = 'dimension'
 		assignment.assigned = amnt
 		for buyer_data in buyers:
@@ -795,8 +806,8 @@ class AddAcquisitionOrBidding(ProvenanceBase):
 		prev_procurements = self.add_non_sale_sellers(data, sellers, sale_type, transaction, transaction_types)
 
 		prices = parent.get('price', [])
-		if not prices:
-			yield data
+# 		if not prices:
+# 			yield data
 # 		amnts = [get_crom_object(p) for p in prices]
 
 		tx_data = parent.get('_prov_entry_data')
@@ -894,6 +905,7 @@ class AddAcquisitionOrBidding(ProvenanceBase):
 		if transaction in SOLD:
 			houses = [self.helper.add_auction_house_data(h) for h in auction_houses_data.get(cno, [])]
 			for data, current_tx in self.add_acquisition(data, buyers, sellers, houses, non_auctions, buy_sell_modifiers, transaction, transaction_types):
+				self.add_non_sale_valuations(parent, lot_object_key, current_tx)
 				acq = get_crom_object(data['_acquisition'])
 				self.add_mod_notes(acq, all_seller_mods, label=f'Seller modifier', classification=vocab.instances["seller description"])
 				self.add_mod_notes(acq, all_buyer_mods, label=f'Buyer modifier', classification=vocab.instances["buyer description"])
@@ -929,6 +941,10 @@ class AddAcquisitionOrBidding(ProvenanceBase):
 			custody_recievers = houses + [add_crom_data(data={}, what=r) for r in experts + commissaires]
 			bid_count = 0
 			for data in self.add_bidding(data, buyers, sellers, buy_sell_modifiers, sale_type, transaction, transaction_types, custody_recievers, include_custody_transfer=True):
+				tx_data = parent.get('_prov_entry_data')
+				current_tx = get_crom_object(tx_data)
+				self.add_non_sale_valuations(parent, lot_object_key, current_tx)
+
 				bid_count += 1
 				act = get_crom_object(data.get('_bidding'))
 				self.add_mod_notes(act, all_seller_mods, label=f'Seller modifier', classification=vocab.instances["seller description"])
@@ -951,6 +967,10 @@ class AddAcquisitionOrBidding(ProvenanceBase):
 					for h in auction_houses_data.get(cno, [])
 				]
 				for data in self.add_bidding(data, buyers, sellers, buy_sell_modifiers, sale_type, transaction, transaction_types, houses, include_custody_transfer=True):
+					tx_data = parent.get('_prov_entry_data')
+					current_tx = get_crom_object(tx_data)
+					self.add_non_sale_valuations(parent, lot_object_key, current_tx)
+
 					act = get_crom_object(data.get('_bidding'))
 					self.add_mod_notes(act, all_seller_mods, label=f'Seller modifier', classification=vocab.instances["seller description"])
 					self.add_mod_notes(act, all_buyer_mods, label=f'Buyer modifier', classification=vocab.instances["buyer description"])

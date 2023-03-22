@@ -112,6 +112,9 @@ class SalesTestPipeline(SalesPipeline):
 		super().__init__(input_path, catalogs, auction_events, contents, **kwargs)
 		self.writer = writer
 		self.prev_post_sales_map = {}
+		self.services_override = {}
+		if 'services_override' in kwargs:
+			self.services_override = kwargs['services_override']
 
 	def serializer_nodes_for_model(self, *args, model=None, **kwargs):
 		nodes = []
@@ -123,10 +126,9 @@ class SalesTestPipeline(SalesPipeline):
 
 	def get_services(self):
 		services = super().get_services()
-		services.update({
-			'problematic_records': {},
-			'location_codes': {}
-		})
+		services.setdefault('problematic_records', {})
+		services.setdefault('location_codes', {})
+		services.update(self.services_override)
 		return services
 
 	def run(self, **options):
@@ -177,6 +179,9 @@ class TestSalesPipelineOutput(unittest.TestCase):
 	def tearDown(self):
 		pass
 
+	def get_services_override(self):
+		return {}
+
 	def run_pipeline(self, test_name):
 		input_path = os.getcwd()
 		catalogs = self.catalogs.copy()
@@ -211,6 +216,7 @@ class TestSalesPipelineOutput(unittest.TestCase):
 				auction_events=events,
 				contents=contents,
 				models=MODELS,
+				services_override=self.get_services_override(),
 				limit=100,
 				debug=True
 		)
@@ -612,7 +618,10 @@ def classified_identifiers(data, member='_label', key='identified_by'):
 
 def classified_identifier_sets(data, key='identified_by'):
 	classified_identifiers = defaultdict(set)
-	identifiers = [(i.get('content'), i.get('classified_as', [])) for i in data.get(key, [])]
+	idents = data.get(key, [])
+	if not isinstance(idents, list):
+		idents = [idents]
+	identifiers = [(i.get('content'), i.get('classified_as', [])) for i in idents]
 	for (content, classification) in identifiers:
 		if content:
 			if len(classification):

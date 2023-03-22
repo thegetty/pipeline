@@ -5,6 +5,7 @@ from contextlib import suppress
 from bonobo.config import Option, Service, Configurable
 
 from cromulent import model, vocab
+from cromulent.model import factory
 
 import pipeline.execution
 from pipeline.util import implode_date, timespan_from_outer_bounds, timespan_from_bound_components
@@ -25,14 +26,14 @@ class AddAuctionEvent(Configurable):
 		cno = data['catalog_number']
 		sale_type = data.get('non_auction_flag', 'Auction')
 
-		ts, begin, end = timespan_from_bound_components(
+		ts, begin, end, uses_following_days_style = timespan_from_bound_components(
 			data,
 			date_modifiers,
 			'sale_begin_', 'begin',
 			'sale_end_', 'eoe'
 		)
 		
-		event_properties['auction_dates'][cno] = (ts, begin, end)
+		event_properties['auction_dates'][cno] = (ts, begin, end, uses_following_days_style)
 		event_properties['auction_date_label'][cno] = ts._label
 		
 		event_date_label = event_properties['auction_date_label'].get(cno)
@@ -51,6 +52,7 @@ class PopulateAuctionEvent(Configurable):
 	helper = Option(required=True)
 	event_properties = Service('event_properties')
 	date_modifiers = Service('date_modifiers')
+	link_types = Service('link_types')
 
 	def auction_event_location(self, data:dict):
 		'''
@@ -98,7 +100,7 @@ class PopulateAuctionEvent(Configurable):
 				city['names'] = [place_verbatim]
 		return loc
 
-	def __call__(self, data:dict, event_properties, date_modifiers):
+	def __call__(self, data:dict, event_properties, date_modifiers, link_types):
 		'''Add modeling data for an auction event'''
 		cno = data['catalog_number']
 		auction_locations = event_properties['auction_locations']
@@ -141,7 +143,7 @@ class PopulateAuctionEvent(Configurable):
 			auction.took_place_at = place
 			auction_locations[cno] = place.clone(minimal=True)
 
-		ts, begin, end = timespan_from_bound_components(
+		ts, begin, end, uses_following_days_style = timespan_from_bound_components(
 			data,
 			date_modifiers,
 			'sale_begin_', 'begin',
@@ -182,20 +184,48 @@ class PopulateAuctionEvent(Configurable):
 		if notes:
 			auction.referred_to_by = vocab.Note(ident='', content=notes)
 
+		sellers = { **data.get('auc_copy', {}), **data.get('other_seller', {}) }
+		for seller in sellers.values():
+			seller_description = vocab.SellerDescription(ident='', content=seller)
+			seller_description.referred_to_by = record
+			auction.referred_to_by = seller_description
+
 		if 'links' in data:
 			event_record = get_crom_object(data['_record'])
 			links = data['links']
 			link_keys = set(links.keys()) - {'portal'}
 			for p in links.get('portal', []):
 				url = p['portal_url']
+				link_data = link_types['portal_url']
+				label = link_data.get('label', url)
+				description = link_data.get('field-description')
 				if url.startswith('http'):
-					event_record.referred_to_by = vocab.WebPage(ident=url, label=url)
+					page = vocab.WebPage(ident='', label=label)
+					page._validate_range = False
+					page.access_point = [vocab.DigitalObject(ident=url, label=url)]
+					if description:
+						page.referred_to_by = vocab.Note(ident='', content=description)
+					event_record.referred_to_by = page
 				else:
 					warnings.warn(f'*** Portal URL value does not appear to be a valid URL: {url}')
 			for k in link_keys:
 				url = links[k]
+				link_data = {}
+				if k in link_types:
+					link_data = link_types[k]
+				else:
+					warnings.warn(f'Link type not found in link_types mapping table: {k!r}')
+
 				if isinstance(url, str):
-					event_record.referred_to_by = vocab.WebPage(ident=url, label=url)
+					label = link_data.get('label', url)
+					description = link_data.get('field-description')
+					link_type_cl = getattr(vocab, link_data.get('type'), vocab.WebPage)
+					w = link_type_cl(ident='', label=label)
+					w._validate_range = False
+					w.access_point = [vocab.DigitalObject(ident=url)]
+					if description:
+						w.referred_to_by = vocab.Note(ident='', content=description)
+					event_record.referred_to_by = w
 				else:
 					print(f'*** not a URL string: {k}: {url}')
 

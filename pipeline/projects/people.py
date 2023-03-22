@@ -94,7 +94,7 @@ class PeopleUtilityHelper(UtilityHelper):
 			return None
 
 	def add_group(self, data, **kwargs):
-		g = super().add_group(data, **kwargs)
+		g = super().add_group(data, split_notes=False, **kwargs)
 		
 		# "people" records that are actually groups are recorded here, serialized, and
 		# then used in the Knoedler pipeline so that those records can be properly
@@ -283,6 +283,7 @@ class AddPerson(Configurable):
 
 	def model_person_or_group(self, data):
 		name = data['auth_name']
+		generic_name = data.get('generic_name')
 		type = {t.strip() for t in data.get('type', '').lower().split(';')} - {''}
 
 		data.setdefault('occupation', [])
@@ -304,7 +305,6 @@ class AddPerson(Configurable):
 				a = self.helper.person_identity.professional_activity(name, classified_as=[vocab.ActiveOccupation], **active_args)
 				data['events'].append(a)
 				
-			
 			if self.helper.add_group(data):
 				yield data
 		else:
@@ -335,7 +335,7 @@ class AddPerson(Configurable):
 				active_args['date_range'] = (start, end)
 
 			# model professional activity, but not if this record is a generic group.
-			if not self.helper.person_identity.is_anonymous_group(name):
+			if not self.helper.person_identity.is_anonymous_group(generic_name):
 				for t in types:
 					a = self.helper.person_identity.professional_activity(name, classified_as=[t], **active_args)
 					data['events'].append(a)
@@ -469,7 +469,8 @@ class PeoplePipeline(PipelineBase):
 									'bibliography',
 									'ulan_id',
 									'segment',
-									'corporate_body'
+									'corporate_body',
+									'generic_name'
 								)
 							}
 						}

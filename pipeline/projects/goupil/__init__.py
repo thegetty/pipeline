@@ -27,7 +27,6 @@ from pipeline.linkedart import (
     add_crom_data,
     get_crom_object,
     get_crom_objects,
-    get_sales_record_crom,
 )
 from pipeline.nodes.basic import KeyManagement, RecordCounter
 from pipeline.projects import PersonIdentity, PipelineBase, UtilityHelper
@@ -166,7 +165,7 @@ class AddArtists(ProvenanceBase, GoupilProvenance):
         hmo = get_crom_object(data["_object"])
         self.model_object_artists_authority(data.get("_artists", []))
 
-        sales_record = get_sales_record_crom(data)
+        sales_records = get_crom_objects(data['_records'])
 
         for seq_no, artist in enumerate(data.get("_artists", [])):
             mods = self.modifiers(artist)
@@ -181,7 +180,7 @@ class AddArtists(ProvenanceBase, GoupilProvenance):
                     attribution_group_names,
                     seq_no=seq_no,
                     role="Artist",
-                    sales_record=sales_record,
+                    sales_record=sales_records,
                 )
                 artist_label = artist["label"]
                 person = get_crom_object(a_data)

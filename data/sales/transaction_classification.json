@@ -28,13 +28,13 @@
         "label": "Bought In"
     },
     "Inconnue": {
-        "url": "http://vocab.getty.edu/aat/XXX-TX-10"
+        "url": "https://data.getty.edu/local/thesaurus/unknown"
     },
     "Unknown": {
-        "url": "http://vocab.getty.edu/aat/XXX-TX-10"
+        "url": "https://data.getty.edu/local/thesaurus/unknown"
     },
     "Unbekannt": {
-        "url": "http://vocab.getty.edu/aat/XXX-TX-10"
+        "url": "https://data.getty.edu/local/thesaurus/unknown"
     },
     "Passed": {
         "url": "http://vocab.getty.edu/aat/300445698"

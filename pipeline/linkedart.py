@@ -27,11 +27,6 @@ def get_crom_objects(data: list):
 		r.append(d.get('_LOD_OBJECT'))
 	return r
 
-def get_sales_record_crom(data: dict):
-	if data.get('_record'):
-		return get_crom_object(data['_record'])
-	else:
-		return get_crom_objects(data['_records'])
 
 def remove_crom_object(data: dict):
 	with suppress(KeyError):

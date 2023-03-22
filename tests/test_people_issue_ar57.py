@@ -81,7 +81,7 @@ class PIRModelingTest_AR57(TestPeoplePipelineOutput):
             },
             '0000': {
                 # no date data
-                'key': f'{self.PREFIX}GEYER',
+                'key': f'{self.PREFIX}ANNA%2C%20SIGNORA%20%5BUNIDENTIFIED%5D',
                 'expected': set(),
             },
             '0001': {

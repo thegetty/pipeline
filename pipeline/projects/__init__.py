@@ -371,7 +371,7 @@ class PersonIdentity:
 		
 		if split_notes:
 			if 'internal_notes' in data:
-				for content in [n.strip() for n in data['internal_notes'].split(';')]:
+				for content in [n.strip() for n in data['internal_notes'].split(';') if n.strip()]:
 					cite = vocab.make_multitype_obj(*(vocab.BiographyStatement, vocab.Internal), ident='', content=content)
 					data['referred_to_by'].append(cite)
 		else:

@@ -1,0 +1,37 @@
+{
+    "heidelberg_link": {
+        "field-name": "heidelberg_link",
+        "field-description": "URL link to citation page hosted by Heidelberg (20th C German Sales). Full pdfs available via citation pages.",
+        "field-example": "https://digi.ub.uni-heidelberg.de/diglit/creutzer1930_11_12",
+        "label": "Heidelberg University",
+        "type": "WebPage"
+    },
+    "hoet_link": {
+        "field-name": "hoet_link",
+        "field-description": "URL link to citation page hosted by Internet Archive (some Dutch Hoet Sales). Full pdfs available via citation pages.",
+        "field-example": "http://archive.org/details/catalogusofnaaml01hoet",
+        "label": "Internet Archive",
+        "type": "WebPage"
+    },
+    "art_sales_cats_online": {
+        "field-name": "art_sales_cats_online",
+        "field-description": "URL link to citation page hosted by ASCO/Brill. Citation page may have link to full pdf. ",
+        "field-example": "http://dx.doi.org/10.1163/2210-7886_ASC-15519",
+        "label": "Art Sales Catalogues Online",
+        "type": "WebPage"
+    },
+    "art_world_in_britain": {
+        "field-name": "art_world_in_britain",
+        "field-description": "URL link to York University. Goes to project page, no pdfs at all.",
+        "field-example": "http://artworld.york.ac.uk",
+        "label": "York University Art World in Britain",
+        "type": "WebPage"
+    },
+    "portal_url": {
+        "field-name": "portal_url_N",
+        "field-description": "URL link to citation page hosted by Getty Research Portal. Full pdfs available via citation pages.",
+        "field-example": "http://portal.getty.edu/books/gri_9929230040001551",
+        "label": "Getty Research Portal",
+        "type": "WebPage"
+    }
+}

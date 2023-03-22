@@ -1,0 +1,9 @@
+{
+    "link": {
+        "field-name": "link",
+        "field-description": "URL to image of stockbook page where object appears, hosted by Rosetta. Goes directly to hosted image, not a citation page.",
+        "field-example": "http://hdl.handle.net/10020/2012m54_fl4155415",
+        "label": "Getty Research Institute",
+        "type": "Image"
+    }
+}

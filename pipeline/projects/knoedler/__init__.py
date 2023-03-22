@@ -361,20 +361,38 @@ class AddBook(Configurable, KnoedlerProvenance):
 	make_la_lo = Service('make_la_lo')
 	make_la_hmo = Service('make_la_hmo')
 	static_instances = Option(default="static_instances")
+	link_types = Service('link_types')
 
-	def __call__(self, data:dict, make_la_lo, make_la_hmo):
+	def __call__(self, data:dict, make_la_lo, make_la_hmo, link_types):
 		book = data['book_record']
 		book_id, _, _ = record_id(book)
 
 		book_type = model.Type(ident='http://vocab.getty.edu/aat/300028051', label='Book')
 		book_type.classified_as = model.Type(ident='http://vocab.getty.edu/aat/300444970', label='Form')
 
+		notes = []
+		url = book.get('link')
+		if url:
+			link_data = link_types['link']
+			label = link_data.get('label', url)
+			description = link_data.get('field-description')
+			if url.startswith('http'):
+				page = vocab.DigitalImage(ident='', label=label)
+				page._validate_range = False
+				page.access_point = [vocab.DigitalObject(ident=url, label=url)]
+				if description:
+					page.referred_to_by = vocab.Note(ident='', content=description)
+				notes.append(page)
+			else:
+				warnings.warn(f'*** Link value does not appear to be a valid URL: {url}')
+				
 		data['_text_book'] = {
 			'uri': self.helper.make_proj_uri('Text', 'Book', book_id),
 			'object_type': vocab.AccountBookText,
 			'classified_as': [book_type],
 			'label': f'Knoedler Stock Book {book_id}',
 			'identifiers': [self.helper.knoedler_number_id(book_id, id_class=vocab.BookNumber)],
+			'referred_to_by': notes
 		}
 
 		data['_physical_book'] = {

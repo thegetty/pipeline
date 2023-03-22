@@ -111,13 +111,15 @@ class PIRModelingTest_AR80(TestSalesPipelineOutput):
     def verifyReferences(self, record, expectedUrlsDict):
         expectedUrls = expectedUrlsDict.keys()
         self.assertIn('referred_to_by', record)
-        refs = record['referred_to_by']
+        
+        refs = [ref for ref in record['referred_to_by'] if 'access_point' in ref]
         self.assertEqual(len(refs), len(expectedUrls))
         
         got = {}
         import pprint
         for r in refs:
             reftype = r['type']
+            # import pdb; pdb.set_trace()
             self.assertEqual(len(r['access_point']), 1)
             url = r['access_point'][0]['id']
             got[url] = {
@@ -127,11 +129,17 @@ class PIRModelingTest_AR80(TestSalesPipelineOutput):
             }
         
         for url, expected in expectedUrlsDict.items():
-        	gotData = got[url]
-        	if 'note' in expected:
-        		self.assertIn(expected['note'], gotData['refs']['Note'])
-        	if 'classification' in expected:
-        		self.assertIn(expected['classification'], gotData['classification'])
+            gotData = got[url]
+            if 'note' in expected:
+                self.assertIn(expected['note'], gotData['refs']['Note'])
+            if 'classification' in expected:
+                self.assertIn(expected['classification'], gotData['classification'])
+
+        for url in expectedUrls:
+            ref = [ref for ref in refs if 'id' in ref['access_point'][0] and ref['access_point'][0]['id'] == url]
+            self.assertEqual(len(ref), 1)
+            ref = ref[0]
+            self.assertEqual(ref['type'], 'DigitalObject')
 
 
 if __name__ == '__main__':

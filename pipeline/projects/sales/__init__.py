@@ -93,7 +93,7 @@ class SalesUtilityHelper(UtilityHelper):
 		self.shared_lot_number_re = re.compile(r'(\[[a-z]\])')
 		self.ignore_house_authnames = CaseFoldingSet(('Anonymous', '[Anonymous]'))
 		self.csv_source_columns = ['pi_record_no', 'star_record_no', 'catalog_number']
-		self.problematic_record_uri = f'tag:getty.edu,2019:digital:pipeline:{project_name}:ProblematicRecord'
+		self.problematic_record_uri = f'https://data.getty.edu/local/thesaurus/problematic-record'
 		self.person_identity = SalesPersonIdentity(make_shared_uri=self.make_shared_uri, make_proj_uri=self.make_proj_uri)
 		self.uid_tag_prefix = UID_TAG_PREFIX
 
@@ -189,6 +189,20 @@ class SalesUtilityHelper(UtilityHelper):
 		catalog.identified_by = model.Name(ident='', content=label)
 
 		return catalog
+
+	def catalog_type(self, cno, sale_type='Auction'):
+		if sale_type in ('Auction', 'Collection Catalog'): # Sale Catalog
+			cl = vocab.AuctionCatalogText
+		elif sale_type == 'Private Contract Sale': # Private Sale Exhibition Catalog
+			cl = vocab.ExhibitionCatalogText
+		elif sale_type == 'Stock List': # Accession Catalog
+			cl = vocab.AccessionCatalogText
+		elif sale_type == 'Lottery': # Lottery Catalog
+			cl = vocab.LotteryCatalogText
+		else:
+			cl = vocab.SalesCatalogText # Sale Catalog
+
+		return cl
 
 	def physical_catalog_notes(self, cno, owner, copy):
 		cat_uri = self.physical_catalog_uri(cno, owner, copy)
@@ -461,14 +475,16 @@ def add_crom_price(data, parent, services, add_citations=False):
 						primary_value = int(parts.pop(0))
 						total_price = Fraction(primary_value)
 						part_names = [f'{primary_value} {primary_unit}']
+						denom = 1
 						for value, unit in zip(parts, decimalization_data['subunits']):
 							if value:
-								name, denom = unit
+								name = unit[0]
+								denom = denom * unit[1]
 								frac = Fraction(value, denom)
 								total_price += frac
 								part_names.append(f'{value} {name}')
 						decimalized_value = str(float(total_price))
-						verbatim.append(', '.join(part_names))
+						verbatim.append(price)
 					else:
 						decimalized_value = price
 						warnings.warn(f'No decimalization rules for currency {currency!r}')
@@ -501,10 +517,10 @@ class SalesPipeline(PipelineBase):
 		vocab.register_instance('act of returning', {'parent': model.Type, 'id': '300438467', 'label': 'Returning'})
 		vocab.register_instance('act of completing sale', {'parent': model.Type, 'id': '300448858', 'label': 'Act of Completing Sale'})
 		vocab.register_instance('qualifier', {'parent': model.Type, 'id': '300435720', 'label': 'Qualifier'})
-		vocab.register_instance('form type', {'parent': model.Type, 'id': '300444970', 'label': 'Form'})
+		vocab.register_instance('form type', {'parent': model.Type, 'id': '300444970', 'label': 'Form'})		
 		vocab.register_instance('buyer description', {'parent': model.Type, 'id': '300445024', 'label': 'Buyer description'})
 		vocab.register_instance('seller description', {'parent': model.Type, 'id': '300445025', 'label': 'Seller description'})
-
+		
 		vocab.register_instance('fire', {'parent': model.Type, 'id': '300068986', 'label': 'Fire'})
 		vocab.register_instance('animal', {'parent': model.Type, 'id': '300249395', 'label': 'Animal'})
 		vocab.register_instance('history', {'parent': model.Type, 'id': '300033898', 'label': 'History'})
@@ -524,8 +540,7 @@ class SalesPipeline(PipelineBase):
 		vocab.register_vocab_class('CatalogForm', {"parent": model.LinguisticObject, "id":"300026059", "label": "Catalog", "metatype": "form type"})
 
 		vocab.register_vocab_class('SalePrice', {"parent": model.MonetaryAmount, "id":"300417246", "label": "Sale Price"})
-
-
+				
 		super().__init__(project_name, helper=helper)
 
 		self.graph_0 = None

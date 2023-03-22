@@ -26,14 +26,14 @@ class AddAuctionEvent(Configurable):
 		cno = data['catalog_number']
 		sale_type = data.get('non_auction_flag', 'Auction')
 
-		ts, begin, end = timespan_from_bound_components(
+		ts, begin, end, uses_following_days_style = timespan_from_bound_components(
 			data,
 			date_modifiers,
 			'sale_begin_', 'begin',
 			'sale_end_', 'eoe'
 		)
 		
-		event_properties['auction_dates'][cno] = (ts, begin, end)
+		event_properties['auction_dates'][cno] = (ts, begin, end, uses_following_days_style)
 		event_properties['auction_date_label'][cno] = ts._label
 		
 		event_date_label = event_properties['auction_date_label'].get(cno)
@@ -143,7 +143,7 @@ class PopulateAuctionEvent(Configurable):
 			auction.took_place_at = place
 			auction_locations[cno] = place.clone(minimal=True)
 
-		ts, begin, end = timespan_from_bound_components(
+		ts, begin, end, uses_following_days_style = timespan_from_bound_components(
 			data,
 			date_modifiers,
 			'sale_begin_', 'begin',
@@ -184,6 +184,12 @@ class PopulateAuctionEvent(Configurable):
 		if notes:
 			auction.referred_to_by = vocab.Note(ident='', content=notes)
 
+		sellers = { **data.get('auc_copy', {}), **data.get('other_seller', {}) }
+		for seller in sellers.values():
+			seller_description = vocab.SellerDescription(ident='', content=seller)
+			seller_description.referred_to_by = record
+			auction.referred_to_by = seller_description
+
 		if 'links' in data:
 			event_record = get_crom_object(data['_record'])
 			links = data['links']
@@ -196,7 +202,7 @@ class PopulateAuctionEvent(Configurable):
 				if url.startswith('http'):
 					page = vocab.WebPage(ident='', label=label)
 					page._validate_range = False
-					page.access_point = vocab.DigitalObject(ident=url, label=url)
+					page.access_point = [vocab.DigitalObject(ident=url, label=url)]
 					if description:
 						page.referred_to_by = vocab.Note(ident='', content=description)
 					event_record.referred_to_by = page

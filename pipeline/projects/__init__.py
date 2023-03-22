@@ -44,10 +44,9 @@ class PersonIdentity:
 		self.ignore_authnames = CaseFoldingSet(('NEW', 'NON-UNIQUE'))
 		self.make_la_person = pipeline.linkedart.MakeLinkedArtPerson()
 		self.make_la_org = pipeline.linkedart.MakeLinkedArtOrganization()
-		self.anon_dated_re = re.compile(r'\[ANONYMOUS - (\d+)TH C[.]\]')
 		self.anon_period_re = re.compile(r'\[ANONYMOUS - (MODERN|ANTIQUE)\]')
-		self.anon_dated_nationality_re = re.compile(r'\[(\w+) - (\d+)TH C[.]\]')
-		self.anon_nationality_re = re.compile(r'\[(?!ANON|ILLEGIBLE|Unknown)(\w+)\]', re.IGNORECASE)
+		self.century_span_re = re.compile(r'(\d+)[A-Z]*-?(\d*)', re.IGNORECASE)
+		self.unacceptable_century_active_re = re.compile(r'.*\s+BC')
 
 	def acceptable_person_auth_name(self, auth_name):
 		if not auth_name:
@@ -62,26 +61,20 @@ class PersonIdentity:
 			return False
 		return True
 
-	def is_anonymous_group(self, auth_name):
-		if self.anon_nationality_re.match(auth_name):
-			return True
-		if self.anon_dated_nationality_re.match(auth_name):
-			return True
-		elif self.anon_dated_re.match(auth_name):
-			return True
-		elif self.anon_period_re.match(auth_name):
-			return True
+	def acceptable_century_active(self, century_active):
+		unacceptable = self.unacceptable_century_active_re.match(century_active)
+		if unacceptable:
+			warnings.warn(f"No timespan information will be populated for {century_active}")
+		return not unacceptable
 
-		for anon_key in ('[ILLEGIBLE]', '[Unknown]'):
-			if anon_key == auth_name:
-				return True
-
-		return False
+	def is_anonymous_group(self, generic_name):
+		return str(generic_name).strip() == 'Yes'
 
 	def is_anonymous(self, data:dict):
 		auth_name = data.get('auth_name')
+		generic_name = data.get('generic_name')
 		if auth_name:
-			if self.is_anonymous_group(auth_name):
+			if self.is_anonymous_group(generic_name):
 				return False
 			return '[ANONYMOUS' in auth_name
 		elif data.get('name'):
@@ -99,8 +92,8 @@ class PersonIdentity:
 
 		auth_name = data.get('auth_name')
 		auth_name_q = '?' in data.get('auth_nameq', '')
-
-		if auth_name and self.is_anonymous_group(auth_name):
+		generic_name = data.get('generic_name', '')
+		if auth_name and self.is_anonymous_group(generic_name):
 			key = ('GROUP', 'AUTH', auth_name)
 			return key, self.make_shared_uri
 		elif auth_name and self.acceptable_person_auth_name(auth_name):
@@ -133,10 +126,10 @@ class PersonIdentity:
 	def add_person(self, a, record=None, relative_id=None, **kwargs):
 		self.add_uri(a, record_id=relative_id)
 		auth_name = a.get('auth_name')
-		
+		generic_name = a.get('generic_name')
 		# is_group will be true here if this person record is a stand-in
 		# for a group of people (e.g. all French people, or 17th century Germans)
-		is_group = auth_name and self.is_anonymous_group(auth_name)
+		is_group = auth_name and self.is_anonymous_group(generic_name)
 		self.add_names(a, group=is_group, referrer=record, **kwargs)
 		self.add_props(a, **kwargs)
 		if is_group:
@@ -163,25 +156,71 @@ class PersonIdentity:
 		data['uri_keys'] = keys
 		data['uri'] = make(*keys)
 
-	def anonymous_group_label(self, role, century=None, nationality=None):
-		if century and nationality:
-			ord = make_ordinal(century)
-			return f'{nationality.capitalize()} {role}s in the {ord} century'
-		elif century:
-			ord = make_ordinal(century)
-			return f'{role}s in the {ord} century'
+	def anonymous_group_label(self, role, century_range=None, nationality=None):
+		if century_range:
+			b, e = century_range
+			if b and e and nationality:
+				ord_begin = make_ordinal(b)
+				ord_end = make_ordinal(e)
+				return f'{nationality.capitalize()} {role}s from {ord_begin} to {ord_end} century'
+			elif b and e:
+				ord_begin = make_ordinal(b)
+				ord_end = make_ordinal(e)
+				return f'{role}s from {ord_begin} to {ord_end} century'
+			elif b and nationality:
+				ord = make_ordinal(b)
+				return f'{nationality.capitalize()} {role}s in the {ord} century'
+			elif b:
+				ord = make_ordinal(b)
+				return f'{role}s in the {ord} century'
 		elif nationality:
 			return f'{nationality.capitalize()} {role}s'
 		else:
 			return f'{role}s'
-		return a
-		
-	def professional_activity(self, name:str, century=None, date_range=None, classified_as=None, **kwargs):
+
+	def group_label_from_authority_name(self, role, century_range=None, authority_name=None):
+		if century_range:
+			b, e = century_range
+			if b and e and authority_name:
+				ord_begin = make_ordinal(b)
+				ord_end = make_ordinal(e)
+				return f'"{authority_name.title()}" from {ord_begin} to {ord_end} century'
+			elif b and e:
+				ord_begin = make_ordinal(b)
+				ord_end = make_ordinal(e)
+				return f'{role}s from {ord_begin} to {ord_end} century'
+			elif b and authority_name:
+				ord = make_ordinal(b)
+				return f'"{authority_name.title()}" in the {ord} century'
+			elif b:
+				ord = make_ordinal(b)
+				return f'{role}s in the {ord} century'
+		elif authority_name:
+			return f'"{authority_name.title()}"'
+		else:
+			return f'{role}s'
+	
+	def make_label_for_professional_activity(self, role: str, authority_name=None, century_range=None, nationality=None):
+		if self.acceptable_person_auth_name(auth_name=authority_name):
+			return self.group_label_from_authority_name(role, century_range=century_range, authority_name=authority_name)
+		else:
+			return self.anonymous_group_label(role, century_range=century_range, nationality=nationality)
+	
+	def century_range_from_century_active(self, century_active: str):
+		if self.acceptable_century_active(century_active=century_active):
+			century_match = self.century_span_re.match(century_active)
+			c_begin = int(century_match.group(1))
+			c_end = int(century_match.group(2)) if century_match.group(2) else None
+			return [c_begin, c_end]
+		else:
+			return None
+
+	def professional_activity(self, name:str, century_range=None, date_range=None, classified_as=None, **kwargs):
 		'''
 		Return a vocab.Active object representing the professional activities
 		of the `name`d person.
 		
-		If `century` or `date_range` arguments are supplied, they are used to
+		If `century_range` or `date_range` arguments are supplied, they are used to
 		associate a timespan with the activity.
 		
 		If a `classified_as` list is supplied, it is used to further classify
@@ -195,21 +234,22 @@ class PersonIdentity:
 			args['ident'] = kwargs['ident']
 		a = vocab.make_multitype_obj(*classified_as, **args)
 
-		ts = self.active_timespan(century=century, date_range=date_range, **kwargs)
+		ts = self.active_timespan(century_range=century_range, date_range=date_range, **kwargs)
 		if ts:
 			if 'verbatim_active_period' in kwargs:
 				ts.identified_by = model.Name(ident='', content=kwargs['verbatim_active_period'])
 			a.timespan = ts
 		return a
 
-	def active_timespan(self, century=None, date_range=None, **kwargs):
+	def active_timespan(self, century_range=None, date_range=None, **kwargs):
 		'''
 		Return a TimeSpan object representing the period during which a
 		person was active in their professional activities. If no such
 		information is supplied, return None.
 		'''
-		if century:
-			ts = timespan_for_century(century, **kwargs)
+		if century_range:
+			b, e = century_range
+			ts = timespan_for_century(begin=b, end=e, **kwargs)
 			return ts
 		elif date_range:
 			b, e = date_range
@@ -289,9 +329,11 @@ class PersonIdentity:
 				return {'date_range': date_range, 'verbatim_active_period': data.get('century_active')}
 		return {}
 
-	def add_props(self, data:dict, role=None, **kwargs):
+	def add_props(self, data:dict, role=None, split_notes=True, **kwargs):
 		role = role if role else 'person'
 		auth_name = data.get('auth_name', '')
+		generic_name = data.get('generic_name', '')
+		century_active = data.get('century_active', '')
 		period_match = self.anon_period_re.match(auth_name)
 		nationalities = []
 		if 'nationality' in data:
@@ -316,15 +358,27 @@ class PersonIdentity:
 		notes_field_classification = {
 			'brief_notes': (vocab.BiographyStatement, vocab.External),
 			'text': (vocab.BiographyStatement, vocab.Internal),
-			'internal_notes': (vocab.BiographyStatement, vocab.Internal),
 			'working_notes': (vocab.ResearchStatement, vocab.Internal),
 		}
 		for key, note_classification in notes_field_classification.items():
 			if key in data:
-				for content in [n.strip() for n in data[key].split(';')]:
+				# there's a chance that a `;` separated field might end with a `;`, thus creating an extra entry which is empty
+				# the following line splits the field and then filters all empty out
+				contents = [n.strip() for n in data[key].split(';') if n.strip()]
+				for content in contents:
 					cite = vocab.make_multitype_obj(*note_classification, ident='', content=content)
 					data['referred_to_by'].append(cite)
-
+		
+		if split_notes:
+			if 'internal_notes' in data:
+				for content in [n.strip() for n in data['internal_notes'].split(';')]:
+					cite = vocab.make_multitype_obj(*(vocab.BiographyStatement, vocab.Internal), ident='', content=content)
+					data['referred_to_by'].append(cite)
+		else:
+			if 'internal_notes' in data:
+				cite = vocab.make_multitype_obj(*(vocab.BiographyStatement, vocab.Internal), ident='', content=data['internal_notes'])
+				data['referred_to_by'].append(cite)
+			
 		for key in ('name_cite', 'bibliography'):
 			if data.get(key):
 				cite = vocab.BibliographyStatement(ident='', content=data[key])
@@ -334,34 +388,26 @@ class PersonIdentity:
 			cite = vocab.BibliographyStatement(ident='', content=data['name_cite'])
 			data['referred_to_by'].append(cite)
 
-		if self.is_anonymous_group(auth_name):
-			nationality_match = self.anon_nationality_re.match(auth_name)
-			dated_nationality_match = self.anon_dated_nationality_re.match(auth_name)
-			dated_match = self.anon_dated_re.match(auth_name)
+		if self.is_anonymous_group(generic_name):
 			data.setdefault('events', [])
-			if nationality_match:
+			if nationalities and not century_active:
 				with suppress(ValueError):
-					nationality = nationality_match.group(1).lower()
-					nationalities.append(nationality)
-					group_label = self.anonymous_group_label(role, nationality=nationality)
-					data['label'] = group_label
-			elif dated_nationality_match:
+					data['label'] = self.make_label_for_professional_activity(role, authority_name=auth_name, nationality=nationalities[0])
+			elif nationalities and century_active:
 				with suppress(ValueError):
-					nationality = dated_nationality_match.group(1).lower()
-					nationalities.append(nationality)
-					century = int(dated_nationality_match.group(2))
-					group_label = self.anonymous_group_label(role, century=century, nationality=nationality)
+					c_range = self.century_range_from_century_active(century_active)
+					group_label = self.make_label_for_professional_activity(role, authority_name=auth_name, century_range=c_range, nationality=nationalities[0])
 					data['label'] = group_label
 					pact_uri = data['uri'] + '-ProfAct-dated-natl'
-					a = self.professional_activity(group_label, classified_as=[vocab.ActiveOccupation], ident=pact_uri, century=century, narrow=True)
+					a = self.professional_activity(group_label, classified_as=[vocab.ActiveOccupation], ident=pact_uri, century_range=c_range, narrow=True)
 					data['events'].append(a)
-			elif dated_match:
+			elif century_active:
 				with suppress(ValueError):
-					century = int(dated_match.group(1))
-					group_label = self.anonymous_group_label(role, century=century)
+					c_range = self.century_range_from_century_active(century_active)
+					group_label = self.make_label_for_professional_activity(role, authority_name=auth_name, century_range=c_range)
 					data['label'] = group_label
 					pact_uri = data['uri'] + '-ProfAct-dated'
-					a = self.professional_activity(group_label, classified_as=[vocab.ActiveOccupation], ident=pact_uri, century=century, narrow=True)
+					a = self.professional_activity(group_label, classified_as=[vocab.ActiveOccupation], ident=pact_uri, century_range=c_range, narrow=True)
 					data['events'].append(a)
 			elif period_match:
 				period = period_match.group(1).lower()
@@ -476,14 +522,17 @@ class PipelineBase:
 
 		vocab.register_instance('occupation', {'parent': model.Type, 'id': '300263369', 'label': 'Occupation'})
 		vocab.register_instance('function', {'parent': model.Type, 'id': '300444971', 'label': 'Function (general concept)'})
-
+		vocab.register_instance('form type', {'parent': model.Type, 'id': '300444970', 'label': 'Form'})
+		vocab.register_instance('object type', {'parent': model.Type, 'id': '300435443', 'label': 'Object / Work Type'})
 		vocab.register_vocab_class('StarNumber', {'parent': vocab.LocalNumber, 'id': 'https://data.getty.edu/local/thesaurus/star-identifier', 'label': 'STAR Identifier'})
 		vocab.register_vocab_class('CorporateName', {'parent': model.Name, 'id': '300445020', 'label': 'Corporate Name'})
 		vocab.register_vocab_class('Internal', {"parent": model.LinguisticObject, "id":"300444972", "label": "private (general concept)", "metatype": "function"})
 		vocab.register_vocab_class('External', {"parent": model.LinguisticObject, "id":"300444973", "label": "public (general concept)", "metatype": "function"})
 		vocab.register_vocab_class('ActiveOccupation', {"parent": model.Activity, "id":"300393177", "label": "Professional Activities", "metatype": "occupation"})
-		vocab.register_vocab_class('Database', {"parent": model.LinguisticObject, "id":"300028543", "label": "Database"})
+		vocab.register_vocab_class('Database', {"parent": model.LinguisticObject, "id":"300028543", "label": "Database", "metatype": "form type"})
 		vocab.register_vocab_class('Transcription', {"parent": model.LinguisticObject, "id":"300404333", "label": "Transcription", "metatype": "brief text"})
+		vocab.register_vocab_class('SellerDescription', {"parent": model.LinguisticObject, "id":"300445025", "label": "seller description", "metatype": "brief text"})
+		vocab.register_vocab_class('TitlePageText', {"parent": model.LinguisticObject, "id":"300445697", "label": "title page text", "metatype": "brief text"})
 		vocab.register_vocab_class('TranscriptionProcess', {"parent": model.Creation, "id":"300440752", "label": "Transcription Process"})
 
 		vocab.register_instance('BuyersAgent', {'parent': model.Type, 'id': '300448857', "label": "Buyer's Agent"})
@@ -624,6 +673,9 @@ class PipelineBase:
 		name = kwargs.get('name', f'STAR {label} Database')
 		db = vocab.Database(ident=uri, label=name)
 		db.identified_by = vocab.PrimaryName(ident='', content=name)
+		er_classification = model.Type(ident='http://vocab.getty.edu/aat/300379790', label='Electronic Records')
+		er_classification.classified_as = vocab.instances["object type"]
+		db.classified_as = er_classification
 		creator = kwargs.get('creator')
 		if creator:
 			creation = model.Creation(ident='')

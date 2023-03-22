@@ -23,7 +23,7 @@ class PIRModelingTest_AR70(TestPeoplePipelineOutput):
         person3 = people['tag:getty.edu,2019:digital:pipeline:REPLACE-WITH-UUID:shared#PERSON,AUTH,CROME%2C%20JOHN']
         person4 = people['tag:getty.edu,2019:digital:pipeline:REPLACE-WITH-UUID:shared#PERSON,AUTH,Cartwright%2C%20William']
         person6 = people['tag:getty.edu,2019:digital:pipeline:REPLACE-WITH-UUID:shared#PERSON,AUTH,Bryan%2C%20Michael']
-        person8 = people['tag:getty.edu,2019:digital:pipeline:REPLACE-WITH-UUID:shared#PERSON,AUTH,Rigters']
+        person8 = people['tag:getty.edu,2019:digital:pipeline:REPLACE-WITH-UUID:shared#PERSON,AUTH,Winstanley%2C%20Thomas']
         person9 = people['tag:getty.edu,2019:digital:pipeline:REPLACE-WITH-UUID:shared#PERSON,AUTH,Coppin%2C%20Daniel']
 
         group5 = groups['tag:getty.edu,2019:digital:pipeline:REPLACE-WITH-UUID:shared#PERSON,AUTH,London%2C%20England%2C%20UK.%20%20Dulwich%20Picture%20Gallery']

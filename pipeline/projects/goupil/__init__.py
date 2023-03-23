@@ -863,7 +863,6 @@ class GoupilTransactionHandler(TransactionHandler):
     def _add_prov_entry_acquisition(
         self, data: dict, tx, from_people, from_agents, to_people, to_agents, date, incoming, purpose=None
     ):
-        rec = data["book_record"]
 
         hmo = get_crom_object(data["_object"])
         sn_ident = self.helper.stock_number_identifier(data["_object"], date)
@@ -922,8 +921,6 @@ class GoupilTransactionHandler(TransactionHandler):
         goupil = self.helper.static_instances.get_instance("Group", "goupil")
         goupil_group = [goupil]
 
-        sales_records = get_crom_objects(data["_records"])
-        hmo = get_crom_object(data["_object"])
         sn_ident = self.helper.stock_number_identifier(data["_object"], date)
 
         price_data = {}
@@ -933,9 +930,6 @@ class GoupilTransactionHandler(TransactionHandler):
         amnt = get_crom_object(price_info)
         goupil_price_part_amnt = get_crom_object(goupil_price_part)
 
-        price_amount = None
-        with suppress(AttributeError):
-            price_amount = amnt.value
         parts = [(goupil, goupil_price_part_amnt)]
         if shared_people:
             role = "shared-buyer" if incoming else "shared-seller"
@@ -1068,17 +1062,15 @@ class GoupilTransactionHandler(TransactionHandler):
         people_groups={},
     ):
         THROUGH = CaseFoldingSet(buy_sell_modifiers["through"])
-        FOR = CaseFoldingSet(buy_sell_modifiers["for"])
 
         if shared_people is None:
             shared_people = []
-        # TODO UPDATE HERE:for k in ("_prov_entries", "_people", "_locations")
+
         for k in ("_prov_entries", "_people", "_locations"):
             data.setdefault(k, [])
 
         date = implode_date(data[date_key]) if date_key in data else None
 
-        odata = data["_object"]
         sales_records = get_crom_objects(data["_records"])
 
         tx = self._empty_tx(data, incoming, purpose=purpose)
@@ -1161,17 +1153,14 @@ class GoupilTransactionHandler(TransactionHandler):
         self._add_prov_entry_acquisition(
             data, tx, from_people, from_agents, to_people, to_agents, date, incoming, purpose=purpose
         )
-
         data["_prov_entries"].append(tx_data)
         data["_people"].extend(people_data)
         return tx
 
     def add_incoming_tx(self, data, buy_sell_modifiers, people_groups={}):
         price_info = data.get("purchase")
-        import pdb
 
-        pdb.set_trace()
-        shared_people = data.get("purchase_buyer")
+        shared_people = data.get("shared_buyer")
         sellers = data["purchase_seller"]
 
         for p in sellers:
@@ -1194,8 +1183,7 @@ class GoupilTransactionHandler(TransactionHandler):
 
     def add_outgoing_tx(self, data, buy_sell_modifiers, people_groups={}):
         price_info = data.get("sale")
-        knoedler_price_part = data.get("sale_knoedler_share")
-        shared_people = data.get("purchase_buyer")
+        shared_people = data.get("shared_buyer")
         buyers = data["sale_buyer"]
         for p in buyers:
             self.helper.copy_source_information(p, data)
@@ -1259,8 +1247,6 @@ class ModelInventorying(GoupilTransactionHandler):
     buy_sell_modifiers = Service("buy_sell_modifiers")
 
     def __call__(self, data: dict, make_la_person, buy_sell_modifiers):
-        odata = data["_object"]
-        date = implode_date(data["entry_date"])
         for k in ("_prov_entries", "_people"):
             data.setdefault(k, [])
 
@@ -1269,11 +1255,6 @@ class ModelInventorying(GoupilTransactionHandler):
             # if there are sellers in this record (and it is "Unsold" by design of the caller),
             # then this is not an actual Inventorying event, and handled in ModelUnsoldPurchases
             return
-        # TO BAZW OLO AUTO SE MIA SUNARTHSH KAI TO KALW KAI GIA EDW KAI GIA TO SALE
-        hmo = get_crom_object(odata)
-        object_label = f"“{hmo._label}”"
-
-        sn_ident = self.helper.stock_number_identifier(odata, date)
 
         inv = self._new_inventorying(data)
         appraisal = self._apprasing_assignment(data)
@@ -1462,7 +1443,7 @@ class GoupilPipeline(PipelineBase):
                                     "seller_ulan_id",
                                 ),
                             },
-                            "purchase_buyer": {
+                            "shared_buyer": {
                                 "rename_keys": {
                                     "joint_own": "name",
                                     "joint_own_sh": "share",

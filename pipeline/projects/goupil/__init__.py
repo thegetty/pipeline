@@ -741,6 +741,9 @@ class TransactionSwitch(Configurable):
 
 
 class GoupilTransactionHandler(TransactionHandler):
+    helper = Option(required=True)
+    cities_auth_db = Service("cities_auth_db")
+
     def modifiers(self, a: dict, key: str):
         return {a.get(key, "").split(" ")[0]}
 
@@ -1212,7 +1215,16 @@ class ModelSale(GoupilTransactionHandler):
     buy_sell_modifiers = Service("buy_sell_modifiers")
     people_groups = Service("people_groups")
 
-    def __call__(self, data: dict, make_la_person, people_groups, buy_sell_modifiers=None, in_tx=None, out_tx=None):
+    def __call__(
+        self,
+        data: dict,
+        make_la_person,
+        people_groups,
+        buy_sell_modifiers=None,
+        in_tx=None,
+        out_tx=None,
+        cities_auth_db=None,
+    ):
         sellers = data["purchase_seller"]
 
         if not in_tx:
@@ -1246,7 +1258,7 @@ class ModelInventorying(GoupilTransactionHandler):
     make_la_person = Service("make_la_person")
     buy_sell_modifiers = Service("buy_sell_modifiers")
 
-    def __call__(self, data: dict, make_la_person, buy_sell_modifiers):
+    def __call__(self, data: dict, make_la_person, buy_sell_modifiers, cities_auth_db=None):
         for k in ("_prov_entries", "_people"):
             data.setdefault(k, [])
 
@@ -1283,7 +1295,7 @@ class ModelUnsoldPurchases(GoupilTransactionHandler):
     buy_sell_modifiers = Service("buy_sell_modifiers")
     people_groups = Service("people_groups")
 
-    def __call__(self, data: dict, make_la_person, buy_sell_modifiers, people_groups):
+    def __call__(self, data: dict, make_la_person, buy_sell_modifiers, people_groups, cities_auth_db=None):
         odata = data["_object"]
         date = implode_date(data["entry_date"])
 

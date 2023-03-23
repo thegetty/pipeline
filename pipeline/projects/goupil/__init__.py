@@ -239,7 +239,7 @@ class GoupilUtilityHelper(SharedUtilityHelper):
 
     def add_group_or_person(self, p_data, relative_id, people_groups, data):
         auth_name = p_data.get("auth_name", "")
-        if not auth_name in [x[2] for x in people_groups["group_keys"]]:
+        if people_groups and not auth_name in [x[2] for x in people_groups["group_keys"]]:
             person = self.add_person(p_data, record=get_crom_objects(data["_records"]), relative_id=relative_id)
             add_crom_data(p_data, person)
             data["_people"].append(p_data)
@@ -919,7 +919,7 @@ class GoupilTransactionHandler(TransactionHandler):
         shared_people_agents,
         date,
         incoming,
-        people_groups,
+        people_groups=None,
     ):
         goupil = self.helper.static_instances.get_instance("Group", "goupil")
         goupil_group = [goupil]
@@ -1001,7 +1001,7 @@ class GoupilTransactionHandler(TransactionHandler):
                 subpaym.carried_out_by = p
                 paym.part = subpaym
 
-    def _add_prov_entry_rights(self, data: dict, tx, shared_people, incoming, people_groups):
+    def _add_prov_entry_rights(self, data: dict, tx, shared_people, incoming, people_groups=None):
         goupil = self.helper.static_instances.get_instance("Group", "knoedler")
         sales_records = get_crom_objects(data["_records"])
 
@@ -1062,7 +1062,7 @@ class GoupilTransactionHandler(TransactionHandler):
         incoming=False,
         purpose=None,
         buy_sell_modifiers=None,
-        people_groups={},
+        people_groups=None,
     ):
         THROUGH = CaseFoldingSet(buy_sell_modifiers["through"])
 
@@ -1160,7 +1160,7 @@ class GoupilTransactionHandler(TransactionHandler):
         data["_people"].extend(people_data)
         return tx
 
-    def add_incoming_tx(self, data, buy_sell_modifiers, people_groups={}):
+    def add_incoming_tx(self, data, buy_sell_modifiers, people_groups=None):
         price_info = data.get("purchase")
 
         shared_people = data.get("shared_buyer")
@@ -1184,7 +1184,7 @@ class GoupilTransactionHandler(TransactionHandler):
 
         return tx
 
-    def add_outgoing_tx(self, data, buy_sell_modifiers, people_groups={}):
+    def add_outgoing_tx(self, data, buy_sell_modifiers, people_groups=None):
         price_info = data.get("sale")
         shared_people = data.get("shared_buyer")
         buyers = data["sale_buyer"]

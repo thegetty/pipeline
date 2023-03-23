@@ -4,7 +4,7 @@
 This script converts a CSV export of the City Authoriry DB JSON that
 can be used as a service file in the provenance pipelines.
 
-    ./scripts/scripts/make_city_auth_db.py city_auth_db.csv > data/common/city_auth_db.json
+    ./scripts/scripts/make_cities_auth_db.py city_auth_db.csv > data/common/cities_auth_db.json
 '''
 
 from contextlib import suppress

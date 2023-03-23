@@ -1,0 +1,6362 @@
+{
+    "(La Haye": {
+        "authority": "The Netherlands",
+        "name": "The Hague"
+    },
+    "(La Haye)": {
+        "authority": "The Netherlands",
+        "name": "The Hague"
+    },
+    "(au Boulevard)": {
+        "authority": "Paris, France",
+        "name": "19 boulevard Montmartre"
+    },
+    ", Paris, France (rue Drouot)": {
+        "authority": "Paris, France",
+        "name": "rue Drouot"
+    },
+    "1 Aberhean terrace, London": {
+        "authority": "London, England, UK",
+        "name": "1 Aberhean terrace"
+    },
+    "1 Rue Saint Dominique": {
+        "authority": "Paris, France",
+        "name": "1 rue Saint Dominique"
+    },
+    "1 avenue de Camoëns": {
+        "authority": "Paris, France",
+        "name": "1 avenue de Camoëns"
+    },
+    "1 avenue de Cornoëns": {
+        "authority": "Paris, France",
+        "name": "1 avenue de Camoëns"
+    },
+    "1 rue Chardin": {
+        "authority": "Paris, France",
+        "name": "1 rue Chardin"
+    },
+    "1 rue Scribe": {
+        "authority": "Paris, France",
+        "name": "1 rue Scribe"
+    },
+    "1 rue du Château, Neuilly": {
+        "authority": "Neuilly sur Seine, France",
+        "name": "1 rue du Château"
+    },
+    "1, rue Massot Geneviève": {
+        "authority": "Paris, France",
+        "name": "1 rue Massot Geneviève"
+    },
+    "10 Avenue du bois de Boulogne": {
+        "authority": "Paris, France",
+        "name": "10 avenue du bois de Boulogne"
+    },
+    "10 Boulevard Bonne nouvelle": {
+        "authority": "Paris, France",
+        "name": "10 boulevard Bonne nouvelle"
+    },
+    "10 Boulevard Malhesherbes": {
+        "authority": "Paris, France",
+        "name": "10 boulevard Malesherbes"
+    },
+    "10 Hereford Square, London": {
+        "authority": "London, England, UK",
+        "name": "10 Hereford Square"
+    },
+    "10 Rue Grange Batelière": {
+        "authority": "Paris, France",
+        "name": "10 rue Grange Batelière"
+    },
+    "10 Rue Laffitte": {
+        "authority": "Paris, France",
+        "name": "10 rue Laffitte"
+    },
+    "10 Rue de Couralles": {
+        "authority": "Paris, France",
+        "name": "10 rue de Courcelles"
+    },
+    "10 Rue de Courcelles": {
+        "authority": "Paris, France",
+        "name": "10 rue de Courcelles"
+    },
+    "10 Rue de Thorm": {
+        "authority": "France",
+        "name": "10 rue de Thorm"
+    },
+    "10 Rur Boissy d'Anglas": {
+        "authority": "Paris, France",
+        "name": "10 rue Boissy d'Anglas"
+    },
+    "10 rue Auellm, Anvers": {
+        "authority": "Antwerp, Belgium",
+        "name": "10 rue Auellm"
+    },
+    "10 rue Charlot": {
+        "authority": "Paris, France",
+        "name": "10 rue Charlot"
+    },
+    "10 rue Frochet": {
+        "authority": "Paris, France",
+        "name": "10 rue Frochot"
+    },
+    "10 rue Froehot": {
+        "authority": "Paris, France",
+        "name": "10 rue Frochot"
+    },
+    "10 rue LAffitte": {
+        "authority": "Paris, France",
+        "name": "10 rue Laffitte"
+    },
+    "10 rue Laffitte": {
+        "authority": "Paris, France",
+        "name": "10 rue Laffitte"
+    },
+    "10 rue Lamenais": {
+        "authority": "Paris, France",
+        "name": "10 rue Lamennais"
+    },
+    "10 rue Lamennais": {
+        "authority": "Paris, France",
+        "name": "10 rue Lamennais"
+    },
+    "10 rue Laurennais": {
+        "authority": "Paris, France",
+        "name": "10 rue Lamennais"
+    },
+    "10 rue Pasquier": {
+        "authority": "Paris, France",
+        "name": "10 rue Pasquier"
+    },
+    "10 rue Trochot": {
+        "authority": "Paris, France",
+        "name": "10 rue Frochot"
+    },
+    "10 rue de Montchamier": {
+        "authority": "Montceau les Mines, France",
+        "name": "10 rue de Montchanin"
+    },
+    "10 rue de Montchanin": {
+        "authority": "Montceau les Mines, France",
+        "name": "10 rue de Montchanin"
+    },
+    "10 rue de P. Brandry": {
+        "authority": "France",
+        "name": "10 rue de P. Brandry"
+    },
+    "100 Rue de Longchamps": {
+        "authority": "Paris, France",
+        "name": "100 rue de Longchamp"
+    },
+    "101 Rue de Richelieu": {
+        "authority": "Paris, France",
+        "name": "101 rue de Richelieu"
+    },
+    "101 avenue de Neuilly": {
+        "authority": "Paris, France",
+        "name": "101 avenue de Neuilly"
+    },
+    "101 avenue des Champs Elysées": {
+        "authority": "Paris, France",
+        "name": "101 avenue des Champs Elysées"
+    },
+    "102 Avenue des Champs Elysées": {
+        "authority": "Paris, France",
+        "name": "102 avenue des Champs Elysées"
+    },
+    "102 Champs Elysées": {
+        "authority": "Paris, France",
+        "name": "102 Champs Elysées"
+    },
+    "102 rue blanche": {
+        "authority": "Paris, France",
+        "name": "102 rue Blanche"
+    },
+    "103 Boulevard Haussmann": {
+        "authority": "Paris, France",
+        "name": "103 boulevard Haussmann"
+    },
+    "103 Boulevrad Malesherbes": {
+        "authority": "Paris, France",
+        "name": "103 boulevard Malesherbes"
+    },
+    "103 Rue Saint Lazare": {
+        "authority": "Paris, France",
+        "name": "103 rue Saint Lazare"
+    },
+    "104 Boulevard de Clichy": {
+        "authority": "Paris, France",
+        "name": "104 boulevard de Clichy"
+    },
+    "104, Boulevard de Clichy": {
+        "authority": "Paris, France",
+        "name": "104 boulevard de Clichy"
+    },
+    "105 Boulevard de la Reine, Versailles": {
+        "authority": "Versailles, France",
+        "name": "105 boulevard de la Reine"
+    },
+    "106 Boulevard Richard Lenoir": {
+        "authority": "Paris, France",
+        "name": "106 boulevard Richard Lenoir"
+    },
+    "107 Avenue Victor Hugo": {
+        "authority": "Paris, France",
+        "name": "107 avenue Victor Hugo"
+    },
+    "107 rue Ordener": {
+        "authority": "Paris, France",
+        "name": "107 rue Ordener"
+    },
+    "11 Impasse des Belles Fénilles": {
+        "authority": "Paris, France",
+        "name": "11 Impasse des Belles Feuilles"
+    },
+    "11 Place Pigalle": {
+        "authority": "Paris, France",
+        "name": "11 Place Pigalle"
+    },
+    "11 Quai de Bourbon": {
+        "authority": "Paris, France",
+        "name": "11 quai de Bourbon"
+    },
+    "11 Rue Boissonade": {
+        "authority": "Paris, France",
+        "name": "11 rue Boissonade"
+    },
+    "11 Rue de Solférino": {
+        "authority": "Paris, France",
+        "name": "11 rue de Solférino"
+    },
+    "11 Rue des Beaux Arts": {
+        "authority": "Paris, France",
+        "name": "11 rue des Beaux Arts"
+    },
+    "11 Rue des Beaux arts": {
+        "authority": "Paris, France",
+        "name": "11 rue des Beaux Arts"
+    },
+    "11 avenue des Tilleuls": {
+        "authority": "Paris, France",
+        "name": "11 avenue des Tilleuls"
+    },
+    "11 passage Stanislas": {
+        "authority": "Paris, France",
+        "name": "11 rue Stanislas"
+    },
+    "11 rue Pigalle": {
+        "authority": "Paris, France",
+        "name": "11 rue Pigalle"
+    },
+    "11 rue Scribe": {
+        "authority": "Paris, France",
+        "name": "11 rue Scribe"
+    },
+    "11 rue de Navarin": {
+        "authority": "Paris, France",
+        "name": "11 rue de Navarin"
+    },
+    "110 Boulevard Haussmann": {
+        "authority": "Paris, France",
+        "name": "110 boulevard Haussmann"
+    },
+    "111 Avenue de Villiers": {
+        "authority": "Paris, France",
+        "name": "111 avenue de Villiers"
+    },
+    "111 Rue de la Pompe": {
+        "authority": "Paris, France",
+        "name": "111 rue de la Pompe"
+    },
+    "111 rue du château Plai": {
+        "authority": "Paris, France",
+        "name": "111 rue du Château Plai"
+    },
+    "111 rue du château Plaisance, Paris": {
+        "authority": "Paris, France",
+        "name": "111 rue du Château Plaisance"
+    },
+    "112 Boulevard Malesherbes": {
+        "authority": "Paris, France",
+        "name": "112 boulevard Malesherbes"
+    },
+    "113 Atochia, Madrid": {
+        "authority": "Madrid, Spain",
+        "name": "113 Atochia"
+    },
+    "113 Boulevard D'Italie": {
+        "authority": "Paris, France",
+        "name": "113 boulevard D'Italie"
+    },
+    "119 Avenue Malakoff": {
+        "authority": "Paris, France",
+        "name": "119 avenue Malakoff"
+    },
+    "11bis rue du bois de Boulogne, Neuilly": {
+        "authority": "Neuilly sur Seine, France",
+        "name": "11 bis rue du bois de Boulogne"
+    },
+    "12 Avenue Kléber": {
+        "authority": "Paris, France",
+        "name": "12 avenue Kléber"
+    },
+    "12 Godot de Maunois": {
+        "authority": "Paris, France",
+        "name": "12 rue Godot de Mauroy"
+    },
+    "12 Rue Elzévir": {
+        "authority": "Paris, France",
+        "name": "12 rue Elzévir"
+    },
+    "12 Rue Godot de Maunier": {
+        "authority": "Paris, France",
+        "name": "12 rue Godot de Mauroy"
+    },
+    "12 Rue Godot de Maunoy": {
+        "authority": "Paris, France",
+        "name": "12 rue Godot de Mauroy"
+    },
+    "12 Rue Godot de Mauroy": {
+        "authority": "Paris, France",
+        "name": "12 rue Godot de Mauroy"
+    },
+    "12 Rue Laffitte": {
+        "authority": "Paris, France",
+        "name": "12 rue Laffitte"
+    },
+    "12 Rue Monceau": {
+        "authority": "Paris, France",
+        "name": "12 rue Monceau"
+    },
+    "12 Rue de Hambourg": {
+        "authority": "Paris, France",
+        "name": "12 rue de Hambourg"
+    },
+    "12 Tue de Helder": {
+        "authority": "Paris, France",
+        "name": "12 rue du Helder"
+    },
+    "12 rue Godot de Manson": {
+        "authority": "Paris, France",
+        "name": "12 rue Godot de Mauroy"
+    },
+    "12 rue Godot de Mauroy": {
+        "authority": "Paris, France",
+        "name": "12 rue Godot de Mauroy"
+    },
+    "12 rue La Condamine": {
+        "authority": "Paris, France",
+        "name": "12 rue La Condamine"
+    },
+    "12 rue Legendre": {
+        "authority": "Paris, France",
+        "name": "12 rue Legendre"
+    },
+    "12 rue Monceau": {
+        "authority": "Paris, France",
+        "name": "12 rue Monceau"
+    },
+    "12 rue de la Faisanderie": {
+        "authority": "Paris, France",
+        "name": "12 rue de la Faisanderie"
+    },
+    "120 Pall Mall, London": {
+        "authority": "London, England, UK",
+        "name": "120 Pall Mall"
+    },
+    "121 Rue de Grammont": {
+        "authority": "Paris, France",
+        "name": "121 rue de Grammont"
+    },
+    "123 rue de Lille": {
+        "authority": "Paris, France",
+        "name": "123 rue de Lille"
+    },
+    "124 rue de Pontoise, l'Ile-Adam": {
+        "authority": "l'Ile-Adam, France",
+        "name": "124 rue de Pontoise"
+    },
+    "124 rue de Provence": {
+        "authority": "Paris, France",
+        "name": "124 rue de Provence"
+    },
+    "125 Avenue Wagram": {
+        "authority": "Paris, France",
+        "name": "125 avenue Wagram"
+    },
+    "126 Boulevard Pereire": {
+        "authority": "Paris, France",
+        "name": "126 boulevard Pereire"
+    },
+    "127 Boulevard Malesherbes": {
+        "authority": "Paris, France",
+        "name": "127 boulevard Malesherbes"
+    },
+    "129 Boulevard Malesherbes": {
+        "authority": "Paris, France",
+        "name": "129 boulevard Malesherbes"
+    },
+    "129 avenue Champs Elysées": {
+        "authority": "Paris, France",
+        "name": "129 avenue Champs Elysées"
+    },
+    "13 Avenue Frochat": {
+        "authority": "Paris, France",
+        "name": "13 avenue Frochot"
+    },
+    "13 Avenur Frochat": {
+        "authority": "Paris, France",
+        "name": "13 avenue Frochot"
+    },
+    "13 Boulevard des Italiens": {
+        "authority": "Paris, France",
+        "name": "13 boulevard des Italiens"
+    },
+    "13 Burton street, London": {
+        "authority": "London, England, UK",
+        "name": "13 Burton street"
+    },
+    "13 Chelsea Embankment, London": {
+        "authority": "London, England, UK",
+        "name": "13 Chelsea Embankment"
+    },
+    "13 Rue Vignon": {
+        "authority": "Paris, France",
+        "name": "13 rue Vignon"
+    },
+    "13 Rue de Coutanges, Auxerre": {
+        "authority": "Auxerre, France",
+        "name": "13 rue de Coutanges"
+    },
+    "13 avenue Trochet": {
+        "authority": "Paris, France",
+        "name": "13 avenue Frochot"
+    },
+    "13 bis rue des Mathurins": {
+        "authority": "Paris, France",
+        "name": "13 bis rue des Mathurins"
+    },
+    "13 rue Pavée": {
+        "authority": "Paris, France",
+        "name": "13 rue Pavée"
+    },
+    "130 Faubourg Saint Honoré": {
+        "authority": "Paris, France",
+        "name": "130 Faubourg Saint Honoré"
+    },
+    "131 Boulevard Malesherbes": {
+        "authority": "Paris, France",
+        "name": "131 boulevard Malesherbes"
+    },
+    "131 avenue Victor Hugo": {
+        "authority": "Paris, France",
+        "name": "131 avenue Victor Hugo"
+    },
+    "132 Boulevard Haussmann": {
+        "authority": "Paris, France",
+        "name": "132 boulevard Haussmann"
+    },
+    "137 avenue Louise, Brussels": {
+        "authority": "Brussels, Belgium",
+        "name": "137 avenue Louise"
+    },
+    "139 Faubourg Saint Honoré": {
+        "authority": "Paris, France",
+        "name": "139 Faubourg Saint Honoré"
+    },
+    "13bis Boulevard Malherbes": {
+        "authority": "Paris, France",
+        "name": "13 bis boulevard Malesherbes"
+    },
+    "14 Avenue d'Antin": {
+        "authority": "Paris, France",
+        "name": "14 avenue d'Antin"
+    },
+    "14 Cité Malesherbes": {
+        "authority": "Paris, France",
+        "name": "14 Cité Malesherbes"
+    },
+    "14 Esplanade, Hamburg": {
+        "authority": "Hamburg, Germany",
+        "name": "14 Esplanade"
+    },
+    "14 Rond Point des Champs Elysées": {
+        "authority": "Paris, France",
+        "name": "14 Rond Point des Champs Elysées"
+    },
+    "14 Rond point des Champs Elysées": {
+        "authority": "Paris, France",
+        "name": "14 Rond Point des Champs Elysées"
+    },
+    "14 Rue Alph. De Neuville": {
+        "authority": "Paris, France",
+        "name": "14 rue Alphonse De Neuville"
+    },
+    "14 Rue Beaureplaire": {
+        "authority": "Paris, France",
+        "name": "14 rue Beaureplaire"
+    },
+    "14 Rue Crevaux": {
+        "authority": "Paris, France",
+        "name": "14 rue Crevaux"
+    },
+    "14 Rue Haucelin": {
+        "authority": "France",
+        "name": "14 rue Haucelin"
+    },
+    "14 Rue Taitbout": {
+        "authority": "Paris, France",
+        "name": "14 rue Taitbout"
+    },
+    "14 Rue Viscomte": {
+        "authority": "Paris, France",
+        "name": "14 rue Visconti"
+    },
+    "14 avenue Alphand": {
+        "authority": "Paris, France",
+        "name": "14 avenue Alphand"
+    },
+    "14 boulevard des Italiens": {
+        "authority": "Paris, France",
+        "name": "14 boulevard des Italiens"
+    },
+    "14 rue Auber": {
+        "authority": "Paris, France",
+        "name": "14 rue Auber"
+    },
+    "14 rue Bergere": {
+        "authority": "Paris, France",
+        "name": "14 rue Bergère"
+    },
+    "14 rue Castellane": {
+        "authority": "Paris, France",
+        "name": "14 rue Castellane"
+    },
+    "14 rue Lafayette": {
+        "authority": "Paris, France",
+        "name": "14 rue Lafayette"
+    },
+    "14 rue Visconti": {
+        "authority": "Paris, France",
+        "name": "14 rue Visconti"
+    },
+    "14 rue Weber": {
+        "authority": "Paris, France",
+        "name": "14 rue Weber"
+    },
+    "14 rue de Magdebourg": {
+        "authority": "Paris, France",
+        "name": "14 rue de Magdebourg"
+    },
+    "14 rue de la Victoire": {
+        "authority": "Paris, France",
+        "name": "14 rue de la Victoire"
+    },
+    "14 ter rue Borghèse, Neuilly": {
+        "authority": "Neuilly sur Seine, France",
+        "name": "14 ter rue Borghèse"
+    },
+    "140 Avenue des Champs Elysées": {
+        "authority": "Paris, France",
+        "name": "140 avenue des Champs Elysées"
+    },
+    "140 Boulevard Haussmann": {
+        "authority": "Paris, France",
+        "name": "140 boulevard Haussmann"
+    },
+    "140 Champs Elysées": {
+        "authority": "Paris, France",
+        "name": "140 Champs Elysées"
+    },
+    "140 avenue des Champs Elysées": {
+        "authority": "Paris, France",
+        "name": "140 avenue des Champs Elysées"
+    },
+    "141 Boulevard Pereire": {
+        "authority": "Paris, France",
+        "name": "141 boulevard Pereire"
+    },
+    "146 Boulevard Haussmann": {
+        "authority": "Paris, France",
+        "name": "146 boulevard Haussmann"
+    },
+    "146 boulevard Haussmann": {
+        "authority": "Paris, France",
+        "name": "146 boulevard Haussmann"
+    },
+    "147 Avenue de Villiers": {
+        "authority": "Paris, France",
+        "name": "147 avenue de Villiers"
+    },
+    "147 Babuino, Rome": {
+        "authority": "Rome, Italy",
+        "name": "147 Babuino"
+    },
+    "147 Rue de Rome": {
+        "authority": "Paris, France",
+        "name": "147 rue de Rome"
+    },
+    "148 Boulevard Haussmann": {
+        "authority": "Paris, France",
+        "name": "148 boulevard Haussmann"
+    },
+    "15 Clifford street, London": {
+        "authority": "London, England, UK",
+        "name": "15 Clifford street"
+    },
+    "15 Impasse Helene": {
+        "authority": "Paris, France",
+        "name": "15 Impasse Helene"
+    },
+    "15 Impasse Hélène, Avenue de Clichy": {
+        "authority": "Paris, France",
+        "name": "15 Impasse Hélène avenue de Clichy"
+    },
+    "15 Rue Cauchois": {
+        "authority": "Paris, France",
+        "name": "15 rue Cauchois"
+    },
+    "15 Rue Faradrey, Ternes": {
+        "authority": "Paris, France",
+        "name": "15 rue Faradrey"
+    },
+    "15 Rue Notre Dame de Lorette": {
+        "authority": "Paris, France",
+        "name": "15 rue Notre Dame de Lorette"
+    },
+    "15 Rue Pigalle": {
+        "authority": "Paris, France",
+        "name": "15 rue Pigalle"
+    },
+    "15 Rue d'Armaillé": {
+        "authority": "Paris, France",
+        "name": "15 rue d'Armaillé"
+    },
+    "15 Schaperstrasse, Berlin": {
+        "authority": "Berlin, Germany",
+        "name": "15 Schaperstrasse"
+    },
+    "15 Selaperstrasse, Berlin": {
+        "authority": "Berlin, Germany",
+        "name": "15 Selaperstrasse"
+    },
+    "15 avenue Bosquet": {
+        "authority": "Paris, France",
+        "name": "15 avenue Bosquet"
+    },
+    "15 avenue Frochot": {
+        "authority": "Paris, France",
+        "name": "15 avenue Frochot"
+    },
+    "15 rue Drouot": {
+        "authority": "Paris, France",
+        "name": "15 rue Drouot"
+    },
+    "15 rue Hegesippe Moreau": {
+        "authority": "Paris, France",
+        "name": "15 rue Hegesippe Moreau"
+    },
+    "15 rue Léon Daran, Pau": {
+        "authority": "Pau, France",
+        "name": "15 rue Léon Daran"
+    },
+    "15 rue Pigalle": {
+        "authority": "Paris, France",
+        "name": "15 rue Pigalle"
+    },
+    "15 rue de Gramont": {
+        "authority": "Paris, France",
+        "name": "15 rue de Grammont"
+    },
+    "15 rue du Conservatoire": {
+        "authority": "Paris, France",
+        "name": "15 rue du Conservatoire"
+    },
+    "15, Avenue d'Antin": {
+        "authority": "Paris, France",
+        "name": "15 avenue d'Antin"
+    },
+    "15, rue Hégesippe Moreau": {
+        "authority": "Paris, France",
+        "name": "15 rue Hegesippe Moreau"
+    },
+    "150 East 44th Street, New York": {
+        "authority": "New York, NY, USA",
+        "name": "150 East 44th street"
+    },
+    "152 avenue Champs Elysées": {
+        "authority": "Paris, France",
+        "name": "152 avenue Champs Elysées"
+    },
+    "155 New Bond street, London": {
+        "authority": "London, England, UK",
+        "name": "155 New Bond street"
+    },
+    "16 Avenue Friedland": {
+        "authority": "Paris, France",
+        "name": "16 avenue Friedland"
+    },
+    "16 Boulevard Maillot": {
+        "authority": "Neuilly sur Seine, France",
+        "name": "16 boulevard Maillot"
+    },
+    "16 Chaussée d'Antin": {
+        "authority": "Paris, France",
+        "name": "16 Chaussée d'Antin"
+    },
+    "16 Rue La Verrier": {
+        "authority": "Paris, France",
+        "name": "16 rue Le Verrier"
+    },
+    "16 Rue Spontini": {
+        "authority": "Paris, France",
+        "name": "16 rue Spontini"
+    },
+    "16 Rue de la Tour d'Auvergne": {
+        "authority": "Paris, France",
+        "name": "16 rue de la Tour d'Auvergne"
+    },
+    "16 Rue du Général Foy": {
+        "authority": "Paris, France",
+        "name": "16 rue du Général Foy"
+    },
+    "16 avenue de Breteuil": {
+        "authority": "Paris, France",
+        "name": "16 avenue de Breteuil"
+    },
+    "16 bis Boulevard Maillot": {
+        "authority": "Neuilly sur Seine, France",
+        "name": "16 bis boulevard Maillot"
+    },
+    "16 rue Grange Batelière": {
+        "authority": "Paris, France",
+        "name": "16 rue Grange Batelière"
+    },
+    "16 rue Laffitte": {
+        "authority": "Paris, France",
+        "name": "16 rue Laffitte"
+    },
+    "16 rue d'Artois": {
+        "authority": "Paris, France",
+        "name": "16 rue d'Artois"
+    },
+    "16 rue du Général Foy": {
+        "authority": "Paris, France",
+        "name": "16 rue du Général Foy"
+    },
+    "16 rue du Sounnerand": {
+        "authority": "Paris, France",
+        "name": "16 rue du Sommerard"
+    },
+    "16 rue grande Batelière": {
+        "authority": "Paris, France",
+        "name": "16 rue Grange Batelière"
+    },
+    "16, rue de la Grange Batelière": {
+        "authority": "Paris, France",
+        "name": "16 rue de la Grange Batelière"
+    },
+    "161 Avenue Victor Hugo": {
+        "authority": "Paris, France",
+        "name": "161 avenue Victor Hugo"
+    },
+    "162 Boulevard Malesherbes": {
+        "authority": "Paris, France",
+        "name": "162 boulevard Malesherbes"
+    },
+    "164 Faubourg Saint Honoré": {
+        "authority": "Paris, France",
+        "name": "164 Faubourg Saint Honoré"
+    },
+    "165 Rue Relliard, Brussels": {
+        "authority": "Brussels, Belgium",
+        "name": "165 rue Relliard"
+    },
+    "17 & 19 rue Vignon": {
+        "authority": "Paris, France",
+        "name": "17 & 19 rue Vignon"
+    },
+    "17 Avenue Tournelle": {
+        "authority": "Paris, France",
+        "name": "17 rue des Tournelles"
+    },
+    "17 Boulevard Malesberbes": {
+        "authority": "Paris, France",
+        "name": "17 boulevard Malesberbes"
+    },
+    "17 Boulevard Malesherbes": {
+        "authority": "Paris, France",
+        "name": "17 boulevard Malesherbes"
+    },
+    "17 Rue Grange Batelière, Paris": {
+        "authority": "Paris, France",
+        "name": "17 rue Grange Batelière"
+    },
+    "17 Rue d'Athènes": {
+        "authority": "Paris, France",
+        "name": "17 rue d'Athènes"
+    },
+    "17 Rue d'Hauteville": {
+        "authority": "Paris, France",
+        "name": "17 rue d'Hauteville"
+    },
+    "17 Rue de Navarin": {
+        "authority": "Paris, France",
+        "name": "17 rue de Navarin"
+    },
+    "17 Rue de l'échiquier": {
+        "authority": "Paris, France",
+        "name": "17 rue de l'Échiquier"
+    },
+    "17 rue Caumartin": {
+        "authority": "Paris, France",
+        "name": "17 rue Caumartin"
+    },
+    "17 rue Duperré": {
+        "authority": "Paris, France",
+        "name": "17 rue Duperré"
+    },
+    "17 rue Saint jean, Boulogne Sur mer": {
+        "authority": "Boulogne sur Mer, France\n",
+        "name": "17 rue Saint Jean"
+    },
+    "17 rue de la Faisanderie": {
+        "authority": "Paris, France",
+        "name": "17 rue de la Faisanderie"
+    },
+    "17 rue de la faisanderie": {
+        "authority": "Paris, France",
+        "name": "17 rue de la Faisanderie"
+    },
+    "17, rue Caumartin": {
+        "authority": "Paris, France",
+        "name": "17 rue Caumartin"
+    },
+    "172 Boulevard Saint Germain": {
+        "authority": "Paris, France",
+        "name": "172 boulevard Saint Germain"
+    },
+    "178 bis Rue de Grenelle": {
+        "authority": "Paris, France",
+        "name": "178 bis rue de Grenelle"
+    },
+    "18 Rue Caumartin": {
+        "authority": "Paris, France",
+        "name": "18 rue Caumartin"
+    },
+    "18 Rue Laffitte": {
+        "authority": "Paris, France",
+        "name": "18 rue Laffitte"
+    },
+    "18 Rue Milton": {
+        "authority": "Paris, France",
+        "name": "18 rue Milton"
+    },
+    "18 Rue de Boulogne": {
+        "authority": "Paris, France",
+        "name": "18 rue de Boulogne"
+    },
+    "18 Rue de l'abreuvoir": {
+        "authority": "Paris, France",
+        "name": "18 rue de l'Abreuvoir"
+    },
+    "18 avenue de la Toison d'or, Brussels": {
+        "authority": "Brussels, Belgium",
+        "name": "18 avenue de la Toison d'or"
+    },
+    "18 rue Ballu": {
+        "authority": "Paris, France",
+        "name": "18 rue Ballu"
+    },
+    "18 rue Caumartin": {
+        "authority": "Paris, France",
+        "name": "18 rue Caumartin"
+    },
+    "18 rue Royale": {
+        "authority": "Paris, France",
+        "name": "18 rue Royale"
+    },
+    "18 rue de Chabrol": {
+        "authority": "Paris, France",
+        "name": "18 rue de Chabrol"
+    },
+    "18 rue du Lycée Molière": {
+        "authority": "Paris, France",
+        "name": "18 rue du Lycée Molière"
+    },
+    "183 Faubourg Poissonnière": {
+        "authority": "Paris, France",
+        "name": "183 rue Faubourg Poissonnière"
+    },
+    "19 Rue des Pretres Saint Germain l'Auxerois": {
+        "authority": "Paris, France",
+        "name": "19 rue des Pretres Saint Germain l'Auxerois"
+    },
+    "19 Rue du Grand chemin, Roubaix": {
+        "authority": "Roubaix, France",
+        "name": "19 rue du Grand chemin"
+    },
+    "19 Rue la Bruyère": {
+        "authority": "Paris, France",
+        "name": "19 rue la Bruyère"
+    },
+    "19 Villa Chaptal, Neuilly Levallois": {
+        "authority": "Neuilly sur Seine, France",
+        "name": "19 Villa Chaptal"
+    },
+    "19 rue Caumartin": {
+        "authority": "Paris, France",
+        "name": "19 rue Caumartin"
+    },
+    "19 rue Montyon": {
+        "authority": "Paris, France",
+        "name": "19 rue Montyon"
+    },
+    "19 rue Poncelet, Paris": {
+        "authority": "Paris, France",
+        "name": "19 rue Poncelet"
+    },
+    "19 rue Saint François de Paul, Nice": {
+        "authority": "Nice, France",
+        "name": "19 rue Saint François de Paul"
+    },
+    "19 rue Spontini": {
+        "authority": "Paris, France",
+        "name": "19 rue Spontini"
+    },
+    "19 rue de Douai": {
+        "authority": "Paris, France",
+        "name": "19 rue de Douai"
+    },
+    "19 rue de Marignan": {
+        "authority": "Paris, France",
+        "name": "19 rue de Marignan"
+    },
+    "19 rue de la faisanderie": {
+        "authority": "Paris, France",
+        "name": "19 rue de la Faisanderie"
+    },
+    "191 via Nazionale, Rome": {
+        "authority": "Rome, Italy",
+        "name": "191 via Nazionale"
+    },
+    "2 Rue Croix des Vignes, Gennevilliers": {
+        "authority": "Gennevilliers",
+        "name": "2 rue Croix des Vignes"
+    },
+    "2 Rue Gluck": {
+        "authority": "Paris, France",
+        "name": "2 rue Glück"
+    },
+    "2 Rue Glück": {
+        "authority": "Paris, France",
+        "name": "2 rue Glück"
+    },
+    "2 Rue de la Chaussée d'Antin": {
+        "authority": "Paris, France",
+        "name": "2 rue de la Chaussée d'Antin"
+    },
+    "2 Rue du Melour": {
+        "authority": "France",
+        "name": "2 rue du Melour"
+    },
+    "2 avenue Hoche": {
+        "authority": "Paris, France",
+        "name": "2 avenue Hoche"
+    },
+    "2 avenue Montaignac": {
+        "authority": "Paris, France",
+        "name": "2 avenue Montaigne"
+    },
+    "2 avenue Montaigne": {
+        "authority": "Paris, France",
+        "name": "2 avenue Montaigne"
+    },
+    "2 rue Caumartin": {
+        "authority": "Paris, France",
+        "name": "2 rue Caumartin"
+    },
+    "2 rue Gluck": {
+        "authority": "Paris, France",
+        "name": "2 rue Glück"
+    },
+    "2 rue Glück": {
+        "authority": "Paris, France",
+        "name": "2 rue Glück"
+    },
+    "2 rue La Boëtie": {
+        "authority": "Paris, France",
+        "name": "2 rue La Boétie"
+    },
+    "2 rue Laffitte": {
+        "authority": "Paris, France",
+        "name": "2 rue Laffitte"
+    },
+    "2 rue Sully Prud'homme": {
+        "authority": "Paris, France",
+        "name": "2 avenue Sully Prudhomme"
+    },
+    "2 rue Tronchet": {
+        "authority": "Paris, France",
+        "name": "2 rue Tronchet"
+    },
+    "2 rue de Franqueville": {
+        "authority": "Paris, France",
+        "name": "2 rue de Franqueville"
+    },
+    "2 rue du  Marotant": {
+        "authority": "France",
+        "name": "2 rue du Marotant"
+    },
+    "2, avenue Montaigne": {
+        "authority": "Paris, France",
+        "name": "2 avenue Montaigne"
+    },
+    "20 Boulevard Flandrin": {
+        "authority": "Paris, France",
+        "name": "20 boulevard Flandrin"
+    },
+    "20 Chaussée d'Antin": {
+        "authority": "Paris, France",
+        "name": "20 Chaussée d'Antin"
+    },
+    "20 Rue Montgrand, Marseille": {
+        "authority": "Marseille, France",
+        "name": "20 rue Montgrand"
+    },
+    "20 Rue d'Aumale": {
+        "authority": "Paris, France",
+        "name": "20 rue d'Aumale"
+    },
+    "20 Rue de l'Entrepot": {
+        "authority": "Dieppe, France",
+        "name": "20 rue de l'Entrepot"
+    },
+    "20 Rue de la Chaussée dAntin": {
+        "authority": "Paris, France",
+        "name": "20 rue de la Chaussée d'Antin"
+    },
+    "20 Rue de la chaussée d'Antin": {
+        "authority": "Paris, France",
+        "name": "20 rue de la Chaussée d'Antin"
+    },
+    "20 Rue des Capucines": {
+        "authority": "Paris, France",
+        "name": "20 rue des Capucines"
+    },
+    "20 chausée d'Antin": {
+        "authority": "Paris, France",
+        "name": "20 Chaussée d'Antin"
+    },
+    "20 place Vendome": {
+        "authority": "Paris, France",
+        "name": "20 Place Vendôme"
+    },
+    "20 rue  des Capucines": {
+        "authority": "Paris, France",
+        "name": "20 rue des Capucines"
+    },
+    "20 rue Eugène Plachat": {
+        "authority": "Paris, France",
+        "name": "20 rue Eugène Flachat"
+    },
+    "20 rue Grignan": {
+        "authority": "Marseille, France",
+        "name": "20 rue Grignan"
+    },
+    "20 rue Littré, Paris": {
+        "authority": "Paris, France",
+        "name": "20 rue Littré"
+    },
+    "20 rue Montgrand, Marseille": {
+        "authority": "Marseille, France",
+        "name": "20 rue Montgrand"
+    },
+    "20 rue Pigalle": {
+        "authority": "Paris, France",
+        "name": "20 rue Pigalle"
+    },
+    "20 rue de l'Arcade": {
+        "authority": "Paris, France",
+        "name": "20 rue de l'Arcade"
+    },
+    "20 rue de l'Entrepôt": {
+        "authority": "Dieppe, France",
+        "name": "20 rue de l'Entrepot"
+    },
+    "20 rue de l'entrepôt": {
+        "authority": "Dieppe, France",
+        "name": "20 rue de l'Entrepot"
+    },
+    "20 rue de la Capuchines, Paris, France": {
+        "authority": "Paris, France",
+        "name": "20 rue de la Capucines"
+    },
+    "20 rue des Capucines": {
+        "authority": "Paris, France",
+        "name": "20 rue des Capucines"
+    },
+    "20 rue des Capucines, Paris, France": {
+        "authority": "Paris, France",
+        "name": "20 rue des Capucines"
+    },
+    "20 rue des Caumartin": {
+        "authority": "Paris, France",
+        "name": "20 rue Caumartin"
+    },
+    "203 bis Boulevard Saint Germain": {
+        "authority": "Paris, France",
+        "name": "203 bis boulevard Saint Germain"
+    },
+    "204 Fifth avenue, New York": {
+        "authority": "New York, NY, USA",
+        "name": "204 Fifth avenue"
+    },
+    "207 Boulevard Saint Germain": {
+        "authority": "Paris, France",
+        "name": "207 boulevard Saint Germain"
+    },
+    "21 Boulevard Montmartre": {
+        "authority": "Paris, France",
+        "name": "21 boulevard Montmartre"
+    },
+    "21 Quai Malaquais": {
+        "authority": "Paris, France",
+        "name": "21 quai Malaquais"
+    },
+    "21 Quai Voltaire": {
+        "authority": "Paris, France",
+        "name": "21 quai Voltaire"
+    },
+    "21 Quai d'Orléans": {
+        "authority": "Paris, France",
+        "name": "21 quai d'Orléans"
+    },
+    "21 quai Malaquais": {
+        "authority": "Paris, France",
+        "name": "21 quai Malaquais"
+    },
+    "21 quai Voltaire": {
+        "authority": "Paris, France",
+        "name": "21 quai Voltaire"
+    },
+    "21 route Bourgogne": {
+        "authority": "Paris, France",
+        "name": "21 rue Bourgogne"
+    },
+    "21 rue de la Pépinière, Paris": {
+        "authority": "Paris, France",
+        "name": "21 rue de la Pépinière"
+    },
+    "22 Calle Fernando El Santo, Madrid": {
+        "authority": "Madrid, Spain",
+        "name": "22 Calle Fernando El Santo"
+    },
+    "22 Cour la reine": {
+        "authority": "Paris, France",
+        "name": "22 Cours La Reine"
+    },
+    "22 Cours-La-Reine": {
+        "authority": "Paris, France",
+        "name": "22 Cours La Reine"
+    },
+    "22 Faubourg Saint Honoré": {
+        "authority": "Paris, France",
+        "name": "22 Faubourg Saint Honoré"
+    },
+    "22 Rue Bergère": {
+        "authority": "Paris, France",
+        "name": "22 rue Bergère"
+    },
+    "22 Rue Labruyère": {
+        "authority": "Paris, France",
+        "name": "22 rue la Bruyère"
+    },
+    "22 Rue Laffitte": {
+        "authority": "Paris, France",
+        "name": "22 rue Laffitte"
+    },
+    "22 Rue Masley, Tarbes": {
+        "authority": "Tarbes, France",
+        "name": "22 rue Masley"
+    },
+    "22 Rue Saint Augustin": {
+        "authority": "Paris, France",
+        "name": "22 rue Saint Augustin"
+    },
+    "22 Rue de Toulaque": {
+        "authority": "Paris, France",
+        "name": "22 rue de Tourlaque"
+    },
+    "22 Rue de Vernaud": {
+        "authority": "France",
+        "name": "22 rue de Vernaud"
+    },
+    "22 Rue de la Tour d'Auvergne": {
+        "authority": "Paris, France",
+        "name": "22 rue de la Tour d'Auvergne"
+    },
+    "22 Stohgasse, Vienna": {
+        "authority": "Vienna, Austria",
+        "name": "22 Stohgasse"
+    },
+    "22 Strohgasse, Vienna": {
+        "authority": "Vienna, Austria",
+        "name": "22 Strohgasse"
+    },
+    "22 rue Saint Etienne, Toulouse": {
+        "authority": "Toulouse, France",
+        "name": "22 rue Saint Etienne"
+    },
+    "22 rue Vintimille": {
+        "authority": "Paris, France",
+        "name": "22 rue Vintimille"
+    },
+    "22 rue de la Pépinière": {
+        "authority": "Paris, France",
+        "name": "22 rue de la Pépinière"
+    },
+    "22 rue de la Tour d'Auvergne": {
+        "authority": "Paris, France",
+        "name": "22 rue de la Tour d'Auvergne"
+    },
+    "22 rue des Capucines": {
+        "authority": "Paris, France",
+        "name": "22 rue des Capucines"
+    },
+    "23 Avenue du Bois de Boulogne": {
+        "authority": "Paris, France",
+        "name": "23 avenue du Bois de Boulogne"
+    },
+    "23 Boulevard Malesherbes": {
+        "authority": "Paris, France",
+        "name": "23 boulevard Malesherbes"
+    },
+    "23 Boulevard Vauban, Lille": {
+        "authority": "Lille, France",
+        "name": "23 boulevard Vauban"
+    },
+    "23 Boulevard Vauban, lille": {
+        "authority": "Lille, France",
+        "name": "23 boulevard Vauban"
+    },
+    "23 Boulevard de Clichy": {
+        "authority": "Paris, France",
+        "name": "23 boulevard de Clichy"
+    },
+    "23 Chaussée d'Antin": {
+        "authority": "Paris, France",
+        "name": "23 Chaussée d'Antin"
+    },
+    "23 Place Vendôme": {
+        "authority": "Paris, France",
+        "name": "23 Place Vendôme"
+    },
+    "23 Place Vendôme, New York": {
+        "authority": "[multiple locations] Paris, France; New York, NY, USA",
+        "name": "23 Place Vendôme; New York"
+    },
+    "23 Rue Galilée": {
+        "authority": "Paris, France",
+        "name": "23 rue Galilée"
+    },
+    "23 Rue Ruhmkorff": {
+        "authority": "Paris, France",
+        "name": "23 rue Ruhmkorff"
+    },
+    "23 Rue d'Amaillé": {
+        "authority": "Paris, France",
+        "name": "23 rue d'Amaillé"
+    },
+    "23 Rue de la Pépinière": {
+        "authority": "Paris, France",
+        "name": "23 rue de la Pépinière"
+    },
+    "23 Rue du Mail": {
+        "authority": "Paris, France",
+        "name": "23 rue du Mail"
+    },
+    "23 rue Fontaine": {
+        "authority": "Paris, France",
+        "name": "23 rue Fontaine"
+    },
+    "24 Boulevard Richard Lenoir": {
+        "authority": "Paris, France",
+        "name": "24 boulevard Richard Lenoir"
+    },
+    "24 Boulevard des Invalides": {
+        "authority": "Paris, France",
+        "name": "24 boulevrad des Invalides"
+    },
+    "24 Boulevrad des Invalides": {
+        "authority": "Paris, France",
+        "name": "24 boulevrad des Invalides"
+    },
+    "24 Cours Lafayette, Lyon": {
+        "authority": "Lyon, France",
+        "name": "24 Cours Lafayette"
+    },
+    "24 Faubourg Montmartre": {
+        "authority": "Paris, France",
+        "name": "24 Faubourg Montmartre"
+    },
+    "24 Rue Tapis vert, Marseille": {
+        "authority": "Marseille, France",
+        "name": "24 rue Tapis vert"
+    },
+    "24 rue Emile Mersier": {
+        "authority": "France",
+        "name": "24 rue Emile Mersier"
+    },
+    "24 rue de l'Arc de triomphe": {
+        "authority": "Paris, France",
+        "name": "24 rue de l'Arc de Triomphe"
+    },
+    "248 Faubourg Saint Honoré": {
+        "authority": "Paris, France",
+        "name": "248 Faubourg Saint Honoré"
+    },
+    "25 Bouelvard de la Madeleine": {
+        "authority": "Paris, France",
+        "name": "25 boulevard de la Madeleine"
+    },
+    "25 Boulevard Malesherbes": {
+        "authority": "Paris, France",
+        "name": "25 boulevard Malesherbes"
+    },
+    "25 Boulevard Montmartre": {
+        "authority": "Paris, France",
+        "name": "25 boulevard Montmartre"
+    },
+    "25 Boulevard de la Madeleine": {
+        "authority": "Paris, France",
+        "name": "25 boulevard de la Madeleine"
+    },
+    "25 Cours Lafayette, Lyon": {
+        "authority": "Lyon, France",
+        "name": "25 Cours Lafayette"
+    },
+    "25 Haymarket, London": {
+        "authority": "London, England, UK",
+        "name": "25 Haymarket"
+    },
+    "25 Promenade des anglais, Nice": {
+        "authority": "Nice, France",
+        "name": "25 Promenade des anglais"
+    },
+    "25 Rue de Clichy": {
+        "authority": "Paris, France",
+        "name": "25 rue de Clichy"
+    },
+    "25 boulevard de la MAdeleine": {
+        "authority": "Paris, France",
+        "name": "25 boulevard de la Madeleine"
+    },
+    "25 boulevard de la Madeleine": {
+        "authority": "Paris, France",
+        "name": "25 boulevard de la Madeleine"
+    },
+    "25 rue Laval": {
+        "authority": "Paris, France",
+        "name": "25 rue Laval"
+    },
+    "25 rue de Clichy": {
+        "authority": "Paris, France",
+        "name": "25 rue de Clichy"
+    },
+    "25 rue des Apenins": {
+        "authority": "Paris, France",
+        "name": "25 rue des Apennins"
+    },
+    "26 Calle de Miguel Iscar Valladolia, Valladolia": {
+        "authority": "Valladolid, Spain",
+        "name": "26 Calle de Miguel Iscar Valladolia"
+    },
+    "26 Rue des Petits Champs": {
+        "authority": "Paris, France",
+        "name": "26 rue des Petits Champs"
+    },
+    "27 Boulevard de Clichy": {
+        "authority": "Paris, France",
+        "name": "27 boulevard de Clichy"
+    },
+    "27 Faubourg Saint Honoré": {
+        "authority": "Paris, France",
+        "name": "27 Faubourg Saint Honoré"
+    },
+    "27 Rue de Berlin": {
+        "authority": "Berlin, Germany",
+        "name": "27 rue de Berlin"
+    },
+    "27 Rue de Courcelles": {
+        "authority": "Paris, France",
+        "name": "27 rue de Courcelles"
+    },
+    "27 bis, avenue de Villiers": {
+        "authority": "Paris, France",
+        "name": "27 bis avenue de Villiers"
+    },
+    "27 rue Saint Honoré": {
+        "authority": "Paris, France",
+        "name": "27 rue Saint Honoré"
+    },
+    "27 rue de la ville d'Evèque": {
+        "authority": "Paris, France",
+        "name": "27 rue de la ville d'Evèque"
+    },
+    "27bis rue Bertrand": {
+        "authority": "Paris, France",
+        "name": "27 bis rue Bertrand"
+    },
+    "28 Boulevard Haussmann": {
+        "authority": "Paris, France",
+        "name": "28 boulevard Haussmann"
+    },
+    "28 Rue Drouot": {
+        "authority": "Paris, France",
+        "name": "28 rue Drouot"
+    },
+    "28 Rue Laffitte": {
+        "authority": "Paris, France",
+        "name": "28 rue Laffitte"
+    },
+    "28 Rue Saint Roch": {
+        "authority": "Paris, France",
+        "name": "28 rue Saint Roch"
+    },
+    "28 Rue de Chateaudun": {
+        "authority": "Paris, France",
+        "name": "28 rue de Châteaudun"
+    },
+    "28 rue Jouffroy": {
+        "authority": "Paris, France",
+        "name": "28 rue Jouffroy"
+    },
+    "28 rue Laffitte": {
+        "authority": "Paris, France",
+        "name": "28 rue Laffitte"
+    },
+    "28 rue de Lisbonne": {
+        "authority": "Paris, France",
+        "name": "28 rue de Lisbonne"
+    },
+    "280 Boulevard Raspail": {
+        "authority": "Paris, France",
+        "name": "280 boulevard Raspail"
+    },
+    "281 Saint Petersbourg": {
+        "authority": "Paris, France",
+        "name": "281 rue de Saint Petersbourg"
+    },
+    "29 Avenue Daubigny; 15 Boulevard du Nord, Paris; Monte Carlo": {
+        "authority": "[multiple locations] Paris, France; Paris, France; Monte Carlo, Monaco",
+        "name": "29 avenue Daubigny; 15 boulevard du Nord; Monte Carlo"
+    },
+    "29 Boulevard Berthier": {
+        "authority": "Paris, France",
+        "name": "29 boulevard Berthier"
+    },
+    "29 Ferme des Mathurins": {
+        "authority": "Paris, France",
+        "name": "29 Ferme des Mathurins"
+    },
+    "29 Rue de la Victoire": {
+        "authority": "Paris, France",
+        "name": "29 rue de la Victoire"
+    },
+    "29 boulevard Berthier": {
+        "authority": "Paris, France",
+        "name": "29 boulevard Berthier"
+    },
+    "29, rue du faubourg Saint Honoré": {
+        "authority": "Paris, France",
+        "name": "29 rue du Faubourg Saint Honoré"
+    },
+    "290 rue Gambetta": {
+        "authority": "Lille, France",
+        "name": "290 rue Gambetta"
+    },
+    "290 rue Gambetta, Lille": {
+        "authority": "Lille, France",
+        "name": "290 rue Gambetta"
+    },
+    "3  avenue du Louvre": {
+        "authority": "Paris, France",
+        "name": "3 avenue du Louvre"
+    },
+    "3 Avenue Hoche": {
+        "authority": "Paris, France",
+        "name": "3 avenue Hoche"
+    },
+    "3 Avenue Montaignac": {
+        "authority": "Montaignac Saint Hippolyte, France",
+        "name": "3 avenue Montaignac"
+    },
+    "3 Rue Richer": {
+        "authority": "Paris, France",
+        "name": "3 rue Richer"
+    },
+    "3 Rue de Piramides": {
+        "authority": "Paris, France",
+        "name": "3 rue de Pyramides"
+    },
+    "3 Rue de Tilsitt": {
+        "authority": "Paris, France",
+        "name": "3 rue de Tilsitt"
+    },
+    "3 avenue Matignon": {
+        "authority": "Paris, France",
+        "name": "3 avenue Matignon"
+    },
+    "3 avenue d'Antin": {
+        "authority": "Paris, France",
+        "name": "3 avenue d'Antin"
+    },
+    "3 rue Crevaux": {
+        "authority": "Paris, France",
+        "name": "3 rue Crevaux"
+    },
+    "3 rue La Trémouille": {
+        "authority": "Paris, France",
+        "name": "3 rue La Trémoille"
+    },
+    "3 rue Logelbach": {
+        "authority": "Paris, France",
+        "name": "3 rue Logelbach"
+    },
+    "3 rue du Helder": {
+        "authority": "Paris, France",
+        "name": "3 rue du Helder"
+    },
+    "30 Rue Milton": {
+        "authority": "Paris, France",
+        "name": "30 rue Milton"
+    },
+    "30 rue Bassano": {
+        "authority": "Paris, France",
+        "name": "30 rue Bassano"
+    },
+    "30 rue Milton": {
+        "authority": "Paris, France",
+        "name": "30 rue Milton"
+    },
+    "30 rue Saint Lazare": {
+        "authority": "Paris, France",
+        "name": "30 rue Saint Lazare"
+    },
+    "31 Boulevard Berthier": {
+        "authority": "Paris, France",
+        "name": "31 boulevard Berthier"
+    },
+    "31 Boulevard Berthier, Paris": {
+        "authority": "Paris, France",
+        "name": "31 boulevard Berthier"
+    },
+    "31 Cours Puget, Marseille": {
+        "authority": "Marseille, France",
+        "name": "31 Cours Puget"
+    },
+    "31 Rue Lafayette": {
+        "authority": "Paris, France",
+        "name": "31 rue Lafayette"
+    },
+    "31 Rue Vernet": {
+        "authority": "Paris, France",
+        "name": "31 rue Vernet"
+    },
+    "31 Rue Victor Massé": {
+        "authority": "Paris, France",
+        "name": "31 rue Victor Massé"
+    },
+    "31 Rue de Navarin": {
+        "authority": "Paris, France",
+        "name": "31 rue de Navarin"
+    },
+    "31 Rue du colisée": {
+        "authority": "Paris, France",
+        "name": "31 rue du Colisée"
+    },
+    "31 rue Dailly, Saint Cloud & Logis du Gros Doué": {
+        "authority": "Saint Cloud, France",
+        "name": "31 rue Dailly"
+    },
+    "31 rue Pierre Charon": {
+        "authority": "Paris, France",
+        "name": "31 rue Pierre Charon"
+    },
+    "31 rue d'Anjou": {
+        "authority": "Paris, France",
+        "name": "31 rue d'Anjou"
+    },
+    "31 rue du Colusée": {
+        "authority": "Paris, France",
+        "name": "31 rue du Colisée"
+    },
+    "312 avenue de Paris, Rueil": {
+        "authority": "[multiple locations] Paris, France; Rueil Malmaison, France",
+        "name": "312 avenue de Paris, Rueil"
+    },
+    "32 Rue Rodier": {
+        "authority": "Paris, France",
+        "name": "32 rue Rodier"
+    },
+    "33 Avenue de l'Opéra": {
+        "authority": "Paris, France",
+        "name": "33 avenue de l'Opéra"
+    },
+    "33 Boulevard Haussmann": {
+        "authority": "Paris, France",
+        "name": "33 boulevard Haussmann"
+    },
+    "33 King William, London": {
+        "authority": "London, England, UK",
+        "name": "33 King William"
+    },
+    "33 Rue Joubert": {
+        "authority": "Paris, France",
+        "name": "33 rue Joubert"
+    },
+    "33 Rue de Monceau": {
+        "authority": "Paris, France",
+        "name": "33 rue de Monceau"
+    },
+    "33 Rue des Dames": {
+        "authority": "Paris, France",
+        "name": "33 rue des Dames"
+    },
+    "33 avenue de l'Opéra": {
+        "authority": "Paris, France",
+        "name": "33 avenue de l'Opéra"
+    },
+    "33 cité des Fleurs, Avenue de Clichy": {
+        "authority": "Paris, France",
+        "name": "33 cité des Fleurs avenue de Clichy"
+    },
+    "33 rue  Saint Dominique": {
+        "authority": "Paris, France",
+        "name": "33 rue Saint Dominique"
+    },
+    "33 rue Joubert": {
+        "authority": "Paris, France",
+        "name": "33 rue Joubert"
+    },
+    "34 Boulevard Clichy": {
+        "authority": "Paris, France",
+        "name": "34 boulevard Clichy"
+    },
+    "34 Rue Lafayette": {
+        "authority": "Paris, France",
+        "name": "34 rue Lafayette"
+    },
+    "34 bis avenue du Bois de Boulogne": {
+        "authority": "Paris, France",
+        "name": "34 bis avenue du Bois de Boulogne"
+    },
+    "34 rue Taitbout": {
+        "authority": "Paris, France",
+        "name": "34 rue Taitbout"
+    },
+    "34bis avenue du Bois": {
+        "authority": "Paris, France",
+        "name": "34 bis avenue du Bois de Boulogne"
+    },
+    "35 Avenue de l'opéra": {
+        "authority": "Paris, France",
+        "name": "35 avenue de l'Opéra"
+    },
+    "35 Faubourg Saint Honoré": {
+        "authority": "Paris, France",
+        "name": "35 Faubourg Saint Honoré"
+    },
+    "35 Rue Esprit des Lois, Bordeaux": {
+        "authority": "Bordeaux, France",
+        "name": "35 rue Esprit des Lois"
+    },
+    "35 Rue Saint Symphonin": {
+        "authority": "Paris, France",
+        "name": "35 rue Saint Symphorien"
+    },
+    "35 Rue Saint Symphorien": {
+        "authority": "Paris, France",
+        "name": "35 rue Saint Symphorien"
+    },
+    "35 Rue Vernet, Paris": {
+        "authority": "Paris, France",
+        "name": "35 rue Vernet"
+    },
+    "35 avenue de l'Opéra": {
+        "authority": "Paris, France",
+        "name": "35 avenue de l'Opéra"
+    },
+    "35 rue Brochant": {
+        "authority": "Paris, France",
+        "name": "35 rue Brochant"
+    },
+    "355 Fifth Avenue, New York": {
+        "authority": "New York, NY, USA",
+        "name": "355 Fifth avenue"
+    },
+    "36 Avenue de d'Opéra": {
+        "authority": "Paris, France",
+        "name": "36 avenue de l'Opéra"
+    },
+    "36 Avenue de l'Opéra": {
+        "authority": "Paris, France",
+        "name": "36 avenue de l'Opéra"
+    },
+    "36 Avenue de l'Opéra, Paris": {
+        "authority": "Paris, France",
+        "name": "36 avenue de l'Opéra"
+    },
+    "36 Boulevard des Italiens": {
+        "authority": "Paris, France",
+        "name": "36 boulevard des Italiens"
+    },
+    "36 Rue Bonaparte": {
+        "authority": "Paris, France",
+        "name": "36 rue Bonaparte"
+    },
+    "36 Rue Esprit des Lois, Bordeaux": {
+        "authority": "Bordeaux, France",
+        "name": "36 rue Esprit des Lois"
+    },
+    "36 Rue Taitbout": {
+        "authority": "Paris, France",
+        "name": "36 rue Taitbout"
+    },
+    "36 Rue de Naples": {
+        "authority": "Paris, France",
+        "name": "36 rue de Naples"
+    },
+    "36 Rue de Trévise": {
+        "authority": "Paris, France",
+        "name": "36 rue de Trévise"
+    },
+    "36 Rue de la Véga": {
+        "authority": "Paris, France",
+        "name": "36 rue de la Véga"
+    },
+    "36 avenue de l'Opéra": {
+        "authority": "Paris, France",
+        "name": "36 avenue de l'Opéra"
+    },
+    "36 rue Copernic": {
+        "authority": "Paris, France",
+        "name": "36 rue Copernic"
+    },
+    "36 rue Laffitte": {
+        "authority": "Paris, France",
+        "name": "36 rue Laffitte"
+    },
+    "36 rue Taitbout": {
+        "authority": "Paris, France",
+        "name": "36 rue Taitbout"
+    },
+    "36 rue de Trevise": {
+        "authority": "Paris, France",
+        "name": "36 rue de Trévise"
+    },
+    "36, rue de Bruxelles": {
+        "authority": "Paris, France",
+        "name": "36 rue de Bruxelles"
+    },
+    "360 Rue Saint Honoré": {
+        "authority": "Paris, France",
+        "name": "360 rue Saint Honoré"
+    },
+    "37 Rue Esprit des Lois, Bordeaux": {
+        "authority": "Bordeaux, France",
+        "name": "37 rue Esprit des Lois"
+    },
+    "37 Victor Massé": {
+        "authority": "Paris, France",
+        "name": "37 Victor Massé"
+    },
+    "37 avenue d'Iéna": {
+        "authority": "Paris, France",
+        "name": "37 avenue d'Iéna"
+    },
+    "37 avenue de l'Opéra": {
+        "authority": "Paris, France",
+        "name": "37 avenue de l'Opéra"
+    },
+    "37 rue Chesson, Bois Colombes": {
+        "authority": "Bois Colombes, France",
+        "name": "37 rue Chesson"
+    },
+    "37 rue Fontaine": {
+        "authority": "Paris, France",
+        "name": "37 rue Fontaine"
+    },
+    "37 rue Jean Goujon": {
+        "authority": "Paris, France",
+        "name": "37 rue Jean Goujon"
+    },
+    "37 rue des martyrs": {
+        "authority": "Paris, France",
+        "name": "37 rue des Martyrs"
+    },
+    "38 Avenue de l'Opéra": {
+        "authority": "Paris, France",
+        "name": "38 avenue de l'Opéra"
+    },
+    "38 Boulevard Haussmann": {
+        "authority": "Paris, France",
+        "name": "38 boulevard Haussmann"
+    },
+    "38 Rue Esprit des Lois, bordeaux": {
+        "authority": "Bordeaux, France",
+        "name": "38 rue Esprit des Lois"
+    },
+    "38 avenue de l'Opéra": {
+        "authority": "Paris, France",
+        "name": "38 avenue de l'Opéra"
+    },
+    "38 rue Desbordes": {
+        "authority": "Paris, France",
+        "name": "38 rue Desbordes"
+    },
+    "38, rue Laffitte": {
+        "authority": "Paris, France",
+        "name": "38 rue Laffitte"
+    },
+    "39 Boulevard Berthier": {
+        "authority": "Paris, France",
+        "name": "39 boulevard Berthier"
+    },
+    "39 Rue Washington": {
+        "authority": "Paris, France",
+        "name": "39 rue Washington"
+    },
+    "39 rue de l'Universit": {
+        "authority": "Paris, France",
+        "name": "39 rue de l'Université"
+    },
+    "4 Avenue de la Bourdonnais": {
+        "authority": "Paris, France",
+        "name": "4 avenue de la Bourdonnais"
+    },
+    "4 Place de la Concorde": {
+        "authority": "Paris, France",
+        "name": "4 Place de la Concorde"
+    },
+    "4 Plaza de Afligidor, Madrid": {
+        "authority": "Madrid, Spain",
+        "name": "4 Plaza de Afligidor"
+    },
+    "4 Rue Gluck": {
+        "authority": "Paris, France",
+        "name": "4 rue Glück"
+    },
+    "4 Rue Glück": {
+        "authority": "Paris, France",
+        "name": "4 rue Glück"
+    },
+    "4 Rue Mogador": {
+        "authority": "Paris, France",
+        "name": "4 rue Mogador"
+    },
+    "4 avenue Velasquez": {
+        "authority": "Paris, France",
+        "name": "4 avenue Velasquez"
+    },
+    "4 rue Boissy d'Anglas": {
+        "authority": "Paris, France",
+        "name": "4 rue Boissy d'Anglas"
+    },
+    "4 rue Frédéric Bastiat": {
+        "authority": "Paris, France",
+        "name": "4 rue Frédéric Bastiat"
+    },
+    "4 rue Galliera": {
+        "authority": "Paris, France",
+        "name": "4 rue Galliera"
+    },
+    "4 rue Galliéra": {
+        "authority": "Paris, France",
+        "name": "4 rue Galliera"
+    },
+    "4 rue Legendre": {
+        "authority": "Paris, France",
+        "name": "4 rue Legendre"
+    },
+    "4 rue Lepelletier": {
+        "authority": "Lille, France",
+        "name": "4 rue Lepelletier"
+    },
+    "4 rue Mogador": {
+        "authority": "Paris, France",
+        "name": "4 rue Mogador"
+    },
+    "4 rue de Montreuil, Vincennes": {
+        "authority": "Vincennes, France",
+        "name": "4 rue de Montreuil"
+    },
+    "4 rue de Volney": {
+        "authority": "Paris, France",
+        "name": "4 rue de Volney"
+    },
+    "4 rue du Cloître Notre Dame": {
+        "authority": "Paris, France",
+        "name": "4 rue du Cloître Notre Dame"
+    },
+    "4 rue du mont, Thieville": {
+        "authority": "Thiéville, France",
+        "name": "4 rue du Mont"
+    },
+    "40 Rue Blanche": {
+        "authority": "Paris, France",
+        "name": "40 rue Blanche"
+    },
+    "40 Rue des Martyres": {
+        "authority": "Paris, France",
+        "name": "40 rue des Martyrs"
+    },
+    "40 rue Cortambert": {
+        "authority": "Paris, France",
+        "name": "40 rue Cortambert"
+    },
+    "40 rue Pergolese": {
+        "authority": "Paris, France",
+        "name": "40 rue Pergolèse"
+    },
+    "40 rue des Martyrs": {
+        "authority": "Paris, France",
+        "name": "40 rue des Martyrs"
+    },
+    "41 Rue Laffitte": {
+        "authority": "Paris, France",
+        "name": "41 rue Laffitte"
+    },
+    "41 Rue Prony": {
+        "authority": "Paris, France",
+        "name": "41 rue Prony"
+    },
+    "41 Rue Vivienne": {
+        "authority": "Paris, France",
+        "name": "41 rue Vivienne"
+    },
+    "41 Rue de Richelieu": {
+        "authority": "Paris, France",
+        "name": "41 rue de Richelieu"
+    },
+    "41 avenue Friedland": {
+        "authority": "Paris, France",
+        "name": "41 avenue Friedland"
+    },
+    "41 rue de la Tour d'Auvergne": {
+        "authority": "Paris, France",
+        "name": "41 rue de la Tour d'Auvergne"
+    },
+    "41-42 Mittelstrasse, Berlin": {
+        "authority": "Berlin, Germany",
+        "name": "41-42 Mittelstrasse"
+    },
+    "42 Boulevard Malesherbes": {
+        "authority": "Paris, France",
+        "name": "42 boulevard Malesherbes"
+    },
+    "42 Rue Boulainvilliers": {
+        "authority": "Paris, France",
+        "name": "42 rue Boulainvilliers"
+    },
+    "42 Rue de Lisbonne": {
+        "authority": "Paris, France",
+        "name": "42 rue de Lisbonne"
+    },
+    "42 rue Blanche": {
+        "authority": "Paris, France",
+        "name": "42 rue Blanche"
+    },
+    "424 Clinton Avenue, Brooklyn": {
+        "authority": "Brooklyn, NY, USA",
+        "name": "424 Clinton avenue"
+    },
+    "43 Boulevard Lannes": {
+        "authority": "Paris, France",
+        "name": "43 boulevard Lannes"
+    },
+    "43 Boulevard Launes": {
+        "authority": "Paris, France",
+        "name": "43 boulevard Lannes"
+    },
+    "43 Boulevrad Lannes": {
+        "authority": "Paris, France",
+        "name": "43 boulevard Lannes"
+    },
+    "43 Old Bond street, London": {
+        "authority": "London, England, UK",
+        "name": "43 Old Bond street"
+    },
+    "43 Rue Laffitte": {
+        "authority": "Paris, France",
+        "name": "43 rue Laffitte"
+    },
+    "43 Rue de Provence": {
+        "authority": "Paris, France",
+        "name": "43 rue de Provence"
+    },
+    "43 Rue de Saint Petersbourg": {
+        "authority": "Paris, France",
+        "name": "43 rue de Saint Petersbourg"
+    },
+    "43 rue Laffitte": {
+        "authority": "Paris, France",
+        "name": "43 rue Laffitte"
+    },
+    "44 Rue de Douai": {
+        "authority": "Paris, France",
+        "name": "44 rue de Douai"
+    },
+    "45 Rue de la République, Lyon": {
+        "authority": "Lyon, France",
+        "name": "45 rue de la République"
+    },
+    "45 avenue de Villiers": {
+        "authority": "Paris, France",
+        "name": "45 avenue de Villiers"
+    },
+    "45 quai d'Orsay": {
+        "authority": "Paris, France",
+        "name": "45 quai d'Orsay"
+    },
+    "46 Avenue Kleber": {
+        "authority": "Paris, France",
+        "name": "46 avenue Kléber"
+    },
+    "46 Boulevard Haussmann": {
+        "authority": "Paris, France",
+        "name": "46 boulevard Haussmann"
+    },
+    "46 quai Henri IV": {
+        "authority": "Paris, France",
+        "name": "46 quai Henri IV"
+    },
+    "47 Boulevard Haussmann": {
+        "authority": "Paris, France",
+        "name": "47 boulevard Haussmann"
+    },
+    "47 Rue de Seine": {
+        "authority": "Paris, France",
+        "name": "47 rue de Seine"
+    },
+    "47 Uplandsgatan, Stockholm": {
+        "authority": "Stockholm, Sweden",
+        "name": "47 Uplandsgatan"
+    },
+    "47 rue de la Victoire": {
+        "authority": "Paris, France",
+        "name": "47 rue de la Victoire"
+    },
+    "48 Boulevard de l'Ouest, Baring": {
+        "authority": "Paris, France",
+        "name": "48 boulevard de l'Ouest"
+    },
+    "48 rue Lepic": {
+        "authority": "Paris, France",
+        "name": "48 rue Lepic"
+    },
+    "48 rue de Londres": {
+        "authority": "London, England, UK",
+        "name": "48 rue de Londres"
+    },
+    "49 Boulevrad Haussmann": {
+        "authority": "Paris, France",
+        "name": "49 boulevard Haussmann"
+    },
+    "49 Rue Lemercier": {
+        "authority": "Paris, France",
+        "name": "49 rue Lemercier"
+    },
+    "4bis Rue Rigault, Nanterre": {
+        "authority": "Nanterre, France",
+        "name": "4 bis rue Rigault"
+    },
+    "5 Boulevard Malesherbes": {
+        "authority": "Paris, France",
+        "name": "5 boulevard Malesherbes"
+    },
+    "5 Place du Th. Français": {
+        "authority": "Paris, France",
+        "name": "5 Place du Th. Français"
+    },
+    "5 Quai Voltaire": {
+        "authority": "Paris, France",
+        "name": "5 quai Voltaire"
+    },
+    "5 Regent street": {
+        "authority": "London, England, UK",
+        "name": "5 Regent street"
+    },
+    "5 Regent street, London": {
+        "authority": "London, England, UK",
+        "name": "5 Regent street"
+    },
+    "5 Rue Laffitte": {
+        "authority": "Paris, France",
+        "name": "5 rue Laffitte"
+    },
+    "5 Rue Newton, Paris": {
+        "authority": "Paris, France",
+        "name": "5 rue Newton"
+    },
+    "5 Rue Terre Nègre, Bordeaux": {
+        "authority": "Bordeaux, France",
+        "name": "5 rue Terre Nègre"
+    },
+    "5 Square Latour Maubourg": {
+        "authority": "Paris, France",
+        "name": "5 Square Latour Maubourg"
+    },
+    "5 avenue Friedland, Paris": {
+        "authority": "Paris, France",
+        "name": "5 avenue Friedland"
+    },
+    "5 avenue Velasquez": {
+        "authority": "Paris, France",
+        "name": "5 avenue Velasquez"
+    },
+    "5 boulevard de Grenelle": {
+        "authority": "Paris, France",
+        "name": "5 boulevard de Grenelle"
+    },
+    "5 place del Pugreslo, Madrid": {
+        "authority": "Madrid, Spain",
+        "name": "5 Place del Pugreslo"
+    },
+    "5 quai Voltaire": {
+        "authority": "Paris, France",
+        "name": "5 quai Voltaire"
+    },
+    "5 rue Boccador, Paris": {
+        "authority": "Paris, France",
+        "name": "5 rue Boccador"
+    },
+    "5 rue Caumartin": {
+        "authority": "Paris, France",
+        "name": "5 rue Caumartin"
+    },
+    "5 rue Scribe": {
+        "authority": "Paris, France",
+        "name": "5 rue Scribe"
+    },
+    "5 rue de Constantine": {
+        "authority": "Paris, France",
+        "name": "5 rue de Constantine"
+    },
+    "5 rue de Grassi, Bordeaux": {
+        "authority": "Bordeaux, France",
+        "name": "5 rue de Grassi"
+    },
+    "5 rue de Surène": {
+        "authority": "Paris, France",
+        "name": "5 rue de Surène"
+    },
+    "5 rue de la paix": {
+        "authority": "Paris, France",
+        "name": "5 rue de la Paix"
+    },
+    "5 rue des Sablons": {
+        "authority": "Paris, France",
+        "name": "5 rue des Sablons"
+    },
+    "50 Avenue du Bois de Boulogne": {
+        "authority": "Paris, France",
+        "name": "50 avenue du Bois de Boulogne"
+    },
+    "50 Faubourg Saint Antoine": {
+        "authority": "Paris, France",
+        "name": "50 rue Faubourg Saint Antoine"
+    },
+    "50 Rue d'Anjou": {
+        "authority": "Paris, France",
+        "name": "50 rue d'Anjou"
+    },
+    "50 avenue du Bois de Boulogne": {
+        "authority": "Paris, France",
+        "name": "50 avenue du Bois de Boulogne"
+    },
+    "50 avenue du bois de Boulogne": {
+        "authority": "Paris, France",
+        "name": "50 avenue du Bois de Boulogne"
+    },
+    "50 bis rue de Douai": {
+        "authority": "Paris, France",
+        "name": "50 bis rue de Douai"
+    },
+    "50 rue Saint Didier": {
+        "authority": "Paris, France",
+        "name": "50 rue Saint Didier"
+    },
+    "50 rue Saint Lazare": {
+        "authority": "Paris, France",
+        "name": "50 rue Saint Lazare"
+    },
+    "51 rue Caulaincourt": {
+        "authority": "Paris, France",
+        "name": "51 rue Caulaincourt"
+    },
+    "52 Rue de Rome": {
+        "authority": "Paris, France",
+        "name": "52 rue de Rome"
+    },
+    "52 Rue des Saint pères": {
+        "authority": "Paris, France",
+        "name": "52 rue des Saint Pères"
+    },
+    "52 bis Boulevard Haussmann": {
+        "authority": "Paris, France",
+        "name": "52 bis boulevard Haussmann"
+    },
+    "52 rue de Rome": {
+        "authority": "Paris, France",
+        "name": "52 rue de Rome"
+    },
+    "53 Rue Caulincourt": {
+        "authority": "Paris, France",
+        "name": "53 rue Caulaincourt"
+    },
+    "53 Rue Condorcet": {
+        "authority": "Paris, France",
+        "name": "53 rue Condorcet"
+    },
+    "53 Rue de Lisbonne": {
+        "authority": "Paris, France",
+        "name": "53 rue de Lisbonne"
+    },
+    "53 rue de Babylone": {
+        "authority": "Paris, France",
+        "name": "53 rue de Babylone"
+    },
+    "53 rue de Lisbonne": {
+        "authority": "Paris, France",
+        "name": "53 rue de Lisbonne"
+    },
+    "54 Faubourg Montmartre": {
+        "authority": "Paris, France",
+        "name": "54 Faubourg Montmartre"
+    },
+    "54 rue Richer": {
+        "authority": "Paris, France",
+        "name": "54 rue Richer"
+    },
+    "556-558 fifth Avenue, New York": {
+        "authority": "New York, NY, USA",
+        "name": "556-558 Fifth avenue"
+    },
+    "56 Avenue du Bois de Boulogne": {
+        "authority": "Paris, France",
+        "name": "56 avenue du Bois de Boulogne"
+    },
+    "56 Rue de la Victoire": {
+        "authority": "Paris, France",
+        "name": "56 rue de la Victoire"
+    },
+    "56 rue de Florence, Brussels": {
+        "authority": "Brussels, Belgium",
+        "name": "56 rue de Florence"
+    },
+    "56 rue de Ponthieu": {
+        "authority": "Paris, France",
+        "name": "56 rue de Ponthieu"
+    },
+    "57 Rue Condorcet": {
+        "authority": "Paris, France",
+        "name": "57 rue Condorcet"
+    },
+    "57 Rue Cortambert": {
+        "authority": "Paris, France",
+        "name": "57 rue Cortambert"
+    },
+    "57 rue La Boétie": {
+        "authority": "Paris, France",
+        "name": "57 rue La Boétie"
+    },
+    "57 rue La Boëtie": {
+        "authority": "Paris, France",
+        "name": "57 rue La Boétie"
+    },
+    "57 rue Saint Domingue": {
+        "authority": "Paris, France",
+        "name": "57 rue Saint Dominique"
+    },
+    "57 rue de La Boëtie, Paris, France": {
+        "authority": "Paris, France",
+        "name": "57 rue de La Boétie"
+    },
+    "57 rue de la Boétie": {
+        "authority": "Paris, France",
+        "name": "57 rue de La Boétie"
+    },
+    "58 Rue Monceaux": {
+        "authority": "Paris, France",
+        "name": "58 rue Monceau"
+    },
+    "59 Boulevard Pereire": {
+        "authority": "Paris, France",
+        "name": "59 boulevard Pereire"
+    },
+    "59 Rue Ampère": {
+        "authority": "Paris, France",
+        "name": "59 rue Ampère"
+    },
+    "59, Rue de Châteaudun": {
+        "authority": "Paris, France",
+        "name": "59 rue de Châteaudun"
+    },
+    "590 Fifth Avenue, New York": {
+        "authority": "New York, NY, USA",
+        "name": "590 Fifth avenue"
+    },
+    "6 Avenue de Messine": {
+        "authority": "Paris, France",
+        "name": "6 avenue de Messine"
+    },
+    "6 Place de Rennes": {
+        "authority": "Rennes, France",
+        "name": "6 Place de Rennes"
+    },
+    "6 Rue Galilée": {
+        "authority": "Paris, France",
+        "name": "6 rue Galilée"
+    },
+    "6 Rue Laffitte": {
+        "authority": "Paris, France",
+        "name": "6 rue Laffitte"
+    },
+    "6 Rue Richichasse": {
+        "authority": "France",
+        "name": "6 rue Richichasse"
+    },
+    "6 Rue Val de grâce": {
+        "authority": "Paris, France",
+        "name": "6 rue Val de Grâce"
+    },
+    "6 Rue d'Uzès": {
+        "authority": "Paris, France",
+        "name": "6 rue d'Uzès"
+    },
+    "6 Rue de Berlin": {
+        "authority": "Berlin, Germany",
+        "name": "6 rue de Berlin"
+    },
+    "6 Rue de Calais": {
+        "authority": "Paris, France",
+        "name": "6 rue de Calais"
+    },
+    "6 Rue de Presbourg": {
+        "authority": "Paris, France",
+        "name": "6 rue de Presbourg"
+    },
+    "6 Rue de Tousson": {
+        "authority": "France",
+        "name": "6 rue de Tousson"
+    },
+    "6 Rue du Val de Grâce": {
+        "authority": "Paris, France",
+        "name": "6 rue du Val de Grâce"
+    },
+    "6 avenue Percier": {
+        "authority": "Paris, France",
+        "name": "6 avenue Percier"
+    },
+    "6 boulevard Capuchines": {
+        "authority": "Paris, France",
+        "name": "6 boulevard Capucines"
+    },
+    "6 boulevard des Capucines": {
+        "authority": "Paris, France",
+        "name": "6 boulevard des Capucines"
+    },
+    "6 place d'Anvers": {
+        "authority": "Paris, France",
+        "name": "6 Place d'Anvers"
+    },
+    "6 rue La Rochefoucauld": {
+        "authority": "Paris, France",
+        "name": "6 rue La Rochefoucauld"
+    },
+    "6 rue Vivienne": {
+        "authority": "Paris, France",
+        "name": "6 rue Vivienne"
+    },
+    "6 rue de l'Abbaye": {
+        "authority": "Paris, France",
+        "name": "6 rue de l'Abbaye"
+    },
+    "60 rue Ampère": {
+        "authority": "Paris, France",
+        "name": "60 rue Ampère"
+    },
+    "60 rue de Clichy": {
+        "authority": "Paris, France",
+        "name": "60 rue de Clichy"
+    },
+    "62 Pigalle": {
+        "authority": "Paris, France",
+        "name": "62 Pigalle"
+    },
+    "62 Rue Pigalle": {
+        "authority": "Paris, France",
+        "name": "62 rue Pigalle"
+    },
+    "62 rue Calais": {
+        "authority": "Paris, France",
+        "name": "62 rue de Calais"
+    },
+    "62 rue Rodier": {
+        "authority": "Paris, France",
+        "name": "62 rue Rodier"
+    },
+    "62 rue de Varenne": {
+        "authority": "Paris, France",
+        "name": "62 rue de Varenne"
+    },
+    "62 rue de la Boetie": {
+        "authority": "Paris, France",
+        "name": "62 rue de La Boétie"
+    },
+    "63 Boulevard Haussmann": {
+        "authority": "Paris, France",
+        "name": "63 boulevard Haussmann"
+    },
+    "63 Boulevrad Haussmann": {
+        "authority": "Paris, France",
+        "name": "63 boulevard Haussmann"
+    },
+    "63 boulevard des Batignolles": {
+        "authority": "Paris, France",
+        "name": "63 boulevard des Batignolles"
+    },
+    "63 rue Taitbout": {
+        "authority": "Paris, France",
+        "name": "63 rue Taitbout"
+    },
+    "63 rue Turbigo": {
+        "authority": "Paris, France",
+        "name": "63 rue Turbigo"
+    },
+    "63, Boulevard Haussmann": {
+        "authority": "Paris, France",
+        "name": "63 boulevard Haussmann"
+    },
+    "64 Rue Pierre Charron": {
+        "authority": "Paris, France",
+        "name": "64 rue Pierre Charron"
+    },
+    "64 rue Blanche": {
+        "authority": "Paris, France",
+        "name": "64 rue Blanche"
+    },
+    "64 rue de la Rochefoucault": {
+        "authority": "Paris, France",
+        "name": "64 rue de la Rochefoucauld"
+    },
+    "64bis rue de Monceau, Paris, France": {
+        "authority": "Paris, France",
+        "name": "64 bis rue de Monceau"
+    },
+    "65 Avenue Niel": {
+        "authority": "Paris, France",
+        "name": "65 avenue Niel"
+    },
+    "65 Boulevard Clichy": {
+        "authority": "Paris, France",
+        "name": "65 boulevard Clichy"
+    },
+    "65 Rue du Rocher": {
+        "authority": "Paris, France",
+        "name": "65 rue du Rocher"
+    },
+    "66 Rue Boursault": {
+        "authority": "Paris, France",
+        "name": "66 rue Boursault"
+    },
+    "66 bis rue Saint Didier": {
+        "authority": "Paris, France",
+        "name": "66 bis rue Saint Didier"
+    },
+    "67 Avenue Henri Martin": {
+        "authority": "Paris, France",
+        "name": "67 avenue Henri Martin"
+    },
+    "67 Rue de Chabrol": {
+        "authority": "Paris, France",
+        "name": "67 rue de Chabrol"
+    },
+    "67 Rue de Chateaudun": {
+        "authority": "Paris, France",
+        "name": "67 rue de Châteaudun"
+    },
+    "67 Rue de Chéky": {
+        "authority": "France",
+        "name": "67 rue de Chéky"
+    },
+    "68 Boulevard Maillot, Neuilly": {
+        "authority": "Neuilly sur Seine, France",
+        "name": "68 boulevard Maillot"
+    },
+    "69 Boulevard Haussmann": {
+        "authority": "Paris, France",
+        "name": "69 boulevard Haussmann"
+    },
+    "69 Quai d'Tauteville": {
+        "authority": "Paris, France",
+        "name": "69 quai d'Tauteville"
+    },
+    "69 Rue de Courcelles": {
+        "authority": "Paris, France",
+        "name": "69 rue de Courcelles"
+    },
+    "69 Rue de Varenne": {
+        "authority": "Paris, France",
+        "name": "69 rue de Varenne"
+    },
+    "7 Avenue Mac Mahon": {
+        "authority": "Paris, France",
+        "name": "7 avenue Mac Mahon"
+    },
+    "7 Haymarket, London": {
+        "authority": "London, England, UK",
+        "name": "7 Haymarket"
+    },
+    "7 Hyde Park Gardens, London": {
+        "authority": "London, England, UK",
+        "name": "7 Hyde Park Gardens"
+    },
+    "7 Place Péraire": {
+        "authority": "Paris, France",
+        "name": "7 boulevard Pereire"
+    },
+    "7 Rue Bourdaloue": {
+        "authority": "Paris, France",
+        "name": "7 rue Bourdaloue"
+    },
+    "7 Rue Caumartin": {
+        "authority": "Paris, France",
+        "name": "7 rue Caumartin"
+    },
+    "7 Rue Chaptal": {
+        "authority": "Paris, France",
+        "name": "7 rue Chaptal"
+    },
+    "7 Rue Fermentin": {
+        "authority": "Paris, France",
+        "name": "7 rue Fermentin"
+    },
+    "7 Rue Laffitte": {
+        "authority": "Paris, France",
+        "name": "7 rue Laffitte"
+    },
+    "7 Rue Lepelletier": {
+        "authority": "Lille, France",
+        "name": "7 rue Lepelletier"
+    },
+    "7 Rue Mansart": {
+        "authority": "Paris, France",
+        "name": "7 rue Mansart"
+    },
+    "7 Rue Montalinet": {
+        "authority": "Paris, France",
+        "name": "7 rue Montalinet"
+    },
+    "7 Rue Montalivet": {
+        "authority": "Paris, France",
+        "name": "7 rue Montalivet"
+    },
+    "7 Rue Vignon": {
+        "authority": "Paris, France",
+        "name": "7 rue Vignon"
+    },
+    "7 Rue des Ecuries-d'Artois, Paris": {
+        "authority": "Paris, France",
+        "name": "7 rue des Ecuries d'Artois"
+    },
+    "7 bis rue Laffitte": {
+        "authority": "Paris, France",
+        "name": "7 bis rue Laffitte"
+    },
+    "7 bis, Impasse du Maine": {
+        "authority": "Paris, France",
+        "name": "7 bis Impasse du Maine"
+    },
+    "7 rue Caumartin": {
+        "authority": "Paris, France",
+        "name": "7 rue Caumartin"
+    },
+    "7 rue Chaptal": {
+        "authority": "Paris, France",
+        "name": "7 rue Chaptal"
+    },
+    "7 rue Laffitte": {
+        "authority": "Paris, France",
+        "name": "7 rue Laffitte"
+    },
+    "7 rue Louis Le Grand": {
+        "authority": "Paris, France",
+        "name": "7 rue Louis Le Grand"
+    },
+    "7 rue Saint Georges": {
+        "authority": "Paris, France",
+        "name": "7 rue Saint Georges"
+    },
+    "7 rue d'Artois": {
+        "authority": "Paris, France",
+        "name": "7 rue d'Artois"
+    },
+    "7 rue de Berri": {
+        "authority": "Paris, France",
+        "name": "7 rue de Berri"
+    },
+    "7 rue de Berry": {
+        "authority": "Paris, France",
+        "name": "7 rue de Berri"
+    },
+    "7 rue de Montalivet": {
+        "authority": "Paris, France",
+        "name": "7 rue de Montalivet"
+    },
+    "7 rue du Parc, Nogent sur Marne": {
+        "authority": "Nogent sur Marne, France",
+        "name": "7 rue du Parc"
+    },
+    "70 Rue de Castiglione": {
+        "authority": "Paris, France",
+        "name": "70 rue de Castiglione"
+    },
+    "705 Fifth avenue, New York": {
+        "authority": "New York, NY, USA",
+        "name": "705 Fifth avenue"
+    },
+    "71 85 rue Ampère": {
+        "authority": "Paris, France",
+        "name": "71-85 rue Ampère"
+    },
+    "71 Boulevard de Clichy": {
+        "authority": "Paris, France",
+        "name": "71 boulevard de Clichy"
+    },
+    "71 Boulevrad de Clichy, E. V.": {
+        "authority": "Paris, France",
+        "name": "71 boulevard de Clichy"
+    },
+    "71 Faubourg Saint Honoré": {
+        "authority": "Paris, France",
+        "name": "71 Faubourg Saint Honoré"
+    },
+    "71 boulevard de Clichy": {
+        "authority": "Paris, France",
+        "name": "71 boulevard de Clichy"
+    },
+    "72 avenue Victor Hugo": {
+        "authority": "Paris, France",
+        "name": "72 avenue Victor Hugo"
+    },
+    "72 rue Jouffroy": {
+        "authority": "Paris, France",
+        "name": "72 rue Jouffroy"
+    },
+    "73 Rue de Grenelle": {
+        "authority": "Paris, France",
+        "name": "73 rue de Grenelle"
+    },
+    "73 avenue Montaigne": {
+        "authority": "Paris, France",
+        "name": "73 avenue Montaigne"
+    },
+    "73 bis, Faubourg Saint Honoré": {
+        "authority": "Paris, France",
+        "name": "73 bis Faubourg Saint Honoré"
+    },
+    "74 Rue Blanche": {
+        "authority": "Paris, France",
+        "name": "74 rue Blanche"
+    },
+    "74 avenue d'Iéna": {
+        "authority": "Paris, France",
+        "name": "74 avenue d'Iéna"
+    },
+    "75 Boulevard Clichy": {
+        "authority": "Paris, France",
+        "name": "75 boulevard Clichy"
+    },
+    "75 Boulevard de Clichy": {
+        "authority": "Paris, France",
+        "name": "75 boulevard de Clichy"
+    },
+    "75 Rue de Chaillot": {
+        "authority": "Paris, France",
+        "name": "75 rue de Chaillot"
+    },
+    "75 rue de Grenelle": {
+        "authority": "Paris, France",
+        "name": "75 rue de Grenelle"
+    },
+    "76 Galerie Vicomte Emmanuel, Milan": {
+        "authority": "Milan, Italy",
+        "name": "76 Galerie Vicomte Emmanuel"
+    },
+    "76 avenue Marceau": {
+        "authority": "Paris, France",
+        "name": "76 avenue Marceau"
+    },
+    "76 rue La Faisanderie": {
+        "authority": "Paris, France",
+        "name": "76 rue de la Faisanderie"
+    },
+    "76 rue de la Faisanderie": {
+        "authority": "Paris, France",
+        "name": "76 rue de la Faisanderie"
+    },
+    "77 Faubourg Saint Honoré": {
+        "authority": "Paris, France",
+        "name": "77 Faubourg Saint Honoré"
+    },
+    "77 Rue Denfert Rochereau": {
+        "authority": "Paris, France",
+        "name": "77 rue Denfert Rochereau"
+    },
+    "77 avenue Kléber": {
+        "authority": "Paris, France",
+        "name": "77 avenue Kléber"
+    },
+    "77 avenue de Villilers": {
+        "authority": "Paris, France",
+        "name": "77 avenue de Villilers"
+    },
+    "77 rue Scribe": {
+        "authority": "Paris, France",
+        "name": "77 rue Scribe"
+    },
+    "77 rue d'enfer Rochereau": {
+        "authority": "Paris, France",
+        "name": "77 rue Denfert Rochereau"
+    },
+    "78 Avenue Marceau": {
+        "authority": "Paris, France",
+        "name": "78 avenue Marceau"
+    },
+    "78 Gallerie Victor Emanuel": {
+        "authority": "Milan, Italy",
+        "name": "78 Gallerie Victor Emanuel"
+    },
+    "78 rue d'Anjou": {
+        "authority": "Paris, France",
+        "name": "78 rue d'Anjou"
+    },
+    "79 Rue Saint Lazare": {
+        "authority": "Paris, France",
+        "name": "79 rue Saint Lazare"
+    },
+    "8 Boulevard de Clichy": {
+        "authority": "Paris, France",
+        "name": "8 boulevard de Clichy"
+    },
+    "8 Boulevard des Capucines": {
+        "authority": "Paris, France",
+        "name": "8 boulevard des Capucines"
+    },
+    "8 Liebfraunenstrasse, Frankfurt": {
+        "authority": "Frankfurt, Germany",
+        "name": "8 Liebfraunenstrasse"
+    },
+    "8 Rue Laffitte": {
+        "authority": "Paris, France",
+        "name": "8 rue Laffitte"
+    },
+    "8 Rue Murillo": {
+        "authority": "Paris, France",
+        "name": "8 rue Murillo"
+    },
+    "8 Rue Saint Georges": {
+        "authority": "Paris, France",
+        "name": "8 rue Saint Georges"
+    },
+    "8 Rue de Ponthieu": {
+        "authority": "Paris, France",
+        "name": "8 rue de Ponthieu"
+    },
+    "8 Rue de Prony": {
+        "authority": "Paris, France",
+        "name": "8 rue de Prony"
+    },
+    "8 avenue Percier": {
+        "authority": "Paris, France",
+        "name": "8 avenue Percier"
+    },
+    "8 boulevard de Clichy": {
+        "authority": "Paris, France",
+        "name": "8 boulevard de Clichy"
+    },
+    "8 du Parc Montsouris": {
+        "authority": "Paris, France",
+        "name": "8 du Parc Montsouris"
+    },
+    "8 rue Delambre": {
+        "authority": "Paris, France",
+        "name": "8 rue Delambre"
+    },
+    "8 rue Laffite": {
+        "authority": "Paris, France",
+        "name": "8 rue Laffitte"
+    },
+    "8 rue Laffitte": {
+        "authority": "Paris, France",
+        "name": "8 rue Laffitte"
+    },
+    "8 rue Murillo": {
+        "authority": "Paris, France",
+        "name": "8 rue Murillo"
+    },
+    "8 rue Saint Georges": {
+        "authority": "Paris, France",
+        "name": "8 rue Saint Georges"
+    },
+    "8 rue Saint Geroges": {
+        "authority": "Paris, France",
+        "name": "8 rue Saint Georges"
+    },
+    "8 rue Tabert": {
+        "authority": "France",
+        "name": "8 rue Tabert"
+    },
+    "8 rue Weber": {
+        "authority": "Paris, France",
+        "name": "8 rue Weber"
+    },
+    "8 rue de Sèze": {
+        "authority": "Paris, France",
+        "name": "8 rue de Sèze"
+    },
+    "8 rue de l'Abbaye": {
+        "authority": "Paris, France",
+        "name": "8 rue de l'Abbaye"
+    },
+    "8, rue Saint Georges": {
+        "authority": "Paris, France",
+        "name": "8 rue Saint Georges"
+    },
+    "8, rue de Sèze": {
+        "authority": "Paris, France",
+        "name": "8 rue de Sèze"
+    },
+    "80 Rue de Lille": {
+        "authority": "Paris, France",
+        "name": "80 rue de Lille"
+    },
+    "80 Rue de la Chapelle": {
+        "authority": "Paris, France",
+        "name": "80 rue de la Chapelle"
+    },
+    "80 rue La Chapelle": {
+        "authority": "Paris, France",
+        "name": "80 rue de la Chapelle"
+    },
+    "80 rue du Ranelagh": {
+        "authority": "Paris, France",
+        "name": "80 rue du Ranelagh"
+    },
+    "81 Boulevard Montpartnasse": {
+        "authority": "Paris, France",
+        "name": "81 boulevard Montpartnasse"
+    },
+    "81 Rue Jouffroy": {
+        "authority": "Paris, France",
+        "name": "81 rue Jouffroy"
+    },
+    "82 Rue Traversière, Brussels": {
+        "authority": "Brussels, Belgium",
+        "name": "82 rue Traversière"
+    },
+    "82 boulevard Flandrin, Paris, France": {
+        "authority": "Paris, France",
+        "name": "82 boulevard Flandrin"
+    },
+    "84 rue Mycha": {
+        "authority": "Paris, France",
+        "name": "84 rue Myrha"
+    },
+    "85 Rue de Sevres": {
+        "authority": "Paris, France",
+        "name": "85 rue de Sevres"
+    },
+    "85 rue Caumartin E. V.": {
+        "authority": "Paris, France",
+        "name": "85 rue Caumartin"
+    },
+    "9 Bruton St. Bond SC. W., London": {
+        "authority": "London, England, UK",
+        "name": "9 Bruton street"
+    },
+    "9 Rue Caumartin": {
+        "authority": "Paris, France",
+        "name": "9 rue Caumartin"
+    },
+    "9 Rue Chaptal, Paris, France": {
+        "authority": "Paris, France",
+        "name": "9 rue Chaptal"
+    },
+    "9 Rue Forest": {
+        "authority": "Paris, France",
+        "name": "9 rue Forest"
+    },
+    "9 Rue H. Notre Dame de Lorette": {
+        "authority": "Paris, France",
+        "name": "9 rue Notre Dame de Lorette"
+    },
+    "9 Rue Laffitte": {
+        "authority": "Paris, France",
+        "name": "9 rue Laffitte"
+    },
+    "9 Rue de Varennes": {
+        "authority": "Paris, France",
+        "name": "9 rue de Varenne"
+    },
+    "9 Rue de l'Orente": {
+        "authority": "Etterbeek, Belgium",
+        "name": "9 rue de l'Orient"
+    },
+    "9 Rue de l'Orient": {
+        "authority": "Etterbeek, Belgium",
+        "name": "9 rue de l'Orient"
+    },
+    "9 boulevard de Seine, Nanterre": {
+        "authority": "Nanterre, France",
+        "name": "9 boulevard de Seine"
+    },
+    "9 place de la République": {
+        "authority": "Paris, France",
+        "name": "9 Place de la République"
+    },
+    "9 rue Buffault": {
+        "authority": "Paris, France",
+        "name": "9 rue Buffault"
+    },
+    "9 rue Caumartin": {
+        "authority": "Paris, France",
+        "name": "9 rue Caumartin"
+    },
+    "9 rue Chaptal": {
+        "authority": "Paris, France",
+        "name": "9 rue Chaptal"
+    },
+    "9 rue Falguière": {
+        "authority": "Paris, France",
+        "name": "9 rue Falguière"
+    },
+    "9 rue Laffitte": {
+        "authority": "Paris, France",
+        "name": "9 rue Laffitte"
+    },
+    "9 rue Laffitte, Paris, France": {
+        "authority": "Paris, France",
+        "name": "9 rue Laffitte"
+    },
+    "9 rue Scribe": {
+        "authority": "Paris, France",
+        "name": "9 rue Scribe"
+    },
+    "9 rue d'Astorg": {
+        "authority": "Paris, France",
+        "name": "9 rue d'Astorg"
+    },
+    "9 rue de Bois Vincennes": {
+        "authority": "Paris, France",
+        "name": "9 rue de Bois Vincennes"
+    },
+    "9 rue de l'Echelle, Paris, France": {
+        "authority": "Paris, France",
+        "name": "9 rue de l'Echelle"
+    },
+    "90 Boulevard Malesherbes": {
+        "authority": "Paris, France",
+        "name": "90 boulevard Malesherbes"
+    },
+    "92 Avenue de WAgram": {
+        "authority": "Paris, France",
+        "name": "92 avenue de Wagram"
+    },
+    "92 Boulevard Malesherbes": {
+        "authority": "Paris, France",
+        "name": "92 boulevard Malesherbes"
+    },
+    "92 avenue des Champs Elysées": {
+        "authority": "Paris, France",
+        "name": "92 avenue des Champs Elysées"
+    },
+    "93 Avenue de Villiers": {
+        "authority": "Paris, France",
+        "name": "93 avenue de Villiers"
+    },
+    "94 Boulevard de Clichy": {
+        "authority": "Paris, France",
+        "name": "94 boulevard de Clichy"
+    },
+    "95 rue de Vaugirard": {
+        "authority": "Paris, France",
+        "name": "95 rue de Vaugirard"
+    },
+    "96 boulevard Haussmann": {
+        "authority": "Paris, France",
+        "name": "96 boulevard Haussmann"
+    },
+    "98bis Boulevard Malesherbes": {
+        "authority": "Paris, France",
+        "name": "98 bis boulevard Malesherbes"
+    },
+    "A l'exposition d'Anvers": {
+        "authority": "Belgium",
+        "name": "Antwerp"
+    },
+    "A. Tooth & Sons": {
+        "authority": "[multiple locations] London, England, UK; Paris, France; New York, NY, USA",
+        "name": "Premises of Arthur Tooth & Sons"
+    },
+    "A. Tooth & Sons, Londres": {
+        "authority": "UK",
+        "name": "London"
+    },
+    "Adler strasse 76, Dusseldorf": {
+        "authority": "Dusseldorf, Germany",
+        "name": "76 Adlerstrasse"
+    },
+    "Albert": {
+        "authority": "France",
+        "name": "Premises of Albert"
+    },
+    "Alexandrie, Egypte": {
+        "authority": "Egypt",
+        "name": "Alexandria"
+    },
+    "Allard, 20 rue des Capucines": {
+        "authority": "Paris, France",
+        "name": "20 rue des Capucines"
+    },
+    "American Art Association": {
+        "authority": "New York, NY, USA",
+        "name": "Premises of American Art Association"
+    },
+    "American Art Association, New York": {
+        "authority": "New York, NY, USA",
+        "name": "Premises of American Art Association"
+    },
+    "American Art Association, maison Square South, New York": {
+        "authority": "New York, NY, USA",
+        "name": "Premises of American Art Association"
+    },
+    "Amersfoort, Pays-Bas": {
+        "authority": "The Netherlands",
+        "name": "Amersfoort"
+    },
+    "Amsterdam": {
+        "authority": "The Netherlands",
+        "name": "Amsterdam"
+    },
+    "Amsterdam, Nederland": {
+        "authority": "The Netherlands",
+        "name": "Amsterdam"
+    },
+    "Amsterdam, Nederland; London, England, UK": {
+        "authority": "[multiple locations] Amsterdam, The Netherlands; London, England, UK",
+        "name": "Amsterdam; London"
+    },
+    "Amsterdam, Nederland; New York, NY, USA": {
+        "authority": "[multiple locations] Amsterdam, The Netherlands; New York, NY, USA",
+        "name": "Amsterdam; New York"
+    },
+    "Andes, 1222, Buenos Aires": {
+        "authority": "Buenos Aires, Argentina",
+        "name": "Andes 1222 Buenos Aires"
+    },
+    "Antwerpen, Belgique": {
+        "authority": "Belgium",
+        "name": "Antwerp"
+    },
+    "Anvers": {
+        "authority": "Antwerp, Belgium",
+        "name": "Anvers"
+    },
+    "Arnhem, Pays-Bas": {
+        "authority": "The Netherlands",
+        "name": "Arnhem"
+    },
+    "Arnold & Tripp": {
+        "authority": "Paris, France",
+        "name": "8 rue Saint Georges"
+    },
+    "Arnold & Tripp, 8, rue Saint Georges": {
+        "authority": "Paris, France",
+        "name": "8 rue Saint Georges"
+    },
+    "Arthur Tooth & Sons, Londres": {
+        "authority": "UK",
+        "name": "London"
+    },
+    "Arthur, Tooth & Sons, 155 New Bond street": {
+        "authority": "London, England, UK",
+        "name": "155 New Bond street"
+    },
+    "Arthur, Tooth & Sons, 155, New Bond street, Londres": {
+        "authority": "London, England, UK",
+        "name": "155 New Bond street"
+    },
+    "Asnieres": {
+        "authority": "Asnières sur Seine, France",
+        "name": "Asnieres"
+    },
+    "Asnières": {
+        "authority": "Asnières sur Seine, France",
+        "name": "Asnieres"
+    },
+    "Au Boulevard": {
+        "authority": "Paris, France",
+        "name": "19 boulevard Montmartre"
+    },
+    "Au boulevard": {
+        "authority": "Paris, France",
+        "name": "19 boulevard Montmartre"
+    },
+    "Au boulevard Montmartre": {
+        "authority": "Paris, France",
+        "name": "19 boulevard Montmartre"
+    },
+    "Au salon": {
+        "authority": "Paris, France",
+        "name": "Premises of Goupil & Cie Paris"
+    },
+    "Auvers": {
+        "authority": "France",
+        "name": "Auvers sur Oise"
+    },
+    "Auvers sur Oise": {
+        "authority": "France",
+        "name": "Auvers sur Oise"
+    },
+    "Avenue de Friedland": {
+        "authority": "Paris, France",
+        "name": "avenue de Friedland"
+    },
+    "Avenue de Laval": {
+        "authority": "Paris, France",
+        "name": "avenue de Laval"
+    },
+    "Avenue de Malakoff": {
+        "authority": "Paris, France",
+        "name": "avenue de Malakoff"
+    },
+    "Avenue de Villiers": {
+        "authority": "Paris, France",
+        "name": "avenue de Villiers"
+    },
+    "Avenue de l'Opéra": {
+        "authority": "Paris, France",
+        "name": "avenue de l'Opéra"
+    },
+    "Baden": {
+        "authority": "Germany",
+        "name": "Baden Baden"
+    },
+    "Baden-Baden, Allemagne": {
+        "authority": "Germany",
+        "name": "Baden Baden"
+    },
+    "Baltimore": {
+        "authority": "USA",
+        "name": "Baltimore"
+    },
+    "Baltimore, MD, USA": {
+        "authority": "USA",
+        "name": "Baltimore"
+    },
+    "Berlin": {
+        "authority": "Germany",
+        "name": "Berlin"
+    },
+    "Berlin (5 Sommerstrasse)": {
+        "authority": "Berlin, Germany",
+        "name": "5 Sommerstrasse"
+    },
+    "Berlin, Deutschland": {
+        "authority": "Germany",
+        "name": "Berlin"
+    },
+    "Bernheim Jeune & Cie, 25  de la Madeleine": {
+        "authority": "Paris, France",
+        "name": "25 de la Madeleine"
+    },
+    "Bernheim Jeune & fils, Paris": {
+        "authority": "Paris, France",
+        "name": "Premises of Bernheim Jeune & Cie"
+    },
+    "Bernheim jeune & Cie, 36 Avenue de l'Opéra": {
+        "authority": "Paris, France",
+        "name": "36 avenue de l'Opéra"
+    },
+    "Biarritz": {
+        "authority": "France",
+        "name": "Biarritz"
+    },
+    "Bois Colombes": {
+        "authority": "France",
+        "name": "Bois Colombes"
+    },
+    "Bologna": {
+        "authority": "Italy",
+        "name": "Bologna"
+    },
+    "Bond street, London": {
+        "authority": "London, England, UK",
+        "name": "Bond street"
+    },
+    "Bordeaux": {
+        "authority": "France",
+        "name": "Bordeaux"
+    },
+    "Boston": {
+        "authority": "USA",
+        "name": "Boston"
+    },
+    "Boston (127 Tremont Street)": {
+        "authority": "Boston, MA, USA",
+        "name": "127 Tremont street"
+    },
+    "Boston, Etats-Unis. (1822-1897)": {
+        "authority": "USA",
+        "name": "Boston"
+    },
+    "Boston, MA, USA": {
+        "authority": "USA",
+        "name": "Boston"
+    },
+    "Bougival": {
+        "authority": "France",
+        "name": "Bougival"
+    },
+    "Boulevard": {
+        "authority": "Paris, France",
+        "name": "19 boulevard Montmartre"
+    },
+    "Boulevard Arago 65": {
+        "authority": "Paris, France",
+        "name": "65 boulevard Arago"
+    },
+    "Boulevard Haussmann": {
+        "authority": "Paris, France",
+        "name": "boulevard Haussmann"
+    },
+    "Boulevard Magenta": {
+        "authority": "Paris, France",
+        "name": "boulevard Magenta"
+    },
+    "Boulevard Malesherbes": {
+        "authority": "Paris, France",
+        "name": "boulevard Malesherbes"
+    },
+    "Boulevard Mallesherbes": {
+        "authority": "Paris, France",
+        "name": "boulevard Malesherbes"
+    },
+    "Boulevard Montmartre": {
+        "authority": "Paris, France",
+        "name": "19 boulevard Montmartre"
+    },
+    "Boulevard Rochechouart, 57 bis": {
+        "authority": "Paris, France",
+        "name": "57 bis boulevard Rochechouart"
+    },
+    "Boulevard Saint Germain": {
+        "authority": "Paris, France",
+        "name": "boulevard Saint Germain"
+    },
+    "Boulevard de Clichy": {
+        "authority": "Paris, France",
+        "name": "boulevard de Clichy"
+    },
+    "Boulevard de la Madeleine": {
+        "authority": "Paris, France",
+        "name": "boulevard de la Madeleine"
+    },
+    "Boulevard des Capucines": {
+        "authority": "Paris, France",
+        "name": "boulevard des Capucines"
+    },
+    "Boulevard des Italiens": {
+        "authority": "Paris, France",
+        "name": "boulevard des Italiens"
+    },
+    "Boulevard du Montparnasse": {
+        "authority": "Paris, France",
+        "name": "boulevard du Montparnasse"
+    },
+    "Boulevard, Paris, France": {
+        "authority": "Paris, France",
+        "name": "19 boulevard Montmartre"
+    },
+    "Breslau, Allemagne": {
+        "authority": "Wrocław, Poland",
+        "name": "Breslau"
+    },
+    "Breton": {
+        "authority": "Brittany, France",
+        "name": "Breton"
+    },
+    "Brighton": {
+        "authority": "UK",
+        "name": "Brighton"
+    },
+    "Brooklyn": {
+        "authority": "USA",
+        "name": "Brooklyn"
+    },
+    "Brussel, Belgique": {
+        "authority": "Belgium",
+        "name": "Brussels"
+    },
+    "Brussels": {
+        "authority": "Belgium",
+        "name": "Brussels"
+    },
+    "Brussels, Belgium": {
+        "authority": "Belgium",
+        "name": "Brussels"
+    },
+    "Bruxelles": {
+        "authority": "Belgium",
+        "name": "Brussels"
+    },
+    "Bruxelles, Belgique": {
+        "authority": "Belgium",
+        "name": "Brussels"
+    },
+    "Buenos Aires": {
+        "authority": "Argentina",
+        "name": "Buenos Aires"
+    },
+    "Buffalo": {
+        "authority": "USA",
+        "name": "Buffalo"
+    },
+    "Buffalo, NY, USA": {
+        "authority": "USA",
+        "name": "Buffalo"
+    },
+    "CHAteau de l'Arizelle": {
+        "authority": "France",
+        "name": "Premises of Château de l'Arizelle"
+    },
+    "Chaptal": {
+        "authority": "Paris, France",
+        "name": "rue Chaptal"
+    },
+    "Chateaurenard": {
+        "authority": "France",
+        "name": "Châteaurenard"
+    },
+    "Chaussée d'Antin": {
+        "authority": "Paris, France",
+        "name": "Chaussée d'Antin"
+    },
+    "Chausée d'Antin": {
+        "authority": "Paris, France",
+        "name": "Chaussée d'Antin"
+    },
+    "Chicago": {
+        "authority": "USA",
+        "name": "Chicago"
+    },
+    "Chicago, IL, USA": {
+        "authority": "USA",
+        "name": "Chicago"
+    },
+    "Christie, Manson & Woods, 8 King Street, Londres": {
+        "authority": "London, England, UK",
+        "name": "8 King street Saint James Square"
+    },
+    "Christie, Manson & Woods, 8 King Street, Saint James Square, Londres": {
+        "authority": "London, England, UK",
+        "name": "8 King street Saint James Square"
+    },
+    "Christie, Manson & Woods, 8 King street Saint James's square, Londres": {
+        "authority": "London, England, UK",
+        "name": "8 King street Saint James Square"
+    },
+    "Christie, Manson & Woods, Londres": {
+        "authority": "UK",
+        "name": "London"
+    },
+    "Château de Chamant": {
+        "authority": "Chamant, France",
+        "name": "Premises of Château de Saint Chamant"
+    },
+    "Cleveland": {
+        "authority": "USA",
+        "name": "Cleveland"
+    },
+    "Den Haag, Nederland": {
+        "authority": "The Netherlands",
+        "name": "The Hague"
+    },
+    "Den Haag, Nederland; New York, NY, USA; Amsterdam, Nederland": {
+        "authority": "[multiple locations] The Hague, The Netherlands; New York, NY, USA; Amsterdam, The Netherlands",
+        "name": "The Hague; New York; Amsterdam"
+    },
+    "Doelenstraat 16-18 à  Amsterdam": {
+        "authority": "Amsterdam, The Netherlands",
+        "name": "16-18 Doelenstraat"
+    },
+    "Dordrecht": {
+        "authority": "The Netherlands",
+        "name": "Dordrecht"
+    },
+    "Dublin": {
+        "authority": "Ireland",
+        "name": "Dublin"
+    },
+    "Duchesne, commissaire priseur": {
+        "authority": "Paris, France",
+        "name": "Premises of Duchesne (commissaire priseur)"
+    },
+    "Durand Ruel": {
+        "authority": "Paris, France",
+        "name": "Premises of Durand Ruel"
+    },
+    "Dusseldorf": {
+        "authority": "Germany",
+        "name": "Dusseldorf"
+    },
+    "Düsseldorf, Allemagne": {
+        "authority": "Germany",
+        "name": "Dusseldorf"
+    },
+    "E. Le Roy & Cie, 9 rue Scribe": {
+        "authority": "Paris, France",
+        "name": "9 rue Scribe"
+    },
+    "Ecouen": {
+        "authority": "Écouen, France",
+        "name": "Ecouen"
+    },
+    "Ecury sur Coole": {
+        "authority": "Écury sur Coole, France",
+        "name": "Ecury sur Coole"
+    },
+    "Edinboro": {
+        "authority": "UK",
+        "name": "Edinburgh"
+    },
+    "Edinburgh": {
+        "authority": "UK",
+        "name": "Edinburgh"
+    },
+    "Elkins Park, PA, USA; Philadelphia, PA, USA": {
+        "authority": "[multiple locations] Elkins Park, PA, USA; Philadelphia, PA, USA",
+        "name": "Elkins Park; Philadelphia"
+    },
+    "Encan, Boston": {
+        "authority": "USA",
+        "name": "Boston"
+    },
+    "Encan, La Haye, Pays-Bas.": {
+        "authority": "The Netherlands",
+        "name": "The Hague"
+    },
+    "Encan, New York": {
+        "authority": "USA",
+        "name": "New York"
+    },
+    "England": {
+        "authority": "UK",
+        "name": "England"
+    },
+    "Epernay": {
+        "authority": "Épernay, France",
+        "name": "Epernay"
+    },
+    "Epernay, France": {
+        "authority": "Épernay, France",
+        "name": "Epernay"
+    },
+    "Escribe": {
+        "authority": "France",
+        "name": "Premises of Eugène Jean Louis Escribe"
+    },
+    "Escribe Vente du 23 février 1889": {
+        "authority": "France",
+        "name": "Premises of Eugène Jean Louis Escribe"
+    },
+    "Eug. Glaenzer & Cie, New York": {
+        "authority": "New York, NY, USA",
+        "name": "Premises of Eugene Glaenzer & Co."
+    },
+    "Eug. Glaenzer & Co, 5 rue Scribe": {
+        "authority": "Paris, France",
+        "name": "5 rue Scribe"
+    },
+    "Eug. Glaenzer & Co, New York": {
+        "authority": "New York, NY, USA",
+        "name": "Premises of Eugene Glaenzer & Co."
+    },
+    "Everard & Cie": {
+        "authority": "France",
+        "name": "Premises of Everard & Cie"
+    },
+    "Exposition": {
+        "authority": "[no place]",
+        "name": "[no place]"
+    },
+    "Exposition  Rotterdam": {
+        "authority": "Rotterdam, The Netherlands",
+        "name": "Premises of Exposition Rotterdam"
+    },
+    "Exposition (loterie)": {
+        "authority": "[no place]",
+        "name": "[no place]"
+    },
+    "Exposition 1859 (loterie) [rayé]": {
+        "authority": "[no place]",
+        "name": "[no place]"
+    },
+    "Exposition 1859 juillet (loterie)": {
+        "authority": "[no place]",
+        "name": "[no place]"
+    },
+    "Exposition Amsterdam": {
+        "authority": "Amsterdam, The Netherlands",
+        "name": "Premises of Exposition Amsterdam"
+    },
+    "Exposition Amsterdam, Pays-Bas": {
+        "authority": "Amsterdam, The Netherlands",
+        "name": "Premises of Exposition Amsterdam"
+    },
+    "Exposition Anvers": {
+        "authority": "Antwerp, Belgium",
+        "name": "Premises of Exposition Anvers"
+    },
+    "Exposition Arti La Haye": {
+        "authority": "The Hague, The Netherlands",
+        "name": "Premises of Exposition Arti La Haye"
+    },
+    "Exposition Bordeaux, France.": {
+        "authority": "Bordeaux, France",
+        "name": "Premises of Exposition Bordeaux"
+    },
+    "Exposition Chicago La Haye": {
+        "authority": "The Hague, The Netherlands",
+        "name": "Premises of Goupil & Cie The Hague"
+    },
+    "Exposition Dresde La Haye": {
+        "authority": "The Hague, The Netherlands",
+        "name": "Premises of Goupil & Cie The Hague"
+    },
+    "Exposition Elberfeld": {
+        "authority": "Elberfeld, Germany",
+        "name": "Premises of Exposition Elberfeld"
+    },
+    "Exposition Gambart": {
+        "authority": "London, England, UK",
+        "name": "Premises of Exposition Gambart"
+    },
+    "Exposition Gambart Londres": {
+        "authority": "UK",
+        "name": "London"
+    },
+    "Exposition Groningen": {
+        "authority": "Groningen, The Netherlands",
+        "name": "Premises of Exposition Groningen"
+    },
+    "Exposition Groningen La Haye": {
+        "authority": "The Hague, The Netherlands",
+        "name": "Premises of Goupil & Cie The Hague"
+    },
+    "Exposition Herdtle & Peters Stuttgart": {
+        "authority": "Stuttgart, Germany",
+        "name": "Premises of Exposition Herdtle & Peters Stuttgart"
+    },
+    "Exposition International des Beaux arts, Dresde": {
+        "authority": "Germany",
+        "name": "Dresden"
+    },
+    "Exposition Internationale d'art à Venise": {
+        "authority": "Italy",
+        "name": "Venice"
+    },
+    "Exposition La Haye": {
+        "authority": "The Hague, The Netherlands",
+        "name": "Premises of Exposition La Haye"
+    },
+    "Exposition Liverpool": {
+        "authority": "Liverpool, England, UK",
+        "name": "Premises of Exposition Liverpool"
+    },
+    "Exposition Lorento La Haye": {
+        "authority": "The Hague, The Netherlands",
+        "name": "Premises of Goupil & Cie The Hague"
+    },
+    "Exposition Munich": {
+        "authority": "Munich, Germany",
+        "name": "Premises of Exposition Munich"
+    },
+    "Exposition Rotterdam": {
+        "authority": "Rotterdam, The Netherlands",
+        "name": "Premises of Exposition Rotterdam"
+    },
+    "Exposition Roubaix": {
+        "authority": "Roubaix, France",
+        "name": "Premises of Exposition Roubaix"
+    },
+    "Exposition Roubaix-Tourcoing, Roubaix": {
+        "authority": "Roubaix, France",
+        "name": "Premises of Exposition Roubaix"
+    },
+    "Exposition Saint Quentin": {
+        "authority": "Saint Quentin, France",
+        "name": "Premises of Exposition Saint Quentin"
+    },
+    "Exposition Seassion[?] La Haye": {
+        "authority": "The Hague, The Netherlands",
+        "name": "Premises of Goupil & Cie The Hague"
+    },
+    "Exposition Trieste": {
+        "authority": "Trieste, Italy",
+        "name": "Premises of Exposition Trieste"
+    },
+    "Exposition Venise": {
+        "authority": "Venice, Italy",
+        "name": "Premises of Exposition Venise"
+    },
+    "Exposition Worishofen": {
+        "authority": "Bad Wörishofen, Germany",
+        "name": "Premises of Exposition Worishofen"
+    },
+    "Exposition d'Amsterdam": {
+        "authority": "Amsterdam, The Netherlands",
+        "name": "Premises of Exposition Amsterdam"
+    },
+    "Exposition d`Amsterdam": {
+        "authority": "Amsterdam, The Netherlands",
+        "name": "Premises of Exposition Amsterdam"
+    },
+    "Exposition d`Anvers": {
+        "authority": "Antwerp, Belgium",
+        "name": "Premises of Exposition Anvers"
+    },
+    "Exposition d`Utrecht": {
+        "authority": "Utrecht, The Netherlands",
+        "name": "Premises of Exposition Utrecht"
+    },
+    "Exposition de 1859 (loterie)": {
+        "authority": "[no place]",
+        "name": "[no place]"
+    },
+    "Exposition de Bayonne": {
+        "authority": "Bayonne, France",
+        "name": "Premises of Exposition Bayonne"
+    },
+    "Exposition de Bordeaux": {
+        "authority": "Bordeaux, France",
+        "name": "Premises of Exposition Bordeaux"
+    },
+    "Exposition de Bruxelles": {
+        "authority": "Brussels, Belgium",
+        "name": "Premises of Exposition Bruxelles"
+    },
+    "Exposition de Douai": {
+        "authority": "Douai, France",
+        "name": "Premises of Exposition Douai"
+    },
+    "Exposition de Gambart à Londres": {
+        "authority": "UK",
+        "name": "London"
+    },
+    "Exposition de Gand": {
+        "authority": "Ghent, Belgium",
+        "name": "Premises of Exposition Gand"
+    },
+    "Exposition de Glasgow": {
+        "authority": "Glasgow, Scotland, UK",
+        "name": "Premises of Exposition Glasgow"
+    },
+    "Exposition de La Haye": {
+        "authority": "The Hague, The Netherlands",
+        "name": "Premises of Exposition La Haye"
+    },
+    "Exposition de Lille": {
+        "authority": "Lille, France",
+        "name": "Premises of Exposition Lille"
+    },
+    "Exposition de Limoge": {
+        "authority": "Limoges, France",
+        "name": "Premises of Exposition Limoge"
+    },
+    "Exposition de Liverpool": {
+        "authority": "Liverpool, England, UK",
+        "name": "Premises of Exposition Liverpool"
+    },
+    "Exposition de Londres": {
+        "authority": "London, England, UK",
+        "name": "Premises of Exposition Londres"
+    },
+    "Exposition de Lyon": {
+        "authority": "Lyon, France",
+        "name": "Premises of Exposition Lyon"
+    },
+    "Exposition de Marseille": {
+        "authority": "Marseille, France",
+        "name": "Premises of Exposition Marseille"
+    },
+    "Exposition de Marseille (au musée)": {
+        "authority": "Marseille, France",
+        "name": "Premises of Exposition Marseille"
+    },
+    "Exposition de Melbourne": {
+        "authority": "Melbourne, Australia",
+        "name": "Premises of Exposition Melbourne"
+    },
+    "Exposition de Metz": {
+        "authority": "Metz, France",
+        "name": "Premises of Exposition Metz"
+    },
+    "Exposition de Mulhouse": {
+        "authority": "Mulhouse, France",
+        "name": "Premises of Exposition Mulhouse"
+    },
+    "Exposition de Mulhouse, 90": {
+        "authority": "Mulhouse, France",
+        "name": "Premises of Exposition Mulhouse"
+    },
+    "Exposition de Munich": {
+        "authority": "Munich, Germany",
+        "name": "Premises of Exposition Munich"
+    },
+    "Exposition de Nice": {
+        "authority": "Nice, France",
+        "name": "Premises of Exposition Nice"
+    },
+    "Exposition de Paris 1861 (loterie)": {
+        "authority": "Paris, France",
+        "name": "Premises of Exposition Paris"
+    },
+    "Exposition de Paris 1865": {
+        "authority": "Paris, France",
+        "name": "Premises of Exposition Paris"
+    },
+    "Exposition de Pau": {
+        "authority": "Pau, France",
+        "name": "Premises of Exposition Pau"
+    },
+    "Exposition de Reims": {
+        "authority": "Reims, France",
+        "name": "Premises of Exposition Reims"
+    },
+    "Exposition de Rheims": {
+        "authority": "Reims, France",
+        "name": "Premises of Exposition Reims"
+    },
+    "Exposition de Rheims, Opéra": {
+        "authority": "Paris, France",
+        "name": "Place de l'Opéra"
+    },
+    "Exposition de Rotterdam": {
+        "authority": "Rotterdam, The Netherlands",
+        "name": "Premises of Exposition Rotterdam"
+    },
+    "Exposition de Roubaix": {
+        "authority": "Roubaix, France",
+        "name": "Premises of Exposition Roubaix"
+    },
+    "Exposition de Roubaix-Tourcoing": {
+        "authority": "Roubaix, France",
+        "name": "Premises of Exposition Roubaix"
+    },
+    "Exposition de Rouen": {
+        "authority": "Rouen, France",
+        "name": "Premises of Exposition Rouen"
+    },
+    "Exposition de St. Quentin": {
+        "authority": "Saint Quentin, France",
+        "name": "Premises of Exposition Saint Quentin"
+    },
+    "Exposition de Stuttgart": {
+        "authority": "Stuttgart, Germany",
+        "name": "Premises of Exposition Stuttgart"
+    },
+    "Exposition de Sydney": {
+        "authority": "Sydney, Australia",
+        "name": "Premises of Exposition Sydney"
+    },
+    "Exposition de Turin": {
+        "authority": "Turin, Italy",
+        "name": "Premises of Exposition Turin"
+    },
+    "Exposition de Venise": {
+        "authority": "Venice, Italy",
+        "name": "Premises of Exposition Venise"
+    },
+    "Exposition de [rayé] Metz La Haye": {
+        "authority": "The Hague, The Netherlands",
+        "name": "Premises of Goupil & Cie The Hague"
+    },
+    "Exposition de la Croix Rouge, Saint Petersbourg": {
+        "authority": "Russia",
+        "name": "Saint Petersburg"
+    },
+    "Exposition des amis de Marseille": {
+        "authority": "France",
+        "name": "Marseille"
+    },
+    "Exposition des amis des arts de Reims": {
+        "authority": "France",
+        "name": "Reims"
+    },
+    "Exposition des arts, Reims": {
+        "authority": "France",
+        "name": "Reims"
+    },
+    "Exposition permanente Stuttgart Herdtle & Peters": {
+        "authority": "Stuttgart, Germany",
+        "name": "Premises of Exposition Herdtle & Peters Stuttgart"
+    },
+    "Exposition à  La Haye": {
+        "authority": "The Hague, The Netherlands",
+        "name": "Premises of Exposition La Haye"
+    },
+    "Exposition à Amsterdam": {
+        "authority": "Amsterdam, The Netherlands",
+        "name": "Premises of Exposition Amsterdam"
+    },
+    "Exposition à Glasgow": {
+        "authority": "Glasgow, Scotland, UK",
+        "name": "Premises of Exposition Glasgow"
+    },
+    "Exposition à La Haÿe": {
+        "authority": "The Hague, The Netherlands",
+        "name": "Premises of Exposition La Haye"
+    },
+    "Exposition à Nantes": {
+        "authority": "Nantes, France",
+        "name": "Premises of Exposition Nantes"
+    },
+    "Exposition à Reims": {
+        "authority": "Reims, France",
+        "name": "Premises of Exposition Reims"
+    },
+    "Exposition à la Haye": {
+        "authority": "The Hague, The Netherlands",
+        "name": "Premises of Exposition La Haye"
+    },
+    "F. & F. Tempelaere, 38, rue Laffitte": {
+        "authority": "Paris, France",
+        "name": "38 rue Laffitte"
+    },
+    "F. Kleinberger, 9 rue de l'Echelle": {
+        "authority": "Paris, France",
+        "name": "9 rue de l'Echelle"
+    },
+    "Feldafisig": {
+        "authority": "Germany",
+        "name": "Feldafing"
+    },
+    "Fifth avenue": {
+        "authority": "New York, NY, USA",
+        "name": "Fifth avenue"
+    },
+    "Florence": {
+        "authority": "Italy",
+        "name": "Florence"
+    },
+    "Florence; Paris": {
+        "authority": "[multiple locations] Florence, Italy; Paris, France",
+        "name": "Florence; Paris"
+    },
+    "Fr. Muller & Co, 16 Doelenstraat [?] à Amsterdam": {
+        "authority": "Amsterdam, The Netherlands",
+        "name": "16 Doelenstraat"
+    },
+    "France": {
+        "authority": "France",
+        "name": "France"
+    },
+    "Francfort": {
+        "authority": "Germany",
+        "name": "Frankfurt"
+    },
+    "Franckfort sur mein": {
+        "authority": "Germany",
+        "name": "Frankfurt"
+    },
+    "Frankfurt": {
+        "authority": "Germany",
+        "name": "Frankfurt"
+    },
+    "Fred. Muller & Cie à Amsterdam": {
+        "authority": "The Netherlands",
+        "name": "Amsterdam"
+    },
+    "Frédérik Muller & Cie, Amsterdam": {
+        "authority": "The Netherlands",
+        "name": "Amsterdam"
+    },
+    "G. Bergaud": {
+        "authority": "France",
+        "name": "Premises of G. Bergaud"
+    },
+    "Galeries G. Petit": {
+        "authority": "Paris, France",
+        "name": "7 rue Saint Georges"
+    },
+    "Georges Bernheim": {
+        "authority": "Paris, France",
+        "name": "Premises of Georges Bernheim"
+    },
+    "Georges Bernheim, 9 rue Laffitte": {
+        "authority": "Paris, France",
+        "name": "9 rue Laffitte"
+    },
+    "Georges Petit": {
+        "authority": "Paris, France",
+        "name": "7 rue Saint Georges"
+    },
+    "Germany": {
+        "authority": "Germany",
+        "name": "Germany"
+    },
+    "Giverny": {
+        "authority": "France",
+        "name": "Giverny"
+    },
+    "Glasgow": {
+        "authority": "UK",
+        "name": "Glasgow"
+    },
+    "Groningen": {
+        "authority": "The Netherlands",
+        "name": "Groningen"
+    },
+    "Haag, Nederland": {
+        "authority": "The Netherlands",
+        "name": "The Hague"
+    },
+    "Haarlem": {
+        "authority": "The Netherlands",
+        "name": "Haarlem"
+    },
+    "Hambourg": {
+        "authority": "Germany",
+        "name": "Hamburg"
+    },
+    "Hambourg (31 Hermanstrasse)": {
+        "authority": "Hamburg, Germany",
+        "name": "31 Hermanstrasse"
+    },
+    "Hamburg": {
+        "authority": "Germany",
+        "name": "Hamburg"
+    },
+    "Haymarket, London": {
+        "authority": "London, England, UK",
+        "name": "Haymarket"
+    },
+    "Hector Brame, 2 rue Laffitte": {
+        "authority": "Paris, France",
+        "name": "2 rue Laffitte"
+    },
+    "Holland Park, London": {
+        "authority": "London, England, UK",
+        "name": "Holland Park"
+    },
+    "Hotel Drouot, Paris, France": {
+        "authority": "Paris, France",
+        "name": "Premises of Hotel Drouot"
+    },
+    "Hotel Sicile": {
+        "authority": "Paris, France",
+        "name": "Premises of Hotel Sicile"
+    },
+    "Hotel des ventes": {
+        "authority": "Paris, France",
+        "name": "Premises of Hotel Drouot"
+    },
+    "Huisson": {
+        "authority": "Paris, France",
+        "name": "d'Huison Longueville"
+    },
+    "Hôtel Cuillon, Paris": {
+        "authority": "Paris, France",
+        "name": "Premises of Hotel Cuillon"
+    },
+    "Hôtel Drouot, Paris, France (Paul Chevallier, Commissaire-priseur)": {
+        "authority": "Paris, France",
+        "name": "Premises of Hotel Drouot"
+    },
+    "Hôtel Drouot, Paris, France.": {
+        "authority": "Paris, France",
+        "name": "Premises of Hotel Drouot"
+    },
+    "Hôtel Drouot, Paris, France; Opéra": {
+        "authority": "[multiple locations] Paris, France; Paris, France",
+        "name": "Premises of Hotel Drouot; Place de l'Opéra"
+    },
+    "Hôtel des Ventes": {
+        "authority": "Paris, France",
+        "name": "Premises of Hotel Drouot"
+    },
+    "Hôtel des ventes voir n° 60": {
+        "authority": "Paris, France",
+        "name": "Premises of Hotel Drouot"
+    },
+    "Hôtel des ventes, Paris, France (rue des Jeuneurs).": {
+        "authority": "Paris, France",
+        "name": "rue des Jeuneurs"
+    },
+    "Hôtel des ventes, Paris, France.": {
+        "authority": "Paris, France",
+        "name": "Premises of Hotel Drouot"
+    },
+    "Impasse du Maine": {
+        "authority": "Paris, France",
+        "name": "Impasse du Maine"
+    },
+    "J. Allard": {
+        "authority": "[multiple locations] London, England, UK; Paris, France",
+        "name": "Premises of J. Allard & Cie"
+    },
+    "J. Allard & Cie, 20 rue des Capucines": {
+        "authority": "Paris, France",
+        "name": "20 rue des Capucines"
+    },
+    "J. Allard,": {
+        "authority": "[multiple locations] London, England, UK; Paris, France",
+        "name": "Premises of J. Allard & Cie"
+    },
+    "J. Allard, 20 rue des Capucines": {
+        "authority": "Paris, France",
+        "name": "20 rue des Capucines"
+    },
+    "J. Allard, Paris": {
+        "authority": "France",
+        "name": "Paris"
+    },
+    "J. Mancini, 63  Haussmann": {
+        "authority": "Paris, France",
+        "name": "63 boulevard Haussmann"
+    },
+    "J. Mancini, 7 rue Caumartin": {
+        "authority": "Paris, France",
+        "name": "7 rue Caumartin"
+    },
+    "Jersey City, NJ, USA": {
+        "authority": "USA",
+        "name": "Jersey City"
+    },
+    "Jules Placais": {
+        "authority": "France",
+        "name": "Premises of Jules Placais"
+    },
+    "Karlsruhe": {
+        "authority": "Germany",
+        "name": "Karlsruhe"
+    },
+    "Knoedler & Co": {
+        "authority": "[multiple locations] London, England, UK; New York, NY, USA; Paris, France",
+        "name": "Premises of Knoedler & Co."
+    },
+    "Kurfürstenstrasse, Berlin": {
+        "authority": "Berlin, Germany",
+        "name": "Kurfürstenstrasse"
+    },
+    "L'Exposition de Lyon": {
+        "authority": "Lyon, France",
+        "name": "Premises of Exposition Lyon"
+    },
+    "L'Exposition de Nantes": {
+        "authority": "Nantes, France",
+        "name": "Premises of Exposition Nantes"
+    },
+    "L'Exposition de Reims": {
+        "authority": "Reims, France",
+        "name": "Premises of Exposition Reims"
+    },
+    "L. Tual": {
+        "authority": "Paris, France",
+        "name": "56 rue de la Victoire"
+    },
+    "La HAye": {
+        "authority": "The Netherlands",
+        "name": "The Hague"
+    },
+    "La Haye": {
+        "authority": "The Netherlands",
+        "name": "The Hague"
+    },
+    "La Haye  Vente Amsterdam": {
+        "authority": "The Netherlands",
+        "name": "Amsterdam"
+    },
+    "La Haye Exposition": {
+        "authority": "The Hague, The Netherlands",
+        "name": "Premises of Exposition La Haye"
+    },
+    "La Haye Exposition ) Munich": {
+        "authority": "The Hague, The Netherlands",
+        "name": "Premises of Goupil & Cie The Hague"
+    },
+    "La Haye Exposition Amsterdam": {
+        "authority": "The Hague, The Netherlands",
+        "name": "Premises of Goupil & Cie The Hague"
+    },
+    "La Haye Exposition Anvers": {
+        "authority": "The Hague, The Netherlands",
+        "name": "Premises of Goupil & Cie The Hague"
+    },
+    "La Haye Exposition Arnhem": {
+        "authority": "The Hague, The Netherlands",
+        "name": "Premises of Goupil & Cie The Hague"
+    },
+    "La Haye Exposition Arnhem[?]": {
+        "authority": "The Hague, The Netherlands",
+        "name": "Premises of Goupil & Cie The Hague"
+    },
+    "La Haye Exposition Arti & Amicitive[?]": {
+        "authority": "The Hague, The Netherlands",
+        "name": "Premises of Goupil & Cie The Hague"
+    },
+    "La Haye Exposition Arti Amicitive à Amsterdam": {
+        "authority": "The Hague, The Netherlands",
+        "name": "Premises of Goupil & Cie The Hague"
+    },
+    "La Haye Exposition Arts & Amicitive": {
+        "authority": "The Hague, The Netherlands",
+        "name": "Premises of Goupil & Cie The Hague"
+    },
+    "La Haye Exposition Berlin": {
+        "authority": "The Hague, The Netherlands",
+        "name": "Premises of Goupil & Cie The Hague"
+    },
+    "La Haye Exposition Bruxelles": {
+        "authority": "The Hague, The Netherlands",
+        "name": "Premises of Goupil & Cie The Hague"
+    },
+    "La Haye Exposition Chicago": {
+        "authority": "The Hague, The Netherlands",
+        "name": "Premises of Goupil & Cie The Hague"
+    },
+    "La Haye Exposition Flensburg[?]": {
+        "authority": "The Hague, The Netherlands",
+        "name": "Premises of Goupil & Cie The Hague"
+    },
+    "La Haye Exposition HAmbourg": {
+        "authority": "The Hague, The Netherlands",
+        "name": "Premises of Goupil & Cie The Hague"
+    },
+    "La Haye Exposition Hambourg": {
+        "authority": "The Hague, The Netherlands",
+        "name": "Premises of Goupil & Cie The Hague"
+    },
+    "La Haye Exposition Kinsburg[?]": {
+        "authority": "The Hague, The Netherlands",
+        "name": "Premises of Goupil & Cie The Hague"
+    },
+    "La Haye Exposition La Haye": {
+        "authority": "The Hague, The Netherlands",
+        "name": "Premises of Goupil & Cie The Hague"
+    },
+    "La Haye Exposition Lunich": {
+        "authority": "The Hague, The Netherlands",
+        "name": "Premises of Goupil & Cie The Hague"
+    },
+    "La Haye Exposition Mauve": {
+        "authority": "The Hague, The Netherlands",
+        "name": "Premises of Goupil & Cie The Hague"
+    },
+    "La Haye Exposition Munich": {
+        "authority": "The Hague, The Netherlands",
+        "name": "Premises of Goupil & Cie The Hague"
+    },
+    "La Haye Exposition Panorama Amsterdam": {
+        "authority": "The Hague, The Netherlands",
+        "name": "Premises of Goupil & Cie The Hague"
+    },
+    "La Haye Exposition Panorama, Amsterdam": {
+        "authority": "The Hague, The Netherlands",
+        "name": "Premises of Goupil & Cie The Hague"
+    },
+    "La Haye Exposition Rotterdam": {
+        "authority": "The Hague, The Netherlands",
+        "name": "Premises of Goupil & Cie The Hague"
+    },
+    "La Haye Exposition Stuttgart": {
+        "authority": "The Hague, The Netherlands",
+        "name": "Premises of Goupil & Cie The Hague"
+    },
+    "La Haye Exposition Toronto": {
+        "authority": "The Hague, The Netherlands",
+        "name": "Premises of Goupil & Cie The Hague"
+    },
+    "La Haye Exposition Toronto[?]": {
+        "authority": "The Hague, The Netherlands",
+        "name": "Premises of Goupil & Cie The Hague"
+    },
+    "La Haye Exposition Utrecht": {
+        "authority": "The Hague, The Netherlands",
+        "name": "Premises of Goupil & Cie The Hague"
+    },
+    "La Haye Exposition Venise": {
+        "authority": "The Hague, The Netherlands",
+        "name": "Premises of Goupil & Cie The Hague"
+    },
+    "La Haye Exposition Vienne": {
+        "authority": "The Hague, The Netherlands",
+        "name": "Premises of Goupil & Cie The Hague"
+    },
+    "La Haye Exposition d'Amsterdam": {
+        "authority": "The Hague, The Netherlands",
+        "name": "Premises of Goupil & Cie The Hague"
+    },
+    "La Haye Exposition d'Anvers": {
+        "authority": "The Hague, The Netherlands",
+        "name": "Premises of Goupil & Cie The Hague"
+    },
+    "La Haye Exposition d'Auvers": {
+        "authority": "The Hague, The Netherlands",
+        "name": "Premises of Goupil & Cie The Hague"
+    },
+    "La Haye Exposition de Berlin": {
+        "authority": "The Hague, The Netherlands",
+        "name": "Premises of Goupil & Cie The Hague"
+    },
+    "La Haye Exposition de Bock": {
+        "authority": "The Hague, The Netherlands",
+        "name": "Premises of Goupil & Cie The Hague"
+    },
+    "La Haye Exposition de Bruxelles": {
+        "authority": "The Hague, The Netherlands",
+        "name": "Premises of Goupil & Cie The Hague"
+    },
+    "La Haye Exposition de Dresde": {
+        "authority": "The Hague, The Netherlands",
+        "name": "Premises of Goupil & Cie The Hague"
+    },
+    "La Haye Exposition de Munich": {
+        "authority": "The Hague, The Netherlands",
+        "name": "Premises of Goupil & Cie The Hague"
+    },
+    "La Haye Exposition de Nonter[?]": {
+        "authority": "The Hague, The Netherlands",
+        "name": "Premises of Goupil & Cie The Hague"
+    },
+    "La Haye Exposition de Saint Louis": {
+        "authority": "The Hague, The Netherlands",
+        "name": "Premises of Goupil & Cie The Hague"
+    },
+    "La Haye Exposition publique Stadée[?]": {
+        "authority": "The Hague, The Netherlands",
+        "name": "Premises of Goupil & Cie The Hague"
+    },
+    "La Haye Exposition à Arnhem": {
+        "authority": "The Hague, The Netherlands",
+        "name": "Premises of Goupil & Cie The Hague"
+    },
+    "La Haye Exposition à Gand": {
+        "authority": "The Hague, The Netherlands",
+        "name": "Premises of Goupil & Cie The Hague"
+    },
+    "La Haye Exposition à Munich": {
+        "authority": "The Hague, The Netherlands",
+        "name": "Premises of Goupil & Cie The Hague"
+    },
+    "La Haye Exposition à Paris": {
+        "authority": "The Hague, The Netherlands",
+        "name": "Premises of Goupil & Cie The Hague"
+    },
+    "La Haye Exposition à Rotterdam": {
+        "authority": "The Hague, The Netherlands",
+        "name": "Premises of Goupil & Cie The Hague"
+    },
+    "La Haye Vente AMsterdam": {
+        "authority": "The Netherlands",
+        "name": "Amsterdam"
+    },
+    "La Haye Vente Amsterdam": {
+        "authority": "The Netherlands",
+        "name": "Amsterdam"
+    },
+    "La Haye Vente Eindhoven": {
+        "authority": "The Netherlands",
+        "name": "Eindhoven"
+    },
+    "La Haye Vente Exposition Amsterdam": {
+        "authority": "The Netherlands",
+        "name": "Amsterdam"
+    },
+    "La Haye Vente Munich": {
+        "authority": "Germany",
+        "name": "Munich"
+    },
+    "La Haye Vente Müller & Co": {
+        "authority": "The Netherlands",
+        "name": "The Hague"
+    },
+    "La Haye Vente amsterdam": {
+        "authority": "The Netherlands",
+        "name": "Amsterdam"
+    },
+    "La Haye Vente d'Amsterdam": {
+        "authority": "The Netherlands",
+        "name": "Amsterdam"
+    },
+    "La Haye Vente à Amsterdam": {
+        "authority": "The Hague, The Netherlands",
+        "name": "Premises of Goupil & Cie The Hague"
+    },
+    "La Haye vente publique": {
+        "authority": "The Netherlands",
+        "name": "The Hague"
+    },
+    "La Haye à Exposition de Bruxelles": {
+        "authority": "The Hague, The Netherlands",
+        "name": "Premises of Goupil & Cie The Hague"
+    },
+    "La Haye, Exposition Munich": {
+        "authority": "The Hague, The Netherlands",
+        "name": "Premises of Goupil & Cie The Hague"
+    },
+    "La Haye, Nederland": {
+        "authority": "The Netherlands",
+        "name": "The Hague"
+    },
+    "La Haye, vente Amsterdam": {
+        "authority": "The Netherlands",
+        "name": "Amsterdam"
+    },
+    "La Haye; Bruxelles": {
+        "authority": "[multiple locations] The Hauge, The Netherlands; Brussels, Belgium",
+        "name": "The Hague; Brussels"
+    },
+    "La Haye[?]": {
+        "authority": "The Netherlands",
+        "name": "The Hague"
+    },
+    "La Haÿe": {
+        "authority": "The Netherlands",
+        "name": "The Hague"
+    },
+    "La aye": {
+        "authority": "The Netherlands",
+        "name": "The Hague"
+    },
+    "La haye": {
+        "authority": "The Netherlands",
+        "name": "The Hague"
+    },
+    "Lagandelle": {
+        "authority": "France",
+        "name": "Lagardelle"
+    },
+    "Lair Dubreuil Commissaire priseur Vente publique": {
+        "authority": "Paris, France",
+        "name": "Premises of Lair Dubreuil (commissaire priseur)"
+    },
+    "Lausanne": {
+        "authority": "Switzerland",
+        "name": "Lausanne"
+    },
+    "Le Mans": {
+        "authority": "France",
+        "name": "Le Mans"
+    },
+    "Leeuwarden": {
+        "authority": "The Netherlands",
+        "name": "Leeuwarden"
+    },
+    "Leiden": {
+        "authority": "The Netherlands",
+        "name": "Leiden"
+    },
+    "Leis[?] Tual": {
+        "authority": "Paris, France",
+        "name": "56 rue de la Victoire"
+    },
+    "Leon Tual": {
+        "authority": "Paris, France",
+        "name": "56 rue de la Victoire"
+    },
+    "Lille": {
+        "authority": "France",
+        "name": "Lille"
+    },
+    "Lisbon": {
+        "authority": "Portugal",
+        "name": "Lisbon"
+    },
+    "Lisbone": {
+        "authority": "Portugal",
+        "name": "Lisbon"
+    },
+    "London": {
+        "authority": "UK",
+        "name": "London"
+    },
+    "London, England, UK": {
+        "authority": "UK",
+        "name": "London"
+    },
+    "London, England, UK; Glasgow, Scotland, UK": {
+        "authority": "[multiple locations] London, England, UK; Glasgow, Scotland, UK",
+        "name": "London; Glasgow"
+    },
+    "London, England, UK; Manchester, England, UK": {
+        "authority": "[multiple locations] London, England, UK; Manchester, England, UK",
+        "name": "London; Manchester"
+    },
+    "London, England, UK; New York, NY, USA": {
+        "authority": "[multiple locations] New York, NY, USA; London, England, UK",
+        "name": "New York; London"
+    },
+    "London, England, UK; New York, NY, USA; Paris, France": {
+        "authority": "[multiple locations] London, England, UK; New York, NY, USA; Paris, France",
+        "name": "London; New York; Paris"
+    },
+    "London, England, UK; Paris, France": {
+        "authority": "[multiple locations] London, England, UK; Paris, France",
+        "name": "London; Paris"
+    },
+    "London, England, UK; Paris, France; New York, NY, USA": {
+        "authority": "[multiple locations] London, England, UK; New York, NY, USA; Paris, France",
+        "name": "London; New York; Paris"
+    },
+    "London; Newcastle upon Tyne": {
+        "authority": "[multiple locations] London, England, UK; Newcastle upon Tyne, England, UK",
+        "name": "London; Newcastle upon Tyne"
+    },
+    "Londres": {
+        "authority": "UK",
+        "name": "London"
+    },
+    "Londres (13 King Street)": {
+        "authority": "London, England, UK",
+        "name": "13 King street"
+    },
+    "Londres (95 Picadilly)": {
+        "authority": "London, England, UK",
+        "name": "95 Picadilly"
+    },
+    "Londres (Pall Mall)": {
+        "authority": "London, England, UK",
+        "name": "Pall Mall"
+    },
+    "Londres Exposition à Munich": {
+        "authority": "Munich, Germany",
+        "name": "Premises of Goupil & Cie London"
+    },
+    "Londres vente Christie": {
+        "authority": "UK",
+        "name": "London"
+    },
+    "Londres, Vente Christie": {
+        "authority": "UK",
+        "name": "London"
+    },
+    "Londres[?]": {
+        "authority": "UK",
+        "name": "London"
+    },
+    "Loterie nationale": {
+        "authority": "[no place]",
+        "name": "[no place]"
+    },
+    "Lyon": {
+        "authority": "France",
+        "name": "Lyon"
+    },
+    "Léon Tual": {
+        "authority": "Paris, France",
+        "name": "56 rue de la Victoire"
+    },
+    "Léon Tual Commissaire priseur Vente publique": {
+        "authority": "Paris, France",
+        "name": "56 rue de la Victoire"
+    },
+    "M. Alavoine, 9 rue Caumartin": {
+        "authority": "Paris, France",
+        "name": "9 rue Caumartin"
+    },
+    "M. Delort": {
+        "authority": "Paris, France",
+        "name": "Premises of Charles Edouard Edmond Delort"
+    },
+    "M. G. Bergaud, 12 Rue Godot et Mauroy[?]": {
+        "authority": "Paris, France",
+        "name": "12 rue Godot de Mauroy"
+    },
+    "M. Goupil à Madrid": {
+        "authority": "Spain",
+        "name": "Madrid"
+    },
+    "M. Henry Mason, 3 Rue de l'Isly": {
+        "authority": "Paris, France",
+        "name": "3 rue de l'Isly"
+    },
+    "M. J. Allard, 20 rue des Capucines": {
+        "authority": "Paris, France",
+        "name": "20 rue des Capucines"
+    },
+    "M. Knoedler & Co": {
+        "authority": "[multiple locations] London, England, UK; New York, NY, USA; Paris, France",
+        "name": "Premises of Knoedler & Co."
+    },
+    "M. Knoedler & Co, 17 Place Vendôme": {
+        "authority": "Paris, France",
+        "name": "17 Place Vendôme"
+    },
+    "M. Knoedler & Co, 23 Place Vendôme": {
+        "authority": "Paris, France",
+        "name": "23 Place Vendôme"
+    },
+    "M. Knoedler & Co, 23, place Vendôme": {
+        "authority": "Paris, France",
+        "name": "23 Place Vendôme"
+    },
+    "M. Knoedler & Co, 355 Fifth Avenue, New York": {
+        "authority": "New York, NY, USA",
+        "name": "355 Fifth avenue"
+    },
+    "M. Knoedler & Co, 355 Fifth avenue, New York": {
+        "authority": "New York, NY, USA",
+        "name": "355 Fifth avenue"
+    },
+    "M. Knoedler & Co, 556-558 Fifth Avenue, New York": {
+        "authority": "New York, NY, USA",
+        "name": "556-558 Fifth avenue"
+    },
+    "M. Knoedler & Co, New York": {
+        "authority": "USA",
+        "name": "New York"
+    },
+    "M. Knoedler & Co, Paris": {
+        "authority": "France",
+        "name": "Paris"
+    },
+    "M. M. Muller & Cie, Doelenstraat 16-18 à Amsterdam": {
+        "authority": "Amsterdam, The Netherlands",
+        "name": "16-18 Doelenstraat"
+    },
+    "M. Paul Chevallier": {
+        "authority": "Paris, France",
+        "name": "10 rue Grange Batelière"
+    },
+    "M. Preyer La Haye": {
+        "authority": "The Netherlands",
+        "name": "The Hague"
+    },
+    "M. Raymond Pujos": {
+        "authority": "France",
+        "name": "Premises of Raymond Pujos"
+    },
+    "M. Wildensetin, 57 rue de la Boétie": {
+        "authority": "Paris, France",
+        "name": "57 rue de La Boétie"
+    },
+    "M. de Beistegui, 12 rue Newton": {
+        "authority": "Paris, France",
+        "name": "12 rue Newton"
+    },
+    "Madrid": {
+        "authority": "Spain",
+        "name": "Madrid"
+    },
+    "Mainz, Deutschland": {
+        "authority": "Germany",
+        "name": "Mainz"
+    },
+    "Maison Bruxelles,": {
+        "authority": "Brussels, Belgium",
+        "name": "Premises of Goupil & Cie Brussels"
+    },
+    "Maison de New York": {
+        "authority": "New York, NY, USA",
+        "name": "289 Broadway street"
+    },
+    "Malvern": {
+        "authority": "UK",
+        "name": "Malvern"
+    },
+    "Manchester": {
+        "authority": "UK",
+        "name": "Manchester"
+    },
+    "Marseille": {
+        "authority": "France",
+        "name": "Marseille"
+    },
+    "Marseille (20 rue Montgrand)": {
+        "authority": "Marseille, France",
+        "name": "20 rue Montgrand"
+    },
+    "Maurice Delestre": {
+        "authority": "Paris, France",
+        "name": "27 rue Drouot"
+    },
+    "Maurice Morel[?]": {
+        "authority": "Paris, France",
+        "name": "Premises of Maurice Morel"
+    },
+    "Milan": {
+        "authority": "Italy",
+        "name": "Milan"
+    },
+    "Monsieur Tattet Ch., 22 rue Matignon": {
+        "authority": "Paris, France",
+        "name": "22 rue Matignon"
+    },
+    "Montaignac": {
+        "authority": "France",
+        "name": "Montaignac"
+    },
+    "Montaignac, 12 rue Godot de Mauroy": {
+        "authority": "[multiple locations] Montaignac Saint Hippolyte, France; Paris, France",
+        "name": "Montaignac; 12 rue Godot de Mauroy"
+    },
+    "Montigny sur Loing": {
+        "authority": "France",
+        "name": "Montigny sur Loing"
+    },
+    "Montmartre": {
+        "authority": "Paris, France",
+        "name": "19 boulevard Montmartre"
+    },
+    "Montréal": {
+        "authority": "Montreal, Canada",
+        "name": "Montréal"
+    },
+    "Moscou": {
+        "authority": "Russia",
+        "name": "Moscow"
+    },
+    "Moscou (1824-1892)": {
+        "authority": "Russia",
+        "name": "Moscow"
+    },
+    "Moscow": {
+        "authority": "Russia",
+        "name": "Moscow"
+    },
+    "Muller & Cie Amsterdam": {
+        "authority": "The Netherlands",
+        "name": "Amsterdam"
+    },
+    "Munich": {
+        "authority": "Germany",
+        "name": "Munich"
+    },
+    "Munich, Germany; Vienna, Austria": {
+        "authority": "[multiple locations] Munich, Germany; Vienna, Austria",
+        "name": "Munich; Vienna"
+    },
+    "München, Deutschland": {
+        "authority": "Germany",
+        "name": "Munich"
+    },
+    "Nanterre": {
+        "authority": "France",
+        "name": "Nanterre"
+    },
+    "Nantes, France": {
+        "authority": "France",
+        "name": "Nantes"
+    },
+    "Naples": {
+        "authority": "Italy",
+        "name": "Naples"
+    },
+    "Naval & Military Club, London": {
+        "authority": "London, England, UK",
+        "name": "Premises of Naval & Military Club"
+    },
+    "Nederland": {
+        "authority": "The Netherlands",
+        "name": "The Netherlands"
+    },
+    "Netherlands": {
+        "authority": "The Netherlands",
+        "name": "The Netherlands"
+    },
+    "New Haven, CT, USA": {
+        "authority": "USA",
+        "name": "New Haven"
+    },
+    "New York": {
+        "authority": "USA",
+        "name": "New York"
+    },
+    "New York (529 Madison Ave.)": {
+        "authority": "New York, NY, USA",
+        "name": "529 Madison avenue"
+    },
+    "New York (82 5th Ave.)": {
+        "authority": "New York, NY, USA",
+        "name": "82 Fifth avenue"
+    },
+    "New York Exposition Saint Louis": {
+        "authority": "New York, NY, USA",
+        "name": "289 Broadway street"
+    },
+    "New York NY, USA": {
+        "authority": "USA",
+        "name": "New York"
+    },
+    "New York [rayé]": {
+        "authority": "USA",
+        "name": "New York"
+    },
+    "New York vente publique": {
+        "authority": "USA",
+        "name": "New York"
+    },
+    "New York, NY": {
+        "authority": "USA",
+        "name": "New York"
+    },
+    "New York, NY, USA": {
+        "authority": "USA",
+        "name": "New York"
+    },
+    "New York, NY, USA; London, England, UK": {
+        "authority": "[multiple locations] New York, NY, USA; London, England, UK",
+        "name": "New York; London"
+    },
+    "New York, NY, USA; Paris, France": {
+        "authority": "[multiple locations] New York, NY, USA; Paris, France",
+        "name": "New York; Paris"
+    },
+    "New York, NY, USA; Staten Island, NY, USA": {
+        "authority": "[multiple locations] New York, NY, USA; Staten Island, NY, USA",
+        "name": "New York; Staten Island"
+    },
+    "New York, USA": {
+        "authority": "USA",
+        "name": "New York"
+    },
+    "New York, USA.": {
+        "authority": "USA",
+        "name": "New York"
+    },
+    "New york": {
+        "authority": "USA",
+        "name": "New York"
+    },
+    "New-York": {
+        "authority": "USA",
+        "name": "New York"
+    },
+    "Newport": {
+        "authority": "USA",
+        "name": "Newport"
+    },
+    "Nez York": {
+        "authority": "USA",
+        "name": "New York"
+    },
+    "Nice": {
+        "authority": "France",
+        "name": "Nice"
+    },
+    "Nimes": {
+        "authority": "Nîmes, France",
+        "name": "Nimes"
+    },
+    "North Easton, MA, USA": {
+        "authority": "USA",
+        "name": "North Easton"
+    },
+    "Notre maison de La Haye": {
+        "authority": "The Hague, The Netherlands",
+        "name": "Premises of Goupil & Cie The Hague"
+    },
+    "Notre maison de Londres": {
+        "authority": "London, England, UK",
+        "name": "Premises of Goupil & Cie London"
+    },
+    "Old Bond Street, London": {
+        "authority": "London, England, UK",
+        "name": "Old Bond street"
+    },
+    "Oldham, England, UK": {
+        "authority": "UK",
+        "name": "Oldham"
+    },
+    "Opéra": {
+        "authority": "Paris, France",
+        "name": "Place de l'Opéra"
+    },
+    "Opéra; Galerie": {
+        "authority": "Paris, France",
+        "name": "Place de l'Opéra"
+    },
+    "Opéra; Galerie?": {
+        "authority": "Paris, France",
+        "name": "Place de l'Opéra"
+    },
+    "Orchard House, Scurbury": {
+        "authority": "Scarbury, England, UK",
+        "name": "Premises of Orchard House"
+    },
+    "Oullins": {
+        "authority": "France",
+        "name": "Oullins"
+    },
+    "P. Chevallier": {
+        "authority": "Paris, France",
+        "name": "10 rue Grange Batelière"
+    },
+    "Palais Rothschild, Vienna": {
+        "authority": "Vienna, Austria",
+        "name": "Palais Rothschild"
+    },
+    "Palancz": {
+        "authority": "France",
+        "name": "Premises of Palancz"
+    },
+    "Paris": {
+        "authority": "France",
+        "name": "Paris"
+    },
+    "Paris, France": {
+        "authority": "France",
+        "name": "Paris"
+    },
+    "Paris, France (1 rue Talleyrand)": {
+        "authority": "Paris, France",
+        "name": "1 rue Talleyrand"
+    },
+    "Paris, France (10 Rue Frochet)": {
+        "authority": "Paris, France",
+        "name": "10 rue Frochot"
+    },
+    "Paris, France (12 rue Elzévir)": {
+        "authority": "Paris, France",
+        "name": "12 rue Elzévir"
+    },
+    "Paris, France (120 Champs Elysées)": {
+        "authority": "Paris, France",
+        "name": "120 Champs Elysées"
+    },
+    "Paris, France (15 rue Drouot)": {
+        "authority": "Paris, France",
+        "name": "15 rue Drouot"
+    },
+    "Paris, France (15 rue de Presbourg)": {
+        "authority": "Paris, France",
+        "name": "15 rue de Presbourg"
+    },
+    "Paris, France (16 rue Vivienne)": {
+        "authority": "Paris, France",
+        "name": "16 rue Vivienne"
+    },
+    "Paris, France (16 rue d'Argout)": {
+        "authority": "Paris, France",
+        "name": "16 rue d'Argout"
+    },
+    "Paris, France (16 rue de 4 septembre)": {
+        "authority": "Paris, France",
+        "name": "16 rue de 4 Septembre"
+    },
+    "Paris, France (16 rue de Crussot)": {
+        "authority": "Paris, France",
+        "name": "16 rue de Crussot"
+    },
+    "Paris, France (17 Quai Malaquais)": {
+        "authority": "Paris, France",
+        "name": "17 quai Malaquais"
+    },
+    "Paris, France (18, rue Bergère)": {
+        "authority": "Paris, France",
+        "name": "18 rue Bergère"
+    },
+    "Paris, France (19, rue Bergère)": {
+        "authority": "Paris, France",
+        "name": "19 rue Bergère"
+    },
+    "Paris, France (21 quai Voltaire)": {
+        "authority": "Paris, France",
+        "name": "21 quai Voltaire"
+    },
+    "Paris, France (22 Cours de la Reine)": {
+        "authority": "Paris, France",
+        "name": "22 Cours de la Reine"
+    },
+    "Paris, France (22 rue Hauteville)": {
+        "authority": "Paris, France",
+        "name": "22 rue Hauteville"
+    },
+    "Paris, France (23 boulevard Malesherbes)": {
+        "authority": "Paris, France",
+        "name": "23 boulevard Malesherbes"
+    },
+    "Paris, France (23 boulevard Poissonnière)": {
+        "authority": "Paris, France",
+        "name": "23 boulevard Poissonnière"
+    },
+    "Paris, France (23 rue Lafitte)": {
+        "authority": "Paris, France",
+        "name": "23 rue Laffitte"
+    },
+    "Paris, France (25 quai Voltaire)": {
+        "authority": "Paris, France",
+        "name": "25 quai Voltaire"
+    },
+    "Paris, France (3 rue Laffite)": {
+        "authority": "Paris, France",
+        "name": "3 rue Laffitte"
+    },
+    "Paris, France (35 rue de Lyon)": {
+        "authority": "Paris, France",
+        "name": "35 rue de Lyon"
+    },
+    "Paris, France (36 boulevard des Italiens)": {
+        "authority": "Paris, France",
+        "name": "36 boulevard des Italiens"
+    },
+    "Paris, France (37 Avenue Kleber)": {
+        "authority": "Paris, France",
+        "name": "37 avenue Kléber"
+    },
+    "Paris, France (40 avenue des champs Elysées)": {
+        "authority": "Paris, France",
+        "name": "40 avenue des Champs Elysées"
+    },
+    "Paris, France (40 rue de la Boétie)": {
+        "authority": "Paris, France",
+        "name": "40 rue de La Boétie"
+    },
+    "Paris, France (41 Rue des Martyrs)": {
+        "authority": "Paris, France",
+        "name": "41 rue des Martyrs"
+    },
+    "Paris, France (45 Avenue Montaigne)": {
+        "authority": "Paris, France",
+        "name": "45 avenue Montaigne"
+    },
+    "Paris, France (47, avenue de Friedland)": {
+        "authority": "Paris, France",
+        "name": "47 avenue de Friedland"
+    },
+    "Paris, France (47, rue Taitbout)": {
+        "authority": "Paris, France",
+        "name": "47 rue Taitbout"
+    },
+    "Paris, France (48 rue du Luxembourg)": {
+        "authority": "Paris, France",
+        "name": "48 rue du Luxembourg"
+    },
+    "Paris, France (5 passage Violet)": {
+        "authority": "Paris, France",
+        "name": "5 passage Violet"
+    },
+    "Paris, France (5 rue Scribe)": {
+        "authority": "Paris, France",
+        "name": "5 rue Scribe"
+    },
+    "Paris, France (59 avenue de la Grande Armée)": {
+        "authority": "Paris, France",
+        "name": "59 avenue de la Grande Armée"
+    },
+    "Paris, France (6 Cité Rougemont)": {
+        "authority": "Paris, France",
+        "name": "6 Cité Rougemont"
+    },
+    "Paris, France (7, rue Saint Georges)": {
+        "authority": "Paris, France",
+        "name": "7 rue Saint Georges"
+    },
+    "Paris, France (70 rue de Rochechouart)": {
+        "authority": "Paris, France",
+        "name": "70 rue de Rochechouart"
+    },
+    "Paris, France (75 ave. Kleber)": {
+        "authority": "Paris, France",
+        "name": "75 avenue Kléber"
+    },
+    "Paris, France (8, rue Laffite)": {
+        "authority": "Paris, France",
+        "name": "8 rue Laffitte"
+    },
+    "Paris, France (89 rue Hautevile)": {
+        "authority": "Paris, France",
+        "name": "89 rue Hautevile"
+    },
+    "Paris, France (9 rue Chaptal)": {
+        "authority": "Paris, France",
+        "name": "9 rue Chaptal"
+    },
+    "Paris, France (9, rue Caumartin)": {
+        "authority": "Paris, France",
+        "name": "9 rue Caumartin"
+    },
+    "Paris, France (94 rue d'Amsterdam)": {
+        "authority": "Paris, France",
+        "name": "94 rue d'Amsterdam"
+    },
+    "Paris, France (Faubourg Poissonnière)": {
+        "authority": "Paris, France",
+        "name": "rue du Faubourg Poissonnière"
+    },
+    "Paris, France (Rue Godot de Mauroi)": {
+        "authority": "Paris, France",
+        "name": "rue Godot de Mauroy"
+    },
+    "Paris, France (rue Laffitte)": {
+        "authority": "Paris, France",
+        "name": "rue Laffitte"
+    },
+    "Paris, France (rue d'Aumale)": {
+        "authority": "Paris, France",
+        "name": "rue d'Aumale"
+    },
+    "Paris, France (rue de Douai)": {
+        "authority": "Paris, France",
+        "name": "rue de Douai"
+    },
+    "Paris, France (rue de la Chausséee d'Antin)": {
+        "authority": "Paris, France",
+        "name": "rue de la Chaussée d'Antin"
+    },
+    "Paris,France": {
+        "authority": "France",
+        "name": "Paris"
+    },
+    "Passy, France (20 Chaussée de la Muette)": {
+        "authority": "Passy, France",
+        "name": "20 Chaussée de la Muette"
+    },
+    "Pau": {
+        "authority": "France",
+        "name": "Pau"
+    },
+    "Pau, Paris, Francde": {
+        "authority": "Paris, France",
+        "name": "Pau"
+    },
+    "Pau, Paris, France": {
+        "authority": "Paris, France",
+        "name": "Pau"
+    },
+    "Paul Chevallier": {
+        "authority": "Paris, France",
+        "name": "10 rue Grange Batelière"
+    },
+    "Paul Chevallier commissaire priseur 10 Rue de la Grange Batelière": {
+        "authority": "Paris, France",
+        "name": "10 rue de la Grange Batelière"
+    },
+    "Paul Détrimont": {
+        "authority": "Paris, France",
+        "name": "rue Laffitte"
+    },
+    "Pesme": {
+        "authority": "France",
+        "name": "Premises of Pesme"
+    },
+    "Philadelphia": {
+        "authority": "USA",
+        "name": "Philadelphia"
+    },
+    "Philadelphia, PA, USA": {
+        "authority": "USA",
+        "name": "Philadelphia"
+    },
+    "Pittet": {
+        "authority": "France",
+        "name": "Premises of Charles Pittet"
+    },
+    "Pittsburgh": {
+        "authority": "USA",
+        "name": "Pittsburgh"
+    },
+    "Place de l'Opéra": {
+        "authority": "Paris, France",
+        "name": "Place de l'Opéra"
+    },
+    "Place de la Madeleine": {
+        "authority": "Paris, France",
+        "name": "Place de la Madeleine"
+    },
+    "Place du Musée, Brussels": {
+        "authority": "Brussels, Belgium",
+        "name": "Place du Musée"
+    },
+    "Providence": {
+        "authority": "UA",
+        "name": "Providence"
+    },
+    "Quai de Billy 53": {
+        "authority": "Paris, France",
+        "name": "53 quai de Billy"
+    },
+    "Reims": {
+        "authority": "France",
+        "name": "Reims"
+    },
+    "Reims, France": {
+        "authority": "France",
+        "name": "Reims"
+    },
+    "Riga": {
+        "authority": "Latvia",
+        "name": "Riga"
+    },
+    "Rio de Janeiro, Bresil": {
+        "authority": "Brazil",
+        "name": "Rio de Janeiro"
+    },
+    "Rome": {
+        "authority": "Italy",
+        "name": "Rome"
+    },
+    "Rotterdam": {
+        "authority": "The Netherlands",
+        "name": "Rotterdam"
+    },
+    "Rotterdam, Pays-Bas": {
+        "authority": "The Netherlands",
+        "name": "Rotterdam"
+    },
+    "Roubaix": {
+        "authority": "France",
+        "name": "Roubaix"
+    },
+    "Roubaix, Paris, France": {
+        "authority": "Paris, France",
+        "name": "Roubaix"
+    },
+    "Rouen, France": {
+        "authority": "France",
+        "name": "Rouen"
+    },
+    "Rue Ampère": {
+        "authority": "Paris, France",
+        "name": "rue Ampère"
+    },
+    "Rue Blanche, Brussels": {
+        "authority": "Brussels, Belgium",
+        "name": "rue Blanche"
+    },
+    "Rue Brochant": {
+        "authority": "Paris, France",
+        "name": "rue Brochant"
+    },
+    "Rue Cambon": {
+        "authority": "Paris, France",
+        "name": "rue Cambon"
+    },
+    "Rue Caumartin": {
+        "authority": "Paris, France",
+        "name": "rue Caumartin"
+    },
+    "Rue Clignancourt": {
+        "authority": "Paris, France",
+        "name": "rue Clignancourt"
+    },
+    "Rue Dauphine": {
+        "authority": "Paris, France",
+        "name": "rue Dauphine"
+    },
+    "Rue Duperré 4 ou 6": {
+        "authority": "Paris, France",
+        "name": "4 or 6 rue Duperré"
+    },
+    "Rue Dupreré 4 ou 6": {
+        "authority": "Paris, France",
+        "name": "4 or 6 rue Duperré"
+    },
+    "Rue Espagnole, Bruges": {
+        "authority": "Bruges, Belgium",
+        "name": "rue Espagnole"
+    },
+    "Rue Fontaine": {
+        "authority": "Paris, France",
+        "name": "rue Fontaine"
+    },
+    "Rue Forest": {
+        "authority": "Paris, France",
+        "name": "rue Forest"
+    },
+    "Rue Glück, 2": {
+        "authority": "Paris, France",
+        "name": "2 rue Glück"
+    },
+    "Rue Glück, 3": {
+        "authority": "Paris, France",
+        "name": "3 rue Glück"
+    },
+    "Rue Glück, 4": {
+        "authority": "Paris, France",
+        "name": "4 rue Glück"
+    },
+    "Rue Lafayette": {
+        "authority": "Paris, France",
+        "name": "rue Lafayette"
+    },
+    "Rue Laffitte": {
+        "authority": "Paris, France",
+        "name": "rue Laffitte"
+    },
+    "Rue Mogador": {
+        "authority": "Paris, France",
+        "name": "rue Mogador"
+    },
+    "Rue Moncey": {
+        "authority": "Paris, France",
+        "name": "rue Moncey"
+    },
+    "Rue Montenotte": {
+        "authority": "Paris, France",
+        "name": "rue Montenotte"
+    },
+    "Rue Moutant 14, Marseille": {
+        "authority": "Marseille, France",
+        "name": "rue Moutant 14"
+    },
+    "Rue Mozart": {
+        "authority": "Paris, France",
+        "name": "avenue Mozart"
+    },
+    "Rue Pelouze": {
+        "authority": "Paris, France",
+        "name": "rue Pelouze"
+    },
+    "Rue Pergolèse": {
+        "authority": "Paris, France",
+        "name": "rue Pergolèse"
+    },
+    "Rue Pigalle": {
+        "authority": "Paris, France",
+        "name": "rue Pigalle"
+    },
+    "Rue Saint Roch": {
+        "authority": "Paris, France",
+        "name": "rue Saint Roch"
+    },
+    "Rue Scribe": {
+        "authority": "Paris, France",
+        "name": "rue Scribe"
+    },
+    "Rue Taillaut": {
+        "authority": "France",
+        "name": "rue Taillaut"
+    },
+    "Rue Taitbout": {
+        "authority": "Paris, France",
+        "name": "rue Taitbout"
+    },
+    "Rue Viscoroti": {
+        "authority": "Paris, France",
+        "name": "rue Visconti"
+    },
+    "Rue de Berlin": {
+        "authority": "Paris, France",
+        "name": "rue de Liège"
+    },
+    "Rue de Doai": {
+        "authority": "Paris, France",
+        "name": "rue de Douai"
+    },
+    "Rue de Fleurus": {
+        "authority": "Paris, France",
+        "name": "rue de Fleurus"
+    },
+    "Rue de Maubeuge 18": {
+        "authority": "Paris, France",
+        "name": "18 rue de Maubeuge"
+    },
+    "Rue de Sèze": {
+        "authority": "Paris, France",
+        "name": "rue de Sèze"
+    },
+    "Rue de Trévise 36": {
+        "authority": "Paris, France",
+        "name": "36 rue de Trévise"
+    },
+    "Rue de l'abreuvoir": {
+        "authority": "Paris, France",
+        "name": "rue de l'Abreuvoir"
+    },
+    "Rue de la Benne": {
+        "authority": "France",
+        "name": "rue de la Benne"
+    },
+    "Rue de la Bruyère N. 5": {
+        "authority": "Paris, France",
+        "name": "5 rue de la Bruyère"
+    },
+    "Rue de la Faisanderie": {
+        "authority": "Paris, France",
+        "name": "rue de la Faisanderie"
+    },
+    "Rue de la Paix": {
+        "authority": "Paris, France",
+        "name": "rue de la Paix"
+    },
+    "Rue de la Rochefoucault": {
+        "authority": "Paris, France",
+        "name": "rue de la Rochefoucauld"
+    },
+    "Rue du 4 Septembre 12": {
+        "authority": "Paris, France",
+        "name": "12 rue du 4 Septembre"
+    },
+    "Rue le Pelletier": {
+        "authority": "Paris, France",
+        "name": "rue Le Peletier"
+    },
+    "Rueil": {
+        "authority": "France",
+        "name": "Rueil"
+    },
+    "Russia": {
+        "authority": "Russia",
+        "name": "Russia"
+    },
+    "Saint Cloud": {
+        "authority": "France",
+        "name": "Saint Cloud"
+    },
+    "Saint Croix": {
+        "authority": "Sainte Croix du Verdon, France",
+        "name": "Saint Croix"
+    },
+    "Saint Gilles": {
+        "authority": "Belgium",
+        "name": "Saint Gilles"
+    },
+    "Saint Jean de Luz": {
+        "authority": "France",
+        "name": "Saint Jean de Luz"
+    },
+    "Saint Louis, MO, USA": {
+        "authority": "USA",
+        "name": "Saint Louis"
+    },
+    "Saint Paul": {
+        "authority": "France",
+        "name": "Saint Paul"
+    },
+    "Saint Petersbourg, Russie": {
+        "authority": "Russia",
+        "name": "Saint Petersburg"
+    },
+    "Saint Petersburg": {
+        "authority": "Russia",
+        "name": "Saint Petersburg"
+    },
+    "Saint Rémy les Chevreuses S & O": {
+        "authority": "France",
+        "name": "Saint Rémy lès Chevreuse"
+    },
+    "San Donato (near Firenze), Italia": {
+        "authority": "Italy",
+        "name": "San Donato"
+    },
+    "San Francisco": {
+        "authority": "USA",
+        "name": "San Francisco"
+    },
+    "San Francisco, CA, USA": {
+        "authority": "USA",
+        "name": "San Francisco"
+    },
+    "San Salvador": {
+        "authority": "El Salvador",
+        "name": "San Salvador"
+    },
+    "Schapertrasse 15, Berlin": {
+        "authority": "Berlin, Germany",
+        "name": "15 Schapertrasse"
+    },
+    "Scheveningen": {
+        "authority": "The Hague, The Netherlands",
+        "name": "Scheveningen"
+    },
+    "Schomergasse 17 1/2, Munich": {
+        "authority": "Munich, Germany",
+        "name": "17 1/2 Schomergasse"
+    },
+    "Siège social": {
+        "authority": "Paris, France",
+        "name": "Premises of Goupil & Cie Paris"
+    },
+    "Siège social Goupil & Cie, 9 rue Chaptal, Paris, France.": {
+        "authority": "Paris, France",
+        "name": "9 rue Chaptal"
+    },
+    "Sociéte des Amis des Arts de Reims": {
+        "authority": "Reims, France",
+        "name": "Premises of Sociéte des Amis des Arts de Reims"
+    },
+    "Société des Arts de Mulhouse": {
+        "authority": "Mulhouse, France",
+        "name": "Premises of Société des Arts de Mulhouse"
+    },
+    "Société des Galeries Georges Petit": {
+        "authority": "Paris, France",
+        "name": "7 rue Saint Georges"
+    },
+    "Société des arts de Mulhouse": {
+        "authority": "Mulhouse, France",
+        "name": "Premises of Société des Arts de Mulhouse"
+    },
+    "Société des beaux arts à Reims": {
+        "authority": "Reims, France",
+        "name": "Premises of Sociéte des Amis des Arts de Reims"
+    },
+    "Société des galeries Georges Petit": {
+        "authority": "Paris, France",
+        "name": "7 rue Saint Georges"
+    },
+    "Société des galeries Georges Petit, Paris": {
+        "authority": "Paris, France",
+        "name": "7 rue Saint Georges"
+    },
+    "Sortain, 11 rue Scribe": {
+        "authority": "Paris, France",
+        "name": "11 rue Scribe"
+    },
+    "St. Louis": {
+        "authority": "St. Louis, MO, USA",
+        "name": "Saint Louis"
+    },
+    "St. Petersburg": {
+        "authority": "Russia",
+        "name": "Saint Petersburg"
+    },
+    "St. Petersburg, Russia": {
+        "authority": "Russia",
+        "name": "Saint Petersburg"
+    },
+    "Stuttgart": {
+        "authority": "Germany",
+        "name": "Stuttgart"
+    },
+    "Stuttgart, Allemagne": {
+        "authority": "Germany",
+        "name": "Stuttgart"
+    },
+    "Stuttgart, Germany": {
+        "authority": "Germany",
+        "name": "Stuttgart"
+    },
+    "Succursale de Berlin, Allemagne": {
+        "authority": "Berlin, Germany",
+        "name": "63 Charlottenstrasse"
+    },
+    "Succursale de Berlin, Allemagne.": {
+        "authority": "Berlin, Germany",
+        "name": "63 Charlottenstrasse"
+    },
+    "Succursale de Boulevard, Paris, France": {
+        "authority": "Paris, France",
+        "name": "19 boulevard Montmartre"
+    },
+    "Succursale de Bruxelles": {
+        "authority": "Brussels, Belgium",
+        "name": "Premises of Goupil & Cie Brussels"
+    },
+    "Succursale de Bruxelles, Belgique": {
+        "authority": "Brussels, Belgium",
+        "name": "Premises of Goupil & Cie Brussels"
+    },
+    "Succursale de Bruxelles, Belgique.": {
+        "authority": "Brussels, Belgium",
+        "name": "Premises of Goupil & Cie Brussels"
+    },
+    "Succursale de Bruxelles.": {
+        "authority": "Brussels, Belgium",
+        "name": "Premises of Goupil & Cie Brussels"
+    },
+    "Succursale de La Haye": {
+        "authority": "The Hague, The Netherlands",
+        "name": "Premises of Goupil & Cie The Hague"
+    },
+    "Succursale de La Haye, Pays-Bas": {
+        "authority": "The Hague, The Netherlands",
+        "name": "Premises of Goupil & Cie The Hague"
+    },
+    "Succursale de La Haye, Pays-Bas.": {
+        "authority": "The Hague, The Netherlands",
+        "name": "Premises of Goupil & Cie The Hague"
+    },
+    "Succursale de La Haye, Pays-Bas; Opéra": {
+        "authority": "[multiple locations] The Hague, The Netherlands; Paris, France",
+        "name": "Premises of Goupil & Cie The Hague; 2 Place de l'Opéra"
+    },
+    "Succursale de La Haye, Pays-Pas": {
+        "authority": "The Hague, The Netherlands",
+        "name": "Premises of Goupil & Cie The Hague"
+    },
+    "Succursale de La Haye.": {
+        "authority": "The Hague, The Netherlands",
+        "name": "Premises of Goupil & Cie The Hague"
+    },
+    "Succursale de La Haye; Opéra": {
+        "authority": "[multiple locations] The Hague, The Netherlands; Paris, France",
+        "name": "Premises of Goupil & Cie The Hague; 2 Place de l'Opéra"
+    },
+    "Succursale de Londres": {
+        "authority": "London, England, UK",
+        "name": "Premises of Goupil & Cie London"
+    },
+    "Succursale de Londres, Grande-Bretagne": {
+        "authority": "London, England, UK",
+        "name": "Premises of Goupil & Cie London"
+    },
+    "Succursale de Londres, Grande-Bretagne.": {
+        "authority": "London, England, UK",
+        "name": "Premises of Goupil & Cie London"
+    },
+    "Succursale de New York, Etats-Unis.": {
+        "authority": "New York, NY, USA",
+        "name": "289 Broadway street"
+    },
+    "Succursale de l'Opéra, Paris": {
+        "authority": "Paris, France",
+        "name": "2 Place de l'Opéra"
+    },
+    "Succursale de l'Opéra, Paris, France": {
+        "authority": "Paris, France",
+        "name": "2 Place de l'Opéra"
+    },
+    "Succursale de l'Opéra, Paris, France.": {
+        "authority": "Paris, France",
+        "name": "2 Place de l'Opéra"
+    },
+    "Succursale de l'Opéra, Paris, France[rayé]": {
+        "authority": "Paris, France",
+        "name": "2 Place de l'Opéra"
+    },
+    "Succursale du Boulevard, Paris, France.": {
+        "authority": "Paris, France",
+        "name": "19 boulevard Montmartre"
+    },
+    "Succursale du boulevard, Paris, France": {
+        "authority": "Paris, France",
+        "name": "19 boulevard Montmartre"
+    },
+    "Succursale du boulevard, Paris, france.": {
+        "authority": "Paris, France",
+        "name": "19 boulevard Montmartre"
+    },
+    "The Hague": {
+        "authority": "The Netherlands",
+        "name": "The Hague"
+    },
+    "Toledo": {
+        "authority": "Spain",
+        "name": "Toledo"
+    },
+    "Tooth & Sons": {
+        "authority": "[multiple locations] London, England, UK; Paris, France; New York, NY, USA",
+        "name": "Premises of Arthur Tooth & Sons"
+    },
+    "Toulouse": {
+        "authority": "France",
+        "name": "Toulouse"
+    },
+    "Trieste, Italie": {
+        "authority": "Italy",
+        "name": "Trieste"
+    },
+    "Troy, NY, USA": {
+        "authority": "USA",
+        "name": "Troy"
+    },
+    "Tülemont": {
+        "authority": "France",
+        "name": "Premises of Tülemont"
+    },
+    "Utrecht": {
+        "authority": "The Netherlands",
+        "name": "Utrecht"
+    },
+    "Utrecht, Nederland": {
+        "authority": "The Netherlands",
+        "name": "Utrecht"
+    },
+    "Utrecht, Netherlands": {
+        "authority": "The Netherlands",
+        "name": "Utrecht"
+    },
+    "Utrecht, Pays-Bas": {
+        "authority": "The Netherlands",
+        "name": "Utrecht"
+    },
+    "Utretcht": {
+        "authority": "The Netherlands",
+        "name": "Utrecht"
+    },
+    "Vendu au Boulevard Montmartre": {
+        "authority": "Paris, France",
+        "name": "19 boulevard Montmartre"
+    },
+    "Vendu au boulevard": {
+        "authority": "Paris, France",
+        "name": "19 boulevard Montmartre"
+    },
+    "Vendu en Vente Publique par Paul Chevallier": {
+        "authority": "Paris, France",
+        "name": "10 rue Grange Batelière"
+    },
+    "Vendu en vente publique par M. Paul Chevallier": {
+        "authority": "Paris, France",
+        "name": "10 rue Grange Batelière"
+    },
+    "Vendu en vente publique par M. Paul Chevallier 18 février 1872": {
+        "authority": "Paris, France",
+        "name": "10 rue Grange Batelière"
+    },
+    "Vendu en vente publique par Paul Chevallier": {
+        "authority": "Paris, France",
+        "name": "10 rue Grange Batelière"
+    },
+    "Vendu en vente publique par Paul Chevallier 18 Février 1882": {
+        "authority": "Paris, France",
+        "name": "10 rue Grange Batelière"
+    },
+    "Vendu en vente publique par Paul Chevallier 18 février 1882": {
+        "authority": "Paris, France",
+        "name": "10 rue Grange Batelière"
+    },
+    "Vendu en vente publique par Paul Chevallier 6 avril 1882": {
+        "authority": "Paris, France",
+        "name": "10 rue Grange Batelière"
+    },
+    "Vendu par Petit": {
+        "authority": "Paris, France",
+        "name": "7 rue Saint Georges"
+    },
+    "Vendu à La Haye": {
+        "authority": "The Netherlands",
+        "name": "The Hague"
+    },
+    "Venice": {
+        "authority": "Italy",
+        "name": "Venice"
+    },
+    "Vente Amsterdam": {
+        "authority": "The Netherlands",
+        "name": "Amsterdam"
+    },
+    "Vente Amsterdam La Haye": {
+        "authority": "The Netherlands",
+        "name": "Amsterdam"
+    },
+    "Vente Amsterdam, Pays-Bas": {
+        "authority": "The Netherlands",
+        "name": "Amsterdam"
+    },
+    "Vente Amsterdam, Pays-Bas.": {
+        "authority": "The Netherlands",
+        "name": "Amsterdam"
+    },
+    "Vente Christie": {
+        "authority": "London, England, UK",
+        "name": "Premises of Christie, Manson & Woods"
+    },
+    "Vente Christie & Cie à Londres": {
+        "authority": "UK",
+        "name": "London"
+    },
+    "Vente Christie Londres": {
+        "authority": "UK",
+        "name": "London"
+    },
+    "Vente Hotel Drouot": {
+        "authority": "Paris, France",
+        "name": "Premises of Hotel Drouot"
+    },
+    "Vente La Haye, Pays-Bas.": {
+        "authority": "The Netherlands",
+        "name": "The Hague"
+    },
+    "Vente New York": {
+        "authority": "USA",
+        "name": "New York"
+    },
+    "Vente Post": {
+        "authority": "[no place]",
+        "name": "[no place]"
+    },
+    "Vente Publique, Paris (17/05/1913)": {
+        "authority": "France",
+        "name": "Paris"
+    },
+    "Vente Rotterdam": {
+        "authority": "The Netherlands",
+        "name": "Rotterdam"
+    },
+    "Vente Rotterdam n° 828": {
+        "authority": "The Netherlands",
+        "name": "Rotterdam"
+    },
+    "Vente Rotterdam, Pays-Bas": {
+        "authority": "The Netherlands",
+        "name": "Rotterdam"
+    },
+    "Vente Rotterdam, Pays-Bas.": {
+        "authority": "The Netherlands",
+        "name": "Rotterdam"
+    },
+    "Vente Rotterdam, Pays-Pas.": {
+        "authority": "The Netherlands",
+        "name": "Rotterdam"
+    },
+    "Vente chez Christie & Cie à": {
+        "authority": "London, England, UK",
+        "name": "Premises of Christie, Manson & Woods"
+    },
+    "Vente chez Christie & Cie à Londres": {
+        "authority": "UK",
+        "name": "London"
+    },
+    "Vente chez Christie & Co à Londres": {
+        "authority": "UK",
+        "name": "London"
+    },
+    "Vente chez Christie et Cie à Londres": {
+        "authority": "UK",
+        "name": "London"
+    },
+    "Vente de charité de Mme Boussod": {
+        "authority": "France",
+        "name": "Premises of charité de Mme Boussod"
+    },
+    "Vente du 23 aout 1887 Paul Chevallier": {
+        "authority": "Paris, France",
+        "name": "10 rue Grange Batelière"
+    },
+    "Vente hotel Drouot": {
+        "authority": "Paris, France",
+        "name": "Premises of Hotel Drouot"
+    },
+    "Vente publique": {
+        "authority": "[no place]",
+        "name": "[no place]"
+    },
+    "Vente publique Amsterdam": {
+        "authority": "The Netherlands",
+        "name": "Amsterdam"
+    },
+    "Vente publique Frais 20%": {
+        "authority": "[no place]",
+        "name": "[no place]"
+    },
+    "Vente publique La Haye": {
+        "authority": "The Netherlands",
+        "name": "The Hague"
+    },
+    "Vente publique New York": {
+        "authority": "USA",
+        "name": "New York"
+    },
+    "Vente publique New York [rayé]": {
+        "authority": "USA",
+        "name": "New York"
+    },
+    "Vente publique New York.": {
+        "authority": "USA",
+        "name": "New York"
+    },
+    "Vente publique Rotterdam": {
+        "authority": "The Netherlands",
+        "name": "Rotterdam"
+    },
+    "Vente publique Rotterdam n. 526": {
+        "authority": "The Netherlands",
+        "name": "Rotterdam"
+    },
+    "Vente publique Sachse et Cie, Berlin": {
+        "authority": "Germany",
+        "name": "Berlin"
+    },
+    "Vente publique frais 20%": {
+        "authority": "[no place]",
+        "name": "[no place]"
+    },
+    "Vente publique par Léon Tual, commissaire priseur": {
+        "authority": "Paris, France",
+        "name": "56 rue de la Victoire"
+    },
+    "Vente publique par M. Paul Chevallier le 06 avril 1882": {
+        "authority": "Paris, France",
+        "name": "10 rue Grange Batelière"
+    },
+    "Vente publique à Amsterdam": {
+        "authority": "The Netherlands",
+        "name": "Amsterdam"
+    },
+    "Vente publique, Amsterdam": {
+        "authority": "The Netherlands",
+        "name": "Amsterdam"
+    },
+    "Vente publique, La Haye, Pays-Bas.": {
+        "authority": "The Netherlands",
+        "name": "The Hague"
+    },
+    "Vente publique, Londres (Christie)": {
+        "authority": "UK",
+        "name": "London"
+    },
+    "Vente publique, Londres (Christie) n° 121": {
+        "authority": "UK",
+        "name": "London"
+    },
+    "Vente publique, Londres (Christie) n°109": {
+        "authority": "UK",
+        "name": "London"
+    },
+    "Vente publique, Londres (Christie) n°114": {
+        "authority": "UK",
+        "name": "London"
+    },
+    "Vente publique, New York": {
+        "authority": "USA",
+        "name": "New York"
+    },
+    "Vente publique, New York [rayé].": {
+        "authority": "USA",
+        "name": "New York"
+    },
+    "Vente publique, New York.": {
+        "authority": "USA",
+        "name": "New York"
+    },
+    "Vente publique, Paris": {
+        "authority": "France",
+        "name": "Paris"
+    },
+    "Vente publique, Paris (17/05/1913)": {
+        "authority": "France",
+        "name": "Paris"
+    },
+    "Vente publique, Paris (Baudouin, Paris, France (16 rue d'Argout, commissaire-priseur).": {
+        "authority": "France",
+        "name": "Paris"
+    },
+    "Vente publique, Paris (H. Baudouin, Commissaire-priseur).": {
+        "authority": "France",
+        "name": "Paris"
+    },
+    "Vente publique, Paris (H. Baudouin, commissaire-priseur)": {
+        "authority": "France",
+        "name": "Paris"
+    },
+    "Vente publique, Paris (Hotel Drouot)": {
+        "authority": "Paris, France",
+        "name": "Premises of Hotel Drouot"
+    },
+    "Vente publique, Paris (J. Allard & Cie, commissaire-priseur)": {
+        "authority": "France",
+        "name": "Paris"
+    },
+    "Vente publique, Paris (Lair Dubreuil, commissaire-priseur).": {
+        "authority": "France",
+        "name": "Paris"
+    },
+    "Vente publique, Paris (Lair Dubreuil, commissaire-priseur). (3 mars 1919)": {
+        "authority": "France",
+        "name": "Paris"
+    },
+    "Vente publique, Paris (Lair Dubreuil, commissaire-priseur). 22 mai 1919": {
+        "authority": "France",
+        "name": "Paris"
+    },
+    "Vente publique, Paris (Lair Dubreuil, commissaire-priseur, 6 rue Favart).": {
+        "authority": "France",
+        "name": "Paris"
+    },
+    "Vente publique, Paris (Leon Tual, commissaire-priseur)": {
+        "authority": "France",
+        "name": "Paris"
+    },
+    "Vente publique, Paris (Paul Chevallier, Commissaire-priseur, 10 rue Grange Batelière, Paris, France).": {
+        "authority": "France",
+        "name": "Paris"
+    },
+    "Vente publique, Paris (Paul Chevallier, commissaire-priseur)": {
+        "authority": "France",
+        "name": "Paris"
+    },
+    "Vente publique, Paris, France": {
+        "authority": "France",
+        "name": "Paris"
+    },
+    "Vente publique, Paris, France (A. Couturier, commissaire-priseur, Paris, 56, rue de la Victoire).": {
+        "authority": "France",
+        "name": "Paris"
+    },
+    "Vente publique, Paris, France (Georges Duchesne, commissaire-priseur, 6 rue de Hanovre, Paris).": {
+        "authority": "France",
+        "name": "Paris"
+    },
+    "Vente publique, Paris, France (Georges Duchesne,commissaire-priseur, 6 rue de Hanovre, Paris).": {
+        "authority": "France",
+        "name": "Paris"
+    },
+    "Vente publique, Paris, France (Paul Chevallier, Commissaire-priseur, 10 rue Grange Batelière, Paris, France).": {
+        "authority": "France",
+        "name": "Paris"
+    },
+    "Vente publique, Paris, France (Paul Chevallier, commissaire-priseur, 10 rue de la Grange Batelière, Paris).": {
+        "authority": "France",
+        "name": "Paris"
+    },
+    "Vente publique, Paris, France (Paul Chevallier, commissaire-priseur, 10 rue de la grange Batelière, Paris, France).": {
+        "authority": "France",
+        "name": "Paris"
+    },
+    "Vente publique, Paris, France (Tual, commissaire-priseur)": {
+        "authority": "France",
+        "name": "Paris"
+    },
+    "Vente publique, Paris, du 04/12/1918": {
+        "authority": "France",
+        "name": "Paris"
+    },
+    "Vente publique, Philadelphia": {
+        "authority": "USA",
+        "name": "Philadelphia"
+    },
+    "Vente publique, Philadelphie": {
+        "authority": "USA",
+        "name": "Philadelphia"
+    },
+    "Vente publique, Philadelphie.": {
+        "authority": "USA",
+        "name": "Philadelphia"
+    },
+    "Vente publique, Rotterdam": {
+        "authority": "The Netherlands",
+        "name": "Rotterdam"
+    },
+    "Vichy": {
+        "authority": "France",
+        "name": "Vichy"
+    },
+    "Vienna": {
+        "authority": "Austria",
+        "name": "Vienna"
+    },
+    "Vienna, Austria": {
+        "authority": "Austria",
+        "name": "Vienna"
+    },
+    "Vienne": {
+        "authority": "Austria",
+        "name": "Vienna"
+    },
+    "Vienne, Autriche": {
+        "authority": "Austria",
+        "name": "Vienna"
+    },
+    "Villa Ducale Sitta, Varese": {
+        "authority": "Varese, Italy",
+        "name": "Premises of Villa Ducale Sitta"
+    },
+    "Villa Fressinet, Grasse": {
+        "authority": "Grasse, France",
+        "name": "Premises of Villa Fressinet"
+    },
+    "Villa Gabrielle, Dinard": {
+        "authority": "Dinard, France",
+        "name": "Premises of Villa Gabrielle"
+    },
+    "Zurich": {
+        "authority": "Switzerland",
+        "name": "Zurich"
+    },
+    "[illi]": {
+        "authority": "[no place]",
+        "name": "[no place]"
+    },
+    "[illi] de Londres": {
+        "authority": "UK",
+        "name": "London"
+    },
+    "[vente publique, rayé]": {
+        "authority": "[no place]",
+        "name": "[no place]"
+    },
+    "au boulevard": {
+        "authority": "Paris, France",
+        "name": "19 boulevard Montmartre"
+    },
+    "avenue de Breteuil": {
+        "authority": "Paris, France",
+        "name": "avenue de Breteuil"
+    },
+    "avenue de l'Opéra": {
+        "authority": "Paris, France",
+        "name": "avenue de l'Opéra"
+    },
+    "avenue de la Bourdonnais, 10, Aubertot": {
+        "authority": "Paris, France",
+        "name": "10 avenue de la Bourdonnais"
+    },
+    "boulevard": {
+        "authority": "Paris, France",
+        "name": "19 boulevard Montmartre"
+    },
+    "exposition de Bruxelles": {
+        "authority": "Brussels, Belgium",
+        "name": "Premises of Exposition Bruxelles"
+    },
+    "exposition de Gand": {
+        "authority": "Ghent, Belgium",
+        "name": "Premises of Exposition Gand"
+    },
+    "exposition de Manchester": {
+        "authority": "Manchester, England, UK",
+        "name": "Premises of Exposition Manchester"
+    },
+    "exposition de Nice": {
+        "authority": "Nice, France",
+        "name": "Premises of Exposition Nice"
+    },
+    "exposition à la Haye": {
+        "authority": "The Hague, The Netherlands",
+        "name": "Premises of Exposition La Haye"
+    },
+    "for": {
+        "authority": "[no place]",
+        "name": "[no place]"
+    },
+    "l'Exposition de Nantes": {
+        "authority": "Nantes, France",
+        "name": "Premises of Exposition Nantes"
+    },
+    "l'Exposition de Reims": {
+        "authority": "Reims, France",
+        "name": "Premises of Exposition Reims"
+    },
+    "l'Exposition à Reims": {
+        "authority": "France",
+        "name": "Reims"
+    },
+    "l'hotel Drouot": {
+        "authority": "Paris, France",
+        "name": "Premises of Hotel Drouot"
+    },
+    "la Haye": {
+        "authority": "The Netherlands",
+        "name": "The Hague"
+    },
+    "loterie nationale": {
+        "authority": "[no place]",
+        "name": "[no place]"
+    },
+    "maison Square South, New York": {
+        "authority": "New York, NY, USA",
+        "name": "289 Broadway street"
+    },
+    "maison de Bruxelles": {
+        "authority": "Brussels, Belgium",
+        "name": "Premises of Goupil & Cie Brussels"
+    },
+    "par MARCKE DE LUMMEN, EMILE VAN, Pays-Bas.": {
+        "authority": "The Netherlands",
+        "name": "The Netherlands"
+    },
+    "par notre maison de La Haye": {
+        "authority": "The Hague, The Netherlands",
+        "name": "Premises of Goupil & Cie The Hague"
+    },
+    "par notre maison de la Haye": {
+        "authority": "The Hague, The Netherlands",
+        "name": "Premises of Goupil & Cie The Hague"
+    },
+    "quai Charles Guiniot, Amboise": {
+        "authority": "Amboise, France",
+        "name": "quai Charles Guinot"
+    },
+    "quai Charles Quinot, Amboise": {
+        "authority": "Amboise, France",
+        "name": "quai Charles Guinot"
+    },
+    "quai Malaquais": {
+        "authority": "Paris, France",
+        "name": "quai Malaquais"
+    },
+    "route de Dieppe, Le Tréport": {
+        "authority": "Le Tréport, France",
+        "name": "route de Dieppe"
+    },
+    "rue Auber, 7": {
+        "authority": "Paris, France",
+        "name": "7 rue Auber"
+    },
+    "rue Cassini 10": {
+        "authority": "Nice, France",
+        "name": "10 rue Cassini"
+    },
+    "rue Cauchois": {
+        "authority": "Paris, France",
+        "name": "rue Cauchois"
+    },
+    "rue Caumartin": {
+        "authority": "Paris, France",
+        "name": "rue Caumartin"
+    },
+    "rue Chaptal": {
+        "authority": "Paris, France",
+        "name": "rue Chaptal"
+    },
+    "rue D'athènes": {
+        "authority": "Paris, France",
+        "name": "rue d'Athènes"
+    },
+    "rue Denfert Rochereau 37": {
+        "authority": "Paris, France",
+        "name": "37 rue Denfert Rochereau"
+    },
+    "rue Dieu": {
+        "authority": "Paris, France",
+        "name": "rue Dieu"
+    },
+    "rue Drouot": {
+        "authority": "Paris, France",
+        "name": "rue Drouot"
+    },
+    "rue Duperré 17": {
+        "authority": "Paris, France",
+        "name": "17 rue Duperré"
+    },
+    "rue Fould": {
+        "authority": "France",
+        "name": "rue Fould"
+    },
+    "rue Glück": {
+        "authority": "Paris, France",
+        "name": "rue Glück"
+    },
+    "rue Godot": {
+        "authority": "Paris, France",
+        "name": "rue Godot de Mauroy"
+    },
+    "rue Lafayette, 34": {
+        "authority": "Paris, France",
+        "name": "34 rue Lafayette"
+    },
+    "rue Laffitte": {
+        "authority": "Paris, France",
+        "name": "rue Laffitte"
+    },
+    "rue Lamennais": {
+        "authority": "Paris, France",
+        "name": "rue Lamennais"
+    },
+    "rue Lepelletier": {
+        "authority": "Paris, France",
+        "name": "rue Le Peletier"
+    },
+    "rue Lepic": {
+        "authority": "Paris, France",
+        "name": "rue Lepic"
+    },
+    "rue Mogador": {
+        "authority": "Paris, France",
+        "name": "rue Mogador"
+    },
+    "rue Moncey": {
+        "authority": "Paris, France",
+        "name": "rue Moncey"
+    },
+    "rue Povars Kay": {
+        "authority": "France",
+        "name": "rue Povars Kay"
+    },
+    "rue Prader 29, Ville d'Avray": {
+        "authority": "Ville d'Avray, France",
+        "name": "29 rue Prader"
+    },
+    "rue Saint Georges": {
+        "authority": "Paris, France",
+        "name": "rue Saint Georges"
+    },
+    "rue Saint Guillaume": {
+        "authority": "Paris, France",
+        "name": "rue Saint Guillaume"
+    },
+    "rue Scribe": {
+        "authority": "Paris, France",
+        "name": "rue Scribe"
+    },
+    "rue Spontin": {
+        "authority": "Paris, France",
+        "name": "rue Spontini"
+    },
+    "rue Taitbout": {
+        "authority": "Paris, France",
+        "name": "rue Taitbout"
+    },
+    "rue Taitbout 47": {
+        "authority": "Paris, France",
+        "name": "47 rue Taitbout"
+    },
+    "rue Volney": {
+        "authority": "Paris, France",
+        "name": "rue Volney"
+    },
+    "rue d'Athènes": {
+        "authority": "Paris, France",
+        "name": "rue d'Athènes"
+    },
+    "rue de Babylon": {
+        "authority": "Paris, France",
+        "name": "rue de Babylone"
+    },
+    "rue de Berlin": {
+        "authority": "Paris, France",
+        "name": "rue de Liège"
+    },
+    "rue de Berry 7": {
+        "authority": "Paris, France",
+        "name": "7 rue de Berri"
+    },
+    "rue de Boulogne": {
+        "authority": "Paris, France",
+        "name": "rue de Boulogne"
+    },
+    "rue de Châteaudun": {
+        "authority": "Paris, France",
+        "name": "rue de Châteaudun"
+    },
+    "rue de Douais 63": {
+        "authority": "Paris, France",
+        "name": "63 rue de Douai"
+    },
+    "rue de Grammont": {
+        "authority": "Paris, France",
+        "name": "rue de Grammont"
+    },
+    "rue de Richelieu": {
+        "authority": "Paris, France",
+        "name": "rue de Richelieu"
+    },
+    "rue de Rome": {
+        "authority": "Paris, France",
+        "name": "rue de Rome"
+    },
+    "rue de Rome 83": {
+        "authority": "Paris, France",
+        "name": "83 rue de Rome"
+    },
+    "rue de Rome, 83": {
+        "authority": "Paris, France",
+        "name": "83 rue de Rome"
+    },
+    "rue de Tilsitt": {
+        "authority": "Paris, France",
+        "name": "rue de Tilsitt"
+    },
+    "rue de Verneuil": {
+        "authority": "Paris, France",
+        "name": "rue de Verneuil"
+    },
+    "rue de l'Eglise, Ouvers sur Oise": {
+        "authority": "Auvers sur Oise, France",
+        "name": "rue de l'Eglise"
+    },
+    "rue de l'abbeye 14": {
+        "authority": "Paris, France",
+        "name": "14 rue de l'Abbaye"
+    },
+    "rue de la Faisanderie": {
+        "authority": "Paris, France",
+        "name": "rue de la Faisanderie"
+    },
+    "rue de la Paix": {
+        "authority": "Paris, France",
+        "name": "rue de la Paix"
+    },
+    "rue de la Seine": {
+        "authority": "Paris, France",
+        "name": "rue de la Seine"
+    },
+    "rue de la faisonnerie": {
+        "authority": "Paris, France",
+        "name": "rue de la Faisanderie"
+    },
+    "rue du salker": {
+        "authority": "France",
+        "name": "rue du Salker"
+    },
+    "saint Paul": {
+        "authority": "France",
+        "name": "Saint Paul"
+    },
+    "succursale du Boulevard, Paris, Fance.": {
+        "authority": "Paris, France",
+        "name": "19 boulevard Montmartre"
+    },
+    "vendu exposition de Marseille": {
+        "authority": "Marseille, France",
+        "name": "Premises of Exposition Marseille"
+    },
+    "vendu par notre maison de La Haye": {
+        "authority": "The Hague, The Netherlands",
+        "name": "Premises of Goupil & Cie The Hague"
+    },
+    "vendu par notre maison de Londres": {
+        "authority": "London, England, UK",
+        "name": "Premises of Goupil & Cie London"
+    },
+    "vente Amsterdam": {
+        "authority": "The Netherlands",
+        "name": "Amsterdam"
+    },
+    "vente Christie Londres n° 125": {
+        "authority": "London, England, UK",
+        "name": "Premises of Christie, Manson & Woods"
+    },
+    "vente New York": {
+        "authority": "USA",
+        "name": "New York"
+    },
+    "vente Rotterdam": {
+        "authority": "The Netherlands",
+        "name": "Rotterdam"
+    },
+    "vente publique": {
+        "authority": "[no place]",
+        "name": "[no place]"
+    },
+    "vente publique  New York": {
+        "authority": "USA",
+        "name": "New York"
+    },
+    "vente publique La Haye": {
+        "authority": "The Netherlands",
+        "name": "The Hague"
+    },
+    "vente publique New York": {
+        "authority": "USA",
+        "name": "New York"
+    },
+    "vente publique Sachse et Cie, Berlin": {
+        "authority": "Germany",
+        "name": "Berlin"
+    },
+    "vente à Rotterdam": {
+        "authority": "The Netherlands",
+        "name": "Rotterdam"
+    },
+    "via Marzutte 42, Rouen": {
+        "authority": "Rouen, France",
+        "name": "42 via Marzutte"
+    },
+    "viale Principale Eugenio 26, Florence": {
+        "authority": "Florence, Italy",
+        "name": "26 viale Principale Eugenio"
+    },
+    "villa roux  Moustapha, Alger": {
+        "authority": "French Algeria",
+        "name": "Premises of Villa Roux Moustapha"
+    }
+}

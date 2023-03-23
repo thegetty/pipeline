@@ -864,9 +864,21 @@ class GoupilTransactionHandler(TransactionHandler):
         return tx
 
     def _add_prov_entry_acquisition(
-        self, data: dict, tx, from_people, from_agents, to_people, to_agents, date, incoming, purpose=None
+        self,
+        data: dict,
+        tx,
+        from_people,
+        from_agents,
+        to_people,
+        to_agents,
+        date,
+        incoming,
+        purpose=None,
+        cities_auth_db=None,
     ):
+        import pdb
 
+        pdb.set_trace()
         hmo = get_crom_object(data["_object"])
         sn_ident = self.helper.stock_number_identifier(data["_object"], date)
 
@@ -920,6 +932,7 @@ class GoupilTransactionHandler(TransactionHandler):
         date,
         incoming,
         people_groups=None,
+        cities_auth_db=None,
     ):
         goupil = self.helper.static_instances.get_instance("Group", "goupil")
         goupil_group = [goupil]
@@ -1063,6 +1076,7 @@ class GoupilTransactionHandler(TransactionHandler):
         purpose=None,
         buy_sell_modifiers=None,
         people_groups=None,
+        cities_auth_db=None,
     ):
         THROUGH = CaseFoldingSet(buy_sell_modifiers["through"])
 
@@ -1154,13 +1168,22 @@ class GoupilTransactionHandler(TransactionHandler):
             people_groups,
         )
         self._add_prov_entry_acquisition(
-            data, tx, from_people, from_agents, to_people, to_agents, date, incoming, purpose=purpose
+            data,
+            tx,
+            from_people,
+            from_agents,
+            to_people,
+            to_agents,
+            date,
+            incoming,
+            purpose=purpose,
+            cities_auth_db=cities_auth_db,
         )
         data["_prov_entries"].append(tx_data)
         data["_people"].extend(people_data)
         return tx
 
-    def add_incoming_tx(self, data, buy_sell_modifiers, people_groups=None):
+    def add_incoming_tx(self, data, buy_sell_modifiers, people_groups=None, cities_auth_db=None):
         price_info = data.get("purchase")
 
         shared_people = data.get("shared_buyer")
@@ -1177,6 +1200,7 @@ class GoupilTransactionHandler(TransactionHandler):
             incoming=True,
             buy_sell_modifiers=buy_sell_modifiers,
             people_groups=people_groups,
+            cities_auth_db=cities_auth_db,
         )
         prev_owners = data.get("prev_own", {})
         if prev_owners:
@@ -1184,7 +1208,7 @@ class GoupilTransactionHandler(TransactionHandler):
 
         return tx
 
-    def add_outgoing_tx(self, data, buy_sell_modifiers, people_groups=None):
+    def add_outgoing_tx(self, data, buy_sell_modifiers, people_groups=None, cities_auth_db=None):
         price_info = data.get("sale")
         shared_people = data.get("shared_buyer")
         buyers = data["sale_buyer"]
@@ -1199,6 +1223,7 @@ class GoupilTransactionHandler(TransactionHandler):
             incoming=False,
             buy_sell_modifiers=buy_sell_modifiers,
             people_groups=people_groups,
+            cities_auth_db=cities_auth_db,
         )
         post_own = data.get("post_own", {})
         if post_own:
@@ -1229,7 +1254,7 @@ class ModelSale(GoupilTransactionHandler):
 
         if not in_tx:
             if len(sellers):
-                in_tx = self.add_incoming_tx(data, buy_sell_modifiers, people_groups)
+                in_tx = self.add_incoming_tx(data, buy_sell_modifiers, people_groups, cities_auth_db=cities_auth_db)
             # if there are no sellers or there is a maintenance cost create an ivnentorying event
             else:
                 inv = self._new_inventorying(data)
@@ -1246,7 +1271,7 @@ class ModelSale(GoupilTransactionHandler):
                 data["_prov_entries"].append(in_tx_data)
 
         if not out_tx:
-            out_tx = self.add_outgoing_tx(data, buy_sell_modifiers, people_groups)
+            out_tx = self.add_outgoing_tx(data, buy_sell_modifiers, people_groups, cities_auth_db=cities_auth_db)
         in_tx.ends_before_the_start_of = out_tx
         out_tx.starts_after_the_end_of = in_tx
 
@@ -1308,7 +1333,7 @@ class ModelUnsoldPurchases(GoupilTransactionHandler):
 
         sn_ident = self.helper.stock_number_identifier(odata, date)
 
-        in_tx = self.add_incoming_tx(data, buy_sell_modifiers, people_groups)
+        in_tx = self.add_incoming_tx(data, buy_sell_modifiers, people_groups, cities_auth_db=cities_auth_db)
 
         yield data
 

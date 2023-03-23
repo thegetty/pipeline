@@ -15,12 +15,13 @@ class PIRModelingTest_AR212(TestGoupilPipelineOutput):
         """
         output = self.run_pipeline("ar212")
         # TODO the following test cases:
-        # 
-        # the one assigned by Goupil should be 'Object Stock Number' http://vocab.getty.edu/aat/300412177 
+        #
+        # the one assigned by Goupil should be 'Object Stock Number' http://vocab.getty.edu/aat/300412177
         # the one assigned by GPI should be 'STAR Identifier' https://data.getty.edu/local/thesaurus/star-identifier
         # retouch par and or modifiers
         # dimension source ref pointing to row
         self.assertTrue(False)
+
 
 if __name__ == "__main__":
     unittest.main()

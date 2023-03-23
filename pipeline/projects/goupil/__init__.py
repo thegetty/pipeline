@@ -140,7 +140,7 @@ class AddArtists(ProvenanceBase, GoupilProvenance):
             mod = a.get("attrib_mod", "")
         # Matt:  as per George, semantics for 'or' are different in buyer/seller field than in artwork production role. The first does not to my knowledge exist in Goupil.
         # basically treat or as attributed to!
-        mod = mod.replace('or', 'attributed to')
+        mod = mod.replace("or", "attributed to")
         mods = CaseFoldingSet({m.strip() for m in mod.split(";")} - {""})
         return mods
 
@@ -165,7 +165,7 @@ class AddArtists(ProvenanceBase, GoupilProvenance):
         hmo = get_crom_object(data["_object"])
         self.model_object_artists_authority(data.get("_artists", []))
 
-        sales_records = get_crom_objects(data['_records'])
+        sales_records = get_crom_objects(data["_records"])
 
         for seq_no, artist in enumerate(data.get("_artists", [])):
             mods = self.modifiers(artist)
@@ -1168,6 +1168,9 @@ class GoupilTransactionHandler(TransactionHandler):
 
     def add_incoming_tx(self, data, buy_sell_modifiers, people_groups={}):
         price_info = data.get("purchase")
+        import pdb
+
+        pdb.set_trace()
         shared_people = data.get("purchase_buyer")
         sellers = data["purchase_seller"]
 

@@ -32,7 +32,10 @@ if __name__ == '__main__':
 				continue
 
 			if loc_auth.startswith(loc_name):
-				loc_auth = loc_auth.split(',')[-1].strip()
+				type = 'city'
+			else:
+				type='address'
+				# loc_auth = loc_auth.split(',')[-1].strip()
 				
 			if loc_verbatim in data:
 				assert data[loc_verbatim]['name'] == loc_name
@@ -41,7 +44,8 @@ if __name__ == '__main__':
 
 			data[loc_verbatim] = {
 				'name': loc_name,
-				'authority': loc_auth
+				'authority': loc_auth,
+				'type' : type
 			}
 
 

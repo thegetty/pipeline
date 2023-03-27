@@ -95,8 +95,13 @@ def make_place_with_cities_db(data: dict, parent: str, services: dict, sales_rec
             o_higher.identified_by = alternative_name
     elif loc_verbatim:
         higher_geography = parse_location_name(loc_verbatim)
-        make_la_place(higher_geography, base_uri=base_uri)
-        o_higher = get_crom_object(higher_geography)
+        if len(higher_geography.keys()) == 1 and "name" in higher_geography:
+            # if nothing but a dictionary with a name is returned,
+            # ignore it to avoiding modelling places heuristically
+            pass
+        else:
+            make_la_place(higher_geography, base_uri=base_uri)
+            o_higher = get_crom_object(higher_geography)
 
     for sale_record in sales_records:
         if o_lower:
@@ -142,7 +147,6 @@ class GoupilPersonIdentity(PersonIdentity):
 
 
 def record_id(data):
-    # import pdb;pdb.set_trace()
     no = data["stock_book_no"]
     gno = data["stock_book_gno"]
     page = data["page_number"]
@@ -1157,6 +1161,10 @@ class GoupilTransactionHandler(TransactionHandler):
             place = get_crom_object(place_data)
             if place:
                 person.residence = place
+            else:
+                loc_verbatim = p_data.get("location")
+                if loc_verbatim:
+                    tx.referred_to_by = vocab.Note(content=loc_verbatim)
 
             if place and "shared#PLACE" in place.id:
                 self.person_sojourn(p_data, place, sales_records)
@@ -1901,7 +1909,6 @@ class GoupilFilePipeline(GoupilPipeline):
 
     def serializer_nodes_for_model(self, *args, model=None, use_memory_writer=True, **kwargs):
         nodes = []
-        print(self.output_path)
         if self.debug:
             if use_memory_writer:
                 w = MergingMemoryWriter(

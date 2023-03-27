@@ -1155,6 +1155,9 @@ class GoupilTransactionHandler(TransactionHandler):
                 sales_records=sales_records,
             )
             place = get_crom_object(place_data)
+            if place:
+                person.residence = place
+
             if place and "shared#PLACE" in place.id:
                 self.person_sojourn(p_data, place, sales_records)
             if THROUGH.intersects(mod):

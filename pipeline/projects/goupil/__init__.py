@@ -50,8 +50,8 @@ def filter_empty_book(data: dict, _):
     return data if data.get("stock_book_no") else None
 
 
-def make_place_with_cities_db(data: dict, parent: str, services: dict, sales_records: list = []):
-    base_uri = f"tag:getty.edu,2019:digital:REPLACE-WITH-UUID:pipeline#PLACE,"
+def make_place_with_cities_db(data: dict, parent: str, services: dict, base_uri, sales_records: list = []):
+
     cities_db = services["cities_auth_db"]
     loc_verbatim = data.get("location")
 
@@ -67,7 +67,7 @@ def make_place_with_cities_db(data: dict, parent: str, services: dict, sales_rec
         name = place["name"]
         type = place["type"]
 
-        higher_geography = parse_location_name(auth)
+        higher_geography = parse_location_name(auth, uri_base=base_uri)
         make_la_place(higher_geography, base_uri=base_uri)
         o_higher = get_crom_object(higher_geography)
 
@@ -94,7 +94,7 @@ def make_place_with_cities_db(data: dict, parent: str, services: dict, sales_rec
         else:
             o_higher.identified_by = alternative_name
     elif loc_verbatim:
-        higher_geography = parse_location_name(loc_verbatim)
+        higher_geography = parse_location_name(loc_verbatim, base_uri=base_uri)
         if len(higher_geography.keys()) == 1 and "name" in higher_geography:
             # if nothing but a dictionary with a name is returned,
             # ignore it to avoiding modelling places heuristically
@@ -373,6 +373,7 @@ class PopulateGoupilObject(Configurable, PopulateObject):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
+        self.uid_tag_prefix = self.helper.proj_prefix
 
     def __call__(self, data: dict, *, vocab_type_map, make_la_org, subject_genre, cities_auth_db):
         sales_records = get_crom_objects(data["_records"])
@@ -481,7 +482,9 @@ class PopulateGoupilObject(Configurable, PopulateObject):
         note = present_location.get("note")
 
         if present_location_verbatim:
-            current = make_place_with_cities_db(present_location, data, self.helper.services)
+            current = make_place_with_cities_db(
+                present_location, data, services=self.helper.services, base_uri=self.uid_tag_prefix
+            )
             curr_place = get_crom_object(current)
             inst = present_location.get("inst")
             if inst:
@@ -938,12 +941,15 @@ class GoupilTransactionHandler(TransactionHandler):
 
         hmo = get_crom_object(data["_object"])
         sn_ident = self.helper.stock_number_identifier(data["_object"], date)
-        sale_location = data["book_record"].get("object_sale_location")
+        sale_location = data["book_record"].get("object_sale_location", {})
         sale_location_verbatim = sale_location.get("location")
 
-        o_place = sale_location["location"]
-
-        place = make_place_with_cities_db(sale_location, data, self.helper.services)
+        place = make_place_with_cities_db(
+            sale_location,
+            data,
+            services=self.helper.services,
+            base_uri=self.helper.uid_tag_prefix,
+        )
         o_place = get_crom_object(place)
 
         dir = "In" if incoming else "Out"
@@ -1178,6 +1184,7 @@ class GoupilTransactionHandler(TransactionHandler):
                 p_data,
                 data,
                 services=self.helper.services,
+                base_uri=self.helper.uid_tag_prefix,
                 sales_records=sales_records,
             )
             place = get_crom_object(place_data)

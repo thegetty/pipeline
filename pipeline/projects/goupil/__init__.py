@@ -51,6 +51,7 @@ def filter_empty_book(data: dict, _):
 
 
 def make_place_with_cities_db(data: dict, parent: str, services: dict, sales_records: list = []):
+    base_uri = f"tag:getty.edu,2019:digital:REPLACE-WITH-UUID:pipeline#PLACE,"
     cities_db = services["cities_auth_db"]
     loc_verbatim = data.get("location")
 
@@ -67,7 +68,7 @@ def make_place_with_cities_db(data: dict, parent: str, services: dict, sales_rec
         type = place["type"]
 
         higher_geography = parse_location_name(auth)
-        make_la_place(higher_geography)
+        make_la_place(higher_geography, base_uri=base_uri)
         o_higher = get_crom_object(higher_geography)
 
         preferred_name = vocab.PrimaryName(ident="", content=name)
@@ -86,15 +87,15 @@ def make_place_with_cities_db(data: dict, parent: str, services: dict, sales_rec
                     "part_of": higher_geography,
                     "identifiers": [preferred_name, alternative_name],
                 },
-                base_uri=f"tag:getty.edu,2019:digital:REPLACE-WITH-UUID:pipeline#PLACE,",
+                base_uri=base_uri,
             )
             o_lower = get_crom_object(lower_geography)
-            make_la_place(higher_geography)
+            make_la_place(higher_geography, base_uri=base_uri)
         else:
             o_higher.identified_by = alternative_name
     elif loc_verbatim:
         higher_geography = parse_location_name(loc_verbatim)
-        make_la_place(higher_geography)
+        make_la_place(higher_geography, base_uri=base_uri)
         o_higher = get_crom_object(higher_geography)
 
     for sale_record in sales_records:
@@ -461,81 +462,72 @@ class PopulateGoupilObject(Configurable, PopulateObject):
     def _populate_object_present_location(self, data: dict):
         sales_records = get_crom_objects(data["_records"])
         hmo = get_crom_object(data)
-        location = data.get("present_location")
-        if location:
-            loc = location.get("geog")
-            note = location.get("note")
+        location = data.get("present_location", {})
+        loc = location.get("location")
+        note = location.get("note")
 
-            if loc:
-                # TODO: if `parse_location_name` fails, still preserve the location string somehow
-                current = parse_location_name(loc, uri_base=self.helper.uid_tag_prefix)
-                inst = location.get("inst")
-                if inst:
-                    owner_data = {
-                        "label": f"{inst} ({loc})",
-                        "identifiers": [vocab.PrimaryName(ident="", content=inst)],
-                    }
-                    ulan = None
-                    with suppress(ValueError, TypeError):
-                        ulan = int(location.get("ulan_id"))
-                    if ulan:
-                        owner_data["ulan"] = ulan
-                        owner_data["uri"] = self.helper.make_proj_uri("ORG", "ULAN", ulan)
-                    else:
-                        owner_data["uri"] = self.helper.make_proj_uri("ORG", "NAME", inst, "PLACE", loc)
+        if loc:
+            current = make_place_with_cities_db(location, data, self.helper.services)
+            curr_place = get_crom_object(current)
+            inst = location.get("inst")
+            if inst:
+                owner_data = {
+                    "label": f"{inst} ({loc})",
+                    "identifiers": [vocab.PrimaryName(ident="", content=inst)],
+                }
+                ulan = None
+                with suppress(ValueError, TypeError):
+                    ulan = int(location.get("ulan_id"))
+                if ulan:
+                    owner_data["ulan"] = ulan
+                    owner_data["uri"] = self.helper.make_proj_uri("ORG", "ULAN", ulan)
                 else:
-                    warnings.warn(
-                        f"*** Object present location data has a location, but not an institution: {pprint.pformat(data)}"
-                    )
-                    owner_data = {
-                        "label": "(Anonymous organization)",
-                        "uri": self.helper.make_proj_uri("ORG", "CURR-OWN", *now_key),
-                        # "referred_to_by": [sales_record],
-                    }
-
-                owner_data["referred_to_by"] = sales_records
-                # It's conceivable that there could be more than one "present location"
-                # for an object that is reconciled based on prev/post sale rewriting.
-                # Therefore, the place URI must not share a prefix with the object URI,
-                # otherwise all such places are liable to be merged during URI
-                # reconciliation as part of the prev/post sale rewriting.
-                base_uri = self.helper.prepend_uri_key(hmo.id, "PLACE")
-                place = None
-                place_data = make_place_with_cities_db(current, data, self.helper.services)
-                if place_data:
-                    place = get_crom_object(place_data)
-                    hmo.current_location = place
-
-                owner = None
-                if owner_data:
-                    make_la_org = MakeLinkedArtOrganization()
-                    owner_data = make_la_org(owner_data)
-                    owner = get_crom_object(owner_data)
-                    hmo.current_owner = owner
-                    owner.residence = place
-
-                if note:
-                    owner_data["note"] = note
-                    desc = vocab.Description(ident="", content=note)
-                    if owner:
-                        assignment = model.AttributeAssignment(ident="")
-                        assignment.carried_out_by = owner
-                        desc.assigned_by = assignment
-                    hmo.referred_to_by = desc
-
-                acc = location.get("acc")
-                if acc:
-                    acc_number = vocab.AccessionNumber(ident="", content=acc)
-                    hmo.identified_by = acc_number
-                    assignment = model.AttributeAssignment(ident="")
-                    if owner:
-                        assignment.carried_out_by = owner
-                    acc_number.assigned_by = assignment
-
-                data["_organizations"].append(owner_data)
-                data["_final_org"] = owner_data
+                    owner_data["uri"] = self.helper.make_proj_uri("ORG", "NAME", inst, "PLACE", loc)
             else:
-                pass  # there is no present location place string
+                warnings.warn(
+                    f"*** Object present location data has a location, but not an institution: {pprint.pformat(data)}"
+                )
+                owner_data = {
+                    "label": "(Anonymous organization)",
+                    "uri": self.helper.make_proj_uri("ORG", "CURR-OWN", "UNKNOWN-ORG"),
+                    # "referred_to_by": [sales_record],
+                }
+
+            owner_data["referred_to_by"] = sales_records
+            if current:
+                curr_place = get_crom_object(current)
+                hmo.current_location = curr_place
+
+            owner = None
+            if owner_data:
+                make_la_org = MakeLinkedArtOrganization()
+                owner_data = make_la_org(owner_data)
+                owner = get_crom_object(owner_data)
+                hmo.current_owner = owner
+                owner.residence = curr_place
+
+            if note:
+                owner_data["note"] = note
+                desc = vocab.Description(ident="", content=note)
+                if owner:
+                    assignment = model.AttributeAssignment(ident="")
+                    assignment.carried_out_by = owner
+                    desc.assigned_by = assignment
+                hmo.referred_to_by = desc
+
+            acc = location.get("acc")
+            if acc:
+                acc_number = vocab.AccessionNumber(ident="", content=acc)
+                hmo.identified_by = acc_number
+                assignment = model.AttributeAssignment(ident="")
+                if owner:
+                    assignment.carried_out_by = owner
+                acc_number.assigned_by = assignment
+
+            data["_organizations"].append(owner_data)
+            data["_final_org"] = owner_data
+        else:
+            pass  # there is no present location place string
 
     def _populate_object_visual_item(self, data: dict, title, subject_genre):
         sales_records = get_crom_objects(data["_records"])
@@ -1650,6 +1642,7 @@ class GoupilPipeline(PipelineBase):
                                     "present_loc_note",
                                     "present_loc_ulan_id",
                                 ),
+                                "rename_keys": {"present_loc_geog": "location"},
                             },
                             "book_record": {
                                 "properties": (

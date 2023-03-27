@@ -420,7 +420,16 @@ class PopulateGoupilObject(Configurable, PopulateObject):
             {
                 k: v
                 for k, v in odata.items()
-                if k in ("materials", "dimensions", "goupil_object_id", "present_location", "subject", "genre")
+                if k
+                in (
+                    "materials",
+                    "dimensions",
+                    "goupil_object_id",
+                    "present_location",
+                    "object_sale_location",
+                    "subject",
+                    "genre",
+                )
             }
         )
 
@@ -450,8 +459,8 @@ class PopulateGoupilObject(Configurable, PopulateObject):
         else:
             data["_object"]["object_type"] = model.HumanMadeObject
 
-        mlao = MakeLinkedArtHumanMadeObject()
-        mlao(data["_object"])
+        make_la_object = MakeLinkedArtHumanMadeObject()
+        make_la_object(data["_object"])
 
         self._populate_object_present_location(data["_object"])
         self._populate_object_visual_item(data["_object"], label, subject_genre)
@@ -466,27 +475,30 @@ class PopulateGoupilObject(Configurable, PopulateObject):
     def _populate_object_present_location(self, data: dict):
         sales_records = get_crom_objects(data["_records"])
         hmo = get_crom_object(data)
-        location = data.get("present_location", {})
-        loc = location.get("location")
-        note = location.get("note")
 
-        if loc:
-            current = make_place_with_cities_db(location, data, self.helper.services)
+        present_location = data.get("present_location", {})
+        present_location_verbatim = present_location.get("location")
+        note = present_location.get("note")
+
+        if present_location_verbatim:
+            current = make_place_with_cities_db(present_location, data, self.helper.services)
             curr_place = get_crom_object(current)
-            inst = location.get("inst")
+            inst = present_location.get("inst")
             if inst:
                 owner_data = {
-                    "label": f"{inst} ({loc})",
+                    "label": f"{inst} ({present_location_verbatim})",
                     "identifiers": [vocab.PrimaryName(ident="", content=inst)],
                 }
                 ulan = None
                 with suppress(ValueError, TypeError):
-                    ulan = int(location.get("ulan_id"))
+                    ulan = int(present_location.get("ulan_id"))
                 if ulan:
                     owner_data["ulan"] = ulan
                     owner_data["uri"] = self.helper.make_proj_uri("ORG", "ULAN", ulan)
                 else:
-                    owner_data["uri"] = self.helper.make_proj_uri("ORG", "NAME", inst, "PLACE", loc)
+                    owner_data["uri"] = self.helper.make_proj_uri(
+                        "ORG", "NAME", inst, "PLACE", present_location_verbatim
+                    )
             else:
                 warnings.warn(
                     f"*** Object present location data has a location, but not an institution: {pprint.pformat(data)}"
@@ -519,7 +531,7 @@ class PopulateGoupilObject(Configurable, PopulateObject):
                     desc.assigned_by = assignment
                 hmo.referred_to_by = desc
 
-            acc = location.get("acc")
+            acc = present_location.get("acc")
             if acc:
                 acc_number = vocab.AccessionNumber(ident="", content=acc)
                 hmo.identified_by = acc_number
@@ -530,8 +542,6 @@ class PopulateGoupilObject(Configurable, PopulateObject):
 
             data["_organizations"].append(owner_data)
             data["_final_org"] = owner_data
-        else:
-            pass  # there is no present location place string
 
     def _populate_object_visual_item(self, data: dict, title, subject_genre):
         sales_records = get_crom_objects(data["_records"])
@@ -928,6 +938,13 @@ class GoupilTransactionHandler(TransactionHandler):
 
         hmo = get_crom_object(data["_object"])
         sn_ident = self.helper.stock_number_identifier(data["_object"], date)
+        sale_location = data["book_record"].get("object_sale_location")
+        sale_location_verbatim = sale_location.get("location")
+
+        o_place = sale_location["location"]
+
+        place = make_place_with_cities_db(sale_location, data, self.helper.services)
+        o_place = get_crom_object(place)
 
         dir = "In" if incoming else "Out"
         if purpose == "returning":
@@ -946,6 +963,11 @@ class GoupilTransactionHandler(TransactionHandler):
         acq._label = name
         acq.identified_by = model.Name(ident="", content=name)
         acq.transferred_title_of = hmo
+
+        if place:
+            acq.took_place_at = o_place
+        elif sale_location_verbatim:
+            acq.referred_to_by = vocab.Note(content=sale_location_verbatim)
 
         for p in from_people:
             acq.transferred_title_from = p
@@ -1655,6 +1677,10 @@ class GoupilPipeline(PipelineBase):
                                 ),
                                 "rename_keys": {"present_loc_geog": "location"},
                             },
+                            "object_sale_location": {
+                                "properties": ("sale_location",),
+                                "rename_keys": {"sale_location": "location"},
+                            },
                             "book_record": {
                                 "properties": (
                                     "title",
@@ -1669,7 +1695,7 @@ class GoupilPipeline(PipelineBase):
                                     "editor_notes",
                                     "no_name_notes",
                                     "rosetta_handle",
-                                    "sale_location",
+                                    "object_sale_location",
                                     "present_location",
                                     "goupil_object_id",
                                     "goupil_event_ord",  # TODO: for future reference only, semantics uknown at this point

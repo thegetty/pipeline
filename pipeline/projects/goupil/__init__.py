@@ -51,48 +51,59 @@ def filter_empty_book(data: dict, _):
 
 
 def make_place_with_cities_db(data: dict, parent: str, services: dict, base_uri, sales_records: list = []):
+    lower_geographies = []
+    higher_geographies = []
+
+    crom_places = []
 
     cities_db = services["cities_auth_db"]
     loc_verbatim = data.get("location")
 
-    lower_geography = None
-    higher_geography = None
-
-    o_lower = None
-    o_higher = None
-
+    if not loc_verbatim:
+        return []
+    loc_verbatim = loc_verbatim.strip()
     if loc_verbatim in cities_db:
-        place = cities_db[loc_verbatim]
-        auth = place["authority"]
-        name = place["name"]
-        type = place["type"]
+        # each location verbatim may correspond with more than one place
+        places = cities_db[loc_verbatim]
 
-        higher_geography = parse_location_name(auth, uri_base=base_uri)
-        make_la_place(higher_geography, base_uri=base_uri)
-        o_higher = get_crom_object(higher_geography)
+        for place in places:
+            auth = place["authority"]
+            name = place["name"]
+            type = place["type"]
 
-        preferred_name = vocab.PrimaryName(ident="", content=name)
-        alternative_name = vocab.AlternateName(ident="", content=loc_verbatim)
-
-        # If the start of the authority column, matches the location name,
-        # then we have something like `Baltimore, MD, USA`
-        # and we don't need to create another instance for the city.
-        # If not, then the case is that we have have a case like `96 boulevard Haussmann, Paris, France`
-        # and we need to model the street address as well.
-        if not auth.startswith(name):
-            lower_geography = make_la_place(
-                {
-                    "name": name,
-                    "type": type,
-                    "part_of": higher_geography,
-                    "identifiers": [preferred_name, alternative_name],
-                },
-                base_uri=base_uri,
-            )
-            o_lower = get_crom_object(lower_geography)
+            higher_geography = parse_location_name(auth, uri_base=base_uri)
             make_la_place(higher_geography, base_uri=base_uri)
-        else:
-            o_higher.identified_by = alternative_name
+            o_higher = get_crom_object(higher_geography)
+
+            crom_places.append(o_higher)
+            higher_geographies.append(higher_geography)
+
+            preferred_name = vocab.PrimaryName(ident="", content=name)
+            alternative_name = vocab.AlternateName(ident="", content=loc_verbatim)
+
+            # If the start of the authority column, matches the location name,
+            # then we have something like `Baltimore, MD, USA`
+            # and we don't need to create another instance for the city.
+            # If not, then the case is that we have have a case like `96 boulevard Haussmann, Paris, France`
+            # and we need to model the street address as well.
+            if not auth.startswith(name):
+                lower_geography = make_la_place(
+                    {
+                        "name": name,
+                        "type": type,
+                        "part_of": higher_geography,
+                        "identifiers": [preferred_name, alternative_name],
+                    },
+                    base_uri=base_uri,
+                )
+                o_lower = get_crom_object(lower_geography)
+                make_la_place(higher_geography, base_uri=base_uri)
+                lower_geographies.append(lower_geography)
+                crom_places.append(o_lower)
+
+            else:
+                if not ";" in loc_verbatim:
+                    o_higher.identified_by = alternative_name
     elif loc_verbatim:
         higher_geography = parse_location_name(loc_verbatim, base_uri=base_uri)
         if len(higher_geography.keys()) == 1 and "name" in higher_geography:
@@ -102,24 +113,19 @@ def make_place_with_cities_db(data: dict, parent: str, services: dict, base_uri,
         else:
             make_la_place(higher_geography, base_uri=base_uri)
             o_higher = get_crom_object(higher_geography)
+            higher_geographies.append(higher_geography)
+            crom_places.append(o_higher)
 
     for sale_record in sales_records:
-        if o_lower:
-            o_lower.referred_to_by = sale_record
-        if o_higher:
-            o_higher.referred_to_by = sale_record
+        for o in crom_places:
+            o.referred_to_by = sale_record
 
-    if lower_geography:
-        parent["_locations"].append(lower_geography)
-    elif higher_geography:
-        parent["_locations"].append(higher_geography)
+    if lower_geographies:
+        parent["_locations"] += lower_geographies
+    elif higher_geographies:
+        parent["_locations"] += higher_geographies
 
-    if lower_geography and higher_geography:
-        return lower_geography
-    elif higher_geography:
-        return higher_geography
-    else:
-        return None
+    return crom_places
 
 
 def add_crom_price(data, parent, services, add_citations=False):
@@ -482,10 +488,10 @@ class PopulateGoupilObject(Configurable, PopulateObject):
         note = present_location.get("note")
 
         if present_location_verbatim:
-            current = make_place_with_cities_db(
+            current_places = make_place_with_cities_db(
                 present_location, data, services=self.helper.services, base_uri=self.uid_tag_prefix
             )
-            curr_place = get_crom_object(current)
+            # curr_place = get_crom_object(current)
             inst = present_location.get("inst")
             if inst:
                 owner_data = {
@@ -513,8 +519,8 @@ class PopulateGoupilObject(Configurable, PopulateObject):
                 }
 
             owner_data["referred_to_by"] = sales_records
-            if current:
-                curr_place = get_crom_object(current)
+
+            for curr_place in current_places:
                 hmo.current_location = curr_place
 
             owner = None
@@ -523,7 +529,8 @@ class PopulateGoupilObject(Configurable, PopulateObject):
                 owner_data = make_la_org(owner_data)
                 owner = get_crom_object(owner_data)
                 hmo.current_owner = owner
-                owner.residence = curr_place
+                for curr_place in current_places:
+                    owner.residence = curr_place
 
             if note:
                 owner_data["note"] = note
@@ -944,13 +951,12 @@ class GoupilTransactionHandler(TransactionHandler):
         sale_location = data["book_record"].get("object_sale_location", {})
         sale_location_verbatim = sale_location.get("location")
 
-        place = make_place_with_cities_db(
+        places = make_place_with_cities_db(
             sale_location,
             data,
             services=self.helper.services,
             base_uri=self.helper.uid_tag_prefix,
         )
-        o_place = get_crom_object(place)
 
         dir = "In" if incoming else "Out"
         if purpose == "returning":
@@ -970,8 +976,9 @@ class GoupilTransactionHandler(TransactionHandler):
         acq.identified_by = model.Name(ident="", content=name)
         acq.transferred_title_of = hmo
 
-        if place:
-            acq.took_place_at = o_place
+        if places:
+            for place in places:
+                acq.took_place_at = place
         elif sale_location_verbatim:
             acq.referred_to_by = vocab.Note(content=sale_location_verbatim)
 
@@ -1180,27 +1187,28 @@ class GoupilTransactionHandler(TransactionHandler):
                 p_data, relative_id=f"{role}_{i+1}", people_groups=people_groups, data=data
             )
 
-            place_data = make_place_with_cities_db(
+            places = make_place_with_cities_db(
                 p_data,
                 data,
                 services=self.helper.services,
                 base_uri=self.helper.uid_tag_prefix,
                 sales_records=sales_records,
             )
-            place = get_crom_object(place_data)
-            if place:
-                person.residence = place
+            if places:
+                for place in places:
+                    person.residence = place
             else:
                 loc_verbatim = p_data.get("location")
                 if loc_verbatim:
                     tx.referred_to_by = vocab.Note(content=loc_verbatim)
 
-            if place and "shared#PLACE" in place.id:
-                self.person_sojourn(p_data, place, sales_records)
-            if THROUGH.intersects(mod):
-                people_agents.append(person)
-            else:
-                people.append(person)
+            for place in places:
+                if place and "shared#PLACE" in place.id:
+                    self.person_sojourn(p_data, place, sales_records)
+                if THROUGH.intersects(mod):
+                    people_agents.append(person)
+                else:
+                    people.append(person)
 
         goupil_group = [self.helper.static_instances.get_instance("Group", "goupil")]
         goupil_group_agents = []
@@ -1547,6 +1555,7 @@ class GoupilPipeline(PipelineBase):
                                     "sell_auth_mod",
                                     "seller_ulan_id",
                                 ),
+                                "rename_keys": {"sell_auth_loc": "location"},
                             },
                             "shared_buyer": {
                                 "rename_keys": {

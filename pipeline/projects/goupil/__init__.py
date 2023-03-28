@@ -81,6 +81,9 @@ def make_place_with_cities_db(data: dict, parent: str, services: dict, base_uri,
             preferred_name = vocab.PrimaryName(ident="", content=name)
             alternative_name = vocab.AlternateName(ident="", content=loc_verbatim)
 
+            for sale_record in sales_records:
+                alternative_name.referred_to_by = sale_record
+
             # If the start of the authority column, matches the location name,
             # then we have something like `Baltimore, MD, USA`
             # and we don't need to create another instance for the city.
@@ -489,7 +492,11 @@ class PopulateGoupilObject(Configurable, PopulateObject):
 
         if present_location_verbatim:
             current_places = make_place_with_cities_db(
-                present_location, data, services=self.helper.services, base_uri=self.uid_tag_prefix
+                present_location,
+                data,
+                services=self.helper.services,
+                base_uri=self.uid_tag_prefix,
+                sales_records=sales_records,
             )
             # curr_place = get_crom_object(current)
             inst = present_location.get("inst")
@@ -950,12 +957,14 @@ class GoupilTransactionHandler(TransactionHandler):
         sn_ident = self.helper.stock_number_identifier(data["_object"], date)
         sale_location = data["book_record"].get("object_sale_location", {})
         sale_location_verbatim = sale_location.get("location")
+        sales_records = get_crom_objects(data["_records"])
 
         places = make_place_with_cities_db(
             sale_location,
             data,
             services=self.helper.services,
             base_uri=self.helper.uid_tag_prefix,
+            sales_records=sales_records,
         )
 
         dir = "In" if incoming else "Out"

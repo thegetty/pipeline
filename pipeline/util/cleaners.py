@@ -271,6 +271,11 @@ def parse_location(*parts, uri_base=None, types=None):
 	if country_name in _COUNTRIES:
 		country_type = 'Country'
 		country_name = _COUNTRY_NAMES.get(country_name, country_name)
+	elif country_name in _COUNTRY_NAMES.values():
+		# to avoid creationing country mappings like { 'Japan' : 'Japan' } if the above search fails,
+		# before giving up try to find the value within the values of the mapping object,
+		# and if it exists, use the country_name variable value as is
+		country_type = 'Country'
 	else:
 		warnings.warn(f'*** Expecting country name, but found unexpected value: {country_name!r}')
 		# not a recognized place name format; assert a generic Place with the associated value as a name

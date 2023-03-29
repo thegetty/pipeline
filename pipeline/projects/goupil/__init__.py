@@ -872,12 +872,27 @@ class GoupilTransactionHandler(TransactionHandler):
             }
         )
 
-    def person_sojourn(self, p_data: dict, sojourn, sales_records):
+    def person_sojourn(self, p_data: dict, sojourn, data: dict):
+        sales_records = get_crom_objects(data["_records"])
         act = model.Activity(ident=self.helper.make_proj_uri("ACT", p_data["label"]), label="Sojourn activity")
         act.classified_as = model.Type(
             ident="http://vocab.getty.edu/aat/300393212", label="establishment (action or condition)"
         )
-        act.took_place_at = sojourn
+
+        if isinstance(sojourn, str):
+            places = make_place_with_cities_db(
+                {"location": sojourn},
+                data,
+                services=self.helper.services,
+                base_uri=self.helper.uid_tag_prefix,
+                sales_records=sales_records,
+            )
+            if not places and sojourn:
+                act.referred_to_by = vocab.Note(ident="", content=sojourn)
+            for place in places:
+                act.took_place_at = place
+        else:
+            act.took_place_at = sojourn
         person = get_crom_object(p_data)
         person.carried_out = act
         for record in sales_records:
@@ -1237,8 +1252,7 @@ class GoupilTransactionHandler(TransactionHandler):
                     tx.referred_to_by = vocab.Note(content=loc_verbatim)
 
             for place in places:
-                if place and "shared#PLACE" in place.id:
-                    self.person_sojourn(p_data, place, sales_records)
+                self.person_sojourn(p_data, place, data)
                 if THROUGH.intersects(mod):
                     people_agents.append(person)
                 else:
@@ -1390,12 +1404,19 @@ class ModelSale(GoupilTransactionHandler):
         out_tx.starts_after_the_end_of = in_tx
 
         purch_loc_note = data["purchase"].get("location_note")
+        purch_loc = data["purchase"].get("location")
 
-        self.helper.add_transaction_place(in_tx, purch_loc_note, data)
-        self.helper.add_transaction_place(out_tx, purch_loc_note, data)
+        in_tx = self.helper.add_transaction_place(in_tx, purch_loc, data)
+        out_tx = self.helper.add_transaction_place(out_tx, purch_loc, data)
+
+        in_tx = self.helper.add_transaction_place(in_tx, purch_loc_note, data)
+        out_tx = self.helper.add_transaction_place(out_tx, purch_loc_note, data)
 
         for seller in sellers:
+            self.person_sojourn(seller, seller.get("location"), data)
             seller = self.helper.add_person_residence(seller, seller.get("loc"), data)
+            in_tx = self.helper.add_transaction_place(in_tx, seller.get("location"), data)
+            out_tx = self.helper.add_transaction_place(out_tx, seller.get("location"), data)
 
         yield data
 
@@ -1437,10 +1458,13 @@ class ModelInventorying(GoupilTransactionHandler):
         data["_prov_entries"].append(tx_out_data)
 
         purch_loc_note = data["purchase"].get("location_note")
+        purch_loc = data["purchase"].get("location")
         tx_out = self.helper.add_transaction_place(tx_out, purch_loc_note, data)
+        tx_out = self.helper.add_transaction_place(tx_out, purch_loc, data)
 
         for seller in sellers:
             seller = self.helper.add_person_residence(seller, seller.get("loc"), data)
+            tx_out = self.helper.add_transaction_place(tx_out, seller.get("location"), data)
 
         yield data
 
@@ -1468,10 +1492,14 @@ class ModelUnsoldPurchases(GoupilTransactionHandler):
         in_tx = self.add_incoming_tx(data, buy_sell_modifiers, people_groups)
 
         purch_loc_note = data["purchase"].get("location_note")
+        purch_loc = data["purchase"].get("location")
+
         in_tx = self.helper.add_transaction_place(in_tx, purch_loc_note, data)
+        in_tx = self.helper.add_transaction_place(in_tx, purch_loc, data)
 
         for seller in sellers:
             seller = self.helper.add_person_residence(seller, seller.get("loc"), data)
+            in_tx = self.helper.add_transaction_place(in_tx, seller.get("location"), data)
 
         yield data
 

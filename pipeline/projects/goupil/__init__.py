@@ -369,6 +369,41 @@ class GoupilUtilityHelper(SharedUtilityHelper):
                 return ("TX-MULTI", dir, n[12:])
         return ("TX", dir, book_id, page_id, row_id)
 
+    def add_transaction_place(self, tx: dict, place_verbatim: str, data: dict):
+        sales_records = get_crom_objects(data["_records"])
+
+        places = make_place_with_cities_db(
+            {"location": place_verbatim},
+            data,
+            services=self.services,
+            base_uri=self.uid_tag_prefix,
+            sales_records=sales_records,
+        )
+        if not places and place_verbatim:
+            tx.referred_to_by = vocab.Note(ident="", content=place_verbatim)
+
+        for place in places:
+            tx.took_place_at = place
+        return tx
+
+    def add_person_residence(self, person: dict, place_verbatim: str, data: dict):
+        sales_records = get_crom_objects(data["_records"])
+        places = make_place_with_cities_db(
+            {"location": place_verbatim},
+            data,
+            services=self.services,
+            base_uri=self.uid_tag_prefix,
+            sales_records=sales_records,
+        )
+        o_person = get_crom_object(person)
+
+        if not places and place_verbatim:
+            o_person.referred_to_by = vocab.Note(ident="", content=place_verbatim)
+
+        for place in places:
+            o_person.residence = place
+        return person
+
 
 class PopulateGoupilObject(Configurable, PopulateObject):
     helper = Option(required=True)
@@ -1354,26 +1389,13 @@ class ModelSale(GoupilTransactionHandler):
         in_tx.ends_before_the_start_of = out_tx
         out_tx.starts_after_the_end_of = in_tx
 
-        sales_records = get_crom_objects(data["_records"])
-
         purch_loc_note = data["purchase"].get("location_note")
-        if purch_loc_note:
-            # import pdb; pdb.set_trace()
 
-            places = make_place_with_cities_db(
-                {"location": purch_loc_note},
-                data,
-                services=self.helper.services,
-                base_uri=self.uid_tag_prefix,
-                sales_records=sales_records,
-            )
-            if not places:
-                in_tx.referred_to_by = vocab.Note(ident="", content=purch_loc_note)
-                out_tx.referred_to_by = vocab.Note(ident="", content=purch_loc_note)
+        self.helper.add_transaction_place(in_tx, purch_loc_note, data)
+        self.helper.add_transaction_place(out_tx, purch_loc_note, data)
 
-            for place in places:
-                in_tx.took_place_at = place
-                out_tx.took_place_at = place
+        for seller in sellers:
+            seller = self.helper.add_person_residence(seller, seller.get("loc"), data)
 
         yield data
 
@@ -1413,24 +1435,12 @@ class ModelInventorying(GoupilTransactionHandler):
         tx_out_data = add_crom_data(data={"uri": tx_out.id, "label": inv_label}, what=tx_out)
 
         data["_prov_entries"].append(tx_out_data)
-        sales_records = get_crom_objects(data["_records"])
 
         purch_loc_note = data["purchase"].get("location_note")
-        if purch_loc_note:
-            # import pdb; pdb.set_trace()
+        tx_out = self.helper.add_transaction_place(tx_out, purch_loc_note, data)
 
-            places = make_place_with_cities_db(
-                {"location": purch_loc_note},
-                data,
-                services=self.helper.services,
-                base_uri=self.uid_tag_prefix,
-                sales_records=sales_records,
-            )
-            if not places:
-                tx_out.referred_to_by = vocab.Note(ident="", content=purch_loc_note)
-
-            for place in places:
-                tx_out.took_place_at = place
+        for seller in sellers:
+            seller = self.helper.add_person_residence(seller, seller.get("loc"), data)
 
         yield data
 
@@ -1457,23 +1467,11 @@ class ModelUnsoldPurchases(GoupilTransactionHandler):
 
         in_tx = self.add_incoming_tx(data, buy_sell_modifiers, people_groups)
 
-        sales_records = get_crom_objects(data["_records"])
-
         purch_loc_note = data["purchase"].get("location_note")
-        if purch_loc_note:
+        in_tx = self.helper.add_transaction_place(in_tx, purch_loc_note, data)
 
-            places = make_place_with_cities_db(
-                {"location": purch_loc_note},
-                data,
-                services=self.helper.services,
-                base_uri=self.uid_tag_prefix,
-                sales_records=sales_records,
-            )
-            if not places:
-                in_tx.referred_to_by = vocab.Note(ident="", content=purch_loc_note)
-
-            for place in places:
-                in_tx.took_place_at = place
+        for seller in sellers:
+            seller = self.helper.add_person_residence(seller, seller.get("loc"), data)
 
         yield data
 

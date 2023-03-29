@@ -61,15 +61,15 @@ def make_place_with_cities_db(data: dict, parent: str, services: dict, base_uri,
 
     if not loc_verbatim:
         return []
-    loc_verbatim = loc_verbatim.strip()
-    if loc_verbatim in cities_db:
+    lookup_key = loc_verbatim.lower().strip()
+    if lookup_key in cities_db:
         # each location verbatim may correspond with more than one place
-        places = cities_db[loc_verbatim]
-
+        places = cities_db[lookup_key]
         for place in places:
             auth = place["authority"]
             name = place["name"]
             type = place["type"]
+            loc_verbatim = place["verbatim"]
 
             higher_geography = parse_location_name(auth, uri_base=base_uri)
             make_la_place(higher_geography, base_uri=base_uri)
@@ -108,7 +108,7 @@ def make_place_with_cities_db(data: dict, parent: str, services: dict, base_uri,
                 if not ";" in loc_verbatim:
                     o_higher.identified_by = alternative_name
     elif loc_verbatim:
-        higher_geography = parse_location_name(loc_verbatim, base_uri=base_uri)
+        higher_geography = parse_location_name(loc_verbatim, uri_base=base_uri)
         if len(higher_geography.keys()) == 1 and "name" in higher_geography:
             # if nothing but a dictionary with a name is returned,
             # ignore it to avoiding modelling places heuristically
@@ -1138,7 +1138,6 @@ class GoupilTransactionHandler(TransactionHandler):
                     goupil_group.append(person)
                 except ValueError as e:
                     warnings.warn(f"ValueError while handling shared rights ({e}): {pprint.pformat(p)}")
-                    raise
 
             g_right = self.ownership_right(remaining, goupil)
             rights.insert(0, g_right)
@@ -1326,6 +1325,10 @@ class ModelSale(GoupilTransactionHandler):
     people_groups = Service("people_groups")
     cities_auth_db = Service("cities_auth_db")
 
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.uid_tag_prefix = self.helper.proj_prefix
+
     def __call__(
         self,
         data: dict,
@@ -1360,6 +1363,27 @@ class ModelSale(GoupilTransactionHandler):
         in_tx.ends_before_the_start_of = out_tx
         out_tx.starts_after_the_end_of = in_tx
 
+        sales_records = get_crom_objects(data["_records"])
+
+        purch_loc_note = data["purchase"].get("location_note")
+        if purch_loc_note:
+            # import pdb; pdb.set_trace()
+
+            places = make_place_with_cities_db(
+                {"location": purch_loc_note},
+                data,
+                services=self.helper.services,
+                base_uri=self.uid_tag_prefix,
+                sales_records=sales_records,
+            )
+            if not places:
+                in_tx.referred_to_by = vocab.Note(ident="", content=purch_loc_note)
+                out_tx.referred_to_by = vocab.Note(ident="", content=purch_loc_note)
+
+            for place in places:
+                in_tx.took_place_at = place
+                out_tx.took_place_at = place
+
         yield data
 
 
@@ -1368,6 +1392,10 @@ class ModelInventorying(GoupilTransactionHandler):
     make_la_person = Service("make_la_person")
     buy_sell_modifiers = Service("buy_sell_modifiers")
     cities_auth_db = Service("cities_auth_db")
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.uid_tag_prefix = self.helper.proj_prefix
 
     def __call__(self, data: dict, make_la_person, buy_sell_modifiers, cities_auth_db):
 
@@ -1394,6 +1422,24 @@ class ModelInventorying(GoupilTransactionHandler):
         tx_out_data = add_crom_data(data={"uri": tx_out.id, "label": inv_label}, what=tx_out)
 
         data["_prov_entries"].append(tx_out_data)
+        sales_records = get_crom_objects(data["_records"])
+
+        purch_loc_note = data["purchase"].get("location_note")
+        if purch_loc_note:
+            # import pdb; pdb.set_trace()
+
+            places = make_place_with_cities_db(
+                {"location": purch_loc_note},
+                data,
+                services=self.helper.services,
+                base_uri=self.uid_tag_prefix,
+                sales_records=sales_records,
+            )
+            if not places:
+                tx_out.referred_to_by = vocab.Note(ident="", content=purch_loc_note)
+
+            for place in places:
+                tx_out.took_place_at = place
 
         yield data
 
@@ -1419,6 +1465,24 @@ class ModelUnsoldPurchases(GoupilTransactionHandler):
         sn_ident = self.helper.stock_number_identifier(odata, date)
 
         in_tx = self.add_incoming_tx(data, buy_sell_modifiers, people_groups)
+
+        sales_records = get_crom_objects(data["_records"])
+
+        purch_loc_note = data["purchase"].get("location_note")
+        if purch_loc_note:
+
+            places = make_place_with_cities_db(
+                {"location": purch_loc_note},
+                data,
+                services=self.helper.services,
+                base_uri=self.uid_tag_prefix,
+                sales_records=sales_records,
+            )
+            if not places:
+                in_tx.referred_to_by = vocab.Note(ident="", content=purch_loc_note)
+
+            for place in places:
+                in_tx.took_place_at = place
 
         yield data
 

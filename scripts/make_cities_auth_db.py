@@ -43,22 +43,28 @@ if __name__ == "__main__":
                 names = names.replace("[multiple locations]", "").split(";")
                 auths = auths.replace("[multiple locations]", "").split(";")
                 types = [guess_type(name, auth) for name, auth in zip(names, auths)]
-
-                data[key.strip()] = [
+                
+                verbatim_key = key
+                key = str(key).strip().lower()
+                data[key] = [
                     {
                         "name": name.strip(),
                         "authority": auth.strip(),
                         "type": type,
+                        "verbatim": verbatim_key
                     }
                     for name, auth, type in zip(names, auths, types)
                 ]
 
             def add_to_data(key, name, auth):
-                data[key.strip()] = [
+                verbatim_key = key
+                key = str(key).strip().lower()
+                data[key] = [
                     {
                         "name": name.strip(),
                         "authority": auth.strip(),
                         "type": guess_type(name, auth),
+                        "verbatim": verbatim_key
                     }
                 ]
 

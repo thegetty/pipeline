@@ -79,8 +79,11 @@ def make_place_with_cities_db(data: dict, parent: str, services: dict, base_uri,
             higher_geographies.append(higher_geography)
 
             preferred_name = vocab.PrimaryName(ident="", content=name)
-            alternative_name = vocab.AlternateName(ident="", content=loc_verbatim)
-
+            
+            alternative_name = None
+            if not name == loc_verbatim:
+                alternative_name = vocab.AlternateName(ident="", content=loc_verbatim)
+            
             # If the start of the authority column, matches the location name,
             # then we have something like `Baltimore, MD, USA`
             # and we don't need to create another instance for the city.
@@ -92,7 +95,7 @@ def make_place_with_cities_db(data: dict, parent: str, services: dict, base_uri,
                         "name": name,
                         "type": type,
                         "part_of": higher_geography,
-                        "identifiers": [preferred_name, alternative_name],
+                        "identifiers": [preferred_name, alternative_name] if alternative_name else [preferred_name],
                     },
                     base_uri=base_uri,
                 )

@@ -690,7 +690,11 @@ def make_la_place(data:dict, base_uri=None):
 	p = model.Place(**placeargs)
 	if place_type:
 		p.classified_as = place_type
-	if name:
+	identifiers = data.get('identifiers')
+	if identifiers:
+		for identifier in identifiers:
+			p.identified_by  = identifier
+	elif name:
 		p.identified_by = model.Name(ident='', content=name)
 	else:
 		warnings.warn(f'Place with missing name on {p.id}')

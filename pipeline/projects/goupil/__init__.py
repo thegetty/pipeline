@@ -215,7 +215,9 @@ class AddArtists(ProvenanceBase, GoupilProvenance):
             mod = a.get("attrib_mod", "")
         # Matt:  as per George, semantics for 'or' are different in buyer/seller field than in artwork production role. The first does not to my knowledge exist in Goupil.
         # basically treat or as attributed to!
-        mod = mod.replace("or", "attributed to")
+        if "or " in mod or " or" in mod:
+            # matched 'or' a separate word
+            mod = mod.replace("or", "attributed to")
         mods = CaseFoldingSet({m.strip() for m in mod.split(";")} - {""})
         return mods
 
@@ -274,7 +276,11 @@ class AddArtists(ProvenanceBase, GoupilProvenance):
         self.model_artists_with_modifers(
             data, hmo, attribution_modifiers, attribution_group_types, attribution_group_names
         )
-
+        
+        for production_assingment in hmo.produced_by.attributed_by:
+            production_assingment.carried_out_by = None
+            production_assingment.carried_out_by = self.helper.static_instances.get_instance('Group', 'goupil')
+        
         return data
 
 

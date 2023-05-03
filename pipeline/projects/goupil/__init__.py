@@ -79,11 +79,11 @@ def make_place_with_cities_db(data: dict, parent: str, services: dict, base_uri,
             higher_geographies.append(higher_geography)
 
             preferred_name = vocab.PrimaryName(ident="", content=name)
-            
+
             alternative_name = None
             if not name == loc_verbatim:
                 alternative_name = vocab.AlternateName(ident="", content=loc_verbatim)
-            
+
             # If the start of the authority column, matches the location name,
             # then we have something like `Baltimore, MD, USA`
             # and we don't need to create another instance for the city.
@@ -276,11 +276,12 @@ class AddArtists(ProvenanceBase, GoupilProvenance):
         self.model_artists_with_modifers(
             data, hmo, attribution_modifiers, attribution_group_types, attribution_group_names
         )
-        
-        for production_assingment in hmo.produced_by.attributed_by:
+
+        attrs = hmo.produced_by.attributed_by if hasattr(hmo.produced_by, "attributed_by") else []
+        for production_assingment in attrs:
             production_assingment.carried_out_by = None
-            production_assingment.carried_out_by = self.helper.static_instances.get_instance('Group', 'goupil')
-        
+            production_assingment.carried_out_by = self.helper.static_instances.get_instance("Group", "goupil")
+
         return data
 
 

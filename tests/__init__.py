@@ -580,11 +580,14 @@ class TestGoupilPipelineOutput(unittest.TestCase):
 		
 		tests_path = Path(f'tests/data/goupil/{test_name}')
 		
-		files = list(tests_path.rglob('goupil_[!0]*'))
-		headers = list(tests_path.rglob('goupil_0*'))
+		files = list(tests_path.glob('goupil_[!0]*'))
+		if not files:
+			files = list(tests_path.glob('goupil[!_][!0]*'))
+	
+		headers = list(tests_path.glob('goupil_0*'))
 		
 		if files:
-			data['files_pattern'] = str(tests_path / 'goupil_[!0]*')
+			data['files_pattern'] = str(files[0])
 		
 		if headers:
 			data['header_file'] = str(headers[0])

@@ -79,11 +79,11 @@ def make_place_with_cities_db(data: dict, parent: str, services: dict, base_uri,
             higher_geographies.append(higher_geography)
 
             preferred_name = vocab.PrimaryName(ident="", content=name)
-            
+
             alternative_name = None
             if not name == loc_verbatim:
                 alternative_name = vocab.AlternateName(ident="", content=loc_verbatim)
-            
+
             # If the start of the authority column, matches the location name,
             # then we have something like `Baltimore, MD, USA`
             # and we don't need to create another instance for the city.
@@ -215,7 +215,9 @@ class AddArtists(ProvenanceBase, GoupilProvenance):
             mod = a.get("attrib_mod", "")
         # Matt:  as per George, semantics for 'or' are different in buyer/seller field than in artwork production role. The first does not to my knowledge exist in Goupil.
         # basically treat or as attributed to!
-        mod = mod.replace("or", "attributed to")
+        if "or " in mod or " or" in mod:
+            # matched 'or' a separate word
+            mod = mod.replace("or", "attributed to")
         mods = CaseFoldingSet({m.strip() for m in mod.split(";")} - {""})
         return mods
 
@@ -274,6 +276,11 @@ class AddArtists(ProvenanceBase, GoupilProvenance):
         self.model_artists_with_modifers(
             data, hmo, attribution_modifiers, attribution_group_types, attribution_group_names
         )
+
+        attrs = hmo.produced_by.attributed_by if hasattr(hmo.produced_by, "attributed_by") else []
+        for production_assingment in attrs:
+            production_assingment.carried_out_by = None
+            production_assingment.carried_out_by = self.helper.static_instances.get_instance("Group", "goupil")
 
         return data
 

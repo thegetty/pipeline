@@ -44,7 +44,8 @@ from pipeline.util import \
 			MatchingFiles, \
 			strip_key_prefix, \
 			rename_keys, \
-			filter_empty_person
+			filter_empty_person, \
+			associate_with_tgn_record
 from pipeline.util.cleaners import \
 			parse_location_name, \
 			date_cleaner
@@ -61,7 +62,8 @@ from pipeline.linkedart import \
 			MakeLinkedArtAuctionHouseOrganization, \
 			MakeLinkedArtOrganization, \
 			MakeLinkedArtPerson, \
-			make_la_place
+			make_la_place, \
+			make_tgn_place
 from pipeline.io.csv import CurriedCSVReader
 from pipeline.nodes.basic import \
 			RecordCounter, \
@@ -353,7 +355,10 @@ class KnoedlerProvenance:
 		thing_label = data['label']
 		knoedler = self.helper.static_instances.get_instance('Group', 'knoedler')
 		ny = self.helper.static_instances.get_instance('Place', 'newyork')
-
+		# TODO remove when development is completed
+		for key, value in self.helper.static_instances.instances['Place'].items():
+			t = self.helper.static_instances.get_instance('Place', key)
+		
 		o = get_crom_object(data)
 		creation = model.Creation(ident='', label=f'Creation of {thing_label}')
 		creation.carried_out_by = knoedler
@@ -1643,7 +1648,17 @@ class KnoedlerPipeline(PipelineBase):
 
 		sellers_to_be_deleted = services.get('sellers_to_be_deleted', {}).get('pi_record_no', [])
 		services['sellers_to_be_deleted'] = sellers_to_be_deleted
-
+		
+		# lookup dictionary with all authority information retrieved
+		tgn_places = services.get('tgn', {}) 
+		
+		# lookup dictionary that maps knoedler a field and its value to a place 
+		# either as same as or as falling within a place in tgn_places dict
+		knoedler_tgn = services.get('knoedler_tgn', {}) 
+		
+		services['tgn'] = tgn_places
+		services['knoedler_tgn'] = knoedler_tgn
+		
 		# make these case-insensitive by wrapping the value lists in CaseFoldingSet
 		for name in ('attribution_modifiers',):
 			if name in services:
@@ -1665,6 +1680,29 @@ class KnoedlerPipeline(PipelineBase):
 			'counts': defaultdict(int)
 		})
 		return services
+	
+	def _static_place_instances(self):
+		'''
+		Create static instances for every place mentioned in the tgn service data.
+		'''
+		super()._static_place_instances()
+		tgn_places = self.services['tgn']
+		instances = {}
+		places = {}
+		
+		for tgn_id, tgn_data in tgn_places.items():
+			places[tgn_id] = tgn_data
+		
+		start = timeit.default_timer()	
+		print("Started the tranformation of Static Places Instances...")
+		for tgn_id, tgn_data in places.items():
+			tgn_id = tgn_data.get('tgn_id')		
+					
+			place = make_tgn_place(tgn_data, self.helper.make_shared_uri, tgn_places)
+			instances[tgn_id] = place
+		# import pdb; pdb.set_trace()
+		print(f"Completed in {timeit.default_timer() - start}")
+		return instances
 
 	def add_sales_chain(self, graph, records, services, serialize=True):
 		'''Add transformation of sales records to the bonobo pipeline.'''
@@ -1711,6 +1749,7 @@ class KnoedlerPipeline(PipelineBase):
 							},
 							'purchase_seller': {
 								'postprocess': [
+									lambda d, p: associate_with_tgn_record(d, p, services['tgn']),
 									lambda d, p: delete_sellers(d, p, services),
 									filter_empty_person,
 									lambda x, _: strip_key_prefix('purchase_seller_', x),
@@ -2097,6 +2136,7 @@ class KnoedlerPipeline(PipelineBase):
 
 		if self.verbose:
 			print('Serializing static instances...', file=sys.stderr)
+		
 		for model, instances in self.static_instances.used_instances().items():
 			g = bonobo.Graph()
 			nodes = self.serializer_nodes_for_model(model=self.models[model], use_memory_writer=False)

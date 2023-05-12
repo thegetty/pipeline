@@ -9,6 +9,7 @@ from threading import Lock
 from contextlib import ContextDecorator, suppress
 from collections import defaultdict, namedtuple
 import warnings
+from copy import deepcopy
 
 import dateutil.parser
 from bonobo.config import Configurable, Option, Service
@@ -631,6 +632,28 @@ def strip_key_prefix(prefix, value):
 			d[k] = v
 	return d
 
+def associate_with_tgn_record(data, parent, tgn):
+	pi_record_no = parent.get('pi_record_no')
+	data['tgn'] = {}
+	if not pi_record_no in tgn:
+		warnings.warn(f"`{pi_record_no}` not found within TGN service file!")
+		return
+	
+	tgn_rec = tgn[pi_record_no]
+	
+	try:
+		for k,v in data.items():
+			for kk, vv in tgn_rec.items():
+					if k in kk:
+						for kkk, vvv in tgn_rec[kk].items():
+							if kkk == v:
+								# import pdb; pdb.set_trace()
+								data['tgn'].update(**deepcopy(tgn_rec[kk][kkk]))
+	except KeyError:
+		# keep this for debug purpose so that any error is not shallowed by KeyManagement 
+		warnings.warn(f"Error while adding TGN data to `{pi_record_no}`")
+
+	return data	
 
 def label_for_timespan_range(begin, end, inclusive=False):
 	'''

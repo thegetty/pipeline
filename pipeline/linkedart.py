@@ -2,6 +2,7 @@ from contextlib import suppress
 import warnings
 import urllib.parse
 import calendar
+import json
 
 from cromulent import model, vocab
 from cromulent.model import factory
@@ -647,6 +648,71 @@ class MakeLinkedArtPlace(MakeLinkedArtRecord):
 			data['uri'] = self.base_uri + urllib.parse.quote(data['name'])
 		return super().__call__(data)
 
+def geo_json(lat, lon, label):
+	return {
+		"type": "Feature",
+		"geometry": {
+			"type": "Point",
+			"coordinates": [float(lon), float(lat)]
+		},
+		"properties": {
+			"name": label
+		}
+	}
+
+def make_tgn_place(tgn_data: dict, uri_creator=None, tgn_lookup = {}):
+	place_shared_uri = uri_creator(('PLACE', 'TGN-ID', tgn_data.get('tgn_id')))
+	
+	if tgn_data is None:
+		return None
+
+	id = tgn_data.get("tgn_id")
+	
+	# if the place is the 'World'
+	# we don't need to model places as being part of it
+	# see: https://vocab.getty.edu/tgn/7029392
+	if id == '7029392':
+		return None
+
+	label = tgn_data.get('place_label')	
+	url = tgn_data.get('permalink')
+	
+	type_label = tgn_data.get('place_type_label')
+	type_identifier = tgn_data.get("place_type_preferred")
+	
+	lat = tgn_data.get('latitude')
+	lon = tgn_data.get('longitude')
+	
+	part_of = tgn_data.get('part_of')
+	
+	if place_shared_uri:
+		p = model.Place(ident=place_shared_uri, label=label)
+	else:
+		warnings.warn(f"No share-uri was created for place with TGN {id}")
+		p = model.Place(ident='', label=label)
+	
+	p.classified_as = model.Type(ident=type_identifier, label=type_label)
+	if lat and lon:
+		p.defined_by = json.dumps(geo_json(lat, lon, label))
+	
+	p.exact_match = vocab.WebPage(ident=f"http://vocab.getty.edu/tgn/{id}", label=f"https://vocab.getty.edu/tgn/{id}")
+	
+	page = vocab.WebPage(ident=url, label=url)
+	page._validate_range = False
+
+	# battling with crom in the following lines
+	# for the classification of a web page to be serialized
+	# we have to assign it a dummy Digital Object acccess_point first 
+	# and then remove it and also to no assing any identifier to the page itself
+	page.access_point = [model.DigitalObject(ident=url, label=url)]
+	page.access_point = None
+	
+	p.referred_to_by = page
+	if part_of:
+		p.part_of = make_tgn_place(tgn_lookup[part_of], uri_creator, tgn_lookup)
+	
+	return p
+	
 def make_la_place(data:dict, base_uri=None):
 	'''
 	Given a dictionary representing data about a place, construct a model.Place object,

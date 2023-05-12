@@ -739,7 +739,10 @@ class PopulateKnoedlerObject(Configurable, pipeline.linkedart.PopulateObject):
 					hmo.identified_by = acc_number
 					assignment = model.AttributeAssignment(ident='')
 					if owner:
+						assignment = model.AttributeAssignment(ident=self.helper.make_shared_uri('ATTR','ACC',acc,'OWN', owner._label))
 						assignment.carried_out_by = owner
+					else:
+						assignment = model.AttributeAssignment(ident=self.helper.make_shared_uri('ATTR','ACC',acc))
 					acc_number.assigned_by = assignment
 
 				data['_locations'].append(place_data)

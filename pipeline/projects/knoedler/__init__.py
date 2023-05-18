@@ -356,8 +356,8 @@ class KnoedlerProvenance:
 		knoedler = self.helper.static_instances.get_instance('Group', 'knoedler')
 		ny = self.helper.static_instances.get_instance('Place', 'newyork')
 		# TODO remove when development is completed
-		for key, value in self.helper.static_instances.instances['Place'].items():
-			t = self.helper.static_instances.get_instance('Place', key)
+		# for key, value in self.helper.static_instances.instances['Place'].items():
+		# 	t = self.helper.static_instances.get_instance('Place', key)
 		
 		o = get_crom_object(data)
 		creation = model.Creation(ident='', label=f'Creation of {thing_label}')
@@ -1071,7 +1071,7 @@ class TransactionHandler(ProvenanceBase):
 		if shared_people is None:
 			shared_people = []
 
-		for k in ('_prov_entries', '_people'):
+		for k in ('_prov_entries', '_people', '_locations'):
 			data.setdefault(k, [])
 
 		parenthetical_parts = []
@@ -1106,6 +1106,40 @@ class TransactionHandler(ProvenanceBase):
 				record=sales_record,
 				relative_id=f'{role}_{i+1}'
 			)
+			
+			tgn_data = p_data.get('loc_tgn')
+			import pdb; pdb.set_trace()
+			if tgn_data:
+				part_of = tgn_data.get("part_of") # this is a tgn id
+				same_as = tgn_data.get('same_as') # this is a tgn id
+				
+				location_name = p_data.get('loc', None) or p_data.get('auth_loc', None)
+				
+				if part_of:
+					tgn_instance = self.helper.static_instances.get_instance('Place', part_of)					
+					place = make_la_place(
+						{
+							'name': location_name,
+							'uri': self.helper.make_shared_uri(('PLACE',location_name))
+						},
+					)
+					o_place = get_crom_object(place)
+					o_place.part_of = tgn_instance
+					person.residence = o_place					
+					
+					data['_locations'].append(place)
+				
+				if same_as:
+					tgn_instance = self.helper.static_instances.get_instance('Place', same_as)					
+					tgn_instance.identified_by = vocab.AlternateName(ident=self.helper.make_shared_uri(('PLACE',location_name)), content=location_name)
+					o_place = get_crom_object(place)
+					person.residence = o_place
+				# else:
+					# warning warn
+					# pass
+			else:
+				# model in place with little info
+				pass
 			if THROUGH.intersects(mod):
 				people_agents.append(person)
 			else:
@@ -1749,7 +1783,7 @@ class KnoedlerPipeline(PipelineBase):
 							},
 							'purchase_seller': {
 								'postprocess': [
-									lambda d, p: associate_with_tgn_record(d, p, services['tgn']),
+									lambda d, p: associate_with_tgn_record(d, p, services['knoedler_tgn']),
 									lambda d, p: delete_sellers(d, p, services),
 									filter_empty_person,
 									lambda x, _: strip_key_prefix('purchase_seller_', x),
@@ -1768,7 +1802,10 @@ class KnoedlerPipeline(PipelineBase):
 									'purchase_buyer_share': 'share',
 									'purchase_buyer_share_auth': 'auth_name',
 								},
-								'postprocess': [filter_empty_person],
+								'postprocess': [
+									lambda d, p: associate_with_tgn_record(d, p, services['knoedler_tgn']),
+									filter_empty_person,
+								],
 								'prefixes': (
 									"purchase_buyer_own",
 									"purchase_buyer_share",
@@ -1986,9 +2023,11 @@ class KnoedlerPipeline(PipelineBase):
 		for branch in (sale, destruction, theft, loss, inventorying, unsold_purchases, returned):
 			prov_entry = graph.add_chain( ExtractKeyedValues(key='_prov_entries'), _input=branch.output )
 			people = graph.add_chain( ExtractKeyedValues(key='_people'), _input=branch.output )
+			locations = graph.add_chain( ExtractKeyedValues(key='_locations'), _input=branch.output )
 
 			if serialize:
 				self.add_serialization_chain(graph, prov_entry.output, model=self.models['ProvenanceEntry'])
+				self.add_serialization_chain(graph, locations.output, model=self.models['Place'])
 				self.add_person_or_group_chain(graph, people)
 
 	def add_book_chain(self, graph, sales_records, serialize=True):

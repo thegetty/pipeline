@@ -633,25 +633,21 @@ def strip_key_prefix(prefix, value):
 	return d
 
 def associate_with_tgn_record(data, parent, tgn):
+	if not data:
+		return None
+	
 	pi_record_no = parent.get('pi_record_no')
-	data['tgn'] = {}
 	if not pi_record_no in tgn:
 		warnings.warn(f"`{pi_record_no}` not found within TGN service file!")
 		return
+	else:
+		print(f"`{pi_record_no}` found within TGN service file!")
 	
 	tgn_rec = tgn[pi_record_no]
 	
-	try:
-		for k,v in data.items():
-			for kk, vv in tgn_rec.items():
-					if k in kk:
-						for kkk, vvv in tgn_rec[kk].items():
-							if kkk == v:
-								# import pdb; pdb.set_trace()
-								data['tgn'].update(**deepcopy(tgn_rec[kk][kkk]))
-	except KeyError:
-		# keep this for debug purpose so that any error is not shallowed by KeyManagement 
-		warnings.warn(f"Error while adding TGN data to `{pi_record_no}`")
+	for key, value in tgn_rec.items():
+		for kk, vv in value.items():
+			data['loc_tgn'] = vv
 
 	return data	
 

@@ -728,7 +728,7 @@ class PopulateKnoedlerObject(Configurable, pipeline.linkedart.PopulateObject):
 					owner_data['note'] = note
 					desc = vocab.Description(ident='', content=note)
 					if owner:
-						assignment = model.AttributeAssignment(ident='')
+						assignment = model.AttributeAssignment(ident=self.helper.make_proj_uri('ATTR',  inst, loc))
 						assignment.carried_out_by = owner
 						desc.assigned_by = assignment
 					hmo.referred_to_by = desc

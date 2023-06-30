@@ -632,10 +632,12 @@ def strip_key_prefix(prefix, value):
 			d[k] = v
 	return d
 
-def associate_with_tgn_record(data, parent, tgn):
+def associate_with_tgn_record(data, parent, tgn, header):
 	if not data:
 		return None
 	
+	location_name = data.get('auth_addr', None) or data.get('auth_loc', None) or data.get('loc', None) or data.get('geog', None)
+
 	pi_record_no = parent.get('pi_record_no')
 	if not pi_record_no in tgn:
 		warnings.warn(f"`{pi_record_no}` not found within TGN service file!")
@@ -646,10 +648,23 @@ def associate_with_tgn_record(data, parent, tgn):
 	tgn_rec = tgn[pi_record_no]
 	
 	for key, value in tgn_rec.items():
+		if header not in key:
+			continue
 		for kk, vv in value.items():
-			data['loc_tgn'] = vv
+			if kk == location_name:
+				data['loc_tgn'] = vv
 
 	return data	
+
+def traverse_static_place_instances(self, tgn_instance):
+	traverse_tgn_instance = tgn_instance
+	part_of_id = (traverse_tgn_instance.part_of[0].exact_match[0].id).split('/')[-1]
+	while True:
+		self.helper.static_instances.get_instance('Place', part_of_id)
+		traverse_tgn_instance = traverse_tgn_instance.part_of[0]
+		if not traverse_tgn_instance.part_of:
+			break
+		part_of_id = (traverse_tgn_instance.part_of[0].exact_match[0].id).split('/')[-1]
 
 def label_for_timespan_range(begin, end, inclusive=False):
 	'''

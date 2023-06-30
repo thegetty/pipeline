@@ -33,6 +33,7 @@ from cromulent.extract import extract_monetary_amount
 
 from pipeline.projects import PipelineBase, UtilityHelper, PersonIdentity
 from pipeline.util import \
+			traverse_static_place_instances, \
 			truncate_with_ellipsis, \
 			implode_date, \
 			timespan_from_outer_bounds, \
@@ -684,6 +685,7 @@ class PopulateKnoedlerObject(Configurable, pipeline.linkedart.PopulateObject):
 		if location:
 			loc = location.get('geog')
 			note = location.get('note')
+			tgn_data = location.get('loc_tgn')
 
 			if loc:
 				# TODO: if `parse_location_name` fails, still preserve the location string somehow
@@ -716,10 +718,32 @@ class PopulateKnoedlerObject(Configurable, pipeline.linkedart.PopulateObject):
 				# Therefore, the place URI must not share a prefix with the object URI,
 				# otherwise all such places are liable to be merged during URI
 				# reconciliation as part of the prev/post sale rewriting.
-				base_uri = self.helper.prepend_uri_key(hmo.id, 'PLACE')
-				place_data = self.helper.make_place(current, base_uri=base_uri, sales_record=sales_record)
-				place = get_crom_object(place_data)
-				hmo.current_location = place
+				
+				owner_place = None
+				if tgn_data:
+					part_of = tgn_data.get("part_of") # this is a tgn id
+					same_as = tgn_data.get('same_as') # this is a tgn id
+					
+					if part_of:
+						tgn_instance = self.helper.static_instances.get_instance('Place', part_of)
+						traverse_static_place_instances(self, tgn_instance)
+						place = make_la_place(
+							{
+								'name': loc,
+								'uri': self.helper.make_shared_uri(('PLACE',loc))
+							},
+						)
+						o_place = get_crom_object(place)
+						o_place.part_of = tgn_instance
+						hmo.current_location = o_place
+						owner_place = o_place
+						data['_locations'].append(place)
+					if same_as:
+						tgn_instance = self.helper.static_instances.get_instance('Place', same_as)
+						traverse_static_place_instances(self, tgn_instance)
+						tgn_instance.identified_by = vocab.AlternateName(ident=self.helper.make_shared_uri(('PLACE',loc)), content=loc)
+						hmo.current_location = tgn_instance
+						owner_place = tgn_instance
 
 				owner = None
 				if owner_data:
@@ -727,7 +751,7 @@ class PopulateKnoedlerObject(Configurable, pipeline.linkedart.PopulateObject):
 					owner_data = make_la_org(owner_data)
 					owner = get_crom_object(owner_data)
 					hmo.current_owner = owner
-					owner.residence = place
+					owner.residence = owner_place
 
 				if note:
 					owner_data['note'] = note
@@ -750,7 +774,6 @@ class PopulateKnoedlerObject(Configurable, pipeline.linkedart.PopulateObject):
 						assignment = model.AttributeAssignment(ident=self.helper.make_shared_uri('ATTR','ACC',acc))
 					acc_number.assigned_by = assignment
 
-				data['_locations'].append(place_data)
 				
 				data['_organizations'].append(owner_data)
 				data['_final_org'] = owner_data
@@ -1108,15 +1131,15 @@ class TransactionHandler(ProvenanceBase):
 			)
 			
 			tgn_data = p_data.get('loc_tgn')
-			import pdb; pdb.set_trace()
 			if tgn_data:
 				part_of = tgn_data.get("part_of") # this is a tgn id
 				same_as = tgn_data.get('same_as') # this is a tgn id
 				
-				location_name = p_data.get('loc', None) or p_data.get('auth_loc', None)
+				location_name = p_data.get('auth_loc', None) or p_data.get('auth_addr', None) or p_data.get('loc', None)
 				
 				if part_of:
-					tgn_instance = self.helper.static_instances.get_instance('Place', part_of)					
+					tgn_instance = self.helper.static_instances.get_instance('Place', part_of)
+					traverse_static_place_instances(self, tgn_instance)					
 					place = make_la_place(
 						{
 							'name': location_name,
@@ -1130,10 +1153,10 @@ class TransactionHandler(ProvenanceBase):
 					data['_locations'].append(place)
 				
 				if same_as:
-					tgn_instance = self.helper.static_instances.get_instance('Place', same_as)					
+					tgn_instance = self.helper.static_instances.get_instance('Place', same_as)
+					traverse_static_place_instances(self, tgn_instance)
 					tgn_instance.identified_by = vocab.AlternateName(ident=self.helper.make_shared_uri(('PLACE',location_name)), content=location_name)
-					o_place = get_crom_object(place)
-					person.residence = o_place
+					person.residence = tgn_instance
 				# else:
 					# warning warn
 					# pass
@@ -1237,6 +1260,35 @@ class TransactionHandler(ProvenanceBase):
 				record=sales_record,
 				relative_id=f'{role}_{i+1}'
 			)
+
+			location_name = p.get('loc', None)
+			if location_name:
+				tgn_data = p.get('loc_tgn')
+				if tgn_data:
+					part_of = tgn_data.get("part_of") # this is a tgn id
+					same_as = tgn_data.get('same_as') # this is a tgn id
+
+					if part_of:
+						tgn_instance = self.helper.static_instances.get_instance('Place', part_of)
+						traverse_static_place_instances(self, tgn_instance)					
+						place = make_la_place(
+							{
+								'name': location_name,
+								'uri': self.helper.make_shared_uri(('PLACE',location_name))
+							},
+						)
+						o_place = get_crom_object(place)
+						o_place.part_of = tgn_instance
+						person.residence = o_place					
+						
+						data['_locations'].append(place)
+					
+					if same_as:
+						tgn_instance = self.helper.static_instances.get_instance('Place', same_as)
+						traverse_static_place_instances(self, tgn_instance)
+						tgn_instance.identified_by = vocab.AlternateName(ident=self.helper.make_shared_uri(('PLACE',location_name)), content=location_name)
+						person.residence = tgn_instance
+
 			data['_people'].append(person_dict)
 
 		ts = None # TODO
@@ -1750,7 +1802,10 @@ class KnoedlerPipeline(PipelineBase):
 					{
 						'group': {
 							'present_location': {
-								'postprocess': lambda x, _: strip_key_prefix('present_loc_', x),
+								'postprocess': [
+									lambda x, _: strip_key_prefix('present_loc_', x),
+									lambda d, p: associate_with_tgn_record(d, p, services['knoedler_tgn'],"present_loc_geog"),
+								],
 								'properties': (
 									"present_loc_geog",
 									"present_loc_inst",
@@ -1783,10 +1838,10 @@ class KnoedlerPipeline(PipelineBase):
 							},
 							'purchase_seller': {
 								'postprocess': [
-									lambda d, p: associate_with_tgn_record(d, p, services['knoedler_tgn']),
 									lambda d, p: delete_sellers(d, p, services),
 									filter_empty_person,
 									lambda x, _: strip_key_prefix('purchase_seller_', x),
+									lambda d, p: associate_with_tgn_record(d, p, services['knoedler_tgn'],"seller_loc"),
 								],
 								'prefixes': (
 									"purchase_seller_name",
@@ -1803,7 +1858,6 @@ class KnoedlerPipeline(PipelineBase):
 									'purchase_buyer_share_auth': 'auth_name',
 								},
 								'postprocess': [
-									lambda d, p: associate_with_tgn_record(d, p, services['knoedler_tgn']),
 									filter_empty_person,
 								],
 								'prefixes': (
@@ -1813,6 +1867,10 @@ class KnoedlerPipeline(PipelineBase):
 								)
 							},
 							'prev_own': {
+								'postprocess': [
+									lambda x, _: strip_key_prefix('prev_own_', x),
+									lambda d, p: associate_with_tgn_record(d, p, services['knoedler_tgn'],"prev_own_loc")
+								],
 								'rename_keys': {
 									'prev_own': 'name',
 									'prev_own_auth': 'auth_name',
@@ -1827,6 +1885,7 @@ class KnoedlerPipeline(PipelineBase):
 							'sale_buyer': {
 								'postprocess': [
 									lambda x, _: strip_key_prefix('sale_buyer_', x),
+									lambda d, p: associate_with_tgn_record(d, p, services['knoedler_tgn'],"buyer"),
 								],
 								'prefixes': (
 									"sale_buyer_name",

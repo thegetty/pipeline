@@ -438,7 +438,7 @@ class ProvenanceBase(Configurable):
 				artist_label = a_data.get('label') # TODO: this may not be right for groups
 				person = get_crom_object(a_data)
 				attrib_assignment_classes = [model.AttributeAssignment]
-				subprod_path = self.helper.make_uri_path(*a_data["uri_keys"])
+				subprod_path = self.helper.make_uri_path(*a_data["uri"])
 				subevent_id = event_uri + f'-{subprod_path}'
 				if UNCERTAIN.intersects(mods):
 					if POSSIBLY.intersects(mods):

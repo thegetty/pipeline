@@ -741,7 +741,14 @@ class PopulateKnoedlerObject(Configurable, pipeline.linkedart.PopulateObject):
 					if same_as:
 						tgn_instance = self.helper.static_instances.get_instance('Place', same_as)
 						traverse_static_place_instances(self, tgn_instance)
-						tgn_instance.identified_by = vocab.AlternateName(ident=self.helper.make_shared_uri(('PLACE',loc)), content=loc)
+						alternate_exists=False
+						for id in tgn_instance.identified_by:
+							if isinstance(id, vocab.AlternateName) and id.content == loc:
+								alternate_exists = True
+
+						if not alternate_exists:
+							tgn_instance.identified_by = vocab.AlternateName(ident=self.helper.make_shared_uri(('PLACE',loc)), content=loc)
+						
 						hmo.current_location = tgn_instance
 						owner_place = tgn_instance
 
@@ -1155,7 +1162,14 @@ class TransactionHandler(ProvenanceBase):
 				if same_as:
 					tgn_instance = self.helper.static_instances.get_instance('Place', same_as)
 					traverse_static_place_instances(self, tgn_instance)
-					tgn_instance.identified_by = vocab.AlternateName(ident=self.helper.make_shared_uri(('PLACE',location_name)), content=location_name)
+					
+					alternate_exists=False
+					for id in tgn_instance.identified_by:
+						if isinstance(id, vocab.AlternateName) and id.content == location_name:
+							alternate_exists = True
+					if not alternate_exists: 
+						tgn_instance.identified_by = vocab.AlternateName(ident=self.helper.make_shared_uri(('PLACE',location_name)), content=location_name)
+					
 					person.residence = tgn_instance
 				# else:
 					# warning warn
@@ -1286,7 +1300,14 @@ class TransactionHandler(ProvenanceBase):
 					if same_as:
 						tgn_instance = self.helper.static_instances.get_instance('Place', same_as)
 						traverse_static_place_instances(self, tgn_instance)
-						tgn_instance.identified_by = vocab.AlternateName(ident=self.helper.make_shared_uri(('PLACE',location_name)), content=location_name)
+						
+						alternate_exists=False
+						for id in tgn_instance.identified_by:
+							if isinstance(id, vocab.AlternateName) and id.content == location_name:
+								alternate_exists = True
+						if not alternate_exists:
+							tgn_instance.identified_by = vocab.AlternateName(ident=self.helper.make_shared_uri(('PLACE',location_name)), content=location_name)
+				
 						person.residence = tgn_instance
 
 			data['_people'].append(person_dict)

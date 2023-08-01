@@ -232,6 +232,7 @@ knoedlerpostprocessing: postprocessing_rewrite_uris
 	PYTHONPATH=`pwd` $(PYTHON) ./scripts/remove_meaningless_ids.py
 	# Reorganizing JSON files...
 	find $(GETTY_PIPELINE_OUTPUT) -name '*.json' | PYTHONPATH=`pwd` xargs -n 256 -P $(CONCURRENCY) $(PYTHON) ./scripts/reorganize_json.py
+	find $(GETTY_PIPELINE_OUTPUT) -name '*.json' | PYTHONPATH=`pwd` xargs -n 256 -P $(CONCURRENCY) $(PYTHON) ./scripts/associate_knoedler_database.py
 
 knoedlergraph: $(GETTY_PIPELINE_TMP_PATH)/knoedler.pdf
 	open -a Preview $(GETTY_PIPELINE_TMP_PATH)/knoedler.pdf

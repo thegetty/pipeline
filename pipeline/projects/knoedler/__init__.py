@@ -289,11 +289,14 @@ def add_crom_price(data, parent, services, add_citations=False):
 	'''
 	Add modeling data for `MonetaryAmount` based on properties of the supplied `data` dict.
 	'''
+	helper = UtilityHelper('add_crom_price')
 	currencies = services['currencies']
 	amt = data.get('amount', '')
 	if '[' in amt:
 		data['amount'] = amt.replace('[', '').replace(']', '')
 	amnt = extract_monetary_amount(data, currency_mapping=currencies, add_citations=add_citations, truncate_label_digits=2)
+	if amnt and not amnt.id and data.get('amount'):
+		amnt.id = helper.make_shared_uri('ATTR', 'MONEY', data.get('amount'))
 	if amnt:
 		add_crom_data(data=data, what=amnt)
 	return data
@@ -764,7 +767,7 @@ class PopulateKnoedlerObject(Configurable, pipeline.linkedart.PopulateObject):
 					owner_data['note'] = note
 					desc = vocab.Description(ident='', content=note)
 					if owner:
-						assignment = model.AttributeAssignment(ident='')
+						assignment = model.AttributeAssignment(ident=self.helper.make_proj_uri('ATTR',  inst, loc))
 						assignment.carried_out_by = owner
 						desc.assigned_by = assignment
 					hmo.referred_to_by = desc

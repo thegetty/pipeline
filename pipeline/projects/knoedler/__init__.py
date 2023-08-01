@@ -2198,6 +2198,12 @@ class KnoedlerPipeline(PipelineBase):
 			_input=hmos1.output
 		)
 
+		items2 = graph.add_chain(
+			ExtractKeyedValue(key='_visual_item'),
+			pipeline.linkedart.MakeLinkedArtRecord(),
+			_input=hmos2.output
+		)
+
 # 		consigners = graph.add_chain( ExtractKeyedValue(key='_consigner'), _input=objects.output )
 		artists = graph.add_chain(
 			ExtractKeyedValues(key='_artists'),
@@ -2206,6 +2212,7 @@ class KnoedlerPipeline(PipelineBase):
 		
 		if serialize:
 			self.add_serialization_chain(graph, items.output, model=self.models['VisualItem'])
+			self.add_serialization_chain(graph, items2.output, model=self.models['VisualItem'])
 			self.add_serialization_chain(graph, hmos1.output, model=self.models['HumanMadeObject'])
 			self.add_serialization_chain(graph, hmos2.output, model=self.models['HumanMadeObject'])
 			self.add_serialization_chain(graph, texts.output, model=self.models['LinguisticObject'])

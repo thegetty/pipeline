@@ -254,8 +254,7 @@ class ProvenanceBase(Configurable):
 
 	def populate_original_object_visual_item(self, data, object_data, original_hmo, sales_record, original_label, seq_no):
 
-		title = truncate_with_ellipsis(original_label, 100) or original_label
-
+		title = original_hmo.identified_by[0].content
 		vi_uri = original_hmo.id + '-VisItem'
 		vi = model.VisualItem(ident=vi_uri)
 		vidata = {

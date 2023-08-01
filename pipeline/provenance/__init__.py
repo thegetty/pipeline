@@ -13,7 +13,9 @@ from pipeline.util import \
 		timespan_after, \
 		timespan_from_outer_bounds, \
 		implode_date, \
-		CaseFoldingSet
+		CaseFoldingSet, \
+		truncate_with_ellipsis
+		
 from pipeline.util.cleaners import parse_location_name
 from pipeline.linkedart import add_crom_data, get_crom_object, get_crom_objects
 
@@ -250,6 +252,51 @@ class ProvenanceBase(Configurable):
 		expected = {frozenset({'or'}), frozenset({'manner of', 'style of', 'or'})}
 		return mods == expected
 
+	def populate_original_object_visual_item(self, data, object_data, original_hmo, sales_record, original_label, seq_no):
+
+		title = truncate_with_ellipsis(original_label, 100) or original_label
+
+		vi_uri = original_hmo.id + '-VisItem'
+		vi = model.VisualItem(ident=vi_uri)
+		vidata = {
+			'uri': vi_uri,
+			'referred_to_by': [sales_record],
+		}
+		if title:
+			vidata['label'] = f'Visual work of “{title}”'
+			vidata['names'] = [(title,{'referred_to_by': [sales_record]})]
+		
+		objgenre = object_data['genre'] if 'genre' in object_data else None
+		objsubject = object_data['subject'] if 'subject' in object_data else None
+
+		
+		subject_genre = self.helper.services['subject_genre']
+		subject_genre_style = self.helper.services['subject_genre_style']
+
+		for prop, mapping in subject_genre.items():
+			key = ', '.join((objsubject,objgenre)) if objsubject else objgenre
+			try:
+				aat_terms = mapping[key]
+				for label, aat_url in aat_terms.items():
+					t = model.Type(ident=aat_url, label=label)
+					setattr(vi, prop, t)
+			except:
+				pass
+
+		for prop, mapping in subject_genre_style.items():
+			key = ', '.join((objsubject,objgenre)) if objsubject else objgenre
+			try:
+				aat_terms = mapping[key]
+				for label, aat_url in aat_terms.items():
+					t = model.Type(ident=aat_url, label=label)
+					t.classified_as = model.Type(ident='http://vocab.getty.edu/aat/300015646', label='Styles and Periods (hierarchy name)')
+					setattr(vi, prop, t)
+			except:
+				pass
+		
+		data[seq_no]['_visual_item'] = add_crom_data(data=vidata, what=vi)
+		original_hmo.shows = vi
+
 	def model_object_influence(self, data, people, hmo, prod_event, attribution_modifiers, attribution_group_types, attribution_group_names, all_uncertain=False):
 		STYLE_OF = attribution_modifiers['style of']
 		COPY_AFTER = attribution_modifiers['copy after']
@@ -352,7 +399,9 @@ class ProvenanceBase(Configurable):
 					assignment.carried_out_by = self.helper.static_instances.get_instance('Group', 'knoedler')
 				else:
 					prod_event.influenced_by = original_hmo
+
 				data['_original_objects'].append(add_crom_data(data={'uri': original_id}, what=original_hmo))
+				self.populate_original_object_visual_item(data['_original_objects'], data['object'], original_hmo, sales_record, original_label, seq_no)
 			else:
 				warnings.warn(f'Unrecognized non-artist attribution modifers: {mods}')
 

@@ -542,7 +542,7 @@ class AddArtists(ProvenanceBase):
 	def __call__(self, data:dict, *, make_la_person, attribution_modifiers, attribution_group_types, attribution_group_names):
 		'''Add modeling for artists as people involved in the production of an object'''
 		hmo = get_crom_object(data['_object'])
-		
+
 		self.model_artists_with_modifers(data, hmo, attribution_modifiers, attribution_group_types, attribution_group_names)
 		return data
 
@@ -681,6 +681,21 @@ class PopulateKnoedlerObject(Configurable, pipeline.linkedart.PopulateObject):
 		data['_physical_objects'].append(data['_object'])
 		return data
 
+		
+
+	def new_residence_activity(self, place, group, record):
+		
+		res_act = model.Activity(ident=self.helper.make_proj_uri('Activity',  'establishment', group.id, place.id))
+		res_act.took_place_at = place
+		res_type = model.Type(ident='http://vocab.getty.edu/aat/300393212', label="Establishment")
+		location_type = model.Type(ident='http://vocab.getty.edu/aat/300393211', label="Location Activity or State")
+		res_type.classified_as = location_type
+		res_act.classified_as = res_type
+		res_act.referred_to_by = record
+
+		return res_act
+
+
 	def _populate_object_present_location(self, data:dict):
 		sales_record = get_crom_object(data['_record'])
 		hmo = get_crom_object(data)
@@ -761,7 +776,9 @@ class PopulateKnoedlerObject(Configurable, pipeline.linkedart.PopulateObject):
 					owner_data = make_la_org(owner_data)
 					owner = get_crom_object(owner_data)
 					hmo.current_owner = owner
-					owner.residence = owner_place
+					res_act = self.new_residence_activity(owner_place, owner, sales_record)
+					owner.carried_out = res_act
+				#	owner.residence = owner_place
 
 				if note:
 					owner_data['note'] = note
@@ -842,6 +859,7 @@ class TransactionHandler(ProvenanceBase):
 		price_info = data.get('purchase')
 		if price_info and not len(sellers):
 			# this inventorying has a "purchase" amount that is an evaluated worth amount
+#			print(data['pi_record_no'])
 			amnt = get_crom_object(price_info)
 			assignment = vocab.AppraisingAssignment(ident='', label=f'Evaluated worth of {sn_ident}')
 			knoedler = self.helper.static_instances.get_instance('Group', 'knoedler')
@@ -1097,6 +1115,19 @@ class TransactionHandler(ProvenanceBase):
 
 		tx.part = acq
 
+	def new_residence_activity(self, place, person, sales_record):
+		
+		res_act = model.Activity(ident=self.helper.make_proj_uri('Activity', 'residing', person.id, place.id))
+		res_act.took_place_at = place
+		res_type = model.Type(ident='http://vocab.getty.edu/aat/300393179', label="Residing")
+		location_type = model.Type(ident='http://vocab.getty.edu/aat/300393211', label="Location Activity or State")
+		res_type.classified_as = location_type
+		res_act.classified_as = res_type
+		res_act.referred_to_by = sales_record
+
+		return res_act
+		
+
 	def _prov_entry(self, data, date_key, participants, price_info=None, knoedler_price_part=None, shared_people=None, incoming=False, purpose=None, buy_sell_modifiers=None):
 		THROUGH = CaseFoldingSet(buy_sell_modifiers['through'])
 		FOR = CaseFoldingSet(buy_sell_modifiers['for'])
@@ -1158,7 +1189,11 @@ class TransactionHandler(ProvenanceBase):
 					)
 					o_place = get_crom_object(place)
 					o_place.part_of = tgn_instance
-					person.residence = o_place					
+				
+					res_act = self.new_residence_activity(o_place, person, sales_record)
+					person.carried_out = res_act
+					
+					#person.residence = o_place					
 					
 					data['_locations'].append(place)
 				
@@ -1173,7 +1208,9 @@ class TransactionHandler(ProvenanceBase):
 					if not alternate_exists: 
 						tgn_instance.identified_by = vocab.AlternateName(ident=self.helper.make_shared_uri(('PLACE',location_name)), content=location_name)
 					
-					person.residence = tgn_instance
+					res_act = self.new_residence_activity(tgn_instance, person, sales_record)
+					person.carried_out = res_act
+					#person.residence = tgn_instance
 				# else:
 					# warning warn
 					# pass
@@ -1296,7 +1333,9 @@ class TransactionHandler(ProvenanceBase):
 						)
 						o_place = get_crom_object(place)
 						o_place.part_of = tgn_instance
-						person.residence = o_place					
+						res_act = self.new_residence_activity(o_place, person, sales_record)
+						person.carried_out = res_act
+					#	person.residence = o_place					
 						
 						data['_locations'].append(place)
 					
@@ -1311,7 +1350,9 @@ class TransactionHandler(ProvenanceBase):
 						if not alternate_exists:
 							tgn_instance.identified_by = vocab.AlternateName(ident=self.helper.make_shared_uri(('PLACE',location_name)), content=location_name)
 				
-						person.residence = tgn_instance
+						res_act = self.new_residence_activity(tgn_instance, person, sales_record)
+						person.carried_out = res_act
+						#person.residence = tgn_instance
 
 			data['_people'].append(person_dict)
 

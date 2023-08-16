@@ -419,12 +419,26 @@ class PersonIdentity:
 				period = period_match.group(1).lower()
 				data['label'] = f'anonymous {period} {role}s'
 		for nationality in nationalities:
-			key = f'{nationality.lower()} nationality'
-			n = vocab.instances.get(key)
-			if n:
-				data['nationality'].append(n)
+			if nationality == "netherlandish":
+				nationality = "dutch"
+				
+			if "and" in nationality or "or" in nationality:
+				nx = nationality.split()
+				for x in nx:
+					if x != "and" and x !="or":
+						data = self.add_nationality(x, data)		
 			else:
-				warnings.warn(f'No nationality instance found in crom for: {key!r}')
+				data = self.add_nationality(nationality, data)
+			
+
+	def add_nationality(self, nationality, data):
+		key = f'{nationality.lower()} nationality'
+		n = vocab.instances.get(key)
+		if n:
+			data['nationality'].append(n)
+		else:
+			warnings.warn(f'No nationality instance found in crom for: {key!r}')
+		return data
 
 	def add_names(self, data:dict, referrer=None, role=None, group=False, **kwargs):
 		'''

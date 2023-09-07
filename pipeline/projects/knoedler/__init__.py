@@ -385,21 +385,21 @@ class AddBook(Configurable, KnoedlerProvenance):
 		book_type = model.Type(ident='http://vocab.getty.edu/aat/300028051', label='Book')
 		book_type.classified_as = model.Type(ident='http://vocab.getty.edu/aat/300444970', label='Form')
 
-		notes = []
-		url = book.get('link')
-		if url:
-			link_data = link_types['link']
-			label = link_data.get('label', url)
-			description = link_data.get('field-description')
-			if url.startswith('http'):
-				page = vocab.DigitalImage(ident='', label=label)
-				page._validate_range = False
-				page.access_point = [vocab.DigitalObject(ident=url, label=url)]
-				if description:
-					page.referred_to_by = vocab.Note(ident='', content=description)
-				notes.append(page)
-			else:
-				warnings.warn(f'*** Link value does not appear to be a valid URL: {url}')
+#		notes = []
+#		url = book.get('link')
+#		if url:
+#			link_data = link_types['link']
+#			label = link_data.get('label', url)
+#			description = link_data.get('field-description')
+#			if url.startswith('http'):
+#				page = vocab.DigitalImage(ident='', label=label)
+#				page._validate_range = False
+#				page.access_point = [vocab.DigitalObject(ident=url, label=url)]
+#				if description:
+#					page.referred_to_by = vocab.Note(ident='', content=description)
+#				notes.append(page)
+#			else:
+#				warnings.warn(f'*** Link value does not appear to be a valid URL: {url}')
 				
 		data['_text_book'] = {
 			'uri': self.helper.make_proj_uri('Text', 'Book', book_id),
@@ -407,7 +407,7 @@ class AddBook(Configurable, KnoedlerProvenance):
 			'classified_as': [book_type],
 			'label': f'Knoedler Stock Book {book_id}',
 			'identifiers': [self.helper.knoedler_number_id(book_id, id_class=vocab.BookNumber)],
-			'referred_to_by': notes
+#			'referred_to_by': notes
 		}
 
 		data['_physical_book'] = {
@@ -611,8 +611,13 @@ class PopulateKnoedlerObject(Configurable, pipeline.linkedart.PopulateObject):
 		odata = data['object']
 
 		# split the title and reference in a value such as 「"Collecting her strength" title info from Sales Book 3, 1874-1879, f.252」
-		label = self.helper.title_value(odata['title'])
-		title_ref = self.helper.add_title_reference(data, odata['title'])
+		#if odata['title']:
+		if 'title' in odata:
+			label = self.helper.title_value(odata['title'])
+			title_ref = self.helper.add_title_reference(data, odata['title'])
+		else:
+			label = self.helper.title_value('')
+			title_ref = self.helper.add_title_reference(data, '')
 
 		typestring = odata.get('object_type', '')
 		identifiers = []
@@ -725,7 +730,9 @@ class PopulateKnoedlerObject(Configurable, pipeline.linkedart.PopulateObject):
 					else:
 						owner_data['uri'] = self.helper.make_proj_uri('ORG', 'NAME', inst, 'PLACE', loc)
 				else:
-					warnings.warn(f'*** Object present location data has a location, but not an institution: {pprint.pformat(data)}')
+					#warnings.warn(f'*** Object present location data has a location, but not an institution: {pprint.pformat(data)}')
+					warnings.warn('*** Object present location data has a location, but not an institution')
+					now_key = (data['present_location']['acc'], data['present_location']['geog'])
 					owner_data = {
 						'label': '(Anonymous organization)',
 						'uri': self.helper.make_proj_uri('ORG', 'CURR-OWN', *now_key),
@@ -866,7 +873,8 @@ class TransactionHandler(ProvenanceBase):
 			assignment.carried_out_by = knoedler
 			assignment.assigned_property = 'dimension'
 			assignment.assigned = amnt
-			amnt.classified_as = model.Type(ident='http://vocab.getty.edu/aat/300412096', label='Valuation')
+			if amnt:
+				amnt.classified_as = model.Type(ident='http://vocab.getty.edu/aat/300412096', label='Valuation')
 			assignment.assigned_to = hmo
 			return assignment
 		return None
@@ -928,12 +936,13 @@ class TransactionHandler(ProvenanceBase):
 				name = p.get('name', p.get('auth_name', '(anonymous)'))
 				share = p.get('share', '1/1')
 				try:
-					share_frac = Fraction(share)
-					remaining -= share_frac
+					if share != '':
+						share_frac = Fraction(share)
+						remaining -= share_frac
 
-					right = self.ownership_right(share_frac, person)
+						right = self.ownership_right(share_frac, person)
 
-					rights.append(right)
+						rights.append(right)
 					people.append(person_dict)
 					knoedler_group.append(person)
 # 					print(f'   {share:<10} {name:<50}')

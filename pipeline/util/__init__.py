@@ -642,8 +642,8 @@ def associate_with_tgn_record(data, parent, tgn, header):
 	if not pi_record_no in tgn:
 		warnings.warn(f"`{pi_record_no}` not found within TGN service file!")
 		return
-	else:
-		print(f"`{pi_record_no}` found within TGN service file!")
+#	else:
+#		print(f"`{pi_record_no}` found within TGN service file!")
 	
 	tgn_rec = tgn[pi_record_no]
 	

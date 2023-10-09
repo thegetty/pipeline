@@ -385,21 +385,22 @@ class AddBook(Configurable, KnoedlerProvenance):
 		book_type = model.Type(ident='http://vocab.getty.edu/aat/300028051', label='Book')
 		book_type.classified_as = model.Type(ident='http://vocab.getty.edu/aat/300444970', label='Form')
 
-#		notes = []
-#		url = book.get('link')
-#		if url:
-#			link_data = link_types['link']
-#			label = link_data.get('label', url)
-#			description = link_data.get('field-description')
-#			if url.startswith('http'):
-#				page = vocab.DigitalImage(ident='', label=label)
-#				page._validate_range = False
-#				page.access_point = [vocab.DigitalObject(ident=url, label=url)]
-#				if description:
-#					page.referred_to_by = vocab.Note(ident='', content=description)
-#				notes.append(page)
-#			else:
-#				warnings.warn(f'*** Link value does not appear to be a valid URL: {url}')
+		notes = []
+		url = book.get('link')
+		if url:
+			link_data = link_types['link']
+			label = link_data.get('label', url)
+			description = link_data.get('field-description')
+			if url.startswith('http'):
+				page = vocab.DigitalImage(ident='', label=label)
+				page._validate_range = False
+				page.access_point = [vocab.DigitalObject(ident=url, label=url)]
+				if description:
+					page.referred_to_by = vocab.Note(ident='', content=description)
+			
+				notes.append(page)
+			else:
+				warnings.warn(f'*** Link value does not appear to be a valid URL: {url}')
 				
 		data['_text_book'] = {
 			'uri': self.helper.make_proj_uri('Text', 'Book', book_id),
@@ -407,7 +408,7 @@ class AddBook(Configurable, KnoedlerProvenance):
 			'classified_as': [book_type],
 			'label': f'Knoedler Stock Book {book_id}',
 			'identifiers': [self.helper.knoedler_number_id(book_id, id_class=vocab.BookNumber)],
-#			'referred_to_by': notes
+			'referred_to_by': []
 		}
 
 		data['_physical_book'] = {
@@ -417,6 +418,8 @@ class AddBook(Configurable, KnoedlerProvenance):
 			'identifiers': [self.helper.knoedler_number_id(book_id, id_class=vocab.BookNumber)],
 			'carries': [data['_text_book']]
 		}
+
+		data['transfer_dig_object'] = notes
 
 		make_la_hmo(data['_physical_book'])
 		make_la_lo(data['_text_book'])
@@ -434,6 +437,9 @@ class AddPage(Configurable, KnoedlerProvenance):
 	def __call__(self, data:dict, make_la_lo, make_la_hmo):
 		book = data['book_record']
 		book_id, page_id, _ = record_id(book)
+		
+		notes = data['transfer_dig_object']
+
 		data['_text_page'] = {
 			'uri': self.helper.make_proj_uri('Text', 'Book', book_id, 'Page', page_id),
 			'object_type': [vocab.PageTextForm,vocab.AccountBookText],
@@ -443,6 +449,7 @@ class AddPage(Configurable, KnoedlerProvenance):
 			'part_of': [data['_text_book']],
 			'part': [],
 		}
+		data['_text_page']['referred_to_by'] = notes
 
 		if book.get('heading'):
 			# This is a transcription of the heading of the page
@@ -1002,15 +1009,22 @@ class TransactionHandler(ProvenanceBase):
 		paym = None
 		if amnt:
 			tx_uri = tx.id
-			payment_id = tx_uri + '-Payment'
-			paym = model.Payment(ident=payment_id, label=f'Payment for {sn_ident}')
-			tx.part = paym
+			# payment_id = tx_uri + '-Payment'
+			# paym = model.Payment(ident=payment_id, label=f'Payment for {sn_ident}')
+			# tx.part = paym
+
+
 			# If a joint owner is a seller or a buyer the payment node is empty and all the monetary ammount's information is moved to 
 			# AttributeAssignment -> Monetary Ammount
 			# P9->E13->p141->E97->P90->full_amount
 			# P9->E13->p141->E97->P180->currency
 			# P9->E13->p141->E97->p67i->E33->P190->note
 			if not joint_owner_also_seller_or_buyer_id:
+				### Dimitra: These lines were moved here from above to solve the problem with the empty payment group   
+				payment_id = tx_uri + '-Payment'
+				paym = model.Payment(ident=payment_id, label=f'Payment for {sn_ident}')
+				tx.part = paym
+				#######################
 				paym.paid_amount = amnt
 				for kp in knoedler_group:
 					if incoming:
@@ -1030,7 +1044,8 @@ class TransactionHandler(ProvenanceBase):
 				subpaym = model.Activity(ident='', label=f"{subpaym_role}'s agent's role in payment")
 				subpaym.classified_as = vocab.instances[f'{subpaym_role}sAgent']
 				subpaym.carried_out_by = p
-				paym.part = subpaym
+				if paym:
+					paym.part = subpaym
 
 			for i, partdata in enumerate(parts):
 				person, part_amnt = partdata
@@ -1058,7 +1073,8 @@ class TransactionHandler(ProvenanceBase):
 						if joint_owner_also_seller_or_buyer_id:
 							for sale_buyer in people:
 								shared_paym.paid_from = sale_buyer
-					paym.part = shared_paym
+					if paym:
+						paym.part = shared_paym
 					
 		# If a joint owner is a seller or a buyer the payment node is empty
 		if not joint_owner_also_seller_or_buyer_id:

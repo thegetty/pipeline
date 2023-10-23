@@ -142,15 +142,16 @@ if __name__ == "__main__":
             if limit and i == limit_no:
                 break
             # read fields from csv
-            field = row[0]
+            
             pi_record_no = row[1]
+            field = row[2]
 
-            place = row[2]
-            same_as = row[3]
+            place = row[3]
+            same_as = row[4]
             if "/" in same_as:
                 same_as = same_as.split("/")[1]
 
-            part_of = row[4]
+            part_of = row[5]
             if "/" in part_of:
                 part_of = part_of.split("/")[1]
 

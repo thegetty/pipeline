@@ -244,7 +244,7 @@
         "longitude": "139.439048",
         "part_of": "1000120",
         "permalink": "http://www.getty.edu/vow/TGNFullDisplay?find=&place=&nation=&subjectid=1001032",
-        "place_label": "東京都",
+        "place_label": "Tōkyō",
         "place_type_label": "prefectures",
         "place_type_preferred": "http://vocab.getty.edu/aat/300235099",
         "tgn_id": "1001032"
@@ -938,16 +938,6 @@
         "place_type_label": "counties",
         "place_type_preferred": "http://vocab.getty.edu/aat/300000771",
         "tgn_id": "1002483"
-    },
-    "1002486": {
-        "latitude": "31.3333",
-        "longitude": "-95.4167",
-        "part_of": "7007826",
-        "permalink": "http://www.getty.edu/vow/TGNFullDisplay?find=&place=&nation=&subjectid=1002486",
-        "place_label": "Houston",
-        "place_type_label": "counties",
-        "place_type_preferred": "http://vocab.getty.edu/aat/300000771",
-        "tgn_id": "1002486"
     },
     "1002488": {
         "latitude": "39.25",
@@ -2019,16 +2009,6 @@
         "place_type_preferred": "http://vocab.getty.edu/aat/300000771",
         "tgn_id": "1002995"
     },
-    "1002996": {
-        "latitude": "41.5",
-        "longitude": "-71.6167",
-        "part_of": "7007711",
-        "permalink": "http://www.getty.edu/vow/TGNFullDisplay?find=&place=&nation=&subjectid=1002996",
-        "place_label": "Washington",
-        "place_type_label": "counties",
-        "place_type_preferred": "http://vocab.getty.edu/aat/300000771",
-        "tgn_id": "1002996"
-    },
     "1002999": {
         "latitude": "40.75",
         "longitude": "-119.616",
@@ -2218,16 +2198,6 @@
         "place_type_label": "islands (landforms)",
         "place_type_preferred": "http://vocab.getty.edu/aat/300008791",
         "tgn_id": "1008328"
-    },
-    "1012241": {
-        "latitude": "41.05",
-        "longitude": "-73.4333",
-        "part_of": "1002366",
-        "permalink": "http://www.getty.edu/vow/TGNFullDisplay?find=&place=&nation=&subjectid=1012241",
-        "place_label": "Noroton Point",
-        "place_type_label": "points (landforms)",
-        "place_type_preferred": "http://vocab.getty.edu/aat/300386846",
-        "tgn_id": "1012241"
     },
     "1012848": {
         "latitude": "40.9167",
@@ -2438,36 +2408,6 @@
         "place_type_label": "parks (public recreation areas)",
         "place_type_preferred": "http://vocab.getty.edu/aat/300008187",
         "tgn_id": "1103049"
-    },
-    "1128845": {
-        "latitude": "41.8",
-        "longitude": "-71.4",
-        "part_of": "7007711",
-        "permalink": "http://www.getty.edu/vow/TGNFullDisplay?find=&place=&nation=&subjectid=1128845",
-        "place_label": "Providence",
-        "place_type_label": "rivers",
-        "place_type_preferred": "http://vocab.getty.edu/aat/300008707",
-        "tgn_id": "1128845"
-    },
-    "1130667": {
-        "latitude": "41.7",
-        "longitude": "-71.1833",
-        "part_of": "7007517",
-        "permalink": "http://www.getty.edu/vow/TGNFullDisplay?find=&place=&nation=&subjectid=1130667",
-        "place_label": "Taunton",
-        "place_type_label": "rivers",
-        "place_type_preferred": "http://vocab.getty.edu/aat/300008707",
-        "tgn_id": "1130667"
-    },
-    "1133481": {
-        "latitude": "40.0333",
-        "longitude": "-75.3667",
-        "part_of": "1002330",
-        "permalink": "http://www.getty.edu/vow/TGNFullDisplay?find=&place=&nation=&subjectid=1133481",
-        "place_label": "Ithan Creek",
-        "place_type_label": "creeks (bodies of water)",
-        "place_type_preferred": "http://vocab.getty.edu/aat/300008706",
-        "tgn_id": "1133481"
     },
     "2000007": {
         "latitude": "33.75",
@@ -4128,6 +4068,16 @@
         "place_type_label": "inhabited places",
         "place_type_preferred": "http://vocab.getty.edu/aat/300008347",
         "tgn_id": "2048280"
+    },
+    "2048396": {
+        "latitude": "38.9833",
+        "longitude": "-76.15",
+        "part_of": "2124025",
+        "permalink": "http://www.getty.edu/vow/TGNFullDisplay?find=&place=&nation=&subjectid=2048396",
+        "place_label": "Queenstown",
+        "place_type_label": "inhabited places",
+        "place_type_preferred": "http://vocab.getty.edu/aat/300008347",
+        "tgn_id": "2048396"
     },
     "2049138": {
         "latitude": "39.5667",
@@ -6239,16 +6189,6 @@
         "place_type_preferred": "http://vocab.getty.edu/aat/300008347",
         "tgn_id": "2094200"
     },
-    "2094736": {
-        "latitude": "40.2",
-        "longitude": "-74.8167",
-        "part_of": "1002213",
-        "permalink": "http://www.getty.edu/vow/TGNFullDisplay?find=&place=&nation=&subjectid=2094736",
-        "place_label": "Wynnewood",
-        "place_type_label": "inhabited places",
-        "place_type_preferred": "http://vocab.getty.edu/aat/300008347",
-        "tgn_id": "2094736"
-    },
     "2094739": {
         "latitude": "40.3167",
         "longitude": "-75.95",
@@ -6278,16 +6218,6 @@
         "place_type_label": "inhabited places",
         "place_type_preferred": "http://vocab.getty.edu/aat/300008347",
         "tgn_id": "2095048"
-    },
-    "2095187": {
-        "latitude": "41.3",
-        "longitude": "-71.8333",
-        "part_of": "1002996",
-        "permalink": "http://www.getty.edu/vow/TGNFullDisplay?find=&place=&nation=&subjectid=2095187",
-        "place_label": "Watch Hill",
-        "place_type_label": "peaks (landforms)",
-        "place_type_preferred": "http://vocab.getty.edu/aat/300008798",
-        "tgn_id": "2095187"
     },
     "2095227": {
         "latitude": "33.55",
@@ -6599,16 +6529,6 @@
         "place_type_preferred": "http://vocab.getty.edu/aat/300008347",
         "tgn_id": "2161638"
     },
-    "2179272": {
-        "latitude": "38.9833",
-        "longitude": "-76.1667",
-        "part_of": "2124025",
-        "permalink": "http://www.getty.edu/vow/TGNFullDisplay?find=&place=&nation=&subjectid=2179272",
-        "place_label": "Blakeford Point",
-        "place_type_label": "capes (landforms)",
-        "place_type_preferred": "http://vocab.getty.edu/aat/300008850",
-        "tgn_id": "2179272"
-    },
     "2196976": {
         "latitude": "42.9167",
         "longitude": "-78.2",
@@ -6618,16 +6538,6 @@
         "place_type_label": "inhabited places",
         "place_type_preferred": "http://vocab.getty.edu/aat/300008347",
         "tgn_id": "2196976"
-    },
-    "2212520": {
-        "latitude": "41",
-        "longitude": "-73.6333",
-        "part_of": "1002366",
-        "permalink": "http://www.getty.edu/vow/TGNFullDisplay?find=&place=&nation=&subjectid=2212520",
-        "place_label": "Byram Harbor",
-        "place_type_label": "bays (bodies of water)",
-        "place_type_preferred": "http://vocab.getty.edu/aat/300132316",
-        "tgn_id": "2212520"
     },
     "2222822": {
         "latitude": "36.9833",
@@ -6788,16 +6698,6 @@
         "place_type_label": "islands (landforms)",
         "place_type_preferred": "http://vocab.getty.edu/aat/300008791",
         "tgn_id": "2467713"
-    },
-    "2468214": {
-        "latitude": "42.1",
-        "longitude": "-71.5667",
-        "part_of": "1003038",
-        "permalink": "http://www.getty.edu/vow/TGNFullDisplay?find=&place=&nation=&subjectid=2468214",
-        "place_label": "Long Meadow",
-        "place_type_label": "swamps",
-        "place_type_preferred": "http://vocab.getty.edu/aat/300008905",
-        "tgn_id": "2468214"
     },
     "2478598": {
         "latitude": "41.1667",
@@ -7634,7 +7534,7 @@
         "longitude": "7.595628",
         "part_of": "7011731",
         "permalink": "http://www.getty.edu/vow/TGNFullDisplay?find=&place=&nation=&subjectid=7003742",
-        "place_label": "Kanton Bern",
+        "place_label": "Canton de Berne",
         "place_type_label": "cantons (administrative bodies)",
         "place_type_preferred": "http://vocab.getty.edu/aat/300000769",
         "tgn_id": "7003742"
@@ -7644,7 +7544,7 @@
         "longitude": "7.103112",
         "part_of": "7011731",
         "permalink": "http://www.getty.edu/vow/TGNFullDisplay?find=&place=&nation=&subjectid=7003745",
-        "place_label": "Canton de Fribourg",
+        "place_label": "Kanton Freiburg",
         "place_type_label": "cantons (administrative bodies)",
         "place_type_preferred": "http://vocab.getty.edu/aat/300000769",
         "tgn_id": "7003745"
@@ -7674,7 +7574,7 @@
         "longitude": "8.166667",
         "part_of": "7011731",
         "permalink": "http://www.getty.edu/vow/TGNFullDisplay?find=&place=&nation=&subjectid=7003750",
-        "place_label": "Canton de Lucerne",
+        "place_label": "Chantun Lucerna",
         "place_type_label": "cantons (administrative bodies)",
         "place_type_preferred": "http://vocab.getty.edu/aat/300000769",
         "tgn_id": "7003750"
@@ -7684,7 +7584,7 @@
         "longitude": "8.410284",
         "part_of": "7011731",
         "permalink": "http://www.getty.edu/vow/TGNFullDisplay?find=&place=&nation=&subjectid=7003753",
-        "place_label": "Canton de Nidwald",
+        "place_label": "Cantone di Nidwaldo",
         "place_type_label": "cantons (administrative bodies)",
         "place_type_preferred": "http://vocab.getty.edu/aat/300000769",
         "tgn_id": "7003753"
@@ -7704,7 +7604,7 @@
         "longitude": "6.644957",
         "part_of": "7011731",
         "permalink": "http://www.getty.edu/vow/TGNFullDisplay?find=&place=&nation=&subjectid=7003763",
-        "place_label": "Canton Vaud",
+        "place_label": "Kanton Waadt",
         "place_type_label": "cantons (administrative bodies)",
         "place_type_preferred": "http://vocab.getty.edu/aat/300000769",
         "tgn_id": "7003763"
@@ -7874,7 +7774,7 @@
         "longitude": "8.790648",
         "part_of": "7011731",
         "permalink": "http://www.getty.edu/vow/TGNFullDisplay?find=&place=&nation=&subjectid=7004723",
-        "place_label": "Chantun Tessin",
+        "place_label": "Canton du Tessin",
         "place_type_label": "cantons (administrative bodies)",
         "place_type_preferred": "http://vocab.getty.edu/aat/300000769",
         "tgn_id": "7004723"
@@ -8549,6 +8449,16 @@
         "place_type_preferred": "http://vocab.getty.edu/aat/300008347",
         "tgn_id": "7007302"
     },
+    "7007312": {
+        "latitude": "46.155798",
+        "longitude": "8.772997",
+        "part_of": "7004723",
+        "permalink": "http://www.getty.edu/vow/TGNFullDisplay?find=&place=&nation=&subjectid=7007312",
+        "place_label": "Ascona",
+        "place_type_label": "inhabited places",
+        "place_type_preferred": "http://vocab.getty.edu/aat/300008347",
+        "tgn_id": "7007312"
+    },
     "7007460": {
         "latitude": "47.43639",
         "longitude": "9.388615",
@@ -8998,16 +8908,6 @@
         "place_type_label": "counties",
         "place_type_preferred": "http://vocab.getty.edu/aat/300000771",
         "tgn_id": "7008114"
-    },
-    "7008116": {
-        "latitude": "50.416667",
-        "longitude": "-4.75",
-        "part_of": "7002445",
-        "permalink": "http://www.getty.edu/vow/TGNFullDisplay?find=&place=&nation=&subjectid=7008116",
-        "place_label": "Cornwall",
-        "place_type_label": "counties",
-        "place_type_preferred": "http://vocab.getty.edu/aat/300000771",
-        "tgn_id": "7008116"
     },
     "7008117": {
         "latitude": "54.5167",
@@ -9504,7 +9404,7 @@
         "longitude": "-1.583333",
         "part_of": "7019038",
         "permalink": "http://www.getty.edu/vow/TGNFullDisplay?find=&place=&nation=&subjectid=7010442",
-        "place_label": "Leeds",
+        "place_label": "Ledes",
         "place_type_label": "inhabited places",
         "place_type_preferred": "http://vocab.getty.edu/aat/300008347",
         "tgn_id": "7010442"
@@ -10649,16 +10549,6 @@
         "place_type_preferred": "http://vocab.getty.edu/aat/300008347",
         "tgn_id": "7013695"
     },
-    "7013699": {
-        "latitude": "39.9833",
-        "longitude": "-75.3",
-        "part_of": "1002330",
-        "permalink": "http://www.getty.edu/vow/TGNFullDisplay?find=&place=&nation=&subjectid=7013699",
-        "place_label": "Haverford Township",
-        "place_type_label": "inhabited places",
-        "place_type_preferred": "http://vocab.getty.edu/aat/300008347",
-        "tgn_id": "7013699"
-    },
     "7013701": {
         "latitude": "46.5833",
         "longitude": "-112.0333",
@@ -11064,7 +10954,7 @@
         "longitude": "-79.9833",
         "part_of": "7013272",
         "permalink": "http://www.getty.edu/vow/TGNFullDisplay?find=&place=&nation=&subjectid=7013927",
-        "place_label": "Pittsburg",
+        "place_label": "Pittsburgh",
         "place_type_label": "inhabited places",
         "place_type_preferred": "http://vocab.getty.edu/aat/300008347",
         "tgn_id": "7013927"
@@ -12629,6 +12519,16 @@
         "place_type_preferred": "http://vocab.getty.edu/aat/300008347",
         "tgn_id": "7014564"
     },
+    "7014569": {
+        "latitude": "41.9",
+        "longitude": "-71.0833",
+        "part_of": "1002201",
+        "permalink": "http://www.getty.edu/vow/TGNFullDisplay?find=&place=&nation=&subjectid=7014569",
+        "place_label": "Taunton",
+        "place_type_label": "inhabited places",
+        "place_type_preferred": "http://vocab.getty.edu/aat/300008347",
+        "tgn_id": "7014569"
+    },
     "7014579": {
         "latitude": "42.3667",
         "longitude": "-71.2333",
@@ -12918,16 +12818,6 @@
         "place_type_label": "neighborhoods",
         "place_type_preferred": "http://vocab.getty.edu/aat/300000745",
         "tgn_id": "7014708"
-    },
-    "7014719": {
-        "latitude": "40.0167",
-        "longitude": "-75.3",
-        "part_of": "7014035",
-        "permalink": "http://www.getty.edu/vow/TGNFullDisplay?find=&place=&nation=&subjectid=7014719",
-        "place_label": "Bryn Mawr",
-        "place_type_label": "parts of inhabited places",
-        "place_type_preferred": "http://vocab.getty.edu/aat/300387331",
-        "tgn_id": "7014719"
     },
     "7015304": {
         "latitude": "34.0833",
@@ -14249,16 +14139,6 @@
         "place_type_preferred": "http://vocab.getty.edu/aat/300008347",
         "tgn_id": "7159681"
     },
-    "7179586": {
-        "latitude": "54.133333",
-        "longitude": "9.816667",
-        "part_of": "7003688",
-        "permalink": "http://www.getty.edu/vow/TGNFullDisplay?find=&place=&nation=&subjectid=7179586",
-        "place_label": "Hamburg",
-        "place_type_label": "farms",
-        "place_type_preferred": "http://vocab.getty.edu/aat/300000206",
-        "tgn_id": "7179586"
-    },
     "7193538": {
         "latitude": "49.683333",
         "longitude": "10.533333",
@@ -14359,16 +14239,6 @@
         "place_type_preferred": "http://vocab.getty.edu/aat/300008347",
         "tgn_id": "7438166"
     },
-    "7443060": {
-        "latitude": "49.966667",
-        "longitude": "-5.65",
-        "part_of": "7008116",
-        "permalink": "http://www.getty.edu/vow/TGNFullDisplay?find=&place=&nation=&subjectid=7443060",
-        "place_label": "Epson Shoal",
-        "place_type_label": "shoals (landforms)",
-        "place_type_preferred": "http://vocab.getty.edu/aat/300387036",
-        "tgn_id": "7443060"
-    },
     "7445597": {
         "latitude": "54.083333",
         "longitude": "-1.116667",
@@ -14429,16 +14299,6 @@
         "place_type_preferred": "http://vocab.getty.edu/aat/300387502",
         "tgn_id": "7460882"
     },
-    "7461024": {
-        "latitude": "51.25",
-        "longitude": "0.75",
-        "part_of": "7008153",
-        "permalink": "http://www.getty.edu/vow/TGNFullDisplay?find=&place=&nation=&subjectid=7461024",
-        "place_label": "Kent",
-        "place_type_label": "neighborhoods",
-        "place_type_preferred": "http://vocab.getty.edu/aat/300000745",
-        "tgn_id": "7461024"
-    },
     "7462475": {
         "latitude": "51.55",
         "longitude": "-0.15",
@@ -14458,16 +14318,6 @@
         "place_type_label": "castles (fortifications)",
         "place_type_preferred": "http://vocab.getty.edu/aat/300006891",
         "tgn_id": "7464892"
-    },
-    "7544535": {
-        "latitude": "",
-        "longitude": "",
-        "part_of": "7008136",
-        "permalink": "http://www.getty.edu/vow/TGNFullDisplay?find=&place=&nation=&subjectid=7544535",
-        "place_label": "Saint James' Park",
-        "place_type_label": "parks (public recreation areas)",
-        "place_type_preferred": "http://vocab.getty.edu/aat/300008187",
-        "tgn_id": "7544535"
     },
     "7593303": {
         "latitude": "-34.6",

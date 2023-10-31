@@ -1006,6 +1006,9 @@ class TransactionHandler(ProvenanceBase):
 		knoedler_group_ids = set([x.id for x in knoedler_group])
 		joint_owner_also_seller_or_buyer_id = people_ids.intersection(knoedler_group_ids)
 
+		if not amnt and knoedler_price_part_amnt:
+			amnt = knoedler_price_part_amnt
+
 		paym = None
 		if amnt:
 			tx_uri = tx.id

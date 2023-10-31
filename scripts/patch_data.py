@@ -24,7 +24,7 @@ knoedler_database = {
     "_label": "STAR Knoedler Database"
 }
 
-def delete_duplicate_dig_objects(references):
+def delete_duplicate_digital_objects(references):
     to_delete = set()
     for i in range(0, len(references)):
         for j in range (i+1, len(references)):
@@ -42,16 +42,40 @@ def delete_duplicate_dig_objects(references):
 
     return references
 
+"""
+ "identified_by": [
+        {
+            "type": "Name",
+            "content": "Knoedler Sale of Stock Number 11084 (1906-11-07)"
+        }
+    ],
+    """
 
+
+def fill_prov_name_info(data):
+    name=data['_label']
+    identified = [
+        {
+            "type" : "Name",
+            "content" : name
+        }
+    ]
+    
+    data['identified_by'] = identified
+    return data
 
 for filename in files:
 	with open(os.path.join(filename), 'r+') as file:
             data = json.load(file)
+            # Add missing names for Provenance activities
+            if data['type'] == 'Activity' and 'identified_by' not in data:
+                data = fill_prov_name_info(data)
+
             if 'referred_to_by' in data:
                 #### Delete duplicate digital objects 
                 digital_references = [ref for ref in data['referred_to_by'] if ref['type'] == "DigitalObject"]
                 if len(digital_references) > 1:
-                    data['referred_to_by'] = delete_duplicate_dig_objects(data['referred_to_by'])
+                    data['referred_to_by'] = delete_duplicate_digital_objects(data['referred_to_by'])
 
                 ### Add the STAR Knoedler reference to all resources
                 data['referred_to_by'].append(knoedler_database)

@@ -636,7 +636,7 @@ def associate_with_tgn_record(data, parent, tgn, header):
 	if not data:
 		return None
 	
-	location_name = data.get('auth_addr', None) or data.get('auth_loc', None) or data.get('loc', None) or data.get('geog', None)
+	location_name = data.get('auth_addr', None) or data.get('auth_loc', None) or data.get('loc', None) or data.get('geog', None) or data.get('own_auth_l', None)
 	pi_record_no = parent.get('pi_record_no')
 	if not pi_record_no in tgn or not location_name:
 		# warnings.warn(f"`{pi_record_no}` not found within TGN service file!")
@@ -650,7 +650,7 @@ def associate_with_tgn_record(data, parent, tgn, header):
 		if header not in key:
 			continue
 		for kk, vv in value.items():
-			if kk == location_name:
+			if kk == location_name or kk in location_name:
 				data['loc_tgn'] = vv
 
 	return data	

@@ -13,6 +13,7 @@ from settings import project_data_path, output_file_path, arches_models, DEBUG
 ### Pipeline
 
 if __name__ == '__main__':
+	counter = 0
 	factory.cache_hierarchy()
 	if DEBUG:
 		LIMIT		= int(os.environ.get('GETTY_PIPELINE_LIMIT', 10))
@@ -50,4 +51,7 @@ if __name__ == '__main__':
 			else:
 				pipeline.run(**options)
 		except RuntimeError:
+
 			raise ValueError()
+		
+

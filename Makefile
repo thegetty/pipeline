@@ -149,6 +149,7 @@ peoplepostprocessing: postprocessing_rewrite_uris
 	PYTHONPATH=`pwd` $(PYTHON) ./scripts/remove_meaningless_ids.py
 	# Reorganizing JSON files...
 	find $(GETTY_PIPELINE_OUTPUT) -name '*.json' | PYTHONPATH=`pwd` xargs -n 256 -P $(CONCURRENCY) $(PYTHON) ./scripts/reorganize_json.py
+	find $(GETTY_PIPELINE_OUTPUT) -name '*.json' | PYTHONPATH=`pwd` xargs -n 256 -P $(CONCURRENCY) $(PYTHON) ./scripts/patch_data_people.py
 
 peoplepostsalefilelist: scripts/find_matching_json_files
 	time ./scripts/find_matching_json_files "${GETTY_PIPELINE_TMP_PATH}/post_sale_rewrite_map.json" $(GETTY_PIPELINE_OUTPUT) > $(GETTY_PIPELINE_OUTPUT)/post-sale-matching-files.txt

@@ -375,13 +375,16 @@ class MakeLinkedArtAgent(MakeLinkedArtRecord):
 
 		for uri in data.get('exact_match', []):
 			thing.exact_match = uri
-
+		# import pdb; pdb.set_trace()
 		for sdata in data.get('sojourns', []):
 			label = sdata.get('label', 'Sojourn activity')
 			stype = sdata.get('type', model.Activity)
 			act = stype(ident='', label=label)
 			ts = get_crom_object(sdata.get('timespan'))
-			place = get_crom_object(sdata.get('place'))
+			if 'tgn' in sdata:
+				place = sdata['tgn']
+			else:
+				place = get_crom_object(sdata.get('place'))
 			act.timespan = ts
 			act.took_place_at = place
 			thing.carried_out = act
@@ -665,7 +668,7 @@ def geo_json(lat, lon, label):
 
 def make_tgn_place(tgn_data: dict, uri_creator=None, tgn_lookup = {}):
 	place_shared_uri = uri_creator(('PLACE', 'TGN-ID', tgn_data.get('tgn_id')))
-	
+	# import pdb; pdb.set_trace()
 	if tgn_data is None:
 		return None
 

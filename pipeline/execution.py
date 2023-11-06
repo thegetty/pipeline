@@ -139,6 +139,12 @@ class GraphExecutor(object):
 		except Exception as e:
 			print(f'**** ERROR running {node}: {e!r}')
 			traceback.print_exc()
+			# with open('log.txt', 'a') as f:
+			# 	f.write(str(e))
+			# 	f.write(traceback.format_exc())
+			# 	f.write('\n\n')
+
+
 # 			raise
 
 	def print_tree(self, i, level=0):

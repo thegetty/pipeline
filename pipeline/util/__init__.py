@@ -635,24 +635,100 @@ def strip_key_prefix(prefix, value):
 def associate_with_tgn_record(data, parent, tgn, header):
 	if not data:
 		return None
-
-	location_name = data.get('auth_addr', None) or data.get('auth_loc', None) or data.get('loc', None) or data.get('geog', None) or data.get('own_auth_l', None)
-
+	
+	location_name = data.get('auth_addr', None) or data.get('auth_loc', None) or data.get('loc', None) or data.get('geog', None)
 	pi_record_no = parent.get('pi_record_no')
 	if not pi_record_no in tgn or not location_name:
 		# warnings.warn(f"`{pi_record_no}` not found within TGN service file!")
 		return data
-	#else:
-	#	print(f"`{pi_record_no}` found within TGN service file!")
+#	else:
+#		print(f"`{pi_record_no}` found within TGN service file!")
 	
 	tgn_rec = tgn[pi_record_no]
-	
+
 	for key, value in tgn_rec.items():
 		if header not in key:
 			continue
 		for kk, vv in value.items():
-			if kk == location_name or kk in location_name:
+			if kk == location_name:
 				data['loc_tgn'] = vv
+
+	return data	
+
+def has_numbers(inputString):
+    return any(char.isdigit() for char in inputString)
+
+def associate_with_tgn_record_people(data, parent, tgn, header):
+	if not data:
+		return None
+	active_cities = None
+	# location_name = data.get('auth_addr', None) or data.get('auth_loc', None) or data.get('loc', None) or data.get('geog', None)
+	location_name_ = data.get('location', None)
+	address_name = data.get('address', None)
+	if address_name:
+		location_name = address_name + ', ' + location_name_
+	else:
+		location_name = location_name_
+
+	location_active_city = data.get('active_city_date', None)
+	# print("location name: ", location_name)
+	if location_active_city and has_numbers(location_active_city):
+		striped_location_active_city = re.sub("[\(\[].*?[\)\]]", "", location_active_city)
+		striped_location_active_city = re.sub('[^a-zA-Z]+', '', striped_location_active_city)
+	
+	elif location_active_city and not has_numbers(location_active_city):
+		location_name = location_active_city
+
+	if location_active_city and location_active_city.__contains__(';'):
+		active_cities = {t.strip() for t in location_active_city.split(';')} - {''}
+
+		if has_numbers(location_active_city):
+			temp_active_cities = set()
+			for city in active_cities:
+				city = re.sub(r'[^a-zA-Z ]+', '', city).strip()
+				# city = re.sub(r'\d', '', city)
+				temp_active_cities.add(city)
+			active_cities = temp_active_cities
+		location_name = None
+		location_active_city = None
+
+	star_record_no = parent.get('star_record_no')
+	if not star_record_no in tgn and not location_name and not location_active_city and not active_cities:
+		# warnings.warn(f"`{star_record_no}` not found within TGN service file!")
+		return data
+#	else:
+#		print(f"`{pi_record_no}` found within TGN service file!")
+	
+	tgn_rec = tgn[star_record_no]
+	
+	if location_name:
+		for key, value in tgn_rec.items():
+			if header not in key:
+				continue
+			for kk, vv in value.items():
+				if kk == location_name:
+					data['loc_tgn'] = vv
+
+	elif location_active_city:
+		for key, value in tgn_rec.items():
+			if header not in key:
+				continue
+			for kk, vv in value.items():
+				if kk == striped_location_active_city:
+					data['loc_tgn'] = vv
+	
+	if active_cities:
+
+		data['loc_tgn'] = {}
+		for key, value in tgn_rec.items():
+			if header not in key:
+				continue
+			for kk, vv in value.items():
+				for i, loc in enumerate(sorted(active_cities)):
+					if loc == 'Brazil':
+						loc = 'Brasil'
+					if kk == loc or kk in loc:
+						data['loc_tgn'][loc] = tgn_rec['active_city_date'][kk]
 
 	return data	
 
@@ -663,6 +739,35 @@ def traverse_static_place_instances(self, tgn_instance):
 		self.helper.static_instances.get_instance('Place', part_of_id)
 		traverse_tgn_instance = traverse_tgn_instance.part_of[0]
 		if not traverse_tgn_instance.part_of:
+			break
+		part_of_id = (traverse_tgn_instance.part_of[0].exact_match[0].id).split('/')[-1]
+
+def traverse_static_place_instances_people(self, tgn_instance):
+	traverse_tgn_instance = tgn_instance
+	# if 'part_of' not in traverse_tgn_instance.__dict__:
+	# 	with open('non-part-of.txt', 'a') as f:
+	# 		f.write("The only place part of problem is: ")
+	# 		f.write(str(traverse_tgn_instance._label))
+	# 		f.write('\n')
+
+	if traverse_tgn_instance.part_of is None:
+		print("Non-part-of-place: ", traverse_tgn_instance._label)
+		# with open('non-part-of.txt', 'a') as f:
+		# 	f.write(str(traverse_tgn_instance._label))
+		# 	f.write('\n')
+		part_of_id = None
+	else:
+		part_of_id = (traverse_tgn_instance.part_of[0].exact_match[0].id).split('/')[-1]
+	while True:
+		if not traverse_tgn_instance.part_of:
+			break
+
+		self.helper.static_instances.get_instance('Place', part_of_id)
+		traverse_tgn_instance = traverse_tgn_instance.part_of[0]
+		if 'part_of' in traverse_tgn_instance.__dict__:
+			if not traverse_tgn_instance.part_of:
+				break
+		else:
 			break
 		part_of_id = (traverse_tgn_instance.part_of[0].exact_match[0].id).split('/')[-1]
 

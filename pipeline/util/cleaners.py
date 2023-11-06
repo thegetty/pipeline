@@ -268,6 +268,8 @@ def parse_location(*parts, uri_base=None, types=None):
 	current = None
 	country_name = re.sub(r'[.].*$', '', parts[-1])
 	country_type = None
+	# import pdb; pdb.set_trace()
+
 	if country_name in _COUNTRIES:
 		country_type = 'Country'
 		country_name = _COUNTRY_NAMES.get(country_name, country_name)
@@ -281,7 +283,8 @@ def parse_location(*parts, uri_base=None, types=None):
 		# might be matched to 'Netherlands'
 		country_type = 'Country'
 	else:
-		warnings.warn(f'*** Expecting country name, but found unexpected value: {country_name!r}')
+		# import pdb; pdb.set_trace()
+		# warnings.warn(f'*** Expecting country name, but found unexpected value: {country_name!r}')
 		# not a recognized place name format; assert a generic Place with the associated value as a name
 		return {'name': value}
 
@@ -393,6 +396,11 @@ def date_parse(value, delim):
 			return None
 	elif len(bits) == 3:
 		# YYYY/MM/DD or YY/YY/YYYY or DD.MM.YYYY or YYYY.MM.DD
+		if 'et' or 'de' in bits[1]:
+			with open('log_et_date.txt', 'a') as f:
+				f.write(bits[1])
+				f.write(value)
+
 		m = int(bits[1])
 		if len(bits[0]) == 4:
 			y = int(bits[0])

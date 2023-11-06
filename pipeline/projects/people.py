@@ -45,12 +45,15 @@ from pipeline.util import \
 			replace_key_pattern, \
 			strip_key_prefix, \
 			label_for_timespan_range, \
-			timespan_from_outer_bounds
+			associate_with_tgn_record, \
+			associate_with_tgn_record_people, \
+			timespan_from_outer_bounds, \
+			traverse_static_place_instances_people
 from pipeline.util.cleaners import date_parse, date_cleaner, parse_location_name
 from pipeline.io.file import MergingFileWriter
 from pipeline.io.memory import MergingMemoryWriter
 import pipeline.linkedart
-from pipeline.linkedart import add_crom_data, get_crom_object
+from pipeline.linkedart import add_crom_data, get_crom_object, make_tgn_place, make_la_place
 from pipeline.io.csv import CurriedCSVReader
 from pipeline.nodes.basic import \
 			RemoveKeys, \
@@ -148,6 +151,10 @@ class AddPerson(Configurable):
 			data[f'{birth_key}_clean'] = date_cleaner(data[birth_key])
 
 		if 'death' in data:
+			if data[death_key] == 10000:
+				with open('date_10k.txt', 'a') as f:
+					f.write(str(data.get('star_record_no')))
+					f.write('\n')
 			data[f'{death_key}_clean'] = date_cleaner(data[death_key])
 		
 		birth = data.get('birth')
@@ -210,33 +217,99 @@ class AddPerson(Configurable):
 			cite = vocab.Note(ident='', content=award) # TODO: add proper classification for an Awards Statement
 			data['referred_to_by'].append(cite)
 
+
+	def new_residence_activity(self, place, group, record):
+		res_act = model.Activity(ident=self.helper.make_proj_uri('Activity',  'establishment', group.id, place.id))
+		res_act.took_place_at = place
+		res_type = model.Type(ident='http://vocab.getty.edu/aat/300393212', label="Establishment")
+		location_type = model.Type(ident='http://vocab.getty.edu/aat/300393211', label="Location Activity or State")
+		res_type.classified_as = location_type
+		res_act.classified_as = res_type
+		res_act.referred_to_by = record
+
+		return res_act
+
 	def model_active_city(self, data, loc):
 		m = self.active_date.search(loc)
 		date = None
 		if m:
 			date = m.group(2)
-			date_range = date_cleaner(date)
+			if not any(char.isdigit() for char in date):
+				date = None
+				date_range = None
+			else:
+				date_range = date_cleaner(date)
+			
 			if date_range:
 				loc = m.group(1)
 			else:
 				# this apparently wasn't a date, but just a parenthetical
 				date = None
-		sdata = {
-			'location': loc,
-		}
+		# handle Brazil problem
+		if loc == 'Brazil':
+			loc = 'Brasil'
+
+		if 'loc_tgn' in data:
+
+			if len(data['loc_tgn']) > 1 and loc in data['loc_tgn']:			
+				sdata = {
+					'location': loc,
+					'loc_tgn': data['loc_tgn'][loc]
+				}
+
+			elif len(data['loc_tgn']) > 1 and loc not in data['loc_tgn']:			
+				sdata = {
+					'location': loc,
+				}
+
+			elif len(data['loc_tgn']) == 1 and loc in data['loc_tgn']:
+				
+				sdata = {
+					'location': loc,
+					'loc_tgn': data['loc_tgn'][loc]
+				}
+			
+			elif len(data['loc_tgn']) == 1 and loc not in data['loc_tgn']:
+				if any(isinstance(i,dict) for i in data['loc_tgn'].values()):
+					sdata = {
+						'location': loc,
+					}
+				else:
+					sdata = {
+					'location': loc,
+					'loc_tgn': data['loc_tgn']
+					}
+
+
+			else: # check here it may is wrong
+				sdata = {
+					'location': loc,
+			}
+		
+		else: 
+			sdata = {
+				'location': loc,
+			}
+
 		if date:
 			sdata['address_date'] = date
+
 		return self.model_sojourn(data, sdata)
 
 	def model_sojourn(self, data, loc):
+
 		base_uri = self.helper.make_proj_uri('PLACE', '')
+
 		cb = data.get('corporate_body', False)
 		sojourn_type = vocab.Establishment if cb else vocab.Residing
+		if not 'classified_as' in sojourn_type.__dict__['_classification'][0].__dict__:
+			print('hi')
+
 		sdata = {
 			'type': sojourn_type,
 			'referred_to_by': [],
 		}
-		
+		 
 		verbatim_date = loc.get('address_date')
 		if verbatim_date:
 			date_range = date_cleaner(verbatim_date)
@@ -248,38 +321,103 @@ class AddPerson(Configurable):
 		
 		current = None
 		l = loc.get('location')
+		tgn_data = loc.get('loc_tgn')
+
 		if l:
 			current = parse_location_name(l, uri_base=self.helper.proj_prefix)
 		address = loc.get('address')
 		if address:
 			current = {
-				'name': address,
-				'part_of': current,
+				'name': address + ', ' + l,
+				# 'part_of': current,
 				'type': 'address',
 			}
-
 		for k in ('address_note', 'location_note'):
 			note = loc.get(k)
 			if note:
 				sdata['referred_to_by'].append(vocab.Note(ident='', content=note))
-
+		### HERE
 		if current:
-			place_data = self.helper.make_place(current, base_uri=base_uri)
-			data['_places'].append(place_data)
-			sdata['place'] = place_data
+
+			if not tgn_data:
+
+				place_data = self.helper.make_place(current, base_uri=base_uri)
+				# import pdb; pdb.set_trace()
+				data['_places'].append(place_data)
+				sdata['place'] = place_data
+				# with open('log_no_tgn.txt', 'a') as f:
+				# 	f.write(data['star_record_no'])
+				# 	f.write(' ')
+				# 	f.write(data['parent_data']['person']['active_city_date'])
+				# 	f.write('\n\n')
+
+			else:
+			# if tgn_data:
+				# print("star_record_no: ", data['star_record_no'])
+				part_of = tgn_data.get("part_of") # this is a tgn id
+				same_as = tgn_data.get('same_as') # this is a tgn id
+				if l in tgn_data:
+					part_of = tgn_data[l].get("part_of") # this is a tgn id
+					same_as = tgn_data[l].get('same_as') # this is a tgn id
+
+				if part_of:
+					tgn_instance = self.helper.static_instances.get_instance('Place', part_of)
+					traverse_static_place_instances_people(self, tgn_instance)
+					place_data = self.helper.make_place(current, base_uri=base_uri)
+
+					# place_data = make_la_place(
+					# {
+					# 	'name': current,
+					# 	'uri': self.helper.make_shared_uri(('PLACE',l))
+					# },
+					# )
+					o_place = get_crom_object(place_data)
+					o_place.part_of = tgn_instance
+					if len(o_place.part_of)>1:
+						i = 0
+						for part in o_place.part_of:
+							if 'exact_match' not in part.__dict__:
+								o_place.part_of.pop(i)
+							i+=1
+
+					data['_places'].append(place_data)
+					sdata['place'] = place_data
+
+
+				if same_as:
+					tgn_instance = self.helper.static_instances.get_instance('Place', same_as)
+					traverse_static_place_instances_people(self, tgn_instance)
+
+					alternate_exists=False
+					for id in tgn_instance.identified_by:
+						if isinstance(id, vocab.AlternateName) and id.content == l:
+							alternate_exists = True
+						
+						if not alternate_exists:
+							tgn_instance.identified_by = vocab.AlternateName(ident=self.helper.make_shared_uri(('PLACE',current)), content=l)
+					
+					owner_place = tgn_instance
+
+					sdata['tgn'] = tgn_instance
+
 		return sdata
 
 	def handle_places(self, data):
 		data.setdefault('sojourns', [])
+		hmo = get_crom_object(data)
 		for i, loc in enumerate(data.get('locations', [])):
 			sdata = self.model_sojourn(data, loc)
 			data['sojourns'].append(sdata)
-		
+
 		active_cities = {t.strip() for t in data.get('active_city_date', '').split(';')} - {''}
+
 		for i, loc in enumerate(sorted(active_cities)):
 			sdata = self.model_active_city(data, loc)
+
 			if sdata:
 				data['sojourns'].append(sdata)
+				owner_place = None
+
 
 	def model_person_or_group(self, data):
 		name = data['auth_name']
@@ -400,6 +538,17 @@ class PeoplePipeline(PipelineBase):
 	# Set up environment
 		'''Return a `dict` of named services available to the bonobo pipeline.'''
 		services = super().setup_services()
+
+		# lookup dictionary with all authority information retrieved
+		tgn_places = services.get('tgn', {}) 
+		
+		# lookup dictionary that maps knoedler a field and its value to a place 
+		# either as same as or as falling within a place in tgn_places dict
+		people_tgn = services.get('people_tgn', {}) 
+		
+		services['tgn'] = tgn_places
+		services['people_tgn'] = people_tgn
+
 		services.update({
 			# to avoid constructing new MakeLinkedArtPerson objects millions of times, this
 			# is passed around as a service to the functions and classes that require it.
@@ -407,6 +556,29 @@ class PeoplePipeline(PipelineBase):
 			'people_groups': {'group_keys': []},
 		})
 		return services
+
+	def _static_place_instances(self):
+		'''
+		Create static instances for every place mentioned in the tgn service data.
+		'''
+		super()._static_place_instances()
+		tgn_places = self.services['tgn']
+		instances = {}
+		places = {}
+		
+		for tgn_id, tgn_data in tgn_places.items():
+			places[tgn_id] = tgn_data
+		
+		start = timeit.default_timer()	
+		print("Started the tranformation of Static Places Instances...")
+		for tgn_id, tgn_data in places.items():
+			tgn_id = tgn_data.get('tgn_id')		
+					
+			place = make_tgn_place(tgn_data, self.helper.make_shared_uri, tgn_places)
+			instances[tgn_id] = place
+		print(f"Completed in {timeit.default_timer() - start}")
+		return instances
+
 
 	def _construct_graph(self, services=None):
 		'''
@@ -423,6 +595,10 @@ class PeoplePipeline(PipelineBase):
 					{
 						'group_repeating': {
 							'locations': {
+								'postprocess': [
+									lambda d, p: associate_with_tgn_record_people(d, p, services['people_tgn'],"address")
+								],
+
 								'prefixes': (
 									'location',
 									'location_note',
@@ -436,6 +612,12 @@ class PeoplePipeline(PipelineBase):
 					{
 						'group': {
 							'person': {
+								'postprocess': [
+									lambda d, p: associate_with_tgn_record_people(d, p, services['people_tgn'],"active_city_date"),
+								# 	lambda d, p: associate_with_tgn_record_people(d, p, services['people_tgn'],"location"),
+								# 	lambda d, p: associate_with_tgn_record_people(d, p, services['people_tgn'],"address")
+								],
+
 								'rename_keys': {
 									'person_authority': 'auth_name',
 									'person_auth_disp': 'auth_display_name',

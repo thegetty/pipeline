@@ -57,18 +57,25 @@ class MergingMemoryWriter(Configurable):
 			raise
 
 	def __call__(self, data: dict):
-		model_object = data['_LOD_OBJECT']
-		ident = model_object.id
-		self.counter['total'] += 1
-		if ident in self.data:
-			self.counter['collision'] += 1
-			self.data[ident] = self.merge(model_object)
-		else:
-			self.counter['non-collision'] += 1
-			self.data[ident] = model_object
+		# import pdb; pdb.set_trace()
+		# check what is going on with LOD_OBJECT
+		if '_LOD_OBJECT' in data:
+			# with open('no_LOD.txt', 'a') as f:
+			# 	f.write(str(data))
+			# 	f.write('\n')
+		
+			model_object = data['_LOD_OBJECT']
+			ident = model_object.id
+			self.counter['total'] += 1
+			if ident in self.data:
+				self.counter['collision'] += 1
+				self.data[ident] = self.merge(model_object)
+			else:
+				self.counter['non-collision'] += 1
+				self.data[ident] = model_object
 
-		if self.limit is not None and len(self.data) >= self.limit:
-			self.flush(verbose=False)
+			if self.limit is not None and len(self.data) >= self.limit:
+				self.flush(verbose=False)
 
 		return None
 

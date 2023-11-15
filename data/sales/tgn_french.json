@@ -1,0 +1,142 @@
+{
+    "1000003": {
+        "latitude": "56.2",
+        "longitude": "15.016",
+        "part_of": "7029392",
+        "permalink": "http://www.getty.edu/vow/TGNFullDisplay?find=&place=&nation=&subjectid=1000003",
+        "place_label": "Europe",
+        "place_type_label": "continents",
+        "place_type_preferred": "http://vocab.getty.edu/aat/300128176",
+        "tgn_id": "1000003"
+    },
+    "1000070": {
+        "latitude": "46",
+        "longitude": "2",
+        "part_of": "1000003",
+        "permalink": "http://www.getty.edu/vow/TGNFullDisplay?find=&place=&nation=&subjectid=1000070",
+        "place_label": "France",
+        "place_type_label": "nations",
+        "place_type_preferred": "http://vocab.getty.edu/aat/300128207",
+        "tgn_id": "1000070"
+    },
+    "7002444": {
+        "latitude": "57",
+        "longitude": "-4",
+        "part_of": "7008591",
+        "permalink": "http://www.getty.edu/vow/TGNFullDisplay?find=&place=&nation=&subjectid=7002444",
+        "place_label": "Scotland",
+        "place_type_label": "countries (sovereign states)",
+        "place_type_preferred": "http://vocab.getty.edu/aat/300387506",
+        "tgn_id": "7002444"
+    },
+    "7002445": {
+        "latitude": "53",
+        "longitude": "-2",
+        "part_of": "7008591",
+        "permalink": "http://www.getty.edu/vow/TGNFullDisplay?find=&place=&nation=&subjectid=7002445",
+        "place_label": "England",
+        "place_type_label": "countries (sovereign states)",
+        "place_type_preferred": "http://vocab.getty.edu/aat/300387506",
+        "tgn_id": "7002445"
+    },
+    "7008104": {
+        "latitude": "51.75",
+        "longitude": "-0.75",
+        "part_of": "7002445",
+        "permalink": "http://www.getty.edu/vow/TGNFullDisplay?find=&place=&nation=&subjectid=7008104",
+        "place_label": "Buckinghamshire",
+        "place_type_label": "counties",
+        "place_type_preferred": "http://vocab.getty.edu/aat/300000771",
+        "tgn_id": "7008104"
+    },
+    "7008127": {
+        "latitude": "54.666667",
+        "longitude": "-1.75",
+        "part_of": "7002445",
+        "permalink": "http://www.getty.edu/vow/TGNFullDisplay?find=&place=&nation=&subjectid=7008127",
+        "place_label": "Durham",
+        "place_type_label": "counties",
+        "place_type_preferred": "http://vocab.getty.edu/aat/300000771",
+        "tgn_id": "7008127"
+    },
+    "7008139": {
+        "latitude": "51.083333",
+        "longitude": "-1.166667",
+        "part_of": "7002445",
+        "permalink": "http://www.getty.edu/vow/TGNFullDisplay?find=&place=&nation=&subjectid=7008139",
+        "place_label": "Hampshire",
+        "place_type_label": "counties",
+        "place_type_preferred": "http://vocab.getty.edu/aat/300000771",
+        "tgn_id": "7008139"
+    },
+    "7008160": {
+        "latitude": "52.666667",
+        "longitude": "1",
+        "part_of": "7002445",
+        "permalink": "http://www.getty.edu/vow/TGNFullDisplay?find=&place=&nation=&subjectid=7008160",
+        "place_label": "Norfolk",
+        "place_type_label": "counties",
+        "place_type_preferred": "http://vocab.getty.edu/aat/300000771",
+        "tgn_id": "7008160"
+    },
+    "7008178": {
+        "latitude": "52.2",
+        "longitude": "-1.6167",
+        "part_of": "7002445",
+        "permalink": "http://www.getty.edu/vow/TGNFullDisplay?find=&place=&nation=&subjectid=7008178",
+        "place_label": "Warwickshire",
+        "place_type_label": "counties",
+        "place_type_preferred": "http://vocab.getty.edu/aat/300000771",
+        "tgn_id": "7008178"
+    },
+    "7008591": {
+        "latitude": "54",
+        "longitude": "-4.5",
+        "part_of": "1000003",
+        "permalink": "http://www.getty.edu/vow/TGNFullDisplay?find=&place=&nation=&subjectid=7008591",
+        "place_label": "United Kingdom",
+        "place_type_label": "nations",
+        "place_type_preferred": "http://vocab.getty.edu/aat/300128207",
+        "tgn_id": "7008591"
+    },
+    "7011980": {
+        "latitude": "52.5",
+        "longitude": "0.1667",
+        "part_of": "7002445",
+        "permalink": "http://www.getty.edu/vow/TGNFullDisplay?find=&place=&nation=&subjectid=7011980",
+        "place_label": "Cambridgeshire",
+        "place_type_label": "counties",
+        "place_type_preferred": "http://vocab.getty.edu/aat/300000771",
+        "tgn_id": "7011980"
+    },
+    "7012031": {
+        "latitude": "52.315972",
+        "longitude": "-0.848108",
+        "part_of": "7002445",
+        "permalink": "http://www.getty.edu/vow/TGNFullDisplay?find=&place=&nation=&subjectid=7012031",
+        "place_label": "Northamptonshire",
+        "place_type_label": "counties",
+        "place_type_preferred": "http://vocab.getty.edu/aat/300000771",
+        "tgn_id": "7012031"
+    },
+    "7012077": {
+        "latitude": "50.75",
+        "longitude": "-3.75",
+        "part_of": "7002445",
+        "permalink": "http://www.getty.edu/vow/TGNFullDisplay?find=&place=&nation=&subjectid=7012077",
+        "place_label": "Devon",
+        "place_type_label": "counties",
+        "place_type_preferred": "http://vocab.getty.edu/aat/300000771",
+        "tgn_id": "7012077"
+    },
+    "7029392": {
+        "latitude": "",
+        "longitude": "",
+        "part_of": "",
+        "permalink": "http://www.getty.edu/vow/TGNFullDisplay?find=&place=&nation=&subjectid=7029392",
+        "place_label": "World",
+        "place_type_label": "facets (controlled vocabulary)",
+        "place_type_preferred": "http://vocab.getty.edu/aat/300386699",
+        "tgn_id": "7029392"
+    }
+}

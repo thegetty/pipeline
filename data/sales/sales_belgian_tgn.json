@@ -1,0 +1,3296 @@
+{
+    "10011": {
+        "pres_loc_geog_1": {
+            "Strasbourg": {
+                "same_as": "7012346"
+            }
+        }
+    },
+    "10017": {
+        "pres_loc_geog_1": {
+            "London": {
+                "same_as": "7011781"
+            }
+        }
+    },
+    "10452": {
+        "pres_loc_geog_1": {
+            "Chartres": {
+                "same_as": "7008267"
+            }
+        }
+    },
+    "10453": {
+        "pres_loc_geog_1": {
+            "Chartres": {
+                "same_as": "7008267"
+            }
+        }
+    },
+    "10455": {
+        "pres_loc_geog_1": {
+            "Chartres": {
+                "same_as": "7008267"
+            }
+        }
+    },
+    "10456": {
+        "pres_loc_geog_1": {
+            "Chartres": {
+                "same_as": "7008267"
+            }
+        }
+    },
+    "10603": {
+        "pres_loc_geog_1": {
+            "Amsterdam": {
+                "same_as": "7006952"
+            }
+        }
+    },
+    "10762": {
+        "pres_loc_geog_1": {
+            "Saint Petersburg": {
+                "same_as": "7010273"
+            }
+        }
+    },
+    "10763": {
+        "pres_loc_geog_1": {
+            "Saint Petersburg": {
+                "same_as": "7010273"
+            }
+        }
+    },
+    "11120": {
+        "pres_loc_geog_1": {
+            "Paris": {
+                "same_as": "7008038"
+            }
+        }
+    },
+    "11525": {
+        "pres_loc_geog_1": {
+            "Raleigh": {
+                "same_as": "7013949"
+            }
+        }
+    },
+    "11533": {
+        "pres_loc_geog_1": {
+            "Pasadena": {
+                "same_as": "7014389"
+            }
+        }
+    },
+    "11698": {
+        "pres_loc_geog_1": {
+            "Hague, The": {
+                "same_as": "7006810"
+            }
+        }
+    },
+    "11908": {
+        "pres_loc_geog_1": {
+            "New York": {
+                "same_as": "7007567"
+            }
+        }
+    },
+    "12101": {
+        "pres_loc_geog_1": {
+            "Haarlem": {
+                "same_as": "7007048"
+            }
+        }
+    },
+    "1233": {
+        "pres_loc_geog_1": {
+            "Oberlin": {
+                "same_as": "7014255"
+            }
+        }
+    },
+    "12330": {
+        "pres_loc_geog_1": {
+            "London": {
+                "same_as": "7011781"
+            }
+        }
+    },
+    "1297": {
+        "pres_loc_geog_1": {
+            "Amsterdam": {
+                "same_as": "7006952"
+            }
+        }
+    },
+    "13728": {
+        "pres_loc_geog_1": {
+            "Nantes": {
+                "same_as": "7008482"
+            }
+        }
+    },
+    "13754": {
+        "pres_loc_geog_1": {
+            "Brussels": {
+                "same_as": "7007868"
+            }
+        }
+    },
+    "14060": {
+        "pres_loc_geog_1": {
+            "Paris": {
+                "same_as": "7008038"
+            }
+        }
+    },
+    "14256": {
+        "pres_loc_geog_1": {
+            "Raleigh": {
+                "same_as": "7013949"
+            }
+        }
+    },
+    "14259": {
+        "pres_loc_geog_1": {
+            "Paris": {
+                "same_as": "7008038"
+            }
+        }
+    },
+    "15156": {
+        "pres_loc_geog_1": {
+            "Antwerp": {
+                "same_as": "7007856"
+            }
+        }
+    },
+    "15362": {
+        "pres_loc_geog_1": {
+            "London": {
+                "same_as": "7011781"
+            }
+        }
+    },
+    "15434": {
+        "pres_loc_geog_1": {
+            "Salzburg": {
+                "same_as": "7003256"
+            }
+        }
+    },
+    "16140": {
+        "pres_loc_geog_1": {
+            "Gotha": {
+                "same_as": "7005938"
+            }
+        }
+    },
+    "16331": {
+        "pres_loc_geog_1": {
+            "Leipzig": {
+                "same_as": "7012329"
+            }
+        }
+    },
+    "16735": {
+        "pres_loc_geog_1": {
+            "Walzburg": {
+                "part_of": "1000062"
+            }
+        }
+    },
+    "16940": {
+        "pres_loc_geog_1": {
+            "Bruges": {
+                "same_as": "7007867"
+            }
+        }
+    },
+    "17635": {
+        "pres_loc_geog_1": {
+            "Ajaccio": {
+                "same_as": "7008351"
+            }
+        }
+    },
+    "17905": {
+        "pres_loc_geog_1": {
+            "Oxford": {
+                "same_as": "7011931"
+            }
+        }
+    },
+    "17906": {
+        "pres_loc_geog_1": {
+            "Rotterdam": {
+                "same_as": "7006792"
+            }
+        }
+    },
+    "17909": {
+        "pres_loc_geog_1": {
+            "London": {
+                "same_as": "7011781"
+            }
+        }
+    },
+    "17910": {
+        "pres_loc_geog_1": {
+            "Oxford": {
+                "same_as": "7011931"
+            }
+        }
+    },
+    "17914": {
+        "pres_loc_geog_1": {
+            "Boston": {
+                "same_as": "7013445"
+            }
+        }
+    },
+    "18033": {
+        "pres_loc_geog_1": {
+            "Dordrecht": {
+                "same_as": "7006798"
+            }
+        }
+    },
+    "18743": {
+        "pres_loc_geog_1": {
+            "Courtrai": {
+                "same_as": "7007934"
+            }
+        }
+    },
+    "19147": {
+        "prev_own_auth_L_1": {
+            "Antwerp": {
+                "same_as": "7007856"
+            }
+        }
+    },
+    "1954": {
+        "pres_loc_geog_1": {
+            "London": {
+                "same_as": "7011781"
+            }
+        }
+    },
+    "1956": {
+        "pres_loc_geog_1": {
+            "London": {
+                "same_as": "7011781"
+            }
+        }
+    },
+    "20416": {
+        "post_own_auth_L_1": {
+            "Cologne": {
+                "same_as": "7004446"
+            }
+        }
+    },
+    "20438": {
+        "pres_loc_geog_1": {
+            "Hague, The": {
+                "same_as": "7006810"
+            }
+        }
+    },
+    "20440": {
+        "pres_loc_geog_1": {
+            "Düsseldorf": {
+                "same_as": "7004443"
+            }
+        }
+    },
+    "2141": {
+        "pres_loc_geog_1": {
+            "Frankfurt am Main": {
+                "same_as": "7005293"
+            }
+        }
+    },
+    "22684": {
+        "pres_loc_geog_1": {
+            "Monclar-d'Agenais": {
+                "same_as": "7622413"
+            }
+        }
+    },
+    "22947": {
+        "pres_loc_geog_1": {
+            "London": {
+                "same_as": "7011781"
+            }
+        }
+    },
+    "22948": {
+        "pres_loc_geog_1": {
+            "London": {
+                "same_as": "7011781"
+            }
+        }
+    },
+    "22949": {
+        "pres_loc_geog_1": {
+            "London": {
+                "same_as": "7011781"
+            }
+        }
+    },
+    "23016": {
+        "pres_loc_geog_1": {
+            "Brussels": {
+                "same_as": "7007868"
+            }
+        }
+    },
+    "23258": {
+        "pres_loc_geog_1": {
+            "Lille": {
+                "same_as": "7008461"
+            }
+        }
+    },
+    "23557": {
+        "pres_loc_geog_1": {
+            "Dordrecht": {
+                "same_as": "7006798"
+            }
+        }
+    },
+    "23677": {
+        "pres_loc_geog_1": {
+            "Antwerp": {
+                "same_as": "7007856"
+            }
+        }
+    },
+    "24171": {
+        "post_own_auth_L_1": {
+            "New York": {
+                "same_as": "7007567"
+            }
+        }
+    },
+    "24180": {
+        "pres_loc_geog_1": {
+            "Moscow": {
+                "same_as": "7012974"
+            }
+        }
+    },
+    "24308": {
+        "pres_loc_geog_1": {
+            "Paris": {
+                "same_as": "7008038"
+            }
+        }
+    },
+    "25380": {
+        "pres_loc_geog_1": {
+            "Rouen": {
+                "same_as": "7008929"
+            }
+        }
+    },
+    "25459": {
+        "pres_loc_geog_1": {
+            "Strasbourg": {
+                "same_as": "7012346"
+            }
+        }
+    },
+    "26230": {
+        "post_own_auth_L_1": {
+            "Amsterdam": {
+                "same_as": "7006952"
+            }
+        }
+    },
+    "27341": {
+        "pres_loc_geog_1": {
+            "Copenhagen": {
+                "same_as": "7003474"
+            }
+        }
+    },
+    "27345": {
+        "pres_loc_geog_1": {
+            "Copenhagen": {
+                "same_as": "7003474"
+            }
+        }
+    },
+    "27359": {
+        "pres_loc_geog_1": {
+            "Salzburg": {
+                "same_as": "7003256"
+            }
+        }
+    },
+    "27362": {
+        "pres_loc_geog_1": {
+            "Brussels": {
+                "same_as": "7007868"
+            }
+        }
+    },
+    "27374": {
+        "pres_loc_geog_1": {
+            "Amsterdam": {
+                "same_as": "7006952"
+            }
+        }
+    },
+    "27376": {
+        "pres_loc_geog_1": {
+            "Ajaccio": {
+                "same_as": "7008351"
+            }
+        }
+    },
+    "27410": {
+        "pres_loc_geog_1": {
+            "Copenhagen": {
+                "same_as": "7003474"
+            }
+        }
+    },
+    "27417": {
+        "pres_loc_geog_1": {
+            "Antwerp": {
+                "same_as": "7007856"
+            }
+        }
+    },
+    "27419": {
+        "pres_loc_geog_1": {
+            "Copenhagen": {
+                "same_as": "7003474"
+            }
+        }
+    },
+    "27900": {
+        "pres_loc_geog_1": {
+            "Seattle": {
+                "same_as": "7014494"
+            }
+        }
+    },
+    "28320": {
+        "pres_loc_geog_1": {
+            "London": {
+                "same_as": "7011781"
+            }
+        }
+    },
+    "28335": {
+        "pres_loc_geog_1": {
+            "Aix-en-Provence": {
+                "same_as": "7010786"
+            }
+        }
+    },
+    "28373": {
+        "post_own_auth_L_1": {
+            "Liège": {
+                "same_as": "7007945"
+            }
+        }
+    },
+    "29106": {
+        "pres_loc_geog_1": {
+            "Paris": {
+                "same_as": "7008038"
+            }
+        }
+    },
+    "29214": {
+        "pres_loc_geog_1": {
+            "Leyden": {
+                "same_as": "7006809"
+            }
+        }
+    },
+    "29216": {
+        "pres_loc_geog_1": {
+            "Brussels": {
+                "same_as": "7007868"
+            }
+        }
+    },
+    "29217": {
+        "pres_loc_geog_1": {
+            "Brussels": {
+                "same_as": "7007868"
+            }
+        }
+    },
+    "29270": {
+        "pres_loc_geog_1": {
+            "Rotterdam": {
+                "same_as": "7006792"
+            }
+        }
+    },
+    "29340": {
+        "pres_loc_geog_1": {
+            "Leipzig": {
+                "same_as": "7012329"
+            }
+        }
+    },
+    "29342": {
+        "pres_loc_geog_1": {
+            "Philadelphia": {
+                "same_as": "7014406"
+            }
+        }
+    },
+    "29355": {
+        "pres_loc_geog_1": {
+            "Leipzig": {
+                "same_as": "7012329"
+            }
+        }
+    },
+    "29361": {
+        "pres_loc_geog_1": {
+            "Paris": {
+                "same_as": "7008038"
+            }
+        }
+    },
+    "29383": {
+        "pres_loc_geog_1": {
+            "Rotterdam": {
+                "same_as": "7006792"
+            }
+        }
+    },
+    "29385": {
+        "pres_loc_geog_1": {
+            "Leipzig": {
+                "same_as": "7012329"
+            }
+        }
+    },
+    "29389": {
+        "pres_loc_geog_1": {
+            "Leipzig": {
+                "same_as": "7012329"
+            }
+        }
+    },
+    "29398": {
+        "pres_loc_geog_1": {
+            "Brussels": {
+                "same_as": "7007868"
+            }
+        }
+    },
+    "29402": {
+        "pres_loc_geog_1": {
+            "Strasbourg": {
+                "same_as": "7012346"
+            }
+        }
+    },
+    "29419": {
+        "pres_loc_geog_1": {
+            "Brussels": {
+                "same_as": "7007868"
+            }
+        }
+    },
+    "29422": {
+        "pres_loc_geog_1": {
+            "Leipzig": {
+                "same_as": "7012329"
+            }
+        }
+    },
+    "29434": {
+        "pres_loc_geog_1": {
+            "Leipzig": {
+                "same_as": "7012329"
+            }
+        }
+    },
+    "29437": {
+        "pres_loc_geog_1": {
+            "Leipzig": {
+                "same_as": "7012329"
+            }
+        }
+    },
+    "29441": {
+        "pres_loc_geog_1": {
+            "Amsterdam": {
+                "same_as": "7006952"
+            }
+        }
+    },
+    "29460": {
+        "pres_loc_geog_1": {
+            "Aachen": {
+                "same_as": "7004799"
+            }
+        }
+    },
+    "29471": {
+        "pres_loc_geog_1": {
+            "Leipzig": {
+                "same_as": "7012329"
+            }
+        }
+    },
+    "29478": {
+        "pres_loc_geog_1": {
+            "Bayonne": {
+                "same_as": "7008192"
+            }
+        }
+    },
+    "29483": {
+        "pres_loc_geog_1": {
+            "London": {
+                "same_as": "7011781"
+            }
+        }
+    },
+    "29484": {
+        "pres_loc_geog_1": {
+            "Leipzig": {
+                "same_as": "7012329"
+            }
+        }
+    },
+    "29495": {
+        "pres_loc_geog_1": {
+            "Leipzig": {
+                "same_as": "7012329"
+            }
+        }
+    },
+    "29504": {
+        "pres_loc_geog_1": {
+            "Leipzig": {
+                "same_as": "7012329"
+            }
+        }
+    },
+    "29505": {
+        "pres_loc_geog_1": {
+            "Leipzig": {
+                "same_as": "7012329"
+            }
+        }
+    },
+    "29523": {
+        "pres_loc_geog_1": {
+            "Leipzig": {
+                "same_as": "7012329"
+            }
+        }
+    },
+    "29532": {
+        "pres_loc_geog_1": {
+            "Antwerp": {
+                "same_as": "7007856"
+            }
+        }
+    },
+    "29655": {
+        "pres_loc_geog_1": {
+            "Paris": {
+                "same_as": "7008038"
+            }
+        }
+    },
+    "30495": {
+        "pres_loc_geog_1": {
+            "Antwerp": {
+                "same_as": "7007856"
+            }
+        }
+    },
+    "30496": {
+        "pres_loc_geog_1": {
+            "Hague, The": {
+                "same_as": "7006810"
+            }
+        }
+    },
+    "30621": {
+        "pres_loc_geog_1": {
+            "Antwerp": {
+                "same_as": "7007856"
+            }
+        }
+    },
+    "30763": {
+        "pres_loc_geog_1": {
+            "Paris": {
+                "same_as": "7008038"
+            }
+        }
+    },
+    "31541": {
+        "pres_loc_geog_1": {
+            "Basel": {
+                "same_as": "7007269"
+            }
+        }
+    },
+    "31841": {
+        "pres_loc_geog_1": {
+            "Paris": {
+                "same_as": "7008038"
+            }
+        }
+    },
+    "32085": {
+        "pres_loc_geog_1": {
+            "Amsterdam": {
+                "same_as": "7006952"
+            }
+        }
+    },
+    "32143": {
+        "pres_loc_geog_1": {
+            "Brussels": {
+                "same_as": "7007868"
+            }
+        }
+    },
+    "32554": {
+        "pres_loc_geog_1": {
+            "Detroit": {
+                "same_as": "7013547"
+            }
+        }
+    },
+    "32601": {
+        "pres_loc_geog_1": {
+            "Washington": {
+                "same_as": "7013962"
+            }
+        }
+    },
+    "32659": {
+        "pres_loc_geog_1": {
+            "Fort Worth": {
+                "same_as": "7013934"
+            }
+        }
+    },
+    "32852": {
+        "post_own_auth_L_1": {
+            "New York": {
+                "same_as": "7007567"
+            }
+        }
+    },
+    "32881": {
+        "pres_loc_geog_1": {
+            "Los Angeles": {
+                "same_as": "7023900"
+            }
+        }
+    },
+    "32897": {
+        "pres_loc_geog_1": {
+            "Brussels": {
+                "same_as": "7007868"
+            }
+        }
+    },
+    "32899": {
+        "pres_loc_geog_1": {
+            "Brussels": {
+                "same_as": "7007868"
+            }
+        }
+    },
+    "32900": {
+        "pres_loc_geog_1": {
+            "Silver Spring": {
+                "same_as": "2048731"
+            }
+        }
+    },
+    "32901": {
+        "pres_loc_geog_1": {
+            "Detroit": {
+                "same_as": "7013547"
+            }
+        }
+    },
+    "32904": {
+        "pres_loc_geog_1": {
+            "Brussels": {
+                "same_as": "7007868"
+            }
+        }
+    },
+    "32905": {
+        "pres_loc_geog_1": {
+            "Brussels": {
+                "same_as": "7007868"
+            }
+        }
+    },
+    "32906": {
+        "pres_loc_geog_1": {
+            "Antwerp": {
+                "same_as": "7007856"
+            }
+        }
+    },
+    "32907": {
+        "pres_loc_geog_1": {
+            "Amsterdam": {
+                "same_as": "7006952"
+            }
+        }
+    },
+    "32908": {
+        "pres_loc_geog_1": {
+            "London": {
+                "same_as": "7011781"
+            }
+        }
+    },
+    "32909": {
+        "pres_loc_geog_1": {
+            "London": {
+                "same_as": "7011781"
+            }
+        }
+    },
+    "32910": {
+        "pres_loc_geog_1": {
+            "Amsterdam": {
+                "same_as": "7006952"
+            }
+        }
+    },
+    "33142": {
+        "pres_loc_geog_1": {
+            "Antwerp": {
+                "same_as": "7007856"
+            }
+        }
+    },
+    "33556": {
+        "pres_loc_geog_1": {
+            "Zürich": {
+                "same_as": "7007302"
+            }
+        }
+    },
+    "33574": {
+        "prev_own_auth_L_1": {
+            "Antwerp": {
+                "same_as": "7007856"
+            }
+        }
+    },
+    "33816": {
+        "pres_loc_geog_1": {
+            "Brussels": {
+                "same_as": "7007868"
+            }
+        }
+    },
+    "33817": {
+        "pres_loc_geog_1": {
+            "Brussels": {
+                "same_as": "7007868"
+            }
+        }
+    },
+    "33818": {
+        "pres_loc_geog_1": {
+            "Madrid": {
+                "same_as": "7010413"
+            }
+        }
+    },
+    "33819": {
+        "pres_loc_geog_1": {
+            "London": {
+                "same_as": "7011781"
+            }
+        }
+    },
+    "33820": {
+        "pres_loc_geog_1": {
+            "Oxford": {
+                "same_as": "7011931"
+            }
+        }
+    },
+    "33821": {
+        "pres_loc_geog_1": {
+            "London": {
+                "same_as": "7011781"
+            }
+        }
+    },
+    "33822": {
+        "pres_loc_geog_1": {
+            "Philadelphia": {
+                "same_as": "7014406"
+            }
+        }
+    },
+    "34021": {
+        "pres_loc_geog_1": {
+            "Basel": {
+                "same_as": "7007269"
+            }
+        }
+    },
+    "34166": {
+        "post_own_auth_L_1": {
+            "Milwaukee": {
+                "same_as": "7014071"
+            }
+        }
+    },
+    "34487": {
+        "pres_loc_geog_1": {
+            "London": {
+                "same_as": "7011781"
+            }
+        }
+    },
+    "34724": {
+        "pres_loc_geog_1": {
+            "Ghent": {
+                "same_as": "7007887"
+            }
+        }
+    },
+    "34730": {
+        "pres_loc_geog_1": {
+            "Ghent": {
+                "same_as": "7007887"
+            }
+        }
+    },
+    "34731": {
+        "pres_loc_geog_1": {
+            "Antwerp": {
+                "same_as": "7007856"
+            }
+        }
+    },
+    "34737": {
+        "pres_loc_geog_1": {
+            "Oxford": {
+                "same_as": "7011931"
+            }
+        }
+    },
+    "34740": {
+        "pres_loc_geog_1": {
+            "Oxford": {
+                "same_as": "7011931"
+            }
+        }
+    },
+    "34742": {
+        "pres_loc_geog_1": {
+            "Oxford": {
+                "same_as": "7011931"
+            }
+        }
+    },
+    "34786": {
+        "pres_loc_geog_1": {
+            "Montpellier": {
+                "same_as": "7009369"
+            }
+        }
+    },
+    "34789": {
+        "pres_loc_geog_1": {
+            "Philadelphia": {
+                "same_as": "7014406"
+            }
+        }
+    },
+    "34791": {
+        "pres_loc_geog_1": {
+            "Saint Petersburg": {
+                "same_as": "7010273"
+            }
+        }
+    },
+    "35207": {
+        "pres_loc_geog_1": {
+            "Rotterdam": {
+                "same_as": "7006792"
+            }
+        }
+    },
+    "35378": {
+        "pres_loc_geog_1": {
+            "Seattle": {
+                "same_as": "7014494"
+            }
+        }
+    },
+    "35471": {
+        "pres_loc_geog_1": {
+            "Boston": {
+                "same_as": "7013445"
+            }
+        }
+    },
+    "35480": {
+        "pres_loc_geog_1": {
+            "Rotterdam": {
+                "same_as": "7006792"
+            }
+        },
+        "prev_own_auth_L_1": {
+            "Brussels": {
+                "same_as": "7007868"
+            }
+        }
+    },
+    "35485": {
+        "pres_loc_geog_1": {
+            "Paris": {
+                "same_as": "7008038"
+            }
+        }
+    },
+    "35519": {
+        "pres_loc_geog_1": {
+            "London": {
+                "same_as": "7011781"
+            }
+        }
+    },
+    "35541": {
+        "pres_loc_geog_1": {
+            "Brussels": {
+                "same_as": "7007868"
+            }
+        }
+    },
+    "35618": {
+        "prev_own_auth_L_1": {
+            "Antwerp": {
+                "same_as": "7007856"
+            }
+        }
+    },
+    "3565": {
+        "pres_loc_geog_1": {
+            "Geneva": {
+                "same_as": "7007279"
+            }
+        }
+    },
+    "35668": {
+        "pres_loc_geog_1": {
+            "Antwerp": {
+                "same_as": "7007856"
+            }
+        }
+    },
+    "35680": {
+        "pres_loc_geog_1": {
+            "Cologne": {
+                "same_as": "7004446"
+            }
+        }
+    },
+    "35747": {
+        "pres_loc_geog_1": {
+            "New York": {
+                "same_as": "7007567"
+            }
+        }
+    },
+    "35766": {
+        "pres_loc_geog_1": {
+            "Brussels": {
+                "same_as": "7007868"
+            }
+        }
+    },
+    "35775": {
+        "pres_loc_geog_1": {
+            "Brussels": {
+                "same_as": "7007868"
+            }
+        }
+    },
+    "35783": {
+        "pres_loc_geog_1": {
+            "Vienna": {
+                "same_as": "7003321"
+            }
+        }
+    },
+    "35784": {
+        "pres_loc_geog_1": {
+            "New York": {
+                "same_as": "7007567"
+            }
+        }
+    },
+    "35785": {
+        "pres_loc_geog_1": {
+            "Hague, The": {
+                "same_as": "7006810"
+            }
+        }
+    },
+    "36419": {
+        "pres_loc_geog_1": {
+            "Saint Petersburg": {
+                "same_as": "7010273"
+            }
+        }
+    },
+    "37537": {
+        "pres_loc_geog_1": {
+            "Haarlem": {
+                "same_as": "7007048"
+            }
+        }
+    },
+    "37572": {
+        "pres_loc_geog_1": {
+            "London": {
+                "same_as": "7011781"
+            }
+        }
+    },
+    "37784": {
+        "pres_loc_geog_1": {
+            "Brussels": {
+                "same_as": "7007868"
+            }
+        }
+    },
+    "37862": {
+        "pres_loc_geog_1": {
+            "Düsseldorf": {
+                "same_as": "7004443"
+            }
+        }
+    },
+    "38180": {
+        "pres_loc_geog_1": {
+            "Paris": {
+                "same_as": "7008038"
+            }
+        }
+    },
+    "38411": {
+        "pres_loc_geog_1": {
+            "Bruges": {
+                "same_as": "7007867"
+            }
+        }
+    },
+    "38787": {
+        "pres_loc_geog_1": {
+            "Gotha": {
+                "same_as": "7005938"
+            }
+        }
+    },
+    "38857": {
+        "pres_loc_geog_1": {
+            "Los Angeles": {
+                "same_as": "7023900"
+            }
+        }
+    },
+    "39098": {
+        "pres_loc_geog_1": {
+            "Chartres": {
+                "same_as": "7008267"
+            }
+        }
+    },
+    "39099": {
+        "pres_loc_geog_1": {
+            "Chartres": {
+                "same_as": "7008267"
+            }
+        }
+    },
+    "39100": {
+        "pres_loc_geog_1": {
+            "Chartres": {
+                "same_as": "7008267"
+            }
+        }
+    },
+    "39101": {
+        "pres_loc_geog_1": {
+            "Chartres": {
+                "same_as": "7008267"
+            }
+        }
+    },
+    "3935": {
+        "pres_loc_geog_1": {
+            "Raleigh": {
+                "same_as": "7013949"
+            }
+        }
+    },
+    "39368": {
+        "pres_loc_geog_1": {
+            "Brussels": {
+                "same_as": "7007868"
+            }
+        }
+    },
+    "39374": {
+        "pres_loc_geog_1": {
+            "Brussels": {
+                "same_as": "7007868"
+            }
+        }
+    },
+    "39769": {
+        "pres_loc_geog_1": {
+            "London": {
+                "same_as": "7011781"
+            }
+        }
+    },
+    "40006": {
+        "pres_loc_geog_1": {
+            "Leipzig": {
+                "same_as": "7012329"
+            }
+        }
+    },
+    "40065": {
+        "pres_loc_geog_1": {
+            "Amsterdam": {
+                "same_as": "7006952"
+            }
+        }
+    },
+    "40066": {
+        "post_own_auth_L_1": {
+            "Brussels": {
+                "same_as": "7007868"
+            }
+        }
+    },
+    "40115": {
+        "pres_loc_geog_1": {
+            "Moscow": {
+                "same_as": "7012974"
+            }
+        }
+    },
+    "40236": {
+        "pres_loc_geog_1": {
+            "Paris": {
+                "same_as": "7008038"
+            }
+        }
+    },
+    "40966": {
+        "pres_loc_geog_1": {
+            "London": {
+                "same_as": "7011781"
+            }
+        }
+    },
+    "41005": {
+        "prev_own_auth_L_1": {
+            "Brussels": {
+                "same_as": "7007868"
+            }
+        }
+    },
+    "41006": {
+        "prev_own_auth_L_1": {
+            "Brussels": {
+                "same_as": "7007868"
+            }
+        }
+    },
+    "41007": {
+        "prev_own_auth_L_1": {
+            "Brussels": {
+                "same_as": "7007868"
+            }
+        }
+    },
+    "41008": {
+        "prev_own_auth_L_1": {
+            "Brussels": {
+                "same_as": "7007868"
+            }
+        }
+    },
+    "41102": {
+        "prev_own_auth_L_1": {
+            "Antwerp": {
+                "same_as": "7007856"
+            }
+        }
+    },
+    "41103": {
+        "prev_own_auth_L_1": {
+            "Antwerp": {
+                "same_as": "7007856"
+            }
+        }
+    },
+    "41104": {
+        "prev_own_auth_L_1": {
+            "Antwerp": {
+                "same_as": "7007856"
+            }
+        }
+    },
+    "41105": {
+        "prev_own_auth_L_1": {
+            "Antwerp": {
+                "same_as": "7007856"
+            }
+        }
+    },
+    "41106": {
+        "prev_own_auth_L_1": {
+            "Antwerp": {
+                "same_as": "7007856"
+            }
+        }
+    },
+    "41107": {
+        "prev_own_auth_L_1": {
+            "Antwerp": {
+                "same_as": "7007856"
+            }
+        }
+    },
+    "41108": {
+        "prev_own_auth_L_1": {
+            "Antwerp": {
+                "same_as": "7007856"
+            }
+        }
+    },
+    "41109": {
+        "prev_own_auth_L_1": {
+            "Antwerp": {
+                "same_as": "7007856"
+            }
+        }
+    },
+    "41110": {
+        "prev_own_auth_L_1": {
+            "Antwerp": {
+                "same_as": "7007856"
+            }
+        }
+    },
+    "41111": {
+        "prev_own_auth_L_1": {
+            "Antwerp": {
+                "same_as": "7007856"
+            }
+        }
+    },
+    "41112": {
+        "prev_own_auth_L_1": {
+            "Antwerp": {
+                "same_as": "7007856"
+            }
+        }
+    },
+    "41113": {
+        "prev_own_auth_L_1": {
+            "Antwerp": {
+                "same_as": "7007856"
+            }
+        }
+    },
+    "41114": {
+        "prev_own_auth_L_1": {
+            "Antwerp": {
+                "same_as": "7007856"
+            }
+        }
+    },
+    "41276": {
+        "pres_loc_geog_1": {
+            "Hague, The": {
+                "same_as": "7006810"
+            }
+        }
+    },
+    "41778": {
+        "pres_loc_geog_1": {
+            "Dordrecht": {
+                "same_as": "7006798"
+            }
+        }
+    },
+    "41787": {
+        "pres_loc_geog_1": {
+            "Nantes": {
+                "same_as": "7008482"
+            }
+        }
+    },
+    "42020": {
+        "pres_loc_geog_1": {
+            "Copenhagen": {
+                "same_as": "7003474"
+            }
+        }
+    },
+    "42032": {
+        "pres_loc_geog_1": {
+            "Copenhagen": {
+                "same_as": "7003474"
+            }
+        }
+    },
+    "42048": {
+        "pres_loc_geog_1": {
+            "Salzburg": {
+                "same_as": "7003256"
+            }
+        }
+    },
+    "42054": {
+        "pres_loc_geog_1": {
+            "Brussels": {
+                "same_as": "7007868"
+            }
+        }
+    },
+    "42071": {
+        "pres_loc_geog_1": {
+            "Amsterdam": {
+                "same_as": "7006952"
+            }
+        }
+    },
+    "42073": {
+        "pres_loc_geog_1": {
+            "Ajaccio": {
+                "same_as": "7008351"
+            }
+        }
+    },
+    "42167": {
+        "pres_loc_geog_1": {
+            "Antwerp": {
+                "same_as": "7007856"
+            }
+        }
+    },
+    "42185": {
+        "pres_loc_geog_1": {
+            "Copenhagen": {
+                "same_as": "7003474"
+            }
+        }
+    },
+    "42192": {
+        "pres_loc_geog_1": {
+            "Copenhagen": {
+                "same_as": "7003474"
+            }
+        }
+    },
+    "43081": {
+        "pres_loc_geog_1": {
+            "Amsterdam": {
+                "same_as": "7006952"
+            }
+        },
+        "prev_own_auth_L_1": {
+            "Brussels": {
+                "same_as": "7007868"
+            }
+        }
+    },
+    "43083": {
+        "pres_loc_geog_1": {
+            "New York": {
+                "same_as": "7007567"
+            }
+        }
+    },
+    "43084": {
+        "pres_loc_geog_1": {
+            "Düsseldorf": {
+                "same_as": "7004443"
+            }
+        }
+    },
+    "43095": {
+        "pres_loc_geog_1": {
+            "Paris": {
+                "same_as": "7008038"
+            }
+        }
+    },
+    "43096": {
+        "pres_loc_geog_1": {
+            "London": {
+                "same_as": "7011781"
+            }
+        }
+    },
+    "43111": {
+        "pres_loc_geog_1": {
+            "Lyon": {
+                "same_as": "7008772"
+            }
+        }
+    },
+    "43117": {
+        "pres_loc_geog_1": {
+            "London": {
+                "same_as": "7011781"
+            }
+        }
+    },
+    "43120": {
+        "pres_loc_geog_1": {
+            "Saint Petersburg": {
+                "same_as": "7010273"
+            }
+        }
+    },
+    "43126": {
+        "pres_loc_geog_1": {
+            "Boston": {
+                "same_as": "7013445"
+            }
+        }
+    },
+    "43168": {
+        "prev_own_auth_L_1": {
+            "Brussels": {
+                "same_as": "7007868"
+            }
+        }
+    },
+    "43173": {
+        "pres_loc_geog_1": {
+            "Rotterdam": {
+                "same_as": "7006792"
+            }
+        },
+        "prev_own_auth_L_1": {
+            "Brussels": {
+                "same_as": "7007868"
+            }
+        }
+    },
+    "43190": {
+        "pres_loc_geog_1": {
+            "Paris": {
+                "same_as": "7008038"
+            }
+        }
+    },
+    "43191": {
+        "prev_own_auth_L_1": {
+            "Brussels": {
+                "same_as": "7007868"
+            }
+        }
+    },
+    "43193": {
+        "pres_loc_geog_1": {
+            "Saint Petersburg": {
+                "same_as": "7010273"
+            }
+        }
+    },
+    "43678": {
+        "pres_loc_geog_1": {
+            "Rotterdam": {
+                "same_as": "7006792"
+            }
+        }
+    },
+    "43692": {
+        "pres_loc_geog_1": {
+            "Rotterdam": {
+                "same_as": "7006792"
+            }
+        }
+    },
+    "43775": {
+        "pres_loc_geog_1": {
+            "Rotterdam": {
+                "same_as": "7006792"
+            }
+        }
+    },
+    "43805": {
+        "pres_loc_geog_1": {
+            "Leipzig": {
+                "same_as": "7012329"
+            }
+        }
+    },
+    "43959": {
+        "pres_loc_geog_1": {
+            "Nîmes": {
+                "same_as": "7008371"
+            }
+        }
+    },
+    "44323": {
+        "pres_loc_geog_1": {
+            "Gotha": {
+                "same_as": "7005938"
+            }
+        }
+    },
+    "44818": {
+        "pres_loc_geog_1": {
+            "Leipzig": {
+                "same_as": "7012329"
+            }
+        }
+    },
+    "45222": {
+        "pres_loc_geog_1": {
+            "Lyon": {
+                "same_as": "7008772"
+            }
+        }
+    },
+    "45238": {
+        "pres_loc_geog_1": {
+            "Montreal": {
+                "same_as": "7013051"
+            }
+        }
+    },
+    "45610": {
+        "pres_loc_geog_1": {
+            "Leipzig": {
+                "same_as": "7012329"
+            }
+        }
+    },
+    "47567": {
+        "pres_loc_geog_1": {
+            "Liège": {
+                "same_as": "7007945"
+            }
+        }
+    },
+    "4798": {
+        "pres_loc_geog_1": {
+            "Paris": {
+                "same_as": "7008038"
+            }
+        }
+    },
+    "4801": {
+        "prev_own_auth_L_1": {
+            "Milan": {
+                "same_as": "7005903"
+            }
+        }
+    },
+    "49324": {
+        "pres_loc_geog_1": {
+            "Amsterdam": {
+                "same_as": "7006952"
+            }
+        }
+    },
+    "4954": {
+        "pres_loc_geog_1": {
+            "Potsdam": {
+                "same_as": "7004463"
+            }
+        }
+    },
+    "49571": {
+        "pres_loc_geog_1": {
+            "Los Angeles": {
+                "same_as": "7023900"
+            }
+        }
+    },
+    "49703": {
+        "pres_loc_geog_1": {
+            "Antwerp": {
+                "same_as": "7007856"
+            }
+        }
+    },
+    "50807": {
+        "pres_loc_geog_1": {
+            "Antwerp": {
+                "same_as": "7007856"
+            }
+        }
+    },
+    "52573": {
+        "pres_loc_geog_1": {
+            "Brussels": {
+                "same_as": "7007868"
+            }
+        }
+    },
+    "52574": {
+        "pres_loc_geog_1": {
+            "Brussels": {
+                "same_as": "7007868"
+            }
+        }
+    },
+    "53383": {
+        "pres_loc_geog_1": {
+            "Leipzig": {
+                "same_as": "7012329"
+            }
+        }
+    },
+    "53529": {
+        "pres_loc_geog_1": {
+            "Paris": {
+                "same_as": "7008038"
+            }
+        }
+    },
+    "5401": {
+        "pres_loc_geog_1": {
+            "Saint Petersburg": {
+                "same_as": "7010273"
+            }
+        }
+    },
+    "54247": {
+        "pres_loc_geog_1": {
+            "Brussels": {
+                "same_as": "7007868"
+            }
+        }
+    },
+    "5650": {
+        "pres_loc_geog_1": {
+            "Raleigh": {
+                "same_as": "7013949"
+            }
+        }
+    },
+    "58777": {
+        "pres_loc_geog_1": {
+            "Moscow": {
+                "same_as": "7012974"
+            }
+        }
+    },
+    "59060": {
+        "pres_loc_geog_1": {
+            "Frankfurt am Main": {
+                "same_as": "7005293"
+            }
+        }
+    },
+    "59258": {
+        "pres_loc_geog_1": {
+            "Stockholm": {
+                "same_as": "7009861"
+            }
+        }
+    },
+    "59767": {
+        "pres_loc_geog_1": {
+            "Alençon": {
+                "same_as": "7008621"
+            }
+        }
+    },
+    "60176": {
+        "pres_loc_geog_1": {
+            "Bruges": {
+                "same_as": "7007867"
+            }
+        }
+    },
+    "60227": {
+        "pres_loc_geog_1": {
+            "Bruges": {
+                "same_as": "7007867"
+            }
+        }
+    },
+    "6026": {
+        "pres_loc_geog_1": {
+            "New York": {
+                "same_as": "7007567"
+            }
+        }
+    },
+    "6046": {
+        "pres_loc_geog_1": {
+            "Raleigh": {
+                "same_as": "7013949"
+            }
+        }
+    },
+    "60939": {
+        "pres_loc_geog_1": {
+            "Nantes": {
+                "same_as": "7008482"
+            }
+        }
+    },
+    "60942": {
+        "pres_loc_geog_1": {
+            "Poughkeepsie": {
+                "same_as": "7014282"
+            }
+        }
+    },
+    "60949": {
+        "pres_loc_geog_1": {
+            "Düsseldorf": {
+                "same_as": "7004443"
+            }
+        }
+    },
+    "60951": {
+        "pres_loc_geog_1": {
+            "Paris": {
+                "same_as": "7008038"
+            }
+        }
+    },
+    "60982": {
+        "pres_loc_geog_1": {
+            "Antwerp": {
+                "same_as": "7007856"
+            }
+        }
+    },
+    "60994": {
+        "pres_loc_geog_1": {
+            "Paris": {
+                "same_as": "7008038"
+            }
+        }
+    },
+    "60995": {
+        "pres_loc_geog_1": {
+            "Tyntesfield": {
+                "part_of": "7012032"
+            }
+        }
+    },
+    "60996": {
+        "pres_loc_geog_1": {
+            "Dublin": {
+                "same_as": "7001306"
+            }
+        }
+    },
+    "61007": {
+        "pres_loc_geog_1": {
+            "Ottawa": {
+                "same_as": "7013088"
+            }
+        }
+    },
+    "61027": {
+        "pres_loc_geog_1": {
+            "London": {
+                "same_as": "7011781"
+            }
+        }
+    },
+    "61035": {
+        "pres_loc_geog_1": {
+            "Antwerp": {
+                "same_as": "7007856"
+            }
+        }
+    },
+    "61046": {
+        "pres_loc_geog_1": {
+            "Paris": {
+                "same_as": "7008038"
+            }
+        }
+    },
+    "61047": {
+        "pres_loc_geog_1": {
+            "Upton House": {
+                "part_of": "7008178"
+            }
+        }
+    },
+    "61079": {
+        "pres_loc_geog_1": {
+            "Lier": {
+                "same_as": "7016996"
+            }
+        }
+    },
+    "61100": {
+        "pres_loc_geog_1": {
+            "Madrid": {
+                "same_as": "7010413"
+            }
+        }
+    },
+    "61103": {
+        "pres_loc_geog_1": {
+            "Frankfurt am Main": {
+                "same_as": "7005293"
+            }
+        }
+    },
+    "61114": {
+        "pres_loc_geog_1": {
+            "Cheltenham": {
+                "same_as": "7011192"
+            }
+        }
+    },
+    "61115": {
+        "pres_loc_geog_1": {
+            "Cheltenham": {
+                "same_as": "7011192"
+            }
+        }
+    },
+    "61141": {
+        "pres_loc_geog_1": {
+            "London": {
+                "same_as": "7011781"
+            }
+        }
+    },
+    "61161": {
+        "post_own_auth_L_1": {
+            "New York": {
+                "same_as": "7007567"
+            }
+        }
+    },
+    "61674": {
+        "pres_loc_geog_1": {
+            "Rotterdam": {
+                "same_as": "7006792"
+            }
+        }
+    },
+    "62286": {
+        "pres_loc_geog_1": {
+            "London": {
+                "same_as": "7011781"
+            }
+        }
+    },
+    "62362": {
+        "pres_loc_geog_1": {
+            "Antwerp": {
+                "same_as": "7007856"
+            }
+        }
+    },
+    "62937": {
+        "pres_loc_geog_1": {
+            "Oxford": {
+                "same_as": "7011931"
+            }
+        }
+    },
+    "63507": {
+        "pres_loc_geog_1": {
+            "Antwerp": {
+                "same_as": "7007856"
+            }
+        }
+    },
+    "64928": {
+        "pres_loc_geog_1": {
+            "Paris": {
+                "same_as": "7008038"
+            }
+        },
+        "prev_own_auth_L_1": {
+            "Bruges": {
+                "same_as": "7007867"
+            }
+        }
+    },
+    "65140": {
+        "pres_loc_geog_1": {
+            "Washington": {
+                "same_as": "7013962"
+            }
+        }
+    },
+    "6610": {
+        "pres_loc_geog_1": {
+            "Hague, The": {
+                "same_as": "7006810"
+            }
+        }
+    },
+    "6611": {
+        "pres_loc_geog_1": {
+            "Hague, The": {
+                "same_as": "7006810"
+            }
+        }
+    },
+    "66115": {
+        "pres_loc_geog_1": {
+            "Lille": {
+                "same_as": "7008461"
+            }
+        }
+    },
+    "66416": {
+        "pres_loc_geog_1": {
+            "Liège": {
+                "same_as": "7007945"
+            }
+        }
+    },
+    "66721": {
+        "pres_loc_geog_1": {
+            "Washington": {
+                "same_as": "7013962"
+            }
+        }
+    },
+    "6681": {
+        "pres_loc_geog_1": {
+            "Mainz": {
+                "same_as": "7004449"
+            }
+        }
+    },
+    "6705": {
+        "pres_loc_geog_1": {
+            "Paris": {
+                "same_as": "7008038"
+            }
+        }
+    },
+    "67101": {
+        "pres_loc_geog_1": {
+            "Brussels": {
+                "same_as": "7007868"
+            }
+        }
+    },
+    "68284": {
+        "pres_loc_geog_1": {
+            "Oxford": {
+                "same_as": "7011931"
+            }
+        }
+    },
+    "68869": {
+        "pres_loc_geog_1": {
+            "Antwerp": {
+                "same_as": "7007856"
+            }
+        }
+    },
+    "68927": {
+        "pres_loc_geog_1": {
+            "Paris": {
+                "same_as": "7008038"
+            }
+        }
+    },
+    "68978": {
+        "pres_loc_geog_1": {
+            "Brussels": {
+                "same_as": "7007868"
+            }
+        }
+    },
+    "69016": {
+        "pres_loc_geog_1": {
+            "Paris": {
+                "same_as": "7008038"
+            }
+        }
+    },
+    "69046": {
+        "post_own_auth_L_1": {
+            "London": {
+                "same_as": "7011781"
+            }
+        }
+    },
+    "69078": {
+        "post_own_auth_L_1": {
+            "Paris": {
+                "same_as": "7008038"
+            }
+        }
+    },
+    "69085": {
+        "pres_loc_geog_1": {
+            "Brussels": {
+                "same_as": "7007868"
+            }
+        }
+    },
+    "69102": {
+        "pres_loc_geog_1": {
+            "Philadelphia": {
+                "same_as": "7014406"
+            }
+        }
+    },
+    "69107": {
+        "pres_loc_geog_1": {
+            "Detroit": {
+                "same_as": "7013547"
+            }
+        }
+    },
+    "69138": {
+        "pres_loc_geog_1": {
+            "Paris": {
+                "same_as": "7008038"
+            }
+        }
+    },
+    "69273": {
+        "pres_loc_geog_1": {
+            "Rotterdam": {
+                "same_as": "7006792"
+            }
+        }
+    },
+    "69422": {
+        "post_own_auth_L_1": {
+            "New York": {
+                "same_as": "7007567"
+            }
+        }
+    },
+    "6994": {
+        "pres_loc_geog_1": {
+            "London": {
+                "same_as": "7011781"
+            }
+        }
+    },
+    "70018": {
+        "pres_loc_geog_1": {
+            "Philadelphia": {
+                "same_as": "7014406"
+            }
+        }
+    },
+    "70119": {
+        "pres_loc_geog_1": {
+            "Philadelphia": {
+                "same_as": "7014406"
+            }
+        }
+    },
+    "70188": {
+        "pres_loc_geog_1": {
+            "Paris": {
+                "same_as": "7008038"
+            }
+        }
+    },
+    "70189": {
+        "pres_loc_geog_1": {
+            "London": {
+                "same_as": "7011781"
+            }
+        }
+    },
+    "70190": {
+        "pres_loc_geog_1": {
+            "New York": {
+                "same_as": "7007567"
+            }
+        }
+    },
+    "70199": {
+        "pres_loc_geog_1": {
+            "Le Mans": {
+                "same_as": "7008494"
+            }
+        }
+    },
+    "70200": {
+        "pres_loc_geog_1": {
+            "Paris": {
+                "same_as": "7008038"
+            }
+        }
+    },
+    "70214": {
+        "pres_loc_geog_1": {
+            "Paris": {
+                "same_as": "7008038"
+            }
+        }
+    },
+    "70287": {
+        "pres_loc_geog_1": {
+            "Paris": {
+                "same_as": "7008038"
+            }
+        }
+    },
+    "70290": {
+        "pres_loc_geog_1": {
+            "Ascott": {
+                "part_of": "7008104"
+            }
+        }
+    },
+    "70314": {
+        "pres_loc_geog_1": {
+            "New York": {
+                "same_as": "7007567"
+            }
+        }
+    },
+    "70339": {
+        "pres_loc_geog_1": {
+            "Lille": {
+                "same_as": "7008461"
+            }
+        }
+    },
+    "70583": {
+        "pres_loc_geog_1": {
+            "Amsterdam": {
+                "same_as": "7006952"
+            }
+        }
+    },
+    "70645": {
+        "pres_loc_geog_1": {
+            "Brussels": {
+                "same_as": "7007868"
+            }
+        }
+    },
+    "70728": {
+        "pres_loc_geog_1": {
+            "Paris": {
+                "same_as": "7008038"
+            }
+        }
+    },
+    "70731": {
+        "pres_loc_geog_1": {
+            "Winterthur": {
+                "same_as": "7007301"
+            }
+        }
+    },
+    "70890": {
+        "post_own_auth_L_1": {
+            "London": {
+                "same_as": "7011781"
+            }
+        }
+    },
+    "70900": {
+        "pres_loc_geog_1": {
+            "Brussels": {
+                "same_as": "7007868"
+            }
+        }
+    },
+    "70917": {
+        "pres_loc_geog_1": {
+            "Lille": {
+                "same_as": "7008461"
+            }
+        }
+    },
+    "71035": {
+        "pres_loc_geog_1": {
+            "Geneva": {
+                "same_as": "7007279"
+            }
+        }
+    },
+    "71056": {
+        "pres_loc_geog_1": {
+            "Moscow": {
+                "same_as": "7012974"
+            }
+        }
+    },
+    "71080": {
+        "pres_loc_geog_1": {
+            "Los Angeles": {
+                "same_as": "7023900"
+            }
+        }
+    },
+    "71139": {
+        "pres_loc_geog_1": {
+            "Brussels": {
+                "same_as": "7007868"
+            }
+        }
+    },
+    "71179": {
+        "pres_loc_geog_1": {
+            "Brussels": {
+                "same_as": "7007868"
+            }
+        }
+    },
+    "72649": {
+        "pres_loc_geog_1": {
+            "Aachen": {
+                "same_as": "7004799"
+            }
+        }
+    },
+    "72674": {
+        "pres_loc_geog_1": {
+            "Aachen": {
+                "same_as": "7004799"
+            }
+        }
+    },
+    "72695": {
+        "pres_loc_geog_1": {
+            "Washington": {
+                "same_as": "7013962"
+            }
+        }
+    },
+    "72839": {
+        "pres_loc_geog_1": {
+            "Spain": {
+                "same_as": "1000095"
+            }
+        }
+    },
+    "7314": {
+        "pres_loc_geog_1": {
+            "Paris": {
+                "same_as": "7008038"
+            }
+        }
+    },
+    "7315": {
+        "pres_loc_geog_1": {
+            "Paris": {
+                "same_as": "7008038"
+            }
+        }
+    },
+    "7324": {
+        "pres_loc_geog_1": {
+            "New York": {
+                "same_as": "7007567"
+            }
+        }
+    },
+    "7327": {
+        "pres_loc_geog_1": {
+            "Cambridge": {
+                "same_as": "7010874"
+            }
+        }
+    },
+    "7354": {
+        "pres_loc_geog_1": {
+            "Paris": {
+                "same_as": "7008038"
+            }
+        }
+    },
+    "73863": {
+        "pres_loc_geog_1": {
+            "Brussels": {
+                "same_as": "7007868"
+            }
+        }
+    },
+    "73917": {
+        "pres_loc_geog_1": {
+            "Barnard Castle": {
+                "same_as": "7010032"
+            }
+        }
+    },
+    "7395": {
+        "pres_loc_geog_1": {
+            "Salzburg": {
+                "same_as": "7003256"
+            }
+        }
+    },
+    "74018": {
+        "pres_loc_geog_1": {
+            "Antwerp": {
+                "same_as": "7007856"
+            }
+        }
+    },
+    "74023": {
+        "pres_loc_geog_1": {
+            "Zürich": {
+                "same_as": "7007302"
+            }
+        }
+    },
+    "74105": {
+        "pres_loc_geog_1": {
+            "Marseilles": {
+                "same_as": "7008781"
+            }
+        }
+    },
+    "74109": {
+        "pres_loc_geog_1": {
+            "Bruges": {
+                "same_as": "7007867"
+            }
+        }
+    },
+    "7422": {
+        "pres_loc_geog_1": {
+            "Hague, The": {
+                "same_as": "7006810"
+            }
+        }
+    },
+    "7428": {
+        "pres_loc_geog_1": {
+            "Hague, The": {
+                "same_as": "7006810"
+            }
+        }
+    },
+    "7436": {
+        "pres_loc_geog_1": {
+            "Hague, The": {
+                "same_as": "7006810"
+            }
+        }
+    },
+    "74391": {
+        "pres_loc_geog_1": {
+            "Brussels": {
+                "same_as": "7007868"
+            }
+        }
+    },
+    "74392": {
+        "pres_loc_geog_1": {
+            "Brussels": {
+                "same_as": "7007868"
+            }
+        }
+    },
+    "7453": {
+        "pres_loc_geog_1": {
+            "Hague, The": {
+                "same_as": "7006810"
+            }
+        }
+    },
+    "74680": {
+        "pres_loc_geog_1": {
+            "Brussels": {
+                "same_as": "7007868"
+            }
+        }
+    },
+    "74696": {
+        "pres_loc_geog_1": {
+            "Brussels": {
+                "same_as": "7007868"
+            }
+        }
+    },
+    "74715": {
+        "pres_loc_geog_1": {
+            "Brussels": {
+                "same_as": "7007868"
+            }
+        }
+    },
+    "74737": {
+        "pres_loc_geog_1": {
+            "Brussels": {
+                "same_as": "7007868"
+            }
+        }
+    },
+    "74752": {
+        "pres_loc_geog_1": {
+            "Los Angeles": {
+                "same_as": "7023900"
+            }
+        }
+    },
+    "74759": {
+        "pres_loc_geog_1": {
+            "London": {
+                "same_as": "7011781"
+            }
+        }
+    },
+    "74760": {
+        "pres_loc_geog_1": {
+            "Oxford": {
+                "same_as": "7011931"
+            }
+        }
+    },
+    "74766": {
+        "pres_loc_geog_1": {
+            "New York": {
+                "same_as": "7007567"
+            }
+        }
+    },
+    "74768": {
+        "pres_loc_geog_1": {
+            "Antwerp": {
+                "same_as": "7007856"
+            }
+        }
+    },
+    "74769": {
+        "pres_loc_geog_1": {
+            "Antwerp": {
+                "same_as": "7007856"
+            }
+        }
+    },
+    "74774": {
+        "pres_loc_geog_1": {
+            "London": {
+                "same_as": "7011781"
+            }
+        }
+    },
+    "74788": {
+        "pres_loc_geog_1": {
+            "Antwerp": {
+                "same_as": "7007856"
+            }
+        }
+    },
+    "74798": {
+        "post_own_auth_L_1": {
+            "Milwaukee": {
+                "same_as": "7014071"
+            }
+        }
+    },
+    "74806": {
+        "pres_loc_geog_1": {
+            "Cambridge": {
+                "same_as": "7010874"
+            }
+        }
+    },
+    "74833": {
+        "pres_loc_geog_1": {
+            "New York": {
+                "same_as": "7007567"
+            }
+        }
+    },
+    "75330": {
+        "pres_loc_geog_1": {
+            "Brussels": {
+                "same_as": "7007868"
+            }
+        }
+    },
+    "75384": {
+        "pres_loc_geog_1": {
+            "Brussels": {
+                "same_as": "7007868"
+            }
+        }
+    },
+    "75385": {
+        "pres_loc_geog_1": {
+            "Brussels": {
+                "same_as": "7007868"
+            }
+        }
+    },
+    "75445": {
+        "pres_loc_geog_1": {
+            "Hague, The": {
+                "same_as": "7006810"
+            }
+        }
+    },
+    "75451": {
+        "pres_loc_geog_1": {
+            "Hague, The": {
+                "same_as": "7006810"
+            }
+        }
+    },
+    "75506": {
+        "pres_loc_geog_1": {
+            "Brussels": {
+                "same_as": "7007868"
+            }
+        }
+    },
+    "75553": {
+        "pres_loc_geog_1": {
+            "Brussels": {
+                "same_as": "7007868"
+            }
+        }
+    },
+    "75582": {
+        "pres_loc_geog_1": {
+            "Brussels": {
+                "same_as": "7007868"
+            }
+        }
+    },
+    "75587": {
+        "pres_loc_geog_1": {
+            "Brussels": {
+                "same_as": "7007868"
+            }
+        }
+    },
+    "75594": {
+        "post_own_auth_L_1": {
+            "New York": {
+                "same_as": "7007567"
+            }
+        }
+    },
+    "75670": {
+        "pres_loc_geog_1": {
+            "Brussels": {
+                "same_as": "7007868"
+            }
+        }
+    },
+    "75704": {
+        "pres_loc_geog_1": {
+            "Brussels": {
+                "same_as": "7007868"
+            }
+        }
+    },
+    "75712": {
+        "pres_loc_geog_1": {
+            "Brussels": {
+                "same_as": "7007868"
+            }
+        }
+    },
+    "76130": {
+        "pres_loc_geog_1": {
+            "Bordeaux": {
+                "same_as": "7008161"
+            }
+        }
+    },
+    "7660": {
+        "pres_loc_geog_1": {
+            "Rennes": {
+                "same_as": "7008263"
+            }
+        }
+    },
+    "76627": {
+        "pres_loc_geog_1": {
+            "Burlington": {
+                "same_as": "7013484"
+            }
+        }
+    },
+    "77643": {
+        "pres_loc_geog_1": {
+            "Boston": {
+                "same_as": "7013445"
+            }
+        }
+    },
+    "77730": {
+        "pres_loc_geog_1": {
+            "London": {
+                "same_as": "7011781"
+            }
+        }
+    },
+    "77862": {
+        "pres_loc_geog_1": {
+            "Marseilles": {
+                "same_as": "7008781"
+            }
+        }
+    },
+    "78209": {
+        "pres_loc_geog_1": {
+            "Brussels": {
+                "same_as": "7007868"
+            }
+        }
+    },
+    "78210": {
+        "pres_loc_geog_1": {
+            "Brussels": {
+                "same_as": "7007868"
+            }
+        }
+    },
+    "78215": {
+        "pres_loc_geog_1": {
+            "Brussels": {
+                "same_as": "7007868"
+            }
+        }
+    },
+    "78229": {
+        "pres_loc_geog_1": {
+            "Brussels": {
+                "same_as": "7007868"
+            }
+        }
+    },
+    "78232": {
+        "pres_loc_geog_1": {
+            "Brussels": {
+                "same_as": "7007868"
+            }
+        }
+    },
+    "78245": {
+        "pres_loc_geog_1": {
+            "Brussels": {
+                "same_as": "7007868"
+            }
+        }
+    },
+    "78249": {
+        "pres_loc_geog_1": {
+            "Brussels": {
+                "same_as": "7007868"
+            }
+        }
+    },
+    "78268": {
+        "pres_loc_geog_1": {
+            "Brussels": {
+                "same_as": "7007868"
+            }
+        }
+    },
+    "78293": {
+        "pres_loc_geog_1": {
+            "Brussels": {
+                "same_as": "7007868"
+            }
+        }
+    },
+    "78312": {
+        "pres_loc_geog_1": {
+            "Los Angeles": {
+                "same_as": "7023900"
+            }
+        }
+    },
+    "78314": {
+        "pres_loc_geog_1": {
+            "Boston": {
+                "same_as": "7013445"
+            }
+        }
+    },
+    "78315": {
+        "pres_loc_geog_1": {
+            "Brussels": {
+                "same_as": "7007868"
+            }
+        }
+    },
+    "78316": {
+        "pres_loc_geog_1": {
+            "London": {
+                "same_as": "7011781"
+            }
+        }
+    },
+    "78323": {
+        "post_own_auth_L_1": {
+            "Riversdale": {
+                "part_of": "7007516"
+            }
+        },
+        "pres_loc_geog_1": {
+            "Silver Spring": {
+                "same_as": "2048731"
+            }
+        }
+    },
+    "78327": {
+        "pres_loc_geog_1": {
+            "Paris": {
+                "same_as": "7008038"
+            }
+        }
+    },
+    "78328": {
+        "pres_loc_geog_1": {
+            "Detroit": {
+                "same_as": "7013547"
+            }
+        }
+    },
+    "78329": {
+        "pres_loc_geog_1": {
+            "Brussels": {
+                "same_as": "7007868"
+            }
+        }
+    },
+    "78330": {
+        "pres_loc_geog_1": {
+            "Antwerp": {
+                "same_as": "7007856"
+            }
+        }
+    },
+    "78331": {
+        "pres_loc_geog_1": {
+            "Brussels": {
+                "same_as": "7007868"
+            }
+        }
+    },
+    "78332": {
+        "pres_loc_geog_1": {
+            "Brussels": {
+                "same_as": "7007868"
+            }
+        }
+    },
+    "78333": {
+        "pres_loc_geog_1": {
+            "Hague, The": {
+                "same_as": "7006810"
+            }
+        }
+    },
+    "78334": {
+        "pres_loc_geog_1": {
+            "Amsterdam": {
+                "same_as": "7006952"
+            }
+        }
+    },
+    "78335": {
+        "pres_loc_geog_1": {
+            "London": {
+                "same_as": "7011781"
+            }
+        }
+    },
+    "78336": {
+        "pres_loc_geog_1": {
+            "London": {
+                "same_as": "7011781"
+            }
+        }
+    },
+    "78337": {
+        "pres_loc_geog_1": {
+            "Amsterdam": {
+                "same_as": "7006952"
+            }
+        }
+    },
+    "78338": {
+        "pres_loc_geog_1": {
+            "London": {
+                "same_as": "7011781"
+            }
+        }
+    },
+    "78415": {
+        "pres_loc_geog_1": {
+            "New York": {
+                "same_as": "7007567"
+            }
+        }
+    },
+    "78595": {
+        "pres_loc_geog_1": {
+            "Amsterdam": {
+                "same_as": "7006952"
+            }
+        }
+    },
+    "78629": {
+        "pres_loc_geog_1": {
+            "Oxford": {
+                "same_as": "7011931"
+            }
+        }
+    },
+    "78631": {
+        "pres_loc_geog_1": {
+            "Oxford": {
+                "same_as": "7011931"
+            }
+        }
+    },
+    "78633": {
+        "pres_loc_geog_1": {
+            "Oxford": {
+                "same_as": "7011931"
+            }
+        }
+    },
+    "78740": {
+        "pres_loc_geog_1": {
+            "Philadelphia": {
+                "same_as": "7014406"
+            }
+        }
+    },
+    "78743": {
+        "pres_loc_geog_1": {
+            "Lier": {
+                "same_as": "7016996"
+            }
+        }
+    },
+    "78796": {
+        "pres_loc_geog_1": {
+            "Paris": {
+                "same_as": "7008038"
+            }
+        }
+    },
+    "79010": {
+        "pres_loc_geog_1": {
+            "Nivaa": {
+                "part_of": "1000066"
+            }
+        }
+    },
+    "79015": {
+        "pres_loc_geog_1": {
+            "London": {
+                "same_as": "7011781"
+            }
+        }
+    },
+    "79038": {
+        "pres_loc_geog_1": {
+            "Dublin": {
+                "same_as": "7001306"
+            }
+        }
+    },
+    "79053": {
+        "pres_loc_geog_1": {
+            "Pasadena": {
+                "same_as": "7014389"
+            }
+        }
+    },
+    "79071": {
+        "pres_loc_geog_1": {
+            "Leipzig": {
+                "same_as": "7012329"
+            }
+        }
+    },
+    "79079": {
+        "pres_loc_geog_1": {
+            "Brussels": {
+                "same_as": "7007868"
+            }
+        }
+    },
+    "79081": {
+        "pres_loc_geog_1": {
+            "Munich": {
+                "same_as": "7004333"
+            }
+        }
+    },
+    "79091": {
+        "pres_loc_geog_1": {
+            "Brussels": {
+                "same_as": "7007868"
+            }
+        }
+    },
+    "79104": {
+        "pres_loc_geog_1": {
+            "Leipzig": {
+                "same_as": "7012329"
+            }
+        }
+    },
+    "79113": {
+        "pres_loc_geog_1": {
+            "Paris": {
+                "same_as": "7008038"
+            }
+        }
+    },
+    "79116": {
+        "pres_loc_geog_1": {
+            "Barnsley": {
+                "same_as": "7010695"
+            }
+        }
+    },
+    "79459": {
+        "pres_loc_geog_1": {
+            "Colonge": {
+                "same_as": "7004446"
+            }
+        }
+    },
+    "80497": {
+        "pres_loc_geog_1": {
+            "London": {
+                "same_as": "7011781"
+            }
+        }
+    },
+    "80691": {
+        "pres_loc_geog_1": {
+            "Antwerp": {
+                "same_as": "7007856"
+            }
+        }
+    },
+    "80731": {
+        "pres_loc_geog_1": {
+            "London": {
+                "same_as": "7011781"
+            }
+        }
+    },
+    "80738": {
+        "pres_loc_geog_1": {
+            "Los Angeles": {
+                "same_as": "7023900"
+            }
+        }
+    },
+    "80838": {
+        "pres_loc_geog_1": {
+            "Monclar-d'Agenais": {
+                "same_as": "7622413"
+            }
+        }
+    },
+    "8101": {
+        "pres_loc_geog_1": {
+            "Saint Petersburg": {
+                "same_as": "7010273"
+            }
+        }
+    },
+    "81175": {
+        "pres_loc_geog_1": {
+            "London": {
+                "same_as": "7011781"
+            }
+        }
+    },
+    "82060": {
+        "pres_loc_geog_1": {
+            "London": {
+                "same_as": "7011781"
+            }
+        }
+    },
+    "82849": {
+        "pres_loc_geog_1": {
+            "London": {
+                "same_as": "7011781"
+            }
+        }
+    },
+    "84040": {
+        "pres_loc_geog_1": {
+            "Hague, The": {
+                "same_as": "7006810"
+            }
+        }
+    },
+    "84211": {
+        "pres_loc_geog_1": {
+            "Nantes": {
+                "same_as": "7008482"
+            }
+        }
+    },
+    "85153": {
+        "pres_loc_geog_1": {
+            "Liège": {
+                "same_as": "7007945"
+            }
+        }
+    },
+    "87825": {
+        "pres_loc_geog_1": {
+            "Paris": {
+                "same_as": "7008038"
+            }
+        }
+    },
+    "87884": {
+        "pres_loc_geog_1": {
+            "Frankfurt am Main": {
+                "same_as": "7005293"
+            }
+        }
+    },
+    "88480": {
+        "pres_loc_geog_1": {
+            "Louisville": {
+                "same_as": "7013915"
+            }
+        }
+    },
+    "89218": {
+        "pres_loc_geog_1": {
+            "London": {
+                "same_as": "7011781"
+            }
+        }
+    },
+    "89548": {
+        "pres_loc_geog_1": {
+            "Hague, The": {
+                "same_as": "7006810"
+            }
+        }
+    },
+    "89567": {
+        "pres_loc_geog_1": {
+            "Chicago": {
+                "same_as": "7013596"
+            }
+        }
+    },
+    "89630": {
+        "pres_loc_geog_1": {
+            "Hanover": {
+                "same_as": "7013260"
+            }
+        }
+    },
+    "89631": {
+        "pres_loc_geog_1": {
+            "Seattle": {
+                "same_as": "7014494"
+            }
+        }
+    },
+    "89696": {
+        "pres_loc_geog_1": {
+            "Ghent": {
+                "same_as": "7007887"
+            }
+        }
+    },
+    "89697": {
+        "pres_loc_geog_1": {
+            "Ghent": {
+                "same_as": "7007887"
+            }
+        }
+    },
+    "89699": {
+        "pres_loc_geog_1": {
+            "Ghent": {
+                "same_as": "7007887"
+            }
+        }
+    },
+    "9204": {
+        "pres_loc_geog_1": {
+            "Raleigh": {
+                "same_as": "7013949"
+            }
+        }
+    },
+    "93957": {
+        "pres_loc_geog_1": {
+            "New York": {
+                "same_as": "7007567"
+            }
+        }
+    },
+    "96197": {
+        "pres_loc_geog_1": {
+            "London": {
+                "same_as": "7011781"
+            }
+        }
+    },
+    "99235": {
+        "pres_loc_geog_1": {
+            "Oxford": {
+                "same_as": "7011931"
+            }
+        }
+    },
+    "99236": {
+        "pres_loc_geog_1": {
+            "Oxford": {
+                "same_as": "7011931"
+            }
+        }
+    }
+}

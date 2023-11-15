@@ -51,6 +51,7 @@ from pipeline.util import \
 			ExtractKeyedValue, \
 			ExtractKeyedValues, \
 			MatchingFiles, \
+			associate_with_tgn_record,\
 			identity, \
 			replace_key_pattern, \
 			strip_key_prefix
@@ -58,7 +59,7 @@ from pipeline.io.file import MergingFileWriter
 from pipeline.io.memory import MergingMemoryWriter
 # from pipeline.io.arches import ArchesWriter
 import pipeline.linkedart
-from pipeline.linkedart import add_crom_data, get_crom_object
+from pipeline.linkedart import add_crom_data, get_crom_object, make_tgn_place
 from pipeline.io.csv import CurriedCSVReader
 from pipeline.nodes.basic import \
 			RecordCounter, \
@@ -446,6 +447,7 @@ def add_crom_price(data, parent, services, add_citations=False):
 	Add modeling data for `MonetaryAmount`, `StartingPrice`, or `EstimatedPrice`,
 	based on properties of the supplied `data` dict.
 	'''
+
 	currencies = services['currencies']
 	decimalization = services['currencies_decimalization']
 	region_currencies = services['region_currencies']
@@ -573,6 +575,13 @@ class SalesPipeline(PipelineBase):
 		'''Return a `dict` of named services available to the bonobo pipeline.'''
 		services = super().setup_services()
 
+		# Register tgn files as services
+		tgn_places = services.get('tgn_belgian')
+		sales_tgn = services.get('sales_belgian_tgn')
+
+		services['tgn'] = tgn_places
+		services['sales_tgn'] = sales_tgn
+
 		# make these case-insensitive by wrapping the value lists in CaseFoldingSet
 		for name in ('transaction_types', 'attribution_modifiers', 'date_modifiers'):
 			if name in services:
@@ -602,6 +611,30 @@ class SalesPipeline(PipelineBase):
 			'counts': defaultdict(int)
 		})
 		return services
+
+	def _static_place_instances(self):
+		'''
+		Create static instances for every place mentioned in the tgn service data.
+		'''
+		super()._static_place_instances()
+		
+		tgn_places = self.services['tgn']
+		instances = {}
+		places = {}
+		
+		for tgn_id, tgn_data in tgn_places.items():
+			places[tgn_id] = tgn_data
+		
+		start = timeit.default_timer()	
+		print("Started the tranformation of Static Places Instances...")
+		for tgn_id, tgn_data in places.items():
+			tgn_id = tgn_data.get('tgn_id')		
+					
+			place = make_tgn_place(tgn_data, self.helper.make_shared_uri, tgn_places)
+			instances[tgn_id] = place
+		# import pdb; pdb.set_trace()
+		print(f"Completed in {timeit.default_timer() - start}")
+		return instances
 
 	def add_physical_catalogs_chain(self, graph, records, serialize=True):
 		'''Add modeling of physical copies of auction catalogs.'''
@@ -805,10 +838,10 @@ class SalesPipeline(PipelineBase):
 									'auction_house': 'name',
 									'house_ulan': 'ulan'
 								},
-# 								'postprocess': [
-# 									lambda x, _: replace_key_pattern(r'(auction_house)', 'house_name', x),
-# 									lambda x, _: strip_key_prefix('house_', x),
-# 								],
+ 								#'postprocess': [
+ 								#	lambda x, _: replace_key_pattern(r'(auction_house)', 'house_name', x),
+ 								#	lambda x, _: strip_key_prefix('house_', x),
+ 								#],
 								'prefixes': ('auction_house', 'house_ulan')
 							},
 							'_artists': {
@@ -840,7 +873,7 @@ class SalesPipeline(PipelineBase):
 									'sell_ulan': 'ulan'
 								},
 								'postprocess': [
-# 									lambda x, _: strip_key_prefix('sell_', x),
+ 								#	lambda x, _: strip_key_prefix('sell_', x),
 									filter_empty_person
 								],
 								'prefixes': (
@@ -871,7 +904,8 @@ class SalesPipeline(PipelineBase):
 									'price_currency',
 									'price_note',
 									'price_source',
-									'price_citation')},
+									'price_citation')
+							},
 							'buyer': {
 								'rename_keys': {
 									'buy_name': 'name',
@@ -886,7 +920,7 @@ class SalesPipeline(PipelineBase):
 									'buy_ulan': 'ulan'
 								},
 								'postprocess': [
-# 									lambda x, _: strip_key_prefix('buy_', x),
+ 									#lambda x, _: strip_key_prefix('buy_', x),
 									filter_empty_person
 								],
 								'prefixes': (
@@ -915,10 +949,13 @@ class SalesPipeline(PipelineBase):
 									'prev_own_auth_p': 'own_auth_p',
 									'prev_own_ulan': 'own_ulan'
 								},
-# 								'postprocess': [
-# 									lambda x, _: replace_key_pattern(r'(prev_owner)', 'prev_own', x),
-# 									lambda x, _: strip_key_prefix('prev_', x),
-# 								],
+ 								'postprocess': lambda d, p: associate_with_tgn_record(d, p, services['sales_tgn'],"prev_own_auth_L_1"),
+								
+								# [
+								#	lambda d, p: associate_with_tgn_record(d, p, services['sales_tgn'],"prev_own_auth_l")
+ 								#	lambda x, _: replace_key_pattern(r'(prev_owner)', 'prev_own', x),
+ 								#	lambda x, _: strip_key_prefix('prev_', x),
+ 								#],
 								'prefixes': (
 									'prev_owner',
 									'prev_own_ques',
@@ -948,7 +985,7 @@ class SalesPipeline(PipelineBase):
 									'prev_sale_ques': 'ques',
 									'prev_sale_cat': 'cat'
 								},
-# 								'postprocess': lambda x, _: strip_key_prefix('prev_sale_', x),
+ 								#'postprocess': lambda x, _: strip_key_prefix('prev_sale_', x),
 								'prefixes': (
 									'prev_sale_year',
 									'prev_sale_mo',
@@ -972,7 +1009,7 @@ class SalesPipeline(PipelineBase):
 									'post_sale_col': 'col',
 									'post_sale_cat': 'cat'
 								},
-# 								'postprocess': lambda x, _: strip_key_prefix('post_sale_', x),
+ 								#'postprocess': lambda x, _: strip_key_prefix('post_sale_', x),
 								'prefixes': (
 									'post_sale_year',
 									'post_sale_mo',
@@ -999,7 +1036,11 @@ class SalesPipeline(PipelineBase):
 									'post_own_auth_p': 'own_auth_p',
 									'post_own_ulan': 'own_ulan'
 								},
-# 								'postprocess': lambda x, _: strip_key_prefix('post_', x),
+ 								'postprocess': lambda d, p: associate_with_tgn_record(d, p, services['sales_tgn'],"post_own_auth_l"),
+								# [
+								#	lambda d, p: associate_with_tgn_record(d, p, services['sales_tgn'],"post_own_auth_l")
+ 								#	lambda x, _: strip_key_prefix('post_', x),
+ 								#],
 								'prefixes': (
 									'post_own',
 									'post_own_q',
@@ -1024,6 +1065,7 @@ class SalesPipeline(PipelineBase):
 									'pres_loc_accq': 'accq',
 									'pres_loc_note': 'note',
 								},
+								'postproccess' : lambda d, p: associate_with_tgn_record(d, p, services['sales_tgn'],"pres_loc_geog"),
 								'prefixes': (
 									'pres_loc_geog',
 									'pres_loc_inst',

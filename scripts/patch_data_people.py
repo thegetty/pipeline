@@ -77,7 +77,6 @@ for filename in files:
                             if class_as[j]['_label'] == 'Residing' or class_as[j]['_label'] == 'Establishment':
                                 # print("is residing or establishment")
                                 if not 'classified_as' in class_as[j]:
-                                    print("no classified as")
                                     data['carried_out'][i]['classified_as'][j]['classified_as'] = cla_res
                         # print("filename ", filename)
                         if 'referred_to_by' in carried_out[i]:

@@ -148,7 +148,10 @@ class KnoedlerUtilityHelper(SharedUtilityHelper):
 		key = data['uri_keys']
 		if key in self.services['people_groups']:
 			warnings.warn(f'*** TODO: model person record as a GROUP: {pprint.pformat(key)}')
-		person = super().add_person(data, record=record, relative_id=relative_id, **kwargs)
+			person = super().add_group(data, record=record, relative_id=relative_id, **kwargs)
+		else :
+			person = super().add_person(data, record=record, relative_id=relative_id, **kwargs)
+
 		if record:
 			person.referred_to_by = record
 		return person
@@ -1012,22 +1015,15 @@ class TransactionHandler(ProvenanceBase):
 		paym = None
 		if amnt:
 			tx_uri = tx.id
-			# payment_id = tx_uri + '-Payment'
-			# paym = model.Payment(ident=payment_id, label=f'Payment for {sn_ident}')
-			# tx.part = paym
-
-
+			payment_id = tx_uri + '-Payment'
+			paym = model.Payment(ident=payment_id, label=f'Payment for {sn_ident}')
+			tx.part = paym
 			# If a joint owner is a seller or a buyer the payment node is empty and all the monetary ammount's information is moved to 
 			# AttributeAssignment -> Monetary Ammount
 			# P9->E13->p141->E97->P90->full_amount
 			# P9->E13->p141->E97->P180->currency
 			# P9->E13->p141->E97->p67i->E33->P190->note
 			if not joint_owner_also_seller_or_buyer_id:
-				### Dimitra: These lines were moved here from above to solve the problem with the empty payment group   
-				payment_id = tx_uri + '-Payment'
-				paym = model.Payment(ident=payment_id, label=f'Payment for {sn_ident}')
-				tx.part = paym
-				#######################
 				paym.paid_amount = amnt
 				for kp in knoedler_group:
 					if incoming:
@@ -1047,8 +1043,7 @@ class TransactionHandler(ProvenanceBase):
 				subpaym = model.Activity(ident='', label=f"{subpaym_role}'s agent's role in payment")
 				subpaym.classified_as = vocab.instances[f'{subpaym_role}sAgent']
 				subpaym.carried_out_by = p
-				if paym:
-					paym.part = subpaym
+				paym.part = subpaym
 
 			for i, partdata in enumerate(parts):
 				person, part_amnt = partdata
@@ -1076,8 +1071,8 @@ class TransactionHandler(ProvenanceBase):
 						if joint_owner_also_seller_or_buyer_id:
 							for sale_buyer in people:
 								shared_paym.paid_from = sale_buyer
-					if paym:
-						paym.part = shared_paym
+
+					paym.part = shared_paym
 					
 		# If a joint owner is a seller or a buyer the payment node is empty
 		if not joint_owner_also_seller_or_buyer_id:
@@ -1144,15 +1139,22 @@ class TransactionHandler(ProvenanceBase):
 		tx.part = acq
 
 	def new_residence_activity(self, place, person, sales_record):
-		
-		res_act = model.Activity(ident=self.helper.make_proj_uri('Activity', 'residing', person.id, place.id))
-		res_act.took_place_at = place
-		res_type = model.Type(ident='http://vocab.getty.edu/aat/300393179', label="Residing")
-		location_type = model.Type(ident='http://vocab.getty.edu/aat/300393211', label="Location Activity or State")
-		res_type.classified_as = location_type
-		res_act.classified_as = res_type
-		res_act.referred_to_by = sales_record
-
+		if isinstance(person, vocab.Person):
+			res_act = model.Activity(ident=self.helper.make_proj_uri('Activity', 'residing', person.id, place.id))
+			res_act.took_place_at = place
+			res_type = model.Type(ident='http://vocab.getty.edu/aat/300393179', label="Residing")
+			location_type = model.Type(ident='http://vocab.getty.edu/aat/300393211', label="Location Activity or State")
+			res_type.classified_as = location_type
+			res_act.classified_as = res_type
+			res_act.referred_to_by = sales_record
+		elif isinstance(person, vocab.Group):
+			res_act = model.Activity(ident=self.helper.make_proj_uri('Activity',  'establishment', person.id, place.id))
+			res_act.took_place_at = place
+			res_type = model.Type(ident='http://vocab.getty.edu/aat/300393212', label="Establishment")
+			location_type = model.Type(ident='http://vocab.getty.edu/aat/300393211', label="Location Activity or State")
+			res_type.classified_as = location_type
+			res_act.classified_as = res_type
+			res_act.referred_to_by = sales_record
 		return res_act
 		
 

@@ -1,0 +1,3062 @@
+{
+    "1000001": {
+        "latitude": "42.284495",
+        "longitude": "-101.123047",
+        "part_of": "7029392",
+        "permalink": "http://www.getty.edu/vow/TGNFullDisplay?find=&place=&nation=&subjectid=1000001",
+        "place_label": "North and Central America",
+        "place_type_label": "continents",
+        "place_type_preferred": "http://vocab.getty.edu/aat/300128176",
+        "tgn_id": "1000001"
+    },
+    "1000003": {
+        "latitude": "56.2",
+        "longitude": "15.016",
+        "part_of": "7029392",
+        "permalink": "http://www.getty.edu/vow/TGNFullDisplay?find=&place=&nation=&subjectid=1000003",
+        "place_label": "Europe",
+        "place_type_label": "continents",
+        "place_type_preferred": "http://vocab.getty.edu/aat/300128176",
+        "tgn_id": "1000003"
+    },
+    "1000004": {
+        "latitude": "43.8",
+        "longitude": "87.633",
+        "part_of": "7029392",
+        "permalink": "http://www.getty.edu/vow/TGNFullDisplay?find=&place=&nation=&subjectid=1000004",
+        "place_label": "Asia",
+        "place_type_label": "continents",
+        "place_type_preferred": "http://vocab.getty.edu/aat/300128176",
+        "tgn_id": "1000004"
+    },
+    "1000062": {
+        "latitude": "47.3333",
+        "longitude": "13.3333",
+        "part_of": "1000003",
+        "permalink": "http://www.getty.edu/vow/TGNFullDisplay?find=&place=&nation=&subjectid=1000062",
+        "place_label": "Austria",
+        "place_type_label": "nations",
+        "place_type_preferred": "http://vocab.getty.edu/aat/300128207",
+        "tgn_id": "1000062"
+    },
+    "1000063": {
+        "latitude": "50.8333",
+        "longitude": "4",
+        "part_of": "1000003",
+        "permalink": "http://www.getty.edu/vow/TGNFullDisplay?find=&place=&nation=&subjectid=1000063",
+        "place_label": "Belgium",
+        "place_type_label": "nations",
+        "place_type_preferred": "http://vocab.getty.edu/aat/300128207",
+        "tgn_id": "1000063"
+    },
+    "1000066": {
+        "latitude": "56",
+        "longitude": "10",
+        "part_of": "1000003",
+        "permalink": "http://www.getty.edu/vow/TGNFullDisplay?find=&place=&nation=&subjectid=1000066",
+        "place_label": "Denmark",
+        "place_type_label": "nations",
+        "place_type_preferred": "http://vocab.getty.edu/aat/300128207",
+        "tgn_id": "1000066"
+    },
+    "1000069": {
+        "latitude": "64",
+        "longitude": "26",
+        "part_of": "1000003",
+        "permalink": "http://www.getty.edu/vow/TGNFullDisplay?find=&place=&nation=&subjectid=1000069",
+        "place_label": "Finland",
+        "place_type_label": "nations",
+        "place_type_preferred": "http://vocab.getty.edu/aat/300128207",
+        "tgn_id": "1000069"
+    },
+    "1000070": {
+        "latitude": "46",
+        "longitude": "2",
+        "part_of": "1000003",
+        "permalink": "http://www.getty.edu/vow/TGNFullDisplay?find=&place=&nation=&subjectid=1000070",
+        "place_label": "France",
+        "place_type_label": "nations",
+        "place_type_preferred": "http://vocab.getty.edu/aat/300128207",
+        "tgn_id": "1000070"
+    },
+    "1000078": {
+        "latitude": "53",
+        "longitude": "-8",
+        "part_of": "1000003",
+        "permalink": "http://www.getty.edu/vow/TGNFullDisplay?find=&place=&nation=&subjectid=1000078",
+        "place_label": "Ireland",
+        "place_type_label": "nations",
+        "place_type_preferred": "http://vocab.getty.edu/aat/300128207",
+        "tgn_id": "1000078"
+    },
+    "1000080": {
+        "latitude": "42.8333",
+        "longitude": "12.8333",
+        "part_of": "1000003",
+        "permalink": "http://www.getty.edu/vow/TGNFullDisplay?find=&place=&nation=&subjectid=1000080",
+        "place_label": "Italy",
+        "place_type_label": "nations",
+        "place_type_preferred": "http://vocab.getty.edu/aat/300128207",
+        "tgn_id": "1000080"
+    },
+    "1000095": {
+        "latitude": "40",
+        "longitude": "-4",
+        "part_of": "1000003",
+        "permalink": "http://www.getty.edu/vow/TGNFullDisplay?find=&place=&nation=&subjectid=1000095",
+        "place_label": "Spain",
+        "place_type_label": "nations",
+        "place_type_preferred": "http://vocab.getty.edu/aat/300128207",
+        "tgn_id": "1000095"
+    },
+    "1000097": {
+        "latitude": "62",
+        "longitude": "15",
+        "part_of": "1000003",
+        "permalink": "http://www.getty.edu/vow/TGNFullDisplay?find=&place=&nation=&subjectid=1000097",
+        "place_label": "Sweden",
+        "place_type_label": "nations",
+        "place_type_preferred": "http://vocab.getty.edu/aat/300128207",
+        "tgn_id": "1000097"
+    },
+    "1000119": {
+        "latitude": "31.5",
+        "longitude": "34.75",
+        "part_of": "1000004",
+        "permalink": "http://www.getty.edu/vow/TGNFullDisplay?find=&place=&nation=&subjectid=1000119",
+        "place_label": "Israel",
+        "place_type_label": "nations",
+        "place_type_preferred": "http://vocab.getty.edu/aat/300128207",
+        "tgn_id": "1000119"
+    },
+    "1000193": {
+        "latitude": "-30",
+        "longitude": "26",
+        "part_of": "7001242",
+        "permalink": "http://www.getty.edu/vow/TGNFullDisplay?find=&place=&nation=&subjectid=1000193",
+        "place_label": "South Africa",
+        "place_type_label": "nations",
+        "place_type_preferred": "http://vocab.getty.edu/aat/300128207",
+        "tgn_id": "1000193"
+    },
+    "1000939": {
+        "latitude": "32.0833",
+        "longitude": "34.8",
+        "part_of": "1000119",
+        "permalink": "http://www.getty.edu/vow/TGNFullDisplay?find=&place=&nation=&subjectid=1000939",
+        "place_label": "Tel Aviv",
+        "place_type_label": "national districts",
+        "place_type_preferred": "http://vocab.getty.edu/aat/300387081",
+        "tgn_id": "1000939"
+    },
+    "1001780": {
+        "latitude": "49.75",
+        "longitude": "15",
+        "part_of": "1000003",
+        "permalink": "http://www.getty.edu/vow/TGNFullDisplay?find=&place=&nation=&subjectid=1001780",
+        "place_label": "Czech Republic",
+        "place_type_label": "nations",
+        "place_type_preferred": "http://vocab.getty.edu/aat/300128207",
+        "tgn_id": "1001780"
+    },
+    "1001869": {
+        "latitude": "23",
+        "longitude": "72",
+        "part_of": "7000198",
+        "permalink": "http://www.getty.edu/vow/TGNFullDisplay?find=&place=&nation=&subjectid=1001869",
+        "place_label": "ગુજરાત",
+        "place_type_label": "states (political divisions)",
+        "place_type_preferred": "http://vocab.getty.edu/aat/300000776",
+        "tgn_id": "1001869"
+    },
+    "1002245": {
+        "latitude": "42.2667",
+        "longitude": "-78.6833",
+        "part_of": "7007568",
+        "permalink": "http://www.getty.edu/vow/TGNFullDisplay?find=&place=&nation=&subjectid=1002245",
+        "place_label": "Cattaraugus",
+        "place_type_label": "counties",
+        "place_type_preferred": "http://vocab.getty.edu/aat/300000771",
+        "tgn_id": "1002245"
+    },
+    "1002289": {
+        "latitude": "26.1333",
+        "longitude": "-81.4833",
+        "part_of": "7007240",
+        "permalink": "http://www.getty.edu/vow/TGNFullDisplay?find=&place=&nation=&subjectid=1002289",
+        "place_label": "Collier",
+        "place_type_label": "counties",
+        "place_type_preferred": "http://vocab.getty.edu/aat/300000771",
+        "tgn_id": "1002289"
+    },
+    "1002441": {
+        "latitude": "39.1833",
+        "longitude": "-84.5333",
+        "part_of": "7007706",
+        "permalink": "http://www.getty.edu/vow/TGNFullDisplay?find=&place=&nation=&subjectid=1002441",
+        "place_label": "Hamilton",
+        "place_type_label": "counties",
+        "place_type_preferred": "http://vocab.getty.edu/aat/300000771",
+        "tgn_id": "1002441"
+    },
+    "1002456": {
+        "latitude": "29.8333",
+        "longitude": "-95.4",
+        "part_of": "7007826",
+        "permalink": "http://www.getty.edu/vow/TGNFullDisplay?find=&place=&nation=&subjectid=1002456",
+        "place_label": "Harris",
+        "place_type_label": "counties",
+        "place_type_preferred": "http://vocab.getty.edu/aat/300000771",
+        "tgn_id": "1002456"
+    },
+    "1002461": {
+        "latitude": "41.7667",
+        "longitude": "-72.7667",
+        "part_of": "7007159",
+        "permalink": "http://www.getty.edu/vow/TGNFullDisplay?find=&place=&nation=&subjectid=1002461",
+        "place_label": "Hartford",
+        "place_type_label": "counties",
+        "place_type_preferred": "http://vocab.getty.edu/aat/300000771",
+        "tgn_id": "1002461"
+    },
+    "1002516": {
+        "latitude": "38.1833",
+        "longitude": "-85.65",
+        "part_of": "7007255",
+        "permalink": "http://www.getty.edu/vow/TGNFullDisplay?find=&place=&nation=&subjectid=1002516",
+        "place_label": "Jefferson",
+        "place_type_label": "counties",
+        "place_type_preferred": "http://vocab.getty.edu/aat/300000771",
+        "tgn_id": "1002516"
+    },
+    "1002608": {
+        "latitude": "34.3667",
+        "longitude": "-118.2",
+        "part_of": "7007157",
+        "permalink": "http://www.getty.edu/vow/TGNFullDisplay?find=&place=&nation=&subjectid=1002608",
+        "place_label": "Los Angeles",
+        "place_type_label": "counties",
+        "place_type_preferred": "http://vocab.getty.edu/aat/300000771",
+        "tgn_id": "1002608"
+    },
+    "1002611": {
+        "latitude": "41.65",
+        "longitude": "-83.6667",
+        "part_of": "7007706",
+        "permalink": "http://www.getty.edu/vow/TGNFullDisplay?find=&place=&nation=&subjectid=1002611",
+        "place_label": "Lucas",
+        "place_type_label": "counties",
+        "place_type_preferred": "http://vocab.getty.edu/aat/300000771",
+        "tgn_id": "1002611"
+    },
+    "1002665": {
+        "latitude": "42.5",
+        "longitude": "-71.3333",
+        "part_of": "7007517",
+        "permalink": "http://www.getty.edu/vow/TGNFullDisplay?find=&place=&nation=&subjectid=1002665",
+        "place_label": "Middlesex",
+        "place_type_label": "counties",
+        "place_type_preferred": "http://vocab.getty.edu/aat/300000771",
+        "tgn_id": "1002665"
+    },
+    "1002672": {
+        "latitude": "43",
+        "longitude": "-87.9667",
+        "part_of": "7007922",
+        "permalink": "http://www.getty.edu/vow/TGNFullDisplay?find=&place=&nation=&subjectid=1002672",
+        "place_label": "Milwaukee",
+        "place_type_label": "counties",
+        "place_type_preferred": "http://vocab.getty.edu/aat/300000771",
+        "tgn_id": "1002672"
+    },
+    "1002681": {
+        "latitude": "43.15",
+        "longitude": "-77.6833",
+        "part_of": "7007568",
+        "permalink": "http://www.getty.edu/vow/TGNFullDisplay?find=&place=&nation=&subjectid=1002681",
+        "place_label": "Monroe",
+        "place_type_label": "counties",
+        "place_type_preferred": "http://vocab.getty.edu/aat/300000771",
+        "tgn_id": "1002681"
+    },
+    "1002712": {
+        "latitude": "41.4",
+        "longitude": "-72.9333",
+        "part_of": "7007159",
+        "permalink": "http://www.getty.edu/vow/TGNFullDisplay?find=&place=&nation=&subjectid=1002712",
+        "place_label": "New Haven",
+        "place_type_label": "counties",
+        "place_type_preferred": "http://vocab.getty.edu/aat/300000771",
+        "tgn_id": "1002712"
+    },
+    "1002782": {
+        "latitude": "40.1167",
+        "longitude": "-75",
+        "part_of": "7007710",
+        "permalink": "http://www.getty.edu/vow/TGNFullDisplay?find=&place=&nation=&subjectid=1002782",
+        "place_label": "Philadelphia",
+        "place_type_label": "counties",
+        "place_type_preferred": "http://vocab.getty.edu/aat/300000771",
+        "tgn_id": "1002782"
+    },
+    "1002841": {
+        "latitude": "38.4667",
+        "longitude": "-121.3167",
+        "part_of": "7007157",
+        "permalink": "http://www.getty.edu/vow/TGNFullDisplay?find=&place=&nation=&subjectid=1002841",
+        "place_label": "Sacramento",
+        "place_type_label": "counties",
+        "place_type_preferred": "http://vocab.getty.edu/aat/300000771",
+        "tgn_id": "1002841"
+    },
+    "1002858": {
+        "latitude": "33.0333",
+        "longitude": "-116.8",
+        "part_of": "7007157",
+        "permalink": "http://www.getty.edu/vow/TGNFullDisplay?find=&place=&nation=&subjectid=1002858",
+        "place_label": "San Diego",
+        "place_type_label": "counties",
+        "place_type_preferred": "http://vocab.getty.edu/aat/300000771",
+        "tgn_id": "1002858"
+    },
+    "1002859": {
+        "latitude": "37.7667",
+        "longitude": "-122.45",
+        "part_of": "7007157",
+        "permalink": "http://www.getty.edu/vow/TGNFullDisplay?find=&place=&nation=&subjectid=1002859",
+        "place_label": "San Francisco",
+        "place_type_label": "counties",
+        "place_type_preferred": "http://vocab.getty.edu/aat/300000771",
+        "tgn_id": "1002859"
+    },
+    "1002870": {
+        "latitude": "27.1667",
+        "longitude": "-82.3333",
+        "part_of": "7007240",
+        "permalink": "http://www.getty.edu/vow/TGNFullDisplay?find=&place=&nation=&subjectid=1002870",
+        "place_label": "Sarasota",
+        "place_type_label": "counties",
+        "place_type_preferred": "http://vocab.getty.edu/aat/300000771",
+        "tgn_id": "1002870"
+    },
+    "1002923": {
+        "latitude": "42.3333",
+        "longitude": "-71.0833",
+        "part_of": "7007517",
+        "permalink": "http://www.getty.edu/vow/TGNFullDisplay?find=&place=&nation=&subjectid=1002923",
+        "place_label": "Suffolk",
+        "place_type_label": "counties",
+        "place_type_preferred": "http://vocab.getty.edu/aat/300000771",
+        "tgn_id": "1002923"
+    },
+    "1003005": {
+        "latitude": "42.25",
+        "longitude": "-83.2833",
+        "part_of": "7007520",
+        "permalink": "http://www.getty.edu/vow/TGNFullDisplay?find=&place=&nation=&subjectid=1003005",
+        "place_label": "Wayne",
+        "place_type_label": "counties",
+        "place_type_preferred": "http://vocab.getty.edu/aat/300000771",
+        "tgn_id": "1003005"
+    },
+    "1003038": {
+        "latitude": "42.3333",
+        "longitude": "-71.8333",
+        "part_of": "7007517",
+        "permalink": "http://www.getty.edu/vow/TGNFullDisplay?find=&place=&nation=&subjectid=1003038",
+        "place_label": "Worcester",
+        "place_type_label": "counties",
+        "place_type_preferred": "http://vocab.getty.edu/aat/300000771",
+        "tgn_id": "1003038"
+    },
+    "1006976": {
+        "latitude": "51.7833",
+        "longitude": "4.6667",
+        "part_of": "7003632",
+        "permalink": "http://www.getty.edu/vow/TGNFullDisplay?find=&place=&nation=&subjectid=1006976",
+        "place_label": "Dordrecht, Gemeente",
+        "place_type_label": "islands (landforms)",
+        "place_type_preferred": "http://vocab.getty.edu/aat/300008791",
+        "tgn_id": "1006976"
+    },
+    "1047715": {
+        "latitude": "52.383333",
+        "longitude": "7",
+        "part_of": "7003626",
+        "permalink": "http://www.getty.edu/vow/TGNFullDisplay?find=&place=&nation=&subjectid=1047715",
+        "place_label": "Denekamp",
+        "place_type_label": "inhabited places",
+        "place_type_preferred": "http://vocab.getty.edu/aat/300008347",
+        "tgn_id": "1047715"
+    },
+    "1048204": {
+        "latitude": "52.1",
+        "longitude": "6.316667",
+        "part_of": "7003619",
+        "permalink": "http://www.getty.edu/vow/TGNFullDisplay?find=&place=&nation=&subjectid=1048204",
+        "place_label": "Vorden",
+        "place_type_label": "inhabited places",
+        "place_type_preferred": "http://vocab.getty.edu/aat/300008347",
+        "tgn_id": "1048204"
+    },
+    "1051036": {
+        "latitude": "55.566667",
+        "longitude": "-2.483333",
+        "part_of": "7008072",
+        "permalink": "http://www.getty.edu/vow/TGNFullDisplay?find=&place=&nation=&subjectid=1051036",
+        "place_label": "Roxburgh",
+        "place_type_label": "inhabited places",
+        "place_type_preferred": "http://vocab.getty.edu/aat/300008347",
+        "tgn_id": "1051036"
+    },
+    "2000682": {
+        "latitude": "38.8667",
+        "longitude": "-95.2333",
+        "part_of": "7007254",
+        "permalink": "http://www.getty.edu/vow/TGNFullDisplay?find=&place=&nation=&subjectid=2000682",
+        "place_label": "Douglas",
+        "place_type_label": "counties",
+        "place_type_preferred": "http://vocab.getty.edu/aat/300000771",
+        "tgn_id": "2000682"
+    },
+    "2001025": {
+        "latitude": "45.0167",
+        "longitude": "-93.45",
+        "part_of": "7007521",
+        "permalink": "http://www.getty.edu/vow/TGNFullDisplay?find=&place=&nation=&subjectid=2001025",
+        "place_label": "Hennepin",
+        "place_type_label": "counties",
+        "place_type_preferred": "http://vocab.getty.edu/aat/300000771",
+        "tgn_id": "2001025"
+    },
+    "2001208": {
+        "latitude": "39.0167",
+        "longitude": "-94.35",
+        "part_of": "7007523",
+        "permalink": "http://www.getty.edu/vow/TGNFullDisplay?find=&place=&nation=&subjectid=2001208",
+        "place_label": "Jackson",
+        "place_type_label": "counties",
+        "place_type_preferred": "http://vocab.getty.edu/aat/300000771",
+        "tgn_id": "2001208"
+    },
+    "2002132": {
+        "latitude": "44.45",
+        "longitude": "-73.05",
+        "part_of": "7007828",
+        "permalink": "http://www.getty.edu/vow/TGNFullDisplay?find=&place=&nation=&subjectid=2002132",
+        "place_label": "Chittenden",
+        "place_type_label": "counties",
+        "place_type_preferred": "http://vocab.getty.edu/aat/300000771",
+        "tgn_id": "2002132"
+    },
+    "4007133": {
+        "latitude": "",
+        "longitude": "",
+        "part_of": "7008072",
+        "permalink": "http://www.getty.edu/vow/TGNFullDisplay?find=&place=&nation=&subjectid=4007133",
+        "place_label": "Mertoun",
+        "place_type_label": "inhabited places",
+        "place_type_preferred": "http://vocab.getty.edu/aat/300008347",
+        "tgn_id": "4007133"
+    },
+    "5000437": {
+        "latitude": "55.75",
+        "longitude": "-2.5",
+        "part_of": "7008072",
+        "permalink": "http://www.getty.edu/vow/TGNFullDisplay?find=&place=&nation=&subjectid=5000437",
+        "place_label": "Berwick",
+        "place_type_label": "general regions",
+        "place_type_preferred": "http://vocab.getty.edu/aat/300387346",
+        "tgn_id": "5000437"
+    },
+    "5003264": {
+        "latitude": "52.166667",
+        "longitude": "5.466667",
+        "part_of": "7003619",
+        "permalink": "http://www.getty.edu/vow/TGNFullDisplay?find=&place=&nation=&subjectid=5003264",
+        "place_label": "Hoevelaken",
+        "place_type_label": "inhabited places",
+        "place_type_preferred": "http://vocab.getty.edu/aat/300008347",
+        "tgn_id": "5003264"
+    },
+    "5003304": {
+        "latitude": "52.2",
+        "longitude": "5.016667",
+        "part_of": "7003627",
+        "permalink": "http://www.getty.edu/vow/TGNFullDisplay?find=&place=&nation=&subjectid=5003304",
+        "place_label": "Nieuwersluis",
+        "place_type_label": "inhabited places",
+        "place_type_preferred": "http://vocab.getty.edu/aat/300008347",
+        "tgn_id": "5003304"
+    },
+    "7000084": {
+        "latitude": "51.5",
+        "longitude": "10.5",
+        "part_of": "1000003",
+        "permalink": "http://www.getty.edu/vow/TGNFullDisplay?find=&place=&nation=&subjectid=7000084",
+        "place_label": "Germany",
+        "place_type_label": "nations",
+        "place_type_preferred": "http://vocab.getty.edu/aat/300128207",
+        "tgn_id": "7000084"
+    },
+    "7000094": {
+        "latitude": "53.75",
+        "longitude": "12.5",
+        "part_of": "7000084",
+        "permalink": "http://www.getty.edu/vow/TGNFullDisplay?find=&place=&nation=&subjectid=7000094",
+        "place_label": "Mecklenburg-Vorpommern",
+        "place_type_label": "states (political divisions)",
+        "place_type_preferred": "http://vocab.getty.edu/aat/300000776",
+        "tgn_id": "7000094"
+    },
+    "7000096": {
+        "latitude": "52.4167",
+        "longitude": "12.5667",
+        "part_of": "7000084",
+        "permalink": "http://www.getty.edu/vow/TGNFullDisplay?find=&place=&nation=&subjectid=7000096",
+        "place_label": "Brandenburg",
+        "place_type_label": "states (political divisions)",
+        "place_type_preferred": "http://vocab.getty.edu/aat/300000776",
+        "tgn_id": "7000096"
+    },
+    "7000198": {
+        "latitude": "20",
+        "longitude": "77",
+        "part_of": "1000004",
+        "permalink": "http://www.getty.edu/vow/TGNFullDisplay?find=&place=&nation=&subjectid=7000198",
+        "place_label": "India",
+        "place_type_label": "nations",
+        "place_type_preferred": "http://vocab.getty.edu/aat/300128207",
+        "tgn_id": "7000198"
+    },
+    "7000811": {
+        "latitude": "-33.9333",
+        "longitude": "18.4667",
+        "part_of": "7017584",
+        "permalink": "http://www.getty.edu/vow/TGNFullDisplay?find=&place=&nation=&subjectid=7000811",
+        "place_label": "Cape Town",
+        "place_type_label": "inhabited places",
+        "place_type_preferred": "http://vocab.getty.edu/aat/300008347",
+        "tgn_id": "7000811"
+    },
+    "7000874": {
+        "latitude": "41.9",
+        "longitude": "12.483333",
+        "part_of": "7003138",
+        "permalink": "http://www.getty.edu/vow/TGNFullDisplay?find=&place=&nation=&subjectid=7000874",
+        "place_label": "Rome",
+        "place_type_label": "inhabited places",
+        "place_type_preferred": "http://vocab.getty.edu/aat/300008347",
+        "tgn_id": "7000874"
+    },
+    "7001242": {
+        "latitude": "2.383",
+        "longitude": "16.066",
+        "part_of": "7029392",
+        "permalink": "http://www.getty.edu/vow/TGNFullDisplay?find=&place=&nation=&subjectid=7001242",
+        "place_label": "Africa",
+        "place_type_label": "continents",
+        "place_type_preferred": "http://vocab.getty.edu/aat/300128176",
+        "tgn_id": "7001242"
+    },
+    "7001306": {
+        "latitude": "53.333056",
+        "longitude": "-6.248889",
+        "part_of": "7593747",
+        "permalink": "http://www.getty.edu/vow/TGNFullDisplay?find=&place=&nation=&subjectid=7001306",
+        "place_label": "Dublin",
+        "place_type_label": "inhabited places",
+        "place_type_preferred": "http://vocab.getty.edu/aat/300008347",
+        "tgn_id": "7001306"
+    },
+    "7001369": {
+        "latitude": "32.0833",
+        "longitude": "34.7667",
+        "part_of": "1000939",
+        "permalink": "http://www.getty.edu/vow/TGNFullDisplay?find=&place=&nation=&subjectid=7001369",
+        "place_label": "Tel Aviv-Jaffa",
+        "place_type_label": "inhabited places",
+        "place_type_preferred": "http://vocab.getty.edu/aat/300008347",
+        "tgn_id": "7001369"
+    },
+    "7001505": {
+        "latitude": "22.3",
+        "longitude": "73.2",
+        "part_of": "1001869",
+        "permalink": "http://www.getty.edu/vow/TGNFullDisplay?find=&place=&nation=&subjectid=7001505",
+        "place_label": "Vadodara",
+        "place_type_label": "inhabited places",
+        "place_type_preferred": "http://vocab.getty.edu/aat/300008347",
+        "tgn_id": "7001505"
+    },
+    "7002435": {
+        "latitude": "60",
+        "longitude": "47",
+        "part_of": "1000004",
+        "permalink": "http://www.getty.edu/vow/TGNFullDisplay?find=&place=&nation=&subjectid=7002435",
+        "place_label": "Russia",
+        "place_type_label": "nations",
+        "place_type_preferred": "http://vocab.getty.edu/aat/300128207",
+        "tgn_id": "7002435"
+    },
+    "7002444": {
+        "latitude": "57",
+        "longitude": "-4",
+        "part_of": "7008591",
+        "permalink": "http://www.getty.edu/vow/TGNFullDisplay?find=&place=&nation=&subjectid=7002444",
+        "place_label": "Scotland",
+        "place_type_label": "countries (sovereign states)",
+        "place_type_preferred": "http://vocab.getty.edu/aat/300387506",
+        "tgn_id": "7002444"
+    },
+    "7002445": {
+        "latitude": "53",
+        "longitude": "-2",
+        "part_of": "7008591",
+        "permalink": "http://www.getty.edu/vow/TGNFullDisplay?find=&place=&nation=&subjectid=7002445",
+        "place_label": "England",
+        "place_type_label": "countries (sovereign states)",
+        "place_type_preferred": "http://vocab.getty.edu/aat/300387506",
+        "tgn_id": "7002445"
+    },
+    "7002795": {
+        "latitude": "40.5",
+        "longitude": "-3.6667",
+        "part_of": "1000095",
+        "permalink": "http://www.getty.edu/vow/TGNFullDisplay?find=&place=&nation=&subjectid=7002795",
+        "place_label": "Madrid",
+        "place_type_label": "autonomous communities",
+        "place_type_preferred": "http://vocab.getty.edu/aat/300387113",
+        "tgn_id": "7002795"
+    },
+    "7002883": {
+        "latitude": "48.5",
+        "longitude": "2.5",
+        "part_of": "1000070",
+        "permalink": "http://www.getty.edu/vow/TGNFullDisplay?find=&place=&nation=&subjectid=7002883",
+        "place_label": "Île-de-France",
+        "place_type_label": "regions (administrative divisions)",
+        "place_type_preferred": "http://vocab.getty.edu/aat/300236112",
+        "tgn_id": "7002883"
+    },
+    "7002893": {
+        "latitude": "47.5",
+        "longitude": "0.833",
+        "part_of": "1000070",
+        "permalink": "http://www.getty.edu/vow/TGNFullDisplay?find=&place=&nation=&subjectid=7002893",
+        "place_label": "Pays de la Loire",
+        "place_type_label": "regions (administrative divisions)",
+        "place_type_preferred": "http://vocab.getty.edu/aat/300236112",
+        "tgn_id": "7002893"
+    },
+    "7002895": {
+        "latitude": "43.916667",
+        "longitude": "6.083333",
+        "part_of": "1000070",
+        "permalink": "http://www.getty.edu/vow/TGNFullDisplay?find=&place=&nation=&subjectid=7002895",
+        "place_label": "Provence-Alpes-Côte d’Azur",
+        "place_type_label": "regions (administrative divisions)",
+        "place_type_preferred": "http://vocab.getty.edu/aat/300236112",
+        "tgn_id": "7002895"
+    },
+    "7003029": {
+        "latitude": "47.25",
+        "longitude": "11.3333",
+        "part_of": "1000062",
+        "permalink": "http://www.getty.edu/vow/TGNFullDisplay?find=&place=&nation=&subjectid=7003029",
+        "place_label": "Tyrol",
+        "place_type_label": "states (political divisions)",
+        "place_type_preferred": "http://vocab.getty.edu/aat/300000776",
+        "tgn_id": "7003029"
+    },
+    "7003030": {
+        "latitude": "48.25",
+        "longitude": "16.416",
+        "part_of": "1000062",
+        "permalink": "http://www.getty.edu/vow/TGNFullDisplay?find=&place=&nation=&subjectid=7003030",
+        "place_label": "Vienna state",
+        "place_type_label": "states (political divisions)",
+        "place_type_preferred": "http://vocab.getty.edu/aat/300000776",
+        "tgn_id": "7003030"
+    },
+    "7003080": {
+        "latitude": "42",
+        "longitude": "14.5",
+        "part_of": "1000080",
+        "permalink": "http://www.getty.edu/vow/TGNFullDisplay?find=&place=&nation=&subjectid=7003080",
+        "place_label": "Lazio",
+        "place_type_label": "regions (administrative divisions)",
+        "place_type_preferred": "http://vocab.getty.edu/aat/300236112",
+        "tgn_id": "7003080"
+    },
+    "7003138": {
+        "latitude": "41.966667",
+        "longitude": "12.666667",
+        "part_of": "7003080",
+        "permalink": "http://www.getty.edu/vow/TGNFullDisplay?find=&place=&nation=&subjectid=7003138",
+        "place_label": "Roma",
+        "place_type_label": "provinces",
+        "place_type_preferred": "http://vocab.getty.edu/aat/300000774",
+        "tgn_id": "7003138"
+    },
+    "7003150": {
+        "latitude": "45.5",
+        "longitude": "9.5",
+        "part_of": "7003237",
+        "permalink": "http://www.getty.edu/vow/TGNFullDisplay?find=&place=&nation=&subjectid=7003150",
+        "place_label": "Milano",
+        "place_type_label": "provinces",
+        "place_type_preferred": "http://vocab.getty.edu/aat/300000774",
+        "tgn_id": "7003150"
+    },
+    "7003237": {
+        "latitude": "45.6667",
+        "longitude": "9.5",
+        "part_of": "1000080",
+        "permalink": "http://www.getty.edu/vow/TGNFullDisplay?find=&place=&nation=&subjectid=7003237",
+        "place_label": "Lombardy",
+        "place_type_label": "regions (administrative divisions)",
+        "place_type_preferred": "http://vocab.getty.edu/aat/300236112",
+        "tgn_id": "7003237"
+    },
+    "7003249": {
+        "latitude": "47.2667",
+        "longitude": "11.4",
+        "part_of": "7003029",
+        "permalink": "http://www.getty.edu/vow/TGNFullDisplay?find=&place=&nation=&subjectid=7003249",
+        "place_label": "Innsbruck",
+        "place_type_label": "inhabited places",
+        "place_type_preferred": "http://vocab.getty.edu/aat/300008347",
+        "tgn_id": "7003249"
+    },
+    "7003321": {
+        "latitude": "48.2167",
+        "longitude": "16.3667",
+        "part_of": "7003030",
+        "permalink": "http://www.getty.edu/vow/TGNFullDisplay?find=&place=&nation=&subjectid=7003321",
+        "place_label": "Vienna",
+        "place_type_label": "inhabited places",
+        "place_type_preferred": "http://vocab.getty.edu/aat/300008347",
+        "tgn_id": "7003321"
+    },
+    "7003382": {
+        "latitude": "49.8333",
+        "longitude": "24",
+        "part_of": "7011664",
+        "permalink": "http://www.getty.edu/vow/TGNFullDisplay?find=&place=&nation=&subjectid=7003382",
+        "place_label": "Lemberg",
+        "place_type_label": "inhabited places",
+        "place_type_preferred": "http://vocab.getty.edu/aat/300008347",
+        "tgn_id": "7003382"
+    },
+    "7003456": {
+        "latitude": "51.166667",
+        "longitude": "4.833333",
+        "part_of": "7018236",
+        "permalink": "http://www.getty.edu/vow/TGNFullDisplay?find=&place=&nation=&subjectid=7003456",
+        "place_label": "Antwerpen",
+        "place_type_label": "provinces",
+        "place_type_preferred": "http://vocab.getty.edu/aat/300000774",
+        "tgn_id": "7003456"
+    },
+    "7003457": {
+        "latitude": "51",
+        "longitude": "3.75",
+        "part_of": "7018236",
+        "permalink": "http://www.getty.edu/vow/TGNFullDisplay?find=&place=&nation=&subjectid=7003457",
+        "place_label": "East Flanders",
+        "place_type_label": "provinces",
+        "place_type_preferred": "http://vocab.getty.edu/aat/300000774",
+        "tgn_id": "7003457"
+    },
+    "7003458": {
+        "latitude": "51",
+        "longitude": "3",
+        "part_of": "7018236",
+        "permalink": "http://www.getty.edu/vow/TGNFullDisplay?find=&place=&nation=&subjectid=7003458",
+        "place_label": "West Flanders",
+        "place_type_label": "provinces",
+        "place_type_preferred": "http://vocab.getty.edu/aat/300000774",
+        "tgn_id": "7003458"
+    },
+    "7003474": {
+        "latitude": "55.7167",
+        "longitude": "12.5667",
+        "part_of": "7594005",
+        "permalink": "http://www.getty.edu/vow/TGNFullDisplay?find=&place=&nation=&subjectid=7003474",
+        "place_label": "Copenhagen",
+        "place_type_label": "inhabited places",
+        "place_type_preferred": "http://vocab.getty.edu/aat/300008347",
+        "tgn_id": "7003474"
+    },
+    "7003514": {
+        "latitude": "49.75",
+        "longitude": "6.1667",
+        "part_of": "1000003",
+        "permalink": "http://www.getty.edu/vow/TGNFullDisplay?find=&place=&nation=&subjectid=7003514",
+        "place_label": "Luxembourg",
+        "place_type_label": "nations",
+        "place_type_preferred": "http://vocab.getty.edu/aat/300128207",
+        "tgn_id": "7003514"
+    },
+    "7003619": {
+        "latitude": "52",
+        "longitude": "5.8333",
+        "part_of": "7016845",
+        "permalink": "http://www.getty.edu/vow/TGNFullDisplay?find=&place=&nation=&subjectid=7003619",
+        "place_label": "Gelderland",
+        "place_type_label": "provinces",
+        "place_type_preferred": "http://vocab.getty.edu/aat/300000774",
+        "tgn_id": "7003619"
+    },
+    "7003624": {
+        "latitude": "51.666",
+        "longitude": "5",
+        "part_of": "7016845",
+        "permalink": "http://www.getty.edu/vow/TGNFullDisplay?find=&place=&nation=&subjectid=7003624",
+        "place_label": "North Brabant",
+        "place_type_label": "provinces",
+        "place_type_preferred": "http://vocab.getty.edu/aat/300000774",
+        "tgn_id": "7003624"
+    },
+    "7003626": {
+        "latitude": "52.4167",
+        "longitude": "6.5",
+        "part_of": "7016845",
+        "permalink": "http://www.getty.edu/vow/TGNFullDisplay?find=&place=&nation=&subjectid=7003626",
+        "place_label": "Overijssel",
+        "place_type_label": "provinces",
+        "place_type_preferred": "http://vocab.getty.edu/aat/300000774",
+        "tgn_id": "7003626"
+    },
+    "7003627": {
+        "latitude": "52",
+        "longitude": "5.25",
+        "part_of": "7016845",
+        "permalink": "http://www.getty.edu/vow/TGNFullDisplay?find=&place=&nation=&subjectid=7003627",
+        "place_label": "Utrecht",
+        "place_type_label": "provinces",
+        "place_type_preferred": "http://vocab.getty.edu/aat/300000774",
+        "tgn_id": "7003627"
+    },
+    "7003632": {
+        "latitude": "52",
+        "longitude": "4.666",
+        "part_of": "7016845",
+        "permalink": "http://www.getty.edu/vow/TGNFullDisplay?find=&place=&nation=&subjectid=7003632",
+        "place_label": "South Holland",
+        "place_type_label": "provinces",
+        "place_type_preferred": "http://vocab.getty.edu/aat/300000774",
+        "tgn_id": "7003632"
+    },
+    "7003669": {
+        "latitude": "48.5",
+        "longitude": "11.5",
+        "part_of": "7000084",
+        "permalink": "http://www.getty.edu/vow/TGNFullDisplay?find=&place=&nation=&subjectid=7003669",
+        "place_label": "Bavaria",
+        "place_type_label": "states (political divisions)",
+        "place_type_preferred": "http://vocab.getty.edu/aat/300000776",
+        "tgn_id": "7003669"
+    },
+    "7003670": {
+        "latitude": "52.5",
+        "longitude": "13.4167",
+        "part_of": "7000084",
+        "permalink": "http://www.getty.edu/vow/TGNFullDisplay?find=&place=&nation=&subjectid=7003670",
+        "place_label": "Berlin",
+        "place_type_label": "states (political divisions)",
+        "place_type_preferred": "http://vocab.getty.edu/aat/300000776",
+        "tgn_id": "7003670"
+    },
+    "7003672": {
+        "latitude": "53.05",
+        "longitude": "8.8333",
+        "part_of": "7000084",
+        "permalink": "http://www.getty.edu/vow/TGNFullDisplay?find=&place=&nation=&subjectid=7003672",
+        "place_label": "Bremen",
+        "place_type_label": "states (political divisions)",
+        "place_type_preferred": "http://vocab.getty.edu/aat/300000776",
+        "tgn_id": "7003672"
+    },
+    "7003673": {
+        "latitude": "53.5833",
+        "longitude": "10",
+        "part_of": "7000084",
+        "permalink": "http://www.getty.edu/vow/TGNFullDisplay?find=&place=&nation=&subjectid=7003673",
+        "place_label": "Hamburg",
+        "place_type_label": "states (political divisions)",
+        "place_type_preferred": "http://vocab.getty.edu/aat/300000776",
+        "tgn_id": "7003673"
+    },
+    "7003676": {
+        "latitude": "52.6667",
+        "longitude": "9",
+        "part_of": "7000084",
+        "permalink": "http://www.getty.edu/vow/TGNFullDisplay?find=&place=&nation=&subjectid=7003676",
+        "place_label": "Lower Saxony",
+        "place_type_label": "states (political divisions)",
+        "place_type_preferred": "http://vocab.getty.edu/aat/300000776",
+        "tgn_id": "7003676"
+    },
+    "7003677": {
+        "latitude": "51",
+        "longitude": "7",
+        "part_of": "7000084",
+        "permalink": "http://www.getty.edu/vow/TGNFullDisplay?find=&place=&nation=&subjectid=7003677",
+        "place_label": "North Rhine-Westphalia",
+        "place_type_label": "states (political divisions)",
+        "place_type_preferred": "http://vocab.getty.edu/aat/300000776",
+        "tgn_id": "7003677"
+    },
+    "7003678": {
+        "latitude": "50.5",
+        "longitude": "9.25",
+        "part_of": "7000084",
+        "permalink": "http://www.getty.edu/vow/TGNFullDisplay?find=&place=&nation=&subjectid=7003678",
+        "place_label": "Hesse",
+        "place_type_label": "states (political divisions)",
+        "place_type_preferred": "http://vocab.getty.edu/aat/300000776",
+        "tgn_id": "7003678"
+    },
+    "7003682": {
+        "latitude": "50",
+        "longitude": "7",
+        "part_of": "7000084",
+        "permalink": "http://www.getty.edu/vow/TGNFullDisplay?find=&place=&nation=&subjectid=7003682",
+        "place_label": "Rhineland Palatinate",
+        "place_type_label": "states (political divisions)",
+        "place_type_preferred": "http://vocab.getty.edu/aat/300000776",
+        "tgn_id": "7003682"
+    },
+    "7003685": {
+        "latitude": "52.8333",
+        "longitude": "10",
+        "part_of": "7000084",
+        "permalink": "http://www.getty.edu/vow/TGNFullDisplay?find=&place=&nation=&subjectid=7003685",
+        "place_label": "Saxony",
+        "place_type_label": "states (political divisions)",
+        "place_type_preferred": "http://vocab.getty.edu/aat/300000776",
+        "tgn_id": "7003685"
+    },
+    "7003689": {
+        "latitude": "51",
+        "longitude": "11",
+        "part_of": "7000084",
+        "permalink": "http://www.getty.edu/vow/TGNFullDisplay?find=&place=&nation=&subjectid=7003689",
+        "place_label": "Thuringia",
+        "place_type_label": "states (political divisions)",
+        "place_type_preferred": "http://vocab.getty.edu/aat/300000776",
+        "tgn_id": "7003689"
+    },
+    "7003692": {
+        "latitude": "47.95",
+        "longitude": "9.9",
+        "part_of": "7000084",
+        "permalink": "http://www.getty.edu/vow/TGNFullDisplay?find=&place=&nation=&subjectid=7003692",
+        "place_label": "Baden-Württemberg",
+        "place_type_label": "states (political divisions)",
+        "place_type_preferred": "http://vocab.getty.edu/aat/300000776",
+        "tgn_id": "7003692"
+    },
+    "7003712": {
+        "latitude": "52.516667",
+        "longitude": "13.4",
+        "part_of": "7003670",
+        "permalink": "http://www.getty.edu/vow/TGNFullDisplay?find=&place=&nation=&subjectid=7003712",
+        "place_label": "Berlin",
+        "place_type_label": "inhabited places",
+        "place_type_preferred": "http://vocab.getty.edu/aat/300008347",
+        "tgn_id": "7003712"
+    },
+    "7003746": {
+        "latitude": "46.196732",
+        "longitude": "6.110443",
+        "part_of": "7011731",
+        "permalink": "http://www.getty.edu/vow/TGNFullDisplay?find=&place=&nation=&subjectid=7003746",
+        "place_label": "Geneva",
+        "place_type_label": "cantons (administrative bodies)",
+        "place_type_preferred": "http://vocab.getty.edu/aat/300000769",
+        "tgn_id": "7003746"
+    },
+    "7003765": {
+        "latitude": "47.416667",
+        "longitude": "8.666667",
+        "part_of": "7011731",
+        "permalink": "http://www.getty.edu/vow/TGNFullDisplay?find=&place=&nation=&subjectid=7003765",
+        "place_label": "Canton de Zurich",
+        "place_type_label": "cantons (administrative bodies)",
+        "place_type_preferred": "http://vocab.getty.edu/aat/300000769",
+        "tgn_id": "7003765"
+    },
+    "7003777": {
+        "latitude": "59.5",
+        "longitude": "18",
+        "part_of": "1000097",
+        "permalink": "http://www.getty.edu/vow/TGNFullDisplay?find=&place=&nation=&subjectid=7003777",
+        "place_label": "Stockholm",
+        "place_type_label": "counties",
+        "place_type_preferred": "http://vocab.getty.edu/aat/300000771",
+        "tgn_id": "7003777"
+    },
+    "7004333": {
+        "latitude": "48.15",
+        "longitude": "11.583333",
+        "part_of": "7003669",
+        "permalink": "http://www.getty.edu/vow/TGNFullDisplay?find=&place=&nation=&subjectid=7004333",
+        "place_label": "Munich",
+        "place_type_label": "inhabited places",
+        "place_type_preferred": "http://vocab.getty.edu/aat/300008347",
+        "tgn_id": "7004333"
+    },
+    "7004424": {
+        "latitude": "49.004722",
+        "longitude": "8.385833",
+        "part_of": "7003692",
+        "permalink": "http://www.getty.edu/vow/TGNFullDisplay?find=&place=&nation=&subjectid=7004424",
+        "place_label": "Karlsruhe",
+        "place_type_label": "inhabited places",
+        "place_type_preferred": "http://vocab.getty.edu/aat/300008347",
+        "tgn_id": "7004424"
+    },
+    "7004428": {
+        "latitude": "49.870556",
+        "longitude": "8.649444",
+        "part_of": "7003678",
+        "permalink": "http://www.getty.edu/vow/TGNFullDisplay?find=&place=&nation=&subjectid=7004428",
+        "place_label": "Darmstadt",
+        "place_type_label": "inhabited places",
+        "place_type_preferred": "http://vocab.getty.edu/aat/300008347",
+        "tgn_id": "7004428"
+    },
+    "7004431": {
+        "latitude": "51.316667",
+        "longitude": "9.5",
+        "part_of": "7003678",
+        "permalink": "http://www.getty.edu/vow/TGNFullDisplay?find=&place=&nation=&subjectid=7004431",
+        "place_label": "Kassel",
+        "place_type_label": "inhabited places",
+        "place_type_preferred": "http://vocab.getty.edu/aat/300008347",
+        "tgn_id": "7004431"
+    },
+    "7004433": {
+        "latitude": "53.633333",
+        "longitude": "11.383333",
+        "part_of": "7000094",
+        "permalink": "http://www.getty.edu/vow/TGNFullDisplay?find=&place=&nation=&subjectid=7004433",
+        "place_label": "Schwerin",
+        "place_type_label": "inhabited places",
+        "place_type_preferred": "http://vocab.getty.edu/aat/300008347",
+        "tgn_id": "7004433"
+    },
+    "7004434": {
+        "latitude": "52.266667",
+        "longitude": "10.533333",
+        "part_of": "7003676",
+        "permalink": "http://www.getty.edu/vow/TGNFullDisplay?find=&place=&nation=&subjectid=7004434",
+        "place_label": "Brunswick",
+        "place_type_label": "inhabited places",
+        "place_type_preferred": "http://vocab.getty.edu/aat/300008347",
+        "tgn_id": "7004434"
+    },
+    "7004446": {
+        "latitude": "50.933333",
+        "longitude": "6.95",
+        "part_of": "7003677",
+        "permalink": "http://www.getty.edu/vow/TGNFullDisplay?find=&place=&nation=&subjectid=7004446",
+        "place_label": "Cologne",
+        "place_type_label": "inhabited places",
+        "place_type_preferred": "http://vocab.getty.edu/aat/300008347",
+        "tgn_id": "7004446"
+    },
+    "7004449": {
+        "latitude": "50",
+        "longitude": "8.271111",
+        "part_of": "7003682",
+        "permalink": "http://www.getty.edu/vow/TGNFullDisplay?find=&place=&nation=&subjectid=7004449",
+        "place_label": "Mainz",
+        "place_type_label": "inhabited places",
+        "place_type_preferred": "http://vocab.getty.edu/aat/300008347",
+        "tgn_id": "7004449"
+    },
+    "7004455": {
+        "latitude": "51.05",
+        "longitude": "13.75",
+        "part_of": "7003685",
+        "permalink": "http://www.getty.edu/vow/TGNFullDisplay?find=&place=&nation=&subjectid=7004455",
+        "place_label": "Dresden",
+        "place_type_label": "inhabited places",
+        "place_type_preferred": "http://vocab.getty.edu/aat/300008347",
+        "tgn_id": "7004455"
+    },
+    "7004463": {
+        "latitude": "52.4",
+        "longitude": "13.066667",
+        "part_of": "7000096",
+        "permalink": "http://www.getty.edu/vow/TGNFullDisplay?find=&place=&nation=&subjectid=7004463",
+        "place_label": "Potsdam",
+        "place_type_label": "inhabited places",
+        "place_type_preferred": "http://vocab.getty.edu/aat/300008347",
+        "tgn_id": "7004463"
+    },
+    "7004799": {
+        "latitude": "50.770833",
+        "longitude": "6.105278",
+        "part_of": "7003677",
+        "permalink": "http://www.getty.edu/vow/TGNFullDisplay?find=&place=&nation=&subjectid=7004799",
+        "place_label": "Aachen",
+        "place_type_label": "inhabited places",
+        "place_type_preferred": "http://vocab.getty.edu/aat/300008347",
+        "tgn_id": "7004799"
+    },
+    "7005090": {
+        "latitude": "50.733333",
+        "longitude": "7.1",
+        "part_of": "7003677",
+        "permalink": "http://www.getty.edu/vow/TGNFullDisplay?find=&place=&nation=&subjectid=7005090",
+        "place_label": "Bonn",
+        "place_type_label": "inhabited places",
+        "place_type_preferred": "http://vocab.getty.edu/aat/300008347",
+        "tgn_id": "7005090"
+    },
+    "7005108": {
+        "latitude": "49.635556",
+        "longitude": "8.359722",
+        "part_of": "7003682",
+        "permalink": "http://www.getty.edu/vow/TGNFullDisplay?find=&place=&nation=&subjectid=7005108",
+        "place_label": "Worms",
+        "place_type_label": "inhabited places",
+        "place_type_preferred": "http://vocab.getty.edu/aat/300008347",
+        "tgn_id": "7005108"
+    },
+    "7005286": {
+        "latitude": "53.083333",
+        "longitude": "8.8",
+        "part_of": "7003672",
+        "permalink": "http://www.getty.edu/vow/TGNFullDisplay?find=&place=&nation=&subjectid=7005286",
+        "place_label": "Bremen",
+        "place_type_label": "inhabited places",
+        "place_type_preferred": "http://vocab.getty.edu/aat/300008347",
+        "tgn_id": "7005286"
+    },
+    "7005289": {
+        "latitude": "53.55",
+        "longitude": "10",
+        "part_of": "7003673",
+        "permalink": "http://www.getty.edu/vow/TGNFullDisplay?find=&place=&nation=&subjectid=7005289",
+        "place_label": "Hambourg",
+        "place_type_label": "inhabited places",
+        "place_type_preferred": "http://vocab.getty.edu/aat/300008347",
+        "tgn_id": "7005289"
+    },
+    "7005293": {
+        "latitude": "50.116667",
+        "longitude": "8.683333",
+        "part_of": "7003678",
+        "permalink": "http://www.getty.edu/vow/TGNFullDisplay?find=&place=&nation=&subjectid=7005293",
+        "place_label": "Frankfurt am Main",
+        "place_type_label": "inhabited places",
+        "place_type_preferred": "http://vocab.getty.edu/aat/300008347",
+        "tgn_id": "7005293"
+    },
+    "7005685": {
+        "latitude": "60",
+        "longitude": "-100",
+        "part_of": "1000001",
+        "permalink": "http://www.getty.edu/vow/TGNFullDisplay?find=&place=&nation=&subjectid=7005685",
+        "place_label": "Canada",
+        "place_type_label": "nations",
+        "place_type_preferred": "http://vocab.getty.edu/aat/300128207",
+        "tgn_id": "7005685"
+    },
+    "7005804": {
+        "latitude": "54",
+        "longitude": "-72",
+        "part_of": "7005685",
+        "permalink": "http://www.getty.edu/vow/TGNFullDisplay?find=&place=&nation=&subjectid=7005804",
+        "place_label": "Quebec",
+        "place_type_label": "provinces",
+        "place_type_preferred": "http://vocab.getty.edu/aat/300000774",
+        "tgn_id": "7005804"
+    },
+    "7005903": {
+        "latitude": "45.466667",
+        "longitude": "9.2",
+        "part_of": "7003150",
+        "permalink": "http://www.getty.edu/vow/TGNFullDisplay?find=&place=&nation=&subjectid=7005903",
+        "place_label": "Milan",
+        "place_type_label": "inhabited places",
+        "place_type_preferred": "http://vocab.getty.edu/aat/300008347",
+        "tgn_id": "7005903"
+    },
+    "7005938": {
+        "latitude": "50.95",
+        "longitude": "10.716667",
+        "part_of": "7003689",
+        "permalink": "http://www.getty.edu/vow/TGNFullDisplay?find=&place=&nation=&subjectid=7005938",
+        "place_label": "Gotha",
+        "place_type_label": "inhabited places",
+        "place_type_preferred": "http://vocab.getty.edu/aat/300008347",
+        "tgn_id": "7005938"
+    },
+    "7006254": {
+        "latitude": "49.6167",
+        "longitude": "6.1333",
+        "part_of": "8711802",
+        "permalink": "http://www.getty.edu/vow/TGNFullDisplay?find=&place=&nation=&subjectid=7006254",
+        "place_label": "Luxembourg",
+        "place_type_label": "inhabited places",
+        "place_type_preferred": "http://vocab.getty.edu/aat/300008347",
+        "tgn_id": "7006254"
+    },
+    "7006278": {
+        "latitude": "47",
+        "longitude": "20",
+        "part_of": "1000003",
+        "permalink": "http://www.getty.edu/vow/TGNFullDisplay?find=&place=&nation=&subjectid=7006278",
+        "place_label": "Hungary",
+        "place_type_label": "nations",
+        "place_type_preferred": "http://vocab.getty.edu/aat/300128207",
+        "tgn_id": "7006278"
+    },
+    "7006280": {
+        "latitude": "47.5",
+        "longitude": "19.05",
+        "part_of": "7017994",
+        "permalink": "http://www.getty.edu/vow/TGNFullDisplay?find=&place=&nation=&subjectid=7006280",
+        "place_label": "Budapest",
+        "place_type_label": "inhabited places",
+        "place_type_preferred": "http://vocab.getty.edu/aat/300008347",
+        "tgn_id": "7006280"
+    },
+    "7006366": {
+        "latitude": "52",
+        "longitude": "20",
+        "part_of": "1000003",
+        "permalink": "http://www.getty.edu/vow/TGNFullDisplay?find=&place=&nation=&subjectid=7006366",
+        "place_label": "Poland",
+        "place_type_label": "nations",
+        "place_type_preferred": "http://vocab.getty.edu/aat/300128207",
+        "tgn_id": "7006366"
+    },
+    "7006464": {
+        "latitude": "50.1",
+        "longitude": "14.4333",
+        "part_of": "7593923",
+        "permalink": "http://www.getty.edu/vow/TGNFullDisplay?find=&place=&nation=&subjectid=7006464",
+        "place_label": "Prague",
+        "place_type_label": "inhabited places",
+        "place_type_preferred": "http://vocab.getty.edu/aat/300008347",
+        "tgn_id": "7006464"
+    },
+    "7006484": {
+        "latitude": "56.95",
+        "longitude": "24.1",
+        "part_of": "7668535",
+        "permalink": "http://www.getty.edu/vow/TGNFullDisplay?find=&place=&nation=&subjectid=7006484",
+        "place_label": "Riga",
+        "place_type_label": "inhabited places",
+        "place_type_preferred": "http://vocab.getty.edu/aat/300008347",
+        "tgn_id": "7006484"
+    },
+    "7006541": {
+        "latitude": "57",
+        "longitude": "25",
+        "part_of": "1000003",
+        "permalink": "http://www.getty.edu/vow/TGNFullDisplay?find=&place=&nation=&subjectid=7006541",
+        "place_label": "Latvia",
+        "place_type_label": "nations",
+        "place_type_preferred": "http://vocab.getty.edu/aat/300128207",
+        "tgn_id": "7006541"
+    },
+    "7006660": {
+        "latitude": "49",
+        "longitude": "32",
+        "part_of": "1000003",
+        "permalink": "http://www.getty.edu/vow/TGNFullDisplay?find=&place=&nation=&subjectid=7006660",
+        "place_label": "Ukraine",
+        "place_type_label": "nations",
+        "place_type_preferred": "http://vocab.getty.edu/aat/300128207",
+        "tgn_id": "7006660"
+    },
+    "7006792": {
+        "latitude": "51.916667",
+        "longitude": "4.5",
+        "part_of": "7003632",
+        "permalink": "http://www.getty.edu/vow/TGNFullDisplay?find=&place=&nation=&subjectid=7006792",
+        "place_label": "Rotterdam",
+        "place_type_label": "inhabited places",
+        "place_type_preferred": "http://vocab.getty.edu/aat/300008347",
+        "tgn_id": "7006792"
+    },
+    "7006798": {
+        "latitude": "51.8",
+        "longitude": "4.666667",
+        "part_of": "1006976",
+        "permalink": "http://www.getty.edu/vow/TGNFullDisplay?find=&place=&nation=&subjectid=7006798",
+        "place_label": "Dordrecht",
+        "place_type_label": "inhabited places",
+        "place_type_preferred": "http://vocab.getty.edu/aat/300008347",
+        "tgn_id": "7006798"
+    },
+    "7006804": {
+        "latitude": "52",
+        "longitude": "4.366667",
+        "part_of": "7003632",
+        "permalink": "http://www.getty.edu/vow/TGNFullDisplay?find=&place=&nation=&subjectid=7006804",
+        "place_label": "Delft",
+        "place_type_label": "inhabited places",
+        "place_type_preferred": "http://vocab.getty.edu/aat/300008347",
+        "tgn_id": "7006804"
+    },
+    "7006805": {
+        "latitude": "52.016667",
+        "longitude": "4.7",
+        "part_of": "7003632",
+        "permalink": "http://www.getty.edu/vow/TGNFullDisplay?find=&place=&nation=&subjectid=7006805",
+        "place_label": "Gouda",
+        "place_type_label": "inhabited places",
+        "place_type_preferred": "http://vocab.getty.edu/aat/300008347",
+        "tgn_id": "7006805"
+    },
+    "7006809": {
+        "latitude": "52.15",
+        "longitude": "4.5",
+        "part_of": "7003632",
+        "permalink": "http://www.getty.edu/vow/TGNFullDisplay?find=&place=&nation=&subjectid=7006809",
+        "place_label": "Leyden",
+        "place_type_label": "inhabited places",
+        "place_type_preferred": "http://vocab.getty.edu/aat/300008347",
+        "tgn_id": "7006809"
+    },
+    "7006810": {
+        "latitude": "52.083333",
+        "longitude": "4.3",
+        "part_of": "7003632",
+        "permalink": "http://www.getty.edu/vow/TGNFullDisplay?find=&place=&nation=&subjectid=7006810",
+        "place_label": "Hague, The",
+        "place_type_label": "inhabited places",
+        "place_type_preferred": "http://vocab.getty.edu/aat/300008347",
+        "tgn_id": "7006810"
+    },
+    "7006842": {
+        "latitude": "51.45",
+        "longitude": "5.466667",
+        "part_of": "7003624",
+        "permalink": "http://www.getty.edu/vow/TGNFullDisplay?find=&place=&nation=&subjectid=7006842",
+        "place_label": "Eindhoven",
+        "place_type_label": "inhabited places",
+        "place_type_preferred": "http://vocab.getty.edu/aat/300008347",
+        "tgn_id": "7006842"
+    },
+    "7006876": {
+        "latitude": "51.983333",
+        "longitude": "5.916667",
+        "part_of": "7003619",
+        "permalink": "http://www.getty.edu/vow/TGNFullDisplay?find=&place=&nation=&subjectid=7006876",
+        "place_label": "Arnhem",
+        "place_type_label": "inhabited places",
+        "place_type_preferred": "http://vocab.getty.edu/aat/300008347",
+        "tgn_id": "7006876"
+    },
+    "7006898": {
+        "latitude": "52.216667",
+        "longitude": "5.966667",
+        "part_of": "7003619",
+        "permalink": "http://www.getty.edu/vow/TGNFullDisplay?find=&place=&nation=&subjectid=7006898",
+        "place_label": "Apeldoorn",
+        "place_type_label": "inhabited places",
+        "place_type_preferred": "http://vocab.getty.edu/aat/300008347",
+        "tgn_id": "7006898"
+    },
+    "7006926": {
+        "latitude": "52.083333",
+        "longitude": "5.133333",
+        "part_of": "7003627",
+        "permalink": "http://www.getty.edu/vow/TGNFullDisplay?find=&place=&nation=&subjectid=7006926",
+        "place_label": "Utrecht",
+        "place_type_label": "inhabited places",
+        "place_type_preferred": "http://vocab.getty.edu/aat/300008347",
+        "tgn_id": "7006926"
+    },
+    "7006951": {
+        "latitude": "52.583",
+        "longitude": "4.916",
+        "part_of": "7016845",
+        "permalink": "http://www.getty.edu/vow/TGNFullDisplay?find=&place=&nation=&subjectid=7006951",
+        "place_label": "North Holland",
+        "place_type_label": "provinces",
+        "place_type_preferred": "http://vocab.getty.edu/aat/300000774",
+        "tgn_id": "7006951"
+    },
+    "7006952": {
+        "latitude": "52.35",
+        "longitude": "4.916667",
+        "part_of": "7006951",
+        "permalink": "http://www.getty.edu/vow/TGNFullDisplay?find=&place=&nation=&subjectid=7006952",
+        "place_label": "Amsterdam",
+        "place_type_label": "inhabited places",
+        "place_type_preferred": "http://vocab.getty.edu/aat/300008347",
+        "tgn_id": "7006952"
+    },
+    "7007048": {
+        "latitude": "52.366667",
+        "longitude": "4.65",
+        "part_of": "7006951",
+        "permalink": "http://www.getty.edu/vow/TGNFullDisplay?find=&place=&nation=&subjectid=7007048",
+        "place_label": "Haarlem",
+        "place_type_label": "inhabited places",
+        "place_type_preferred": "http://vocab.getty.edu/aat/300008347",
+        "tgn_id": "7007048"
+    },
+    "7007057": {
+        "latitude": "52.633333",
+        "longitude": "4.75",
+        "part_of": "7006951",
+        "permalink": "http://www.getty.edu/vow/TGNFullDisplay?find=&place=&nation=&subjectid=7007057",
+        "place_label": "Alkmaar",
+        "place_type_label": "inhabited places",
+        "place_type_preferred": "http://vocab.getty.edu/aat/300008347",
+        "tgn_id": "7007057"
+    },
+    "7007157": {
+        "latitude": "37",
+        "longitude": "-119",
+        "part_of": "7012149",
+        "permalink": "http://www.getty.edu/vow/TGNFullDisplay?find=&place=&nation=&subjectid=7007157",
+        "place_label": "California",
+        "place_type_label": "states (political divisions)",
+        "place_type_preferred": "http://vocab.getty.edu/aat/300000776",
+        "tgn_id": "7007157"
+    },
+    "7007159": {
+        "latitude": "41.8333",
+        "longitude": "-72.8333",
+        "part_of": "7012149",
+        "permalink": "http://www.getty.edu/vow/TGNFullDisplay?find=&place=&nation=&subjectid=7007159",
+        "place_label": "Connecticut",
+        "place_type_label": "states (political divisions)",
+        "place_type_preferred": "http://vocab.getty.edu/aat/300000776",
+        "tgn_id": "7007159"
+    },
+    "7007240": {
+        "latitude": "28",
+        "longitude": "-82",
+        "part_of": "7012149",
+        "permalink": "http://www.getty.edu/vow/TGNFullDisplay?find=&place=&nation=&subjectid=7007240",
+        "place_label": "Florida",
+        "place_type_label": "states (political divisions)",
+        "place_type_preferred": "http://vocab.getty.edu/aat/300000776",
+        "tgn_id": "7007240"
+    },
+    "7007251": {
+        "latitude": "40",
+        "longitude": "-89",
+        "part_of": "7012149",
+        "permalink": "http://www.getty.edu/vow/TGNFullDisplay?find=&place=&nation=&subjectid=7007251",
+        "place_label": "Illinois",
+        "place_type_label": "states (political divisions)",
+        "place_type_preferred": "http://vocab.getty.edu/aat/300000776",
+        "tgn_id": "7007251"
+    },
+    "7007254": {
+        "latitude": "38.6667",
+        "longitude": "-98",
+        "part_of": "7012149",
+        "permalink": "http://www.getty.edu/vow/TGNFullDisplay?find=&place=&nation=&subjectid=7007254",
+        "place_label": "Kansas",
+        "place_type_label": "states (political divisions)",
+        "place_type_preferred": "http://vocab.getty.edu/aat/300000776",
+        "tgn_id": "7007254"
+    },
+    "7007255": {
+        "latitude": "37",
+        "longitude": "-85",
+        "part_of": "7012149",
+        "permalink": "http://www.getty.edu/vow/TGNFullDisplay?find=&place=&nation=&subjectid=7007255",
+        "place_label": "Kentucky",
+        "place_type_label": "states (political divisions)",
+        "place_type_preferred": "http://vocab.getty.edu/aat/300000776",
+        "tgn_id": "7007255"
+    },
+    "7007269": {
+        "latitude": "47.558395",
+        "longitude": "7.573271",
+        "part_of": "7007667",
+        "permalink": "http://www.getty.edu/vow/TGNFullDisplay?find=&place=&nation=&subjectid=7007269",
+        "place_label": "Basel",
+        "place_type_label": "inhabited places",
+        "place_type_preferred": "http://vocab.getty.edu/aat/300008347",
+        "tgn_id": "7007269"
+    },
+    "7007279": {
+        "latitude": "46.195602",
+        "longitude": "6.148113",
+        "part_of": "7003746",
+        "permalink": "http://www.getty.edu/vow/TGNFullDisplay?find=&place=&nation=&subjectid=7007279",
+        "place_label": "Geneva",
+        "place_type_label": "inhabited places",
+        "place_type_preferred": "http://vocab.getty.edu/aat/300008347",
+        "tgn_id": "7007279"
+    },
+    "7007301": {
+        "latitude": "47.50564",
+        "longitude": "8.72413",
+        "part_of": "7003765",
+        "permalink": "http://www.getty.edu/vow/TGNFullDisplay?find=&place=&nation=&subjectid=7007301",
+        "place_label": "Winterthur",
+        "place_type_label": "inhabited places",
+        "place_type_preferred": "http://vocab.getty.edu/aat/300008347",
+        "tgn_id": "7007301"
+    },
+    "7007302": {
+        "latitude": "47.366667",
+        "longitude": "8.55",
+        "part_of": "7003765",
+        "permalink": "http://www.getty.edu/vow/TGNFullDisplay?find=&place=&nation=&subjectid=7007302",
+        "place_label": "Zurich",
+        "place_type_label": "inhabited places",
+        "place_type_preferred": "http://vocab.getty.edu/aat/300008347",
+        "tgn_id": "7007302"
+    },
+    "7007517": {
+        "latitude": "42.25",
+        "longitude": "-71.8333",
+        "part_of": "7012149",
+        "permalink": "http://www.getty.edu/vow/TGNFullDisplay?find=&place=&nation=&subjectid=7007517",
+        "place_label": "Massachusetts",
+        "place_type_label": "states (political divisions)",
+        "place_type_preferred": "http://vocab.getty.edu/aat/300000776",
+        "tgn_id": "7007517"
+    },
+    "7007520": {
+        "latitude": "44",
+        "longitude": "-85",
+        "part_of": "7012149",
+        "permalink": "http://www.getty.edu/vow/TGNFullDisplay?find=&place=&nation=&subjectid=7007520",
+        "place_label": "Michigan",
+        "place_type_label": "states (political divisions)",
+        "place_type_preferred": "http://vocab.getty.edu/aat/300000776",
+        "tgn_id": "7007520"
+    },
+    "7007521": {
+        "latitude": "46",
+        "longitude": "-94",
+        "part_of": "7012149",
+        "permalink": "http://www.getty.edu/vow/TGNFullDisplay?find=&place=&nation=&subjectid=7007521",
+        "place_label": "Minnesota",
+        "place_type_label": "states (political divisions)",
+        "place_type_preferred": "http://vocab.getty.edu/aat/300000776",
+        "tgn_id": "7007521"
+    },
+    "7007523": {
+        "latitude": "38",
+        "longitude": "-98",
+        "part_of": "7012149",
+        "permalink": "http://www.getty.edu/vow/TGNFullDisplay?find=&place=&nation=&subjectid=7007523",
+        "place_label": "Missouri",
+        "place_type_label": "states (political divisions)",
+        "place_type_preferred": "http://vocab.getty.edu/aat/300000776",
+        "tgn_id": "7007523"
+    },
+    "7007567": {
+        "latitude": "40.7",
+        "longitude": "-74",
+        "part_of": "7007568",
+        "permalink": "http://www.getty.edu/vow/TGNFullDisplay?find=&place=&nation=&subjectid=7007567",
+        "place_label": "New York",
+        "place_type_label": "inhabited places",
+        "place_type_preferred": "http://vocab.getty.edu/aat/300008347",
+        "tgn_id": "7007567"
+    },
+    "7007568": {
+        "latitude": "43",
+        "longitude": "-75",
+        "part_of": "7012149",
+        "permalink": "http://www.getty.edu/vow/TGNFullDisplay?find=&place=&nation=&subjectid=7007568",
+        "place_label": "New York",
+        "place_type_label": "states (political divisions)",
+        "place_type_preferred": "http://vocab.getty.edu/aat/300000776",
+        "tgn_id": "7007568"
+    },
+    "7007601": {
+        "latitude": "51.1",
+        "longitude": "17",
+        "part_of": "7024123",
+        "permalink": "http://www.getty.edu/vow/TGNFullDisplay?find=&place=&nation=&subjectid=7007601",
+        "place_label": "Breslau",
+        "place_type_label": "inhabited places",
+        "place_type_preferred": "http://vocab.getty.edu/aat/300008347",
+        "tgn_id": "7007601"
+    },
+    "7007660": {
+        "latitude": "54.3667",
+        "longitude": "18.6833",
+        "part_of": "7024115",
+        "permalink": "http://www.getty.edu/vow/TGNFullDisplay?find=&place=&nation=&subjectid=7007660",
+        "place_label": "Danzig",
+        "place_type_label": "inhabited places",
+        "place_type_preferred": "http://vocab.getty.edu/aat/300008347",
+        "tgn_id": "7007660"
+    },
+    "7007667": {
+        "latitude": "47.566901",
+        "longitude": "7.615195",
+        "part_of": "7011731",
+        "permalink": "http://www.getty.edu/vow/TGNFullDisplay?find=&place=&nation=&subjectid=7007667",
+        "place_label": "Basle-Town",
+        "place_type_label": "cantons (administrative bodies)",
+        "place_type_preferred": "http://vocab.getty.edu/aat/300000769",
+        "tgn_id": "7007667"
+    },
+    "7007706": {
+        "latitude": "40",
+        "longitude": "-80.8333",
+        "part_of": "7012149",
+        "permalink": "http://www.getty.edu/vow/TGNFullDisplay?find=&place=&nation=&subjectid=7007706",
+        "place_label": "Ohio",
+        "place_type_label": "states (political divisions)",
+        "place_type_preferred": "http://vocab.getty.edu/aat/300000776",
+        "tgn_id": "7007706"
+    },
+    "7007710": {
+        "latitude": "40.8333",
+        "longitude": "-76",
+        "part_of": "7012149",
+        "permalink": "http://www.getty.edu/vow/TGNFullDisplay?find=&place=&nation=&subjectid=7007710",
+        "place_label": "Pennsylvania",
+        "place_type_label": "states (political divisions)",
+        "place_type_preferred": "http://vocab.getty.edu/aat/300000776",
+        "tgn_id": "7007710"
+    },
+    "7007756": {
+        "latitude": "52.4167",
+        "longitude": "16.8833",
+        "part_of": "7024119",
+        "permalink": "http://www.getty.edu/vow/TGNFullDisplay?find=&place=&nation=&subjectid=7007756",
+        "place_label": "Poznań",
+        "place_type_label": "inhabited places",
+        "place_type_preferred": "http://vocab.getty.edu/aat/300008347",
+        "tgn_id": "7007756"
+    },
+    "7007826": {
+        "latitude": "30",
+        "longitude": "-100",
+        "part_of": "7012149",
+        "permalink": "http://www.getty.edu/vow/TGNFullDisplay?find=&place=&nation=&subjectid=7007826",
+        "place_label": "Texas",
+        "place_type_label": "states (political divisions)",
+        "place_type_preferred": "http://vocab.getty.edu/aat/300000776",
+        "tgn_id": "7007826"
+    },
+    "7007828": {
+        "latitude": "44",
+        "longitude": "-73",
+        "part_of": "7012149",
+        "permalink": "http://www.getty.edu/vow/TGNFullDisplay?find=&place=&nation=&subjectid=7007828",
+        "place_label": "Vermont",
+        "place_type_label": "states (political divisions)",
+        "place_type_preferred": "http://vocab.getty.edu/aat/300000776",
+        "tgn_id": "7007828"
+    },
+    "7007833": {
+        "latitude": "52.25",
+        "longitude": "21",
+        "part_of": "7024122",
+        "permalink": "http://www.getty.edu/vow/TGNFullDisplay?find=&place=&nation=&subjectid=7007833",
+        "place_label": "Warsaw",
+        "place_type_label": "inhabited places",
+        "place_type_preferred": "http://vocab.getty.edu/aat/300008347",
+        "tgn_id": "7007833"
+    },
+    "7007856": {
+        "latitude": "51.213886",
+        "longitude": "4.401514",
+        "part_of": "7003456",
+        "permalink": "http://www.getty.edu/vow/TGNFullDisplay?find=&place=&nation=&subjectid=7007856",
+        "place_label": "Antwerp",
+        "place_type_label": "inhabited places",
+        "place_type_preferred": "http://vocab.getty.edu/aat/300008347",
+        "tgn_id": "7007856"
+    },
+    "7007867": {
+        "latitude": "51.210933",
+        "longitude": "3.225971",
+        "part_of": "7003458",
+        "permalink": "http://www.getty.edu/vow/TGNFullDisplay?find=&place=&nation=&subjectid=7007867",
+        "place_label": "Bruges",
+        "place_type_label": "inhabited places",
+        "place_type_preferred": "http://vocab.getty.edu/aat/300008347",
+        "tgn_id": "7007867"
+    },
+    "7007868": {
+        "latitude": "50.833333",
+        "longitude": "4.333333",
+        "part_of": "7018237",
+        "permalink": "http://www.getty.edu/vow/TGNFullDisplay?find=&place=&nation=&subjectid=7007868",
+        "place_label": "Brussels",
+        "place_type_label": "inhabited places",
+        "place_type_preferred": "http://vocab.getty.edu/aat/300008347",
+        "tgn_id": "7007868"
+    },
+    "7007887": {
+        "latitude": "51.05",
+        "longitude": "3.716667",
+        "part_of": "7003457",
+        "permalink": "http://www.getty.edu/vow/TGNFullDisplay?find=&place=&nation=&subjectid=7007887",
+        "place_label": "Ghent",
+        "place_type_label": "inhabited places",
+        "place_type_preferred": "http://vocab.getty.edu/aat/300008347",
+        "tgn_id": "7007887"
+    },
+    "7007919": {
+        "latitude": "37",
+        "longitude": "-80",
+        "part_of": "7012149",
+        "permalink": "http://www.getty.edu/vow/TGNFullDisplay?find=&place=&nation=&subjectid=7007919",
+        "place_label": "Virginia",
+        "place_type_label": "states (political divisions)",
+        "place_type_preferred": "http://vocab.getty.edu/aat/300000776",
+        "tgn_id": "7007919"
+    },
+    "7007922": {
+        "latitude": "45",
+        "longitude": "-90",
+        "part_of": "7012149",
+        "permalink": "http://www.getty.edu/vow/TGNFullDisplay?find=&place=&nation=&subjectid=7007922",
+        "place_label": "Wisconsin",
+        "place_type_label": "states (political divisions)",
+        "place_type_preferred": "http://vocab.getty.edu/aat/300000776",
+        "tgn_id": "7007922"
+    },
+    "7007949": {
+        "latitude": "50.883333",
+        "longitude": "4.7",
+        "part_of": "7018239",
+        "permalink": "http://www.getty.edu/vow/TGNFullDisplay?find=&place=&nation=&subjectid=7007949",
+        "place_label": "Louvain",
+        "place_type_label": "inhabited places",
+        "place_type_preferred": "http://vocab.getty.edu/aat/300008347",
+        "tgn_id": "7007949"
+    },
+    "7008038": {
+        "latitude": "48.866667",
+        "longitude": "2.333333",
+        "part_of": "7002883",
+        "permalink": "http://www.getty.edu/vow/TGNFullDisplay?find=&place=&nation=&subjectid=7008038",
+        "place_label": "Paris",
+        "place_type_label": "inhabited places",
+        "place_type_preferred": "http://vocab.getty.edu/aat/300008347",
+        "tgn_id": "7008038"
+    },
+    "7008072": {
+        "latitude": "55.5833",
+        "longitude": "-3.25",
+        "part_of": "7002444",
+        "permalink": "http://www.getty.edu/vow/TGNFullDisplay?find=&place=&nation=&subjectid=7008072",
+        "place_label": "Scottish Borders",
+        "place_type_label": "unitary authorities",
+        "place_type_preferred": "http://vocab.getty.edu/aat/300387071",
+        "tgn_id": "7008072"
+    },
+    "7008104": {
+        "latitude": "51.75",
+        "longitude": "-0.75",
+        "part_of": "7002445",
+        "permalink": "http://www.getty.edu/vow/TGNFullDisplay?find=&place=&nation=&subjectid=7008104",
+        "place_label": "Buckinghamshire",
+        "place_type_label": "counties",
+        "place_type_preferred": "http://vocab.getty.edu/aat/300000771",
+        "tgn_id": "7008104"
+    },
+    "7008132": {
+        "latitude": "51.833333",
+        "longitude": "-2.166667",
+        "part_of": "7002445",
+        "permalink": "http://www.getty.edu/vow/TGNFullDisplay?find=&place=&nation=&subjectid=7008132",
+        "place_label": "Gloucestershire",
+        "place_type_label": "counties",
+        "place_type_preferred": "http://vocab.getty.edu/aat/300000771",
+        "tgn_id": "7008132"
+    },
+    "7008133": {
+        "latitude": "",
+        "longitude": "",
+        "part_of": "7002445",
+        "permalink": "http://www.getty.edu/vow/TGNFullDisplay?find=&place=&nation=&subjectid=7008133",
+        "place_label": "Sussex",
+        "place_type_label": "general regions",
+        "place_type_preferred": "http://vocab.getty.edu/aat/300387346",
+        "tgn_id": "7008133"
+    },
+    "7008136": {
+        "latitude": "51.5",
+        "longitude": "-0.1667",
+        "part_of": "7002445",
+        "permalink": "http://www.getty.edu/vow/TGNFullDisplay?find=&place=&nation=&subjectid=7008136",
+        "place_label": "Greater London",
+        "place_type_label": "metropolitan areas",
+        "place_type_preferred": "http://vocab.getty.edu/aat/300132618",
+        "tgn_id": "7008136"
+    },
+    "7008157": {
+        "latitude": "53.166667",
+        "longitude": "-0.25",
+        "part_of": "7002445",
+        "permalink": "http://www.getty.edu/vow/TGNFullDisplay?find=&place=&nation=&subjectid=7008157",
+        "place_label": "Lincolnshire",
+        "place_type_label": "counties",
+        "place_type_preferred": "http://vocab.getty.edu/aat/300000771",
+        "tgn_id": "7008157"
+    },
+    "7008168": {
+        "latitude": "51.75",
+        "longitude": "-1.1667",
+        "part_of": "7002445",
+        "permalink": "http://www.getty.edu/vow/TGNFullDisplay?find=&place=&nation=&subjectid=7008168",
+        "place_label": "Oxfordshire",
+        "place_type_label": "counties",
+        "place_type_preferred": "http://vocab.getty.edu/aat/300000771",
+        "tgn_id": "7008168"
+    },
+    "7008180": {
+        "latitude": "51.25",
+        "longitude": "-1.916667",
+        "part_of": "7002445",
+        "permalink": "http://www.getty.edu/vow/TGNFullDisplay?find=&place=&nation=&subjectid=7008180",
+        "place_label": "Wiltshire",
+        "place_type_label": "counties",
+        "place_type_preferred": "http://vocab.getty.edu/aat/300000771",
+        "tgn_id": "7008180"
+    },
+    "7008224": {
+        "latitude": "47.316667",
+        "longitude": "5.016667",
+        "part_of": "8711849",
+        "permalink": "http://www.getty.edu/vow/TGNFullDisplay?find=&place=&nation=&subjectid=7008224",
+        "place_label": "Dijon",
+        "place_type_label": "inhabited places",
+        "place_type_preferred": "http://vocab.getty.edu/aat/300008347",
+        "tgn_id": "7008224"
+    },
+    "7008244": {
+        "latitude": "46.314074",
+        "longitude": "4.828233",
+        "part_of": "8711849",
+        "permalink": "http://www.getty.edu/vow/TGNFullDisplay?find=&place=&nation=&subjectid=7008244",
+        "place_label": "Mâcon",
+        "place_type_label": "inhabited places",
+        "place_type_preferred": "http://vocab.getty.edu/aat/300008347",
+        "tgn_id": "7008244"
+    },
+    "7008258": {
+        "latitude": "48.390756",
+        "longitude": "-4.486165",
+        "part_of": "7012216",
+        "permalink": "http://www.getty.edu/vow/TGNFullDisplay?find=&place=&nation=&subjectid=7008258",
+        "place_label": "Brest",
+        "place_type_label": "inhabited places",
+        "place_type_preferred": "http://vocab.getty.edu/aat/300008347",
+        "tgn_id": "7008258"
+    },
+    "7008412": {
+        "latitude": "48.69211",
+        "longitude": "6.187756",
+        "part_of": "8711850",
+        "permalink": "http://www.getty.edu/vow/TGNFullDisplay?find=&place=&nation=&subjectid=7008412",
+        "place_label": "Nancy",
+        "place_type_label": "inhabited places",
+        "place_type_preferred": "http://vocab.getty.edu/aat/300008347",
+        "tgn_id": "7008412"
+    },
+    "7008461": {
+        "latitude": "50.632971",
+        "longitude": "3.058585",
+        "part_of": "8711851",
+        "permalink": "http://www.getty.edu/vow/TGNFullDisplay?find=&place=&nation=&subjectid=7008461",
+        "place_label": "Lille",
+        "place_type_label": "inhabited places",
+        "place_type_preferred": "http://vocab.getty.edu/aat/300008347",
+        "tgn_id": "7008461"
+    },
+    "7008480": {
+        "latitude": "47.473806",
+        "longitude": "-0.54774",
+        "part_of": "7002893",
+        "permalink": "http://www.getty.edu/vow/TGNFullDisplay?find=&place=&nation=&subjectid=7008480",
+        "place_label": "Angers",
+        "place_type_label": "inhabited places",
+        "place_type_preferred": "http://vocab.getty.edu/aat/300008347",
+        "tgn_id": "7008480"
+    },
+    "7008591": {
+        "latitude": "54",
+        "longitude": "-4.5",
+        "part_of": "1000003",
+        "permalink": "http://www.getty.edu/vow/TGNFullDisplay?find=&place=&nation=&subjectid=7008591",
+        "place_label": "United Kingdom",
+        "place_type_label": "nations",
+        "place_type_preferred": "http://vocab.getty.edu/aat/300128207",
+        "tgn_id": "7008591"
+    },
+    "7008772": {
+        "latitude": "45.748457",
+        "longitude": "4.846711",
+        "part_of": "8711848",
+        "permalink": "http://www.getty.edu/vow/TGNFullDisplay?find=&place=&nation=&subjectid=7008772",
+        "place_label": "Lyons",
+        "place_type_label": "inhabited places",
+        "place_type_preferred": "http://vocab.getty.edu/aat/300008347",
+        "tgn_id": "7008772"
+    },
+    "7009369": {
+        "latitude": "43.61092",
+        "longitude": "3.87723",
+        "part_of": "8711854",
+        "permalink": "http://www.getty.edu/vow/TGNFullDisplay?find=&place=&nation=&subjectid=7009369",
+        "place_label": "Montpellier",
+        "place_type_label": "inhabited places",
+        "place_type_preferred": "http://vocab.getty.edu/aat/300008347",
+        "tgn_id": "7009369"
+    },
+    "7009409": {
+        "latitude": "48.492744",
+        "longitude": "3.502217",
+        "part_of": "8711850",
+        "permalink": "http://www.getty.edu/vow/TGNFullDisplay?find=&place=&nation=&subjectid=7009409",
+        "place_label": "Nogent-sur-Seine",
+        "place_type_label": "inhabited places",
+        "place_type_preferred": "http://vocab.getty.edu/aat/300008347",
+        "tgn_id": "7009409"
+    },
+    "7009861": {
+        "latitude": "59.3333",
+        "longitude": "18.0833",
+        "part_of": "7003777",
+        "permalink": "http://www.getty.edu/vow/TGNFullDisplay?find=&place=&nation=&subjectid=7009861",
+        "place_label": "Stockholm",
+        "place_type_label": "inhabited places",
+        "place_type_preferred": "http://vocab.getty.edu/aat/300008347",
+        "tgn_id": "7009861"
+    },
+    "7009880": {
+        "latitude": "60.1333",
+        "longitude": "25",
+        "part_of": "7594395",
+        "permalink": "http://www.getty.edu/vow/TGNFullDisplay?find=&place=&nation=&subjectid=7009880",
+        "place_label": "Helsinki",
+        "place_type_label": "inhabited places",
+        "place_type_preferred": "http://vocab.getty.edu/aat/300008347",
+        "tgn_id": "7009880"
+    },
+    "7009954": {
+        "latitude": "57.7167",
+        "longitude": "11.9667",
+        "part_of": "7024620",
+        "permalink": "http://www.getty.edu/vow/TGNFullDisplay?find=&place=&nation=&subjectid=7009954",
+        "place_label": "Gothenburg",
+        "place_type_label": "inhabited places",
+        "place_type_preferred": "http://vocab.getty.edu/aat/300008347",
+        "tgn_id": "7009954"
+    },
+    "7010034": {
+        "latitude": "54.533333",
+        "longitude": "-1.566667",
+        "part_of": "7026514",
+        "permalink": "http://www.getty.edu/vow/TGNFullDisplay?find=&place=&nation=&subjectid=7010034",
+        "place_label": "Darlington",
+        "place_type_label": "inhabited places",
+        "place_type_preferred": "http://vocab.getty.edu/aat/300008347",
+        "tgn_id": "7010034"
+    },
+    "7010042": {
+        "latitude": "51.05",
+        "longitude": "2.366667",
+        "part_of": "8711851",
+        "permalink": "http://www.getty.edu/vow/TGNFullDisplay?find=&place=&nation=&subjectid=7010042",
+        "place_label": "Dunkirk",
+        "place_type_label": "inhabited places",
+        "place_type_preferred": "http://vocab.getty.edu/aat/300008347",
+        "tgn_id": "7010042"
+    },
+    "7010273": {
+        "latitude": "59.8833",
+        "longitude": "30.25",
+        "part_of": "7018216",
+        "permalink": "http://www.getty.edu/vow/TGNFullDisplay?find=&place=&nation=&subjectid=7010273",
+        "place_label": "Saint Petersburg",
+        "place_type_label": "inhabited places",
+        "place_type_preferred": "http://vocab.getty.edu/aat/300008347",
+        "tgn_id": "7010273"
+    },
+    "7010370": {
+        "latitude": "53.716667",
+        "longitude": "-0.333333",
+        "part_of": "7019056",
+        "permalink": "http://www.getty.edu/vow/TGNFullDisplay?find=&place=&nation=&subjectid=7010370",
+        "place_label": "Kingston-Upon-Hull",
+        "place_type_label": "inhabited places",
+        "place_type_preferred": "http://vocab.getty.edu/aat/300008347",
+        "tgn_id": "7010370"
+    },
+    "7010413": {
+        "latitude": "40.4",
+        "longitude": "-3.683333",
+        "part_of": "7010420",
+        "permalink": "http://www.getty.edu/vow/TGNFullDisplay?find=&place=&nation=&subjectid=7010413",
+        "place_label": "Madrid",
+        "place_type_label": "inhabited places",
+        "place_type_preferred": "http://vocab.getty.edu/aat/300008347",
+        "tgn_id": "7010413"
+    },
+    "7010420": {
+        "latitude": "40.4",
+        "longitude": "-3.6833",
+        "part_of": "7002795",
+        "permalink": "http://www.getty.edu/vow/TGNFullDisplay?find=&place=&nation=&subjectid=7010420",
+        "place_label": "Madrid",
+        "place_type_label": "provinces",
+        "place_type_preferred": "http://vocab.getty.edu/aat/300000774",
+        "tgn_id": "7010420"
+    },
+    "7010477": {
+        "latitude": "53.5",
+        "longitude": "-2.216667",
+        "part_of": "7027477",
+        "permalink": "http://www.getty.edu/vow/TGNFullDisplay?find=&place=&nation=&subjectid=7010477",
+        "place_label": "Manchester",
+        "place_type_label": "inhabited places",
+        "place_type_preferred": "http://vocab.getty.edu/aat/300008347",
+        "tgn_id": "7010477"
+    },
+    "7010588": {
+        "latitude": "49.9",
+        "longitude": "2.3",
+        "part_of": "8711851",
+        "permalink": "http://www.getty.edu/vow/TGNFullDisplay?find=&place=&nation=&subjectid=7010588",
+        "place_label": "Amiens",
+        "place_type_label": "inhabited places",
+        "place_type_preferred": "http://vocab.getty.edu/aat/300008347",
+        "tgn_id": "7010588"
+    },
+    "7010743": {
+        "latitude": "52.65",
+        "longitude": "-0.483333",
+        "part_of": "7008157",
+        "permalink": "http://www.getty.edu/vow/TGNFullDisplay?find=&place=&nation=&subjectid=7010743",
+        "place_label": "Stamford",
+        "place_type_label": "inhabited places",
+        "place_type_preferred": "http://vocab.getty.edu/aat/300008347",
+        "tgn_id": "7010743"
+    },
+    "7010786": {
+        "latitude": "43.528695",
+        "longitude": "5.448791",
+        "part_of": "7002895",
+        "permalink": "http://www.getty.edu/vow/TGNFullDisplay?find=&place=&nation=&subjectid=7010786",
+        "place_label": "Aix-en-Provence",
+        "place_type_label": "inhabited places",
+        "place_type_preferred": "http://vocab.getty.edu/aat/300008347",
+        "tgn_id": "7010786"
+    },
+    "7010874": {
+        "latitude": "52.2",
+        "longitude": "0.116667",
+        "part_of": "7011980",
+        "permalink": "http://www.getty.edu/vow/TGNFullDisplay?find=&place=&nation=&subjectid=7010874",
+        "place_label": "Cambridge",
+        "place_type_label": "inhabited places",
+        "place_type_preferred": "http://vocab.getty.edu/aat/300008347",
+        "tgn_id": "7010874"
+    },
+    "7010955": {
+        "latitude": "52.466667",
+        "longitude": "-1.916667",
+        "part_of": "7019028",
+        "permalink": "http://www.getty.edu/vow/TGNFullDisplay?find=&place=&nation=&subjectid=7010955",
+        "place_label": "Birmingham",
+        "place_type_label": "inhabited places",
+        "place_type_preferred": "http://vocab.getty.edu/aat/300008347",
+        "tgn_id": "7010955"
+    },
+    "7011128": {
+        "latitude": "51.833333",
+        "longitude": "-2.25",
+        "part_of": "7008132",
+        "permalink": "http://www.getty.edu/vow/TGNFullDisplay?find=&place=&nation=&subjectid=7011128",
+        "place_label": "Gloucester",
+        "place_type_label": "inhabited places",
+        "place_type_preferred": "http://vocab.getty.edu/aat/300008347",
+        "tgn_id": "7011128"
+    },
+    "7011210": {
+        "latitude": "51.066667",
+        "longitude": "-1.783333",
+        "part_of": "7008180",
+        "permalink": "http://www.getty.edu/vow/TGNFullDisplay?find=&place=&nation=&subjectid=7011210",
+        "place_label": "Salisbury",
+        "place_type_label": "inhabited places",
+        "place_type_preferred": "http://vocab.getty.edu/aat/300008347",
+        "tgn_id": "7011210"
+    },
+    "7011215": {
+        "latitude": "51.430556",
+        "longitude": "-2.189722",
+        "part_of": "7008180",
+        "permalink": "http://www.getty.edu/vow/TGNFullDisplay?find=&place=&nation=&subjectid=7011215",
+        "place_label": "Corsham",
+        "place_type_label": "inhabited places",
+        "place_type_preferred": "http://vocab.getty.edu/aat/300008347",
+        "tgn_id": "7011215"
+    },
+    "7011219": {
+        "latitude": "51.438611",
+        "longitude": "-2.004167",
+        "part_of": "7008180",
+        "permalink": "http://www.getty.edu/vow/TGNFullDisplay?find=&place=&nation=&subjectid=7011219",
+        "place_label": "Calne",
+        "place_type_label": "inhabited places",
+        "place_type_preferred": "http://vocab.getty.edu/aat/300008347",
+        "tgn_id": "7011219"
+    },
+    "7011483": {
+        "latitude": "50.833333",
+        "longitude": "-0.15",
+        "part_of": "7026513",
+        "permalink": "http://www.getty.edu/vow/TGNFullDisplay?find=&place=&nation=&subjectid=7011483",
+        "place_label": "Brighton",
+        "place_type_label": "inhabited places",
+        "place_type_preferred": "http://vocab.getty.edu/aat/300008347",
+        "tgn_id": "7011483"
+    },
+    "7011664": {
+        "latitude": "49.75",
+        "longitude": "23.916",
+        "part_of": "7006660",
+        "permalink": "http://www.getty.edu/vow/TGNFullDisplay?find=&place=&nation=&subjectid=7011664",
+        "place_label": "L’vovskaya Oblast’",
+        "place_type_label": "oblasts",
+        "place_type_preferred": "http://vocab.getty.edu/aat/300235107",
+        "tgn_id": "7011664"
+    },
+    "7011731": {
+        "latitude": "47",
+        "longitude": "8",
+        "part_of": "1000003",
+        "permalink": "http://www.getty.edu/vow/TGNFullDisplay?find=&place=&nation=&subjectid=7011731",
+        "place_label": "Switzerland",
+        "place_type_label": "nations",
+        "place_type_preferred": "http://vocab.getty.edu/aat/300128207",
+        "tgn_id": "7011731"
+    },
+    "7011781": {
+        "latitude": "51.514248",
+        "longitude": "-0.093145",
+        "part_of": "7008136",
+        "permalink": "http://www.getty.edu/vow/TGNFullDisplay?find=&place=&nation=&subjectid=7011781",
+        "place_label": "London",
+        "place_type_label": "inhabited places",
+        "place_type_preferred": "http://vocab.getty.edu/aat/300008347",
+        "tgn_id": "7011781"
+    },
+    "7011931": {
+        "latitude": "51.75",
+        "longitude": "-1.25",
+        "part_of": "7008168",
+        "permalink": "http://www.getty.edu/vow/TGNFullDisplay?find=&place=&nation=&subjectid=7011931",
+        "place_label": "Oxford",
+        "place_type_label": "inhabited places",
+        "place_type_preferred": "http://vocab.getty.edu/aat/300008347",
+        "tgn_id": "7011931"
+    },
+    "7011980": {
+        "latitude": "52.5",
+        "longitude": "0.1667",
+        "part_of": "7002445",
+        "permalink": "http://www.getty.edu/vow/TGNFullDisplay?find=&place=&nation=&subjectid=7011980",
+        "place_label": "Cambridgeshire",
+        "place_type_label": "counties",
+        "place_type_preferred": "http://vocab.getty.edu/aat/300000771",
+        "tgn_id": "7011980"
+    },
+    "7012006": {
+        "latitude": "52.966667",
+        "longitude": "-1.166667",
+        "part_of": "7026519",
+        "permalink": "http://www.getty.edu/vow/TGNFullDisplay?find=&place=&nation=&subjectid=7012006",
+        "place_label": "Nottingham",
+        "place_type_label": "inhabited places",
+        "place_type_preferred": "http://vocab.getty.edu/aat/300008347",
+        "tgn_id": "7012006"
+    },
+    "7012034": {
+        "latitude": "52.6833",
+        "longitude": "-2.65",
+        "part_of": "7002445",
+        "permalink": "http://www.getty.edu/vow/TGNFullDisplay?find=&place=&nation=&subjectid=7012034",
+        "place_label": "Shropshire",
+        "place_type_label": "counties",
+        "place_type_preferred": "http://vocab.getty.edu/aat/300000771",
+        "tgn_id": "7012034"
+    },
+    "7012149": {
+        "latitude": "38",
+        "longitude": "-98",
+        "part_of": "1000001",
+        "permalink": "http://www.getty.edu/vow/TGNFullDisplay?find=&place=&nation=&subjectid=7012149",
+        "place_label": "United States",
+        "place_type_label": "nations",
+        "place_type_preferred": "http://vocab.getty.edu/aat/300128207",
+        "tgn_id": "7012149"
+    },
+    "7012216": {
+        "latitude": "48.166",
+        "longitude": "-2.833",
+        "part_of": "1000070",
+        "permalink": "http://www.getty.edu/vow/TGNFullDisplay?find=&place=&nation=&subjectid=7012216",
+        "place_label": "Brittany",
+        "place_type_label": "regions (administrative divisions)",
+        "place_type_preferred": "http://vocab.getty.edu/aat/300236112",
+        "tgn_id": "7012216"
+    },
+    "7012304": {
+        "latitude": "49.766667",
+        "longitude": "10.816667",
+        "part_of": "7003669",
+        "permalink": "http://www.getty.edu/vow/TGNFullDisplay?find=&place=&nation=&subjectid=7012304",
+        "place_label": "Pommersfelden",
+        "place_type_label": "inhabited places",
+        "place_type_preferred": "http://vocab.getty.edu/aat/300008347",
+        "tgn_id": "7012304"
+    },
+    "7012329": {
+        "latitude": "51.3333",
+        "longitude": "12.4167",
+        "part_of": "7003685",
+        "permalink": "http://www.getty.edu/vow/TGNFullDisplay?find=&place=&nation=&subjectid=7012329",
+        "place_label": "Leipzig",
+        "place_type_label": "inhabited places",
+        "place_type_preferred": "http://vocab.getty.edu/aat/300008347",
+        "tgn_id": "7012329"
+    },
+    "7012346": {
+        "latitude": "48.600381",
+        "longitude": "7.787355",
+        "part_of": "8711850",
+        "permalink": "http://www.getty.edu/vow/TGNFullDisplay?find=&place=&nation=&subjectid=7012346",
+        "place_label": "Strasbourg",
+        "place_type_label": "inhabited places",
+        "place_type_preferred": "http://vocab.getty.edu/aat/300008347",
+        "tgn_id": "7012346"
+    },
+    "7012571": {
+        "latitude": "52.033333",
+        "longitude": "8.9",
+        "part_of": "7003677",
+        "permalink": "http://www.getty.edu/vow/TGNFullDisplay?find=&place=&nation=&subjectid=7012571",
+        "place_label": "Lemgo",
+        "place_type_label": "inhabited places",
+        "place_type_preferred": "http://vocab.getty.edu/aat/300008347",
+        "tgn_id": "7012571"
+    },
+    "7012966": {
+        "latitude": "52.533333",
+        "longitude": "-2.416667",
+        "part_of": "7012034",
+        "permalink": "http://www.getty.edu/vow/TGNFullDisplay?find=&place=&nation=&subjectid=7012966",
+        "place_label": "Bridgnorth",
+        "place_type_label": "inhabited places",
+        "place_type_preferred": "http://vocab.getty.edu/aat/300008347",
+        "tgn_id": "7012966"
+    },
+    "7012974": {
+        "latitude": "55.75",
+        "longitude": "37.7",
+        "part_of": "7018215",
+        "permalink": "http://www.getty.edu/vow/TGNFullDisplay?find=&place=&nation=&subjectid=7012974",
+        "place_label": "Moscow",
+        "place_type_label": "inhabited places",
+        "place_type_preferred": "http://vocab.getty.edu/aat/300008347",
+        "tgn_id": "7012974"
+    },
+    "7013051": {
+        "latitude": "45.5",
+        "longitude": "-73.6",
+        "part_of": "7005804",
+        "permalink": "http://www.getty.edu/vow/TGNFullDisplay?find=&place=&nation=&subjectid=7013051",
+        "place_label": "Montreal",
+        "place_type_label": "inhabited places",
+        "place_type_preferred": "http://vocab.getty.edu/aat/300008347",
+        "tgn_id": "7013051"
+    },
+    "7013088": {
+        "latitude": "45.4167",
+        "longitude": "-75.7167",
+        "part_of": "7013154",
+        "permalink": "http://www.getty.edu/vow/TGNFullDisplay?find=&place=&nation=&subjectid=7013088",
+        "place_label": "Ottawa",
+        "place_type_label": "inhabited places",
+        "place_type_preferred": "http://vocab.getty.edu/aat/300008347",
+        "tgn_id": "7013088"
+    },
+    "7013154": {
+        "latitude": "50",
+        "longitude": "-86",
+        "part_of": "7005685",
+        "permalink": "http://www.getty.edu/vow/TGNFullDisplay?find=&place=&nation=&subjectid=7013154",
+        "place_label": "Ontario",
+        "place_type_label": "provinces",
+        "place_type_preferred": "http://vocab.getty.edu/aat/300000774",
+        "tgn_id": "7013154"
+    },
+    "7013260": {
+        "latitude": "52.366667",
+        "longitude": "9.716667",
+        "part_of": "7003676",
+        "permalink": "http://www.getty.edu/vow/TGNFullDisplay?find=&place=&nation=&subjectid=7013260",
+        "place_label": "Hanover",
+        "place_type_label": "inhabited places",
+        "place_type_preferred": "http://vocab.getty.edu/aat/300008347",
+        "tgn_id": "7013260"
+    },
+    "7013272": {
+        "latitude": "40.6167",
+        "longitude": "-80.1167",
+        "part_of": "7007710",
+        "permalink": "http://www.getty.edu/vow/TGNFullDisplay?find=&place=&nation=&subjectid=7013272",
+        "place_label": "Allegheny",
+        "place_type_label": "counties",
+        "place_type_preferred": "http://vocab.getty.edu/aat/300000771",
+        "tgn_id": "7013272"
+    },
+    "7013284": {
+        "latitude": "43.7",
+        "longitude": "-79.4167",
+        "part_of": "7013154",
+        "permalink": "http://www.getty.edu/vow/TGNFullDisplay?find=&place=&nation=&subjectid=7013284",
+        "place_label": "Toronto",
+        "place_type_label": "inhabited places",
+        "place_type_preferred": "http://vocab.getty.edu/aat/300008347",
+        "tgn_id": "7013284"
+    },
+    "7013388": {
+        "latitude": "42.3333",
+        "longitude": "-73.25",
+        "part_of": "7007517",
+        "permalink": "http://www.getty.edu/vow/TGNFullDisplay?find=&place=&nation=&subjectid=7013388",
+        "place_label": "Berkshire",
+        "place_type_label": "counties",
+        "place_type_preferred": "http://vocab.getty.edu/aat/300000771",
+        "tgn_id": "7013388"
+    },
+    "7013445": {
+        "latitude": "42.35",
+        "longitude": "-71.05",
+        "part_of": "1002923",
+        "permalink": "http://www.getty.edu/vow/TGNFullDisplay?find=&place=&nation=&subjectid=7013445",
+        "place_label": "Boston",
+        "place_type_label": "inhabited places",
+        "place_type_preferred": "http://vocab.getty.edu/aat/300008347",
+        "tgn_id": "7013445"
+    },
+    "7013484": {
+        "latitude": "44.4667",
+        "longitude": "-73.2",
+        "part_of": "2002132",
+        "permalink": "http://www.getty.edu/vow/TGNFullDisplay?find=&place=&nation=&subjectid=7013484",
+        "place_label": "Burlington",
+        "place_type_label": "inhabited places",
+        "place_type_preferred": "http://vocab.getty.edu/aat/300008347",
+        "tgn_id": "7013484"
+    },
+    "7013527": {
+        "latitude": "42.3667",
+        "longitude": "-71.1",
+        "part_of": "1002665",
+        "permalink": "http://www.getty.edu/vow/TGNFullDisplay?find=&place=&nation=&subjectid=7013527",
+        "place_label": "Cambridge",
+        "place_type_label": "inhabited places",
+        "place_type_preferred": "http://vocab.getty.edu/aat/300008347",
+        "tgn_id": "7013527"
+    },
+    "7013547": {
+        "latitude": "42.3167",
+        "longitude": "-83.0333",
+        "part_of": "1003005",
+        "permalink": "http://www.getty.edu/vow/TGNFullDisplay?find=&place=&nation=&subjectid=7013547",
+        "place_label": "Detroit",
+        "place_type_label": "inhabited places",
+        "place_type_preferred": "http://vocab.getty.edu/aat/300008347",
+        "tgn_id": "7013547"
+    },
+    "7013596": {
+        "latitude": "41.85",
+        "longitude": "-87.65",
+        "part_of": "7013649",
+        "permalink": "http://www.getty.edu/vow/TGNFullDisplay?find=&place=&nation=&subjectid=7013596",
+        "place_label": "Chicago",
+        "place_type_label": "inhabited places",
+        "place_type_preferred": "http://vocab.getty.edu/aat/300008347",
+        "tgn_id": "7013596"
+    },
+    "7013604": {
+        "latitude": "39.15",
+        "longitude": "-84.45",
+        "part_of": "1002441",
+        "permalink": "http://www.getty.edu/vow/TGNFullDisplay?find=&place=&nation=&subjectid=7013604",
+        "place_label": "Cincinnati",
+        "place_type_label": "inhabited places",
+        "place_type_preferred": "http://vocab.getty.edu/aat/300008347",
+        "tgn_id": "7013604"
+    },
+    "7013649": {
+        "latitude": "41.8333",
+        "longitude": "-87.85",
+        "part_of": "7007251",
+        "permalink": "http://www.getty.edu/vow/TGNFullDisplay?find=&place=&nation=&subjectid=7013649",
+        "place_label": "Cook",
+        "place_type_label": "counties",
+        "place_type_preferred": "http://vocab.getty.edu/aat/300000771",
+        "tgn_id": "7013649"
+    },
+    "7013695": {
+        "latitude": "41.75",
+        "longitude": "-72.6833",
+        "part_of": "1002461",
+        "permalink": "http://www.getty.edu/vow/TGNFullDisplay?find=&place=&nation=&subjectid=7013695",
+        "place_label": "Hartford",
+        "place_type_label": "inhabited places",
+        "place_type_preferred": "http://vocab.getty.edu/aat/300008347",
+        "tgn_id": "7013695"
+    },
+    "7013727": {
+        "latitude": "29.75",
+        "longitude": "-95.35",
+        "part_of": "1002456",
+        "permalink": "http://www.getty.edu/vow/TGNFullDisplay?find=&place=&nation=&subjectid=7013727",
+        "place_label": "Houston",
+        "place_type_label": "inhabited places",
+        "place_type_preferred": "http://vocab.getty.edu/aat/300008347",
+        "tgn_id": "7013727"
+    },
+    "7013792": {
+        "latitude": "50.183333",
+        "longitude": "8.5",
+        "part_of": "7003678",
+        "permalink": "http://www.getty.edu/vow/TGNFullDisplay?find=&place=&nation=&subjectid=7013792",
+        "place_label": "Kronberg",
+        "place_type_label": "inhabited places",
+        "place_type_preferred": "http://vocab.getty.edu/aat/300008347",
+        "tgn_id": "7013792"
+    },
+    "7013820": {
+        "latitude": "39.0833",
+        "longitude": "-94.5667",
+        "part_of": "2001208",
+        "permalink": "http://www.getty.edu/vow/TGNFullDisplay?find=&place=&nation=&subjectid=7013820",
+        "place_label": "Kansas City",
+        "place_type_label": "inhabited places",
+        "place_type_preferred": "http://vocab.getty.edu/aat/300008347",
+        "tgn_id": "7013820"
+    },
+    "7013875": {
+        "latitude": "38.9667",
+        "longitude": "-95.2333",
+        "part_of": "2000682",
+        "permalink": "http://www.getty.edu/vow/TGNFullDisplay?find=&place=&nation=&subjectid=7013875",
+        "place_label": "Lawrence",
+        "place_type_label": "inhabited places",
+        "place_type_preferred": "http://vocab.getty.edu/aat/300008347",
+        "tgn_id": "7013875"
+    },
+    "7013915": {
+        "latitude": "38.25",
+        "longitude": "-85.75",
+        "part_of": "1002516",
+        "permalink": "http://www.getty.edu/vow/TGNFullDisplay?find=&place=&nation=&subjectid=7013915",
+        "place_label": "Louisville",
+        "place_type_label": "inhabited places",
+        "place_type_preferred": "http://vocab.getty.edu/aat/300008347",
+        "tgn_id": "7013915"
+    },
+    "7013927": {
+        "latitude": "40.4333",
+        "longitude": "-79.9833",
+        "part_of": "7013272",
+        "permalink": "http://www.getty.edu/vow/TGNFullDisplay?find=&place=&nation=&subjectid=7013927",
+        "place_label": "Pittsburgh",
+        "place_type_label": "inhabited places",
+        "place_type_preferred": "http://vocab.getty.edu/aat/300008347",
+        "tgn_id": "7013927"
+    },
+    "7013962": {
+        "latitude": "38.8833",
+        "longitude": "-77.0333",
+        "part_of": "7015717",
+        "permalink": "http://www.getty.edu/vow/TGNFullDisplay?find=&place=&nation=&subjectid=7013962",
+        "place_label": "Washington",
+        "place_type_label": "inhabited places",
+        "place_type_preferred": "http://vocab.getty.edu/aat/300008347",
+        "tgn_id": "7013962"
+    },
+    "7013964": {
+        "latitude": "37.55",
+        "longitude": "-77.45",
+        "part_of": "7022211",
+        "permalink": "http://www.getty.edu/vow/TGNFullDisplay?find=&place=&nation=&subjectid=7013964",
+        "place_label": "Richmond",
+        "place_type_label": "inhabited places",
+        "place_type_preferred": "http://vocab.getty.edu/aat/300008347",
+        "tgn_id": "7013964"
+    },
+    "7014071": {
+        "latitude": "43.0333",
+        "longitude": "-87.9",
+        "part_of": "1002672",
+        "permalink": "http://www.getty.edu/vow/TGNFullDisplay?find=&place=&nation=&subjectid=7014071",
+        "place_label": "Milwaukee",
+        "place_type_label": "inhabited places",
+        "place_type_preferred": "http://vocab.getty.edu/aat/300008347",
+        "tgn_id": "7014071"
+    },
+    "7014080": {
+        "latitude": "44.9667",
+        "longitude": "-93.25",
+        "part_of": "2001025",
+        "permalink": "http://www.getty.edu/vow/TGNFullDisplay?find=&place=&nation=&subjectid=7014080",
+        "place_label": "Minneapolis",
+        "place_type_label": "inhabited places",
+        "place_type_preferred": "http://vocab.getty.edu/aat/300008347",
+        "tgn_id": "7014080"
+    },
+    "7014182": {
+        "latitude": "26.1333",
+        "longitude": "-81.7833",
+        "part_of": "1002289",
+        "permalink": "http://www.getty.edu/vow/TGNFullDisplay?find=&place=&nation=&subjectid=7014182",
+        "place_label": "Naples",
+        "place_type_label": "inhabited places",
+        "place_type_preferred": "http://vocab.getty.edu/aat/300008347",
+        "tgn_id": "7014182"
+    },
+    "7014210": {
+        "latitude": "41.3",
+        "longitude": "-72.9167",
+        "part_of": "1002712",
+        "permalink": "http://www.getty.edu/vow/TGNFullDisplay?find=&place=&nation=&subjectid=7014210",
+        "place_label": "New Haven",
+        "place_type_label": "inhabited places",
+        "place_type_preferred": "http://vocab.getty.edu/aat/300008347",
+        "tgn_id": "7014210"
+    },
+    "7014348": {
+        "latitude": "43.15",
+        "longitude": "-77.6",
+        "part_of": "1002681",
+        "permalink": "http://www.getty.edu/vow/TGNFullDisplay?find=&place=&nation=&subjectid=7014348",
+        "place_label": "Rochester",
+        "place_type_label": "inhabited places",
+        "place_type_preferred": "http://vocab.getty.edu/aat/300008347",
+        "tgn_id": "7014348"
+    },
+    "7014378": {
+        "latitude": "41.65",
+        "longitude": "-83.55",
+        "part_of": "1002611",
+        "permalink": "http://www.getty.edu/vow/TGNFullDisplay?find=&place=&nation=&subjectid=7014378",
+        "place_label": "Toledo",
+        "place_type_label": "inhabited places",
+        "place_type_preferred": "http://vocab.getty.edu/aat/300008347",
+        "tgn_id": "7014378"
+    },
+    "7014389": {
+        "latitude": "34.1667",
+        "longitude": "-118.15",
+        "part_of": "1002608",
+        "permalink": "http://www.getty.edu/vow/TGNFullDisplay?find=&place=&nation=&subjectid=7014389",
+        "place_label": "Pasadena",
+        "place_type_label": "inhabited places",
+        "place_type_preferred": "http://vocab.getty.edu/aat/300008347",
+        "tgn_id": "7014389"
+    },
+    "7014406": {
+        "latitude": "39.95",
+        "longitude": "-75.15",
+        "part_of": "1002782",
+        "permalink": "http://www.getty.edu/vow/TGNFullDisplay?find=&place=&nation=&subjectid=7014406",
+        "place_label": "Philadelphia",
+        "place_type_label": "inhabited places",
+        "place_type_preferred": "http://vocab.getty.edu/aat/300008347",
+        "tgn_id": "7014406"
+    },
+    "7014455": {
+        "latitude": "32.7",
+        "longitude": "-117.15",
+        "part_of": "1002858",
+        "permalink": "http://www.getty.edu/vow/TGNFullDisplay?find=&place=&nation=&subjectid=7014455",
+        "place_label": "San Diego",
+        "place_type_label": "inhabited places",
+        "place_type_preferred": "http://vocab.getty.edu/aat/300008347",
+        "tgn_id": "7014455"
+    },
+    "7014456": {
+        "latitude": "37.7667",
+        "longitude": "-122.4167",
+        "part_of": "1002859",
+        "permalink": "http://www.getty.edu/vow/TGNFullDisplay?find=&place=&nation=&subjectid=7014456",
+        "place_label": "San Francisco",
+        "place_type_label": "inhabited places",
+        "place_type_preferred": "http://vocab.getty.edu/aat/300008347",
+        "tgn_id": "7014456"
+    },
+    "7014483": {
+        "latitude": "27.3333",
+        "longitude": "-82.5167",
+        "part_of": "1002870",
+        "permalink": "http://www.getty.edu/vow/TGNFullDisplay?find=&place=&nation=&subjectid=7014483",
+        "place_label": "Sarasota",
+        "place_type_label": "inhabited places",
+        "place_type_preferred": "http://vocab.getty.edu/aat/300008347",
+        "tgn_id": "7014483"
+    },
+    "7014630": {
+        "latitude": "42.7",
+        "longitude": "-73.2",
+        "part_of": "7013388",
+        "permalink": "http://www.getty.edu/vow/TGNFullDisplay?find=&place=&nation=&subjectid=7014630",
+        "place_label": "Williamstown",
+        "place_type_label": "inhabited places",
+        "place_type_preferred": "http://vocab.getty.edu/aat/300008347",
+        "tgn_id": "7014630"
+    },
+    "7014647": {
+        "latitude": "42.25",
+        "longitude": "-71.8",
+        "part_of": "1003038",
+        "permalink": "http://www.getty.edu/vow/TGNFullDisplay?find=&place=&nation=&subjectid=7014647",
+        "place_label": "Worcester",
+        "place_type_label": "inhabited places",
+        "place_type_preferred": "http://vocab.getty.edu/aat/300008347",
+        "tgn_id": "7014647"
+    },
+    "7015717": {
+        "latitude": "38.8333",
+        "longitude": "-77",
+        "part_of": "7012149",
+        "permalink": "http://www.getty.edu/vow/TGNFullDisplay?find=&place=&nation=&subjectid=7015717",
+        "place_label": "District of Columbia",
+        "place_type_label": "national districts",
+        "place_type_preferred": "http://vocab.getty.edu/aat/300387081",
+        "tgn_id": "7015717"
+    },
+    "7015829": {
+        "latitude": "",
+        "longitude": "",
+        "part_of": "1002245",
+        "permalink": "http://www.getty.edu/vow/TGNFullDisplay?find=&place=&nation=&subjectid=7015829",
+        "place_label": "Saint Bonaventure",
+        "place_type_label": "inhabited places",
+        "place_type_preferred": "http://vocab.getty.edu/aat/300008347",
+        "tgn_id": "7015829"
+    },
+    "7016845": {
+        "latitude": "52.5",
+        "longitude": "5.75",
+        "part_of": "1000003",
+        "permalink": "http://www.getty.edu/vow/TGNFullDisplay?find=&place=&nation=&subjectid=7016845",
+        "place_label": "Netherlands",
+        "place_type_label": "nations",
+        "place_type_preferred": "http://vocab.getty.edu/aat/300128207",
+        "tgn_id": "7016845"
+    },
+    "7017283": {
+        "latitude": "55.833333",
+        "longitude": "-4.25",
+        "part_of": "7019097",
+        "permalink": "http://www.getty.edu/vow/TGNFullDisplay?find=&place=&nation=&subjectid=7017283",
+        "place_label": "Glasgow",
+        "place_type_label": "inhabited places",
+        "place_type_preferred": "http://vocab.getty.edu/aat/300008347",
+        "tgn_id": "7017283"
+    },
+    "7017584": {
+        "latitude": "-34",
+        "longitude": "20",
+        "part_of": "1000193",
+        "permalink": "http://www.getty.edu/vow/TGNFullDisplay?find=&place=&nation=&subjectid=7017584",
+        "place_label": "Western Cape",
+        "place_type_label": "provinces",
+        "place_type_preferred": "http://vocab.getty.edu/aat/300000774",
+        "tgn_id": "7017584"
+    },
+    "7017902": {
+        "latitude": "38.5667",
+        "longitude": "-121.4833",
+        "part_of": "1002841",
+        "permalink": "http://www.getty.edu/vow/TGNFullDisplay?find=&place=&nation=&subjectid=7017902",
+        "place_label": "Sacramento",
+        "place_type_label": "inhabited places",
+        "place_type_preferred": "http://vocab.getty.edu/aat/300008347",
+        "tgn_id": "7017902"
+    },
+    "7017994": {
+        "latitude": "47.5",
+        "longitude": "19.0833",
+        "part_of": "7006278",
+        "permalink": "http://www.getty.edu/vow/TGNFullDisplay?find=&place=&nation=&subjectid=7017994",
+        "place_label": "Budapest",
+        "place_type_label": "special cities",
+        "place_type_preferred": "http://vocab.getty.edu/aat/300387067",
+        "tgn_id": "7017994"
+    },
+    "7018215": {
+        "latitude": "55.75",
+        "longitude": "37.583333",
+        "part_of": "7002435",
+        "permalink": "http://www.getty.edu/vow/TGNFullDisplay?find=&place=&nation=&subjectid=7018215",
+        "place_label": "Moscow",
+        "place_type_label": "autonomous cities",
+        "place_type_preferred": "http://vocab.getty.edu/aat/300387069",
+        "tgn_id": "7018215"
+    },
+    "7018216": {
+        "latitude": "59.894444",
+        "longitude": "30.264167",
+        "part_of": "7002435",
+        "permalink": "http://www.getty.edu/vow/TGNFullDisplay?find=&place=&nation=&subjectid=7018216",
+        "place_label": "Saint Petersburg",
+        "place_type_label": "autonomous cities",
+        "place_type_preferred": "http://vocab.getty.edu/aat/300387069",
+        "tgn_id": "7018216"
+    },
+    "7018236": {
+        "latitude": "51",
+        "longitude": "4.5",
+        "part_of": "1000063",
+        "permalink": "http://www.getty.edu/vow/TGNFullDisplay?find=&place=&nation=&subjectid=7018236",
+        "place_label": "Flanders",
+        "place_type_label": "regions (administrative divisions)",
+        "place_type_preferred": "http://vocab.getty.edu/aat/300236112",
+        "tgn_id": "7018236"
+    },
+    "7018237": {
+        "latitude": "50.8333",
+        "longitude": "4.3333",
+        "part_of": "1000063",
+        "permalink": "http://www.getty.edu/vow/TGNFullDisplay?find=&place=&nation=&subjectid=7018237",
+        "place_label": "Brussels-Capital Region",
+        "place_type_label": "regions (administrative divisions)",
+        "place_type_preferred": "http://vocab.getty.edu/aat/300236112",
+        "tgn_id": "7018237"
+    },
+    "7018239": {
+        "latitude": "50.916667",
+        "longitude": "4.583333",
+        "part_of": "7018236",
+        "permalink": "http://www.getty.edu/vow/TGNFullDisplay?find=&place=&nation=&subjectid=7018239",
+        "place_label": "Vlaams-Brabant",
+        "place_type_label": "provinces",
+        "place_type_preferred": "http://vocab.getty.edu/aat/300000774",
+        "tgn_id": "7018239"
+    },
+    "7019028": {
+        "latitude": "52.5",
+        "longitude": "-1.9167",
+        "part_of": "7029506",
+        "permalink": "http://www.getty.edu/vow/TGNFullDisplay?find=&place=&nation=&subjectid=7019028",
+        "place_label": "Birmingham",
+        "place_type_label": "unitary authorities",
+        "place_type_preferred": "http://vocab.getty.edu/aat/300387071",
+        "tgn_id": "7019028"
+    },
+    "7019056": {
+        "latitude": "53.75",
+        "longitude": "-0.3333",
+        "part_of": "7002445",
+        "permalink": "http://www.getty.edu/vow/TGNFullDisplay?find=&place=&nation=&subjectid=7019056",
+        "place_label": "Kingston upon Hull",
+        "place_type_label": "unitary authorities",
+        "place_type_preferred": "http://vocab.getty.edu/aat/300387071",
+        "tgn_id": "7019056"
+    },
+    "7019097": {
+        "latitude": "55.9167",
+        "longitude": "-4.25",
+        "part_of": "7002444",
+        "permalink": "http://www.getty.edu/vow/TGNFullDisplay?find=&place=&nation=&subjectid=7019097",
+        "place_label": "Glasgow",
+        "place_type_label": "unitary authorities",
+        "place_type_preferred": "http://vocab.getty.edu/aat/300387071",
+        "tgn_id": "7019097"
+    },
+    "7019115": {
+        "latitude": "55.9167",
+        "longitude": "-3.0833",
+        "part_of": "7002444",
+        "permalink": "http://www.getty.edu/vow/TGNFullDisplay?find=&place=&nation=&subjectid=7019115",
+        "place_label": "East Lothian",
+        "place_type_label": "unitary authorities",
+        "place_type_preferred": "http://vocab.getty.edu/aat/300387071",
+        "tgn_id": "7019115"
+    },
+    "7022211": {
+        "latitude": "",
+        "longitude": "",
+        "part_of": "7007919",
+        "permalink": "http://www.getty.edu/vow/TGNFullDisplay?find=&place=&nation=&subjectid=7022211",
+        "place_label": "Richmond",
+        "place_type_label": "independent cities",
+        "place_type_preferred": "http://vocab.getty.edu/aat/300387068",
+        "tgn_id": "7022211"
+    },
+    "7023900": {
+        "latitude": "34.05",
+        "longitude": "-118.2333",
+        "part_of": "1002608",
+        "permalink": "http://www.getty.edu/vow/TGNFullDisplay?find=&place=&nation=&subjectid=7023900",
+        "place_label": "Los Angeles",
+        "place_type_label": "inhabited places",
+        "place_type_preferred": "http://vocab.getty.edu/aat/300008347",
+        "tgn_id": "7023900"
+    },
+    "7024115": {
+        "latitude": "54.25",
+        "longitude": "18",
+        "part_of": "7006366",
+        "permalink": "http://www.getty.edu/vow/TGNFullDisplay?find=&place=&nation=&subjectid=7024115",
+        "place_label": "Pomeranian Voivodeship",
+        "place_type_label": "voivodeships",
+        "place_type_preferred": "http://vocab.getty.edu/aat/300235112",
+        "tgn_id": "7024115"
+    },
+    "7024119": {
+        "latitude": "52.25",
+        "longitude": "17",
+        "part_of": "7006366",
+        "permalink": "http://www.getty.edu/vow/TGNFullDisplay?find=&place=&nation=&subjectid=7024119",
+        "place_label": "Greater Poland Voivodeship",
+        "place_type_label": "voivodeships",
+        "place_type_preferred": "http://vocab.getty.edu/aat/300235112",
+        "tgn_id": "7024119"
+    },
+    "7024122": {
+        "latitude": "52.25",
+        "longitude": "21",
+        "part_of": "7006366",
+        "permalink": "http://www.getty.edu/vow/TGNFullDisplay?find=&place=&nation=&subjectid=7024122",
+        "place_label": "Masovian Voivodeship",
+        "place_type_label": "voivodeships",
+        "place_type_preferred": "http://vocab.getty.edu/aat/300235112",
+        "tgn_id": "7024122"
+    },
+    "7024123": {
+        "latitude": "51",
+        "longitude": "16.5",
+        "part_of": "7006366",
+        "permalink": "http://www.getty.edu/vow/TGNFullDisplay?find=&place=&nation=&subjectid=7024123",
+        "place_label": "Lower Silesian Voivodeship",
+        "place_type_label": "voivodeships",
+        "place_type_preferred": "http://vocab.getty.edu/aat/300235112",
+        "tgn_id": "7024123"
+    },
+    "7024620": {
+        "latitude": "58",
+        "longitude": "13",
+        "part_of": "1000097",
+        "permalink": "http://www.getty.edu/vow/TGNFullDisplay?find=&place=&nation=&subjectid=7024620",
+        "place_label": "Västra Götaland",
+        "place_type_label": "counties",
+        "place_type_preferred": "http://vocab.getty.edu/aat/300000771",
+        "tgn_id": "7024620"
+    },
+    "7026513": {
+        "latitude": "50.833333",
+        "longitude": "-0.133333",
+        "part_of": "7002445",
+        "permalink": "http://www.getty.edu/vow/TGNFullDisplay?find=&place=&nation=&subjectid=7026513",
+        "place_label": "Brighton and Hove",
+        "place_type_label": "unitary authorities",
+        "place_type_preferred": "http://vocab.getty.edu/aat/300387071",
+        "tgn_id": "7026513"
+    },
+    "7026514": {
+        "latitude": "",
+        "longitude": "",
+        "part_of": "7002445",
+        "permalink": "http://www.getty.edu/vow/TGNFullDisplay?find=&place=&nation=&subjectid=7026514",
+        "place_label": "Darlington",
+        "place_type_label": "unitary authorities",
+        "place_type_preferred": "http://vocab.getty.edu/aat/300387071",
+        "tgn_id": "7026514"
+    },
+    "7026519": {
+        "latitude": "52.964593",
+        "longitude": "-1.178576",
+        "part_of": "7002445",
+        "permalink": "http://www.getty.edu/vow/TGNFullDisplay?find=&place=&nation=&subjectid=7026519",
+        "place_label": "Nottingham",
+        "place_type_label": "unitary authorities",
+        "place_type_preferred": "http://vocab.getty.edu/aat/300387071",
+        "tgn_id": "7026519"
+    },
+    "7026570": {
+        "latitude": "53.45",
+        "longitude": "-2.233333",
+        "part_of": "7002445",
+        "permalink": "http://www.getty.edu/vow/TGNFullDisplay?find=&place=&nation=&subjectid=7026570",
+        "place_label": "Manchester, City and Borough of",
+        "place_type_label": "counties",
+        "place_type_preferred": "http://vocab.getty.edu/aat/300000771",
+        "tgn_id": "7026570"
+    },
+    "7027477": {
+        "latitude": "53.4833",
+        "longitude": "-2.25",
+        "part_of": "7026570",
+        "permalink": "http://www.getty.edu/vow/TGNFullDisplay?find=&place=&nation=&subjectid=7027477",
+        "place_label": "Manchester",
+        "place_type_label": "urban districts",
+        "place_type_preferred": "http://vocab.getty.edu/aat/300387337",
+        "tgn_id": "7027477"
+    },
+    "7029392": {
+        "latitude": "",
+        "longitude": "",
+        "part_of": "",
+        "permalink": "http://www.getty.edu/vow/TGNFullDisplay?find=&place=&nation=&subjectid=7029392",
+        "place_label": "World",
+        "place_type_label": "facets (controlled vocabulary)",
+        "place_type_preferred": "http://vocab.getty.edu/aat/300386699",
+        "tgn_id": "7029392"
+    },
+    "7029506": {
+        "latitude": "52.5",
+        "longitude": "-1.966667",
+        "part_of": "7002445",
+        "permalink": "http://www.getty.edu/vow/TGNFullDisplay?find=&place=&nation=&subjectid=7029506",
+        "place_label": "West Midlands",
+        "place_type_label": "counties",
+        "place_type_preferred": "http://vocab.getty.edu/aat/300000771",
+        "tgn_id": "7029506"
+    },
+    "7452373": {
+        "latitude": "55.983333",
+        "longitude": "-2.866667",
+        "part_of": "7019115",
+        "permalink": "http://www.getty.edu/vow/TGNFullDisplay?find=&place=&nation=&subjectid=7452373",
+        "place_label": "Gosford House",
+        "place_type_label": "estates (commercial agricultural holding)",
+        "place_type_preferred": "http://vocab.getty.edu/aat/300387502",
+        "tgn_id": "7452373"
+    },
+    "7593747": {
+        "latitude": "53.363",
+        "longitude": "-6.093",
+        "part_of": "1000078",
+        "permalink": "http://www.getty.edu/vow/TGNFullDisplay?find=&place=&nation=&subjectid=7593747",
+        "place_label": "Dublin",
+        "place_type_label": "special cities",
+        "place_type_preferred": "http://vocab.getty.edu/aat/300387067",
+        "tgn_id": "7593747"
+    },
+    "7593923": {
+        "latitude": "50.083",
+        "longitude": "14.466",
+        "part_of": "1001780",
+        "permalink": "http://www.getty.edu/vow/TGNFullDisplay?find=&place=&nation=&subjectid=7593923",
+        "place_label": "Hlavní Město Praha",
+        "place_type_label": "special cities",
+        "place_type_preferred": "http://vocab.getty.edu/aat/300387067",
+        "tgn_id": "7593923"
+    },
+    "7594005": {
+        "latitude": "55.833",
+        "longitude": "12.333",
+        "part_of": "1000066",
+        "permalink": "http://www.getty.edu/vow/TGNFullDisplay?find=&place=&nation=&subjectid=7594005",
+        "place_label": "Region Hovedstaden",
+        "place_type_label": "regions (administrative divisions)",
+        "place_type_preferred": "http://vocab.getty.edu/aat/300236112",
+        "tgn_id": "7594005"
+    },
+    "7594395": {
+        "latitude": "60.4175",
+        "longitude": "24.75",
+        "part_of": "1000069",
+        "permalink": "http://www.getty.edu/vow/TGNFullDisplay?find=&place=&nation=&subjectid=7594395",
+        "place_label": "Newland Region",
+        "place_type_label": "regions (administrative divisions)",
+        "place_type_preferred": "http://vocab.getty.edu/aat/300236112",
+        "tgn_id": "7594395"
+    },
+    "7668535": {
+        "latitude": "56.97778",
+        "longitude": "24.12167",
+        "part_of": "7006541",
+        "permalink": "http://www.getty.edu/vow/TGNFullDisplay?find=&place=&nation=&subjectid=7668535",
+        "place_label": "Rīga",
+        "place_type_label": "special cities",
+        "place_type_preferred": "http://vocab.getty.edu/aat/300387067",
+        "tgn_id": "7668535"
+    },
+    "8711802": {
+        "latitude": "49.614273",
+        "longitude": "6.17289",
+        "part_of": "7003514",
+        "permalink": "http://www.getty.edu/vow/TGNFullDisplay?find=&place=&nation=&subjectid=8711802",
+        "place_label": "Lëtzebuerg",
+        "place_type_label": "cantons (administrative bodies)",
+        "place_type_preferred": "http://vocab.getty.edu/aat/300000769",
+        "tgn_id": "8711802"
+    },
+    "8711848": {
+        "latitude": "45.283",
+        "longitude": "4.75",
+        "part_of": "1000070",
+        "permalink": "http://www.getty.edu/vow/TGNFullDisplay?find=&place=&nation=&subjectid=8711848",
+        "place_label": "Auvergne-Rhône-Alpes",
+        "place_type_label": "regions (administrative divisions)",
+        "place_type_preferred": "http://vocab.getty.edu/aat/300236112",
+        "tgn_id": "8711848"
+    },
+    "8711849": {
+        "latitude": "47.016",
+        "longitude": "5.083",
+        "part_of": "1000070",
+        "permalink": "http://www.getty.edu/vow/TGNFullDisplay?find=&place=&nation=&subjectid=8711849",
+        "place_label": "Bourgogne-Franche-Comté",
+        "place_type_label": "first level subdivisions (political entities)",
+        "place_type_preferred": "http://vocab.getty.edu/aat/300387064",
+        "tgn_id": "8711849"
+    },
+    "8711850": {
+        "latitude": "48.683",
+        "longitude": "5.866",
+        "part_of": "1000070",
+        "permalink": "http://www.getty.edu/vow/TGNFullDisplay?find=&place=&nation=&subjectid=8711850",
+        "place_label": "Grand Est",
+        "place_type_label": "regions (administrative divisions)",
+        "place_type_preferred": "http://vocab.getty.edu/aat/300236112",
+        "tgn_id": "8711850"
+    },
+    "8711851": {
+        "latitude": "49.916",
+        "longitude": "2.666",
+        "part_of": "1000070",
+        "permalink": "http://www.getty.edu/vow/TGNFullDisplay?find=&place=&nation=&subjectid=8711851",
+        "place_label": "Hauts-de-France",
+        "place_type_label": "regions (administrative divisions)",
+        "place_type_preferred": "http://vocab.getty.edu/aat/300236112",
+        "tgn_id": "8711851"
+    },
+    "8711854": {
+        "latitude": "43.583",
+        "longitude": "2.216",
+        "part_of": "1000070",
+        "permalink": "http://www.getty.edu/vow/TGNFullDisplay?find=&place=&nation=&subjectid=8711854",
+        "place_label": "Occitanie",
+        "place_type_label": "regions (administrative divisions)",
+        "place_type_preferred": "http://vocab.getty.edu/aat/300236112",
+        "tgn_id": "8711854"
+    }
+}

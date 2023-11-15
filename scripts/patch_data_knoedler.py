@@ -67,8 +67,9 @@ def fill_prov_name_info(data):
 for filename in files:
 	with open(os.path.join(filename), 'r+') as file:
             data = json.load(file)
+        
             # Add missing names for Provenance activities
-            if data['type'] == 'Activity' and 'identified_by' not in data:
+            if 'type' in data and data['type'] == 'Activity' and 'identified_by' not in data:
                 data = fill_prov_name_info(data)
 
             if 'referred_to_by' in data:
@@ -78,7 +79,13 @@ for filename in files:
                     data['referred_to_by'] = delete_duplicate_digital_objects(data['referred_to_by'])
 
                 ### Add the STAR Knoedler reference to all resources
-                data['referred_to_by'].append(knoedler_database)
+                references = data['referred_to_by']
+                ispersondb = False
+                for i in range(len(references)):
+                    if 'label' in references and references[i]['_label'] == "STAR Person Authority Database":
+                        ispersondb = True
+                if not ispersondb:
+                    data['referred_to_by'].append(knoedler_database)
             else:
                 data['referred_to_by'] = [knoedler_database]
 

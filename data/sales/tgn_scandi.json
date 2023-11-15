@@ -1,0 +1,272 @@
+{
+    "1000001": {
+        "latitude": "42.284495",
+        "longitude": "-101.123047",
+        "part_of": "7029392",
+        "permalink": "http://www.getty.edu/vow/TGNFullDisplay?find=&place=&nation=&subjectid=1000001",
+        "place_label": "North and Central America",
+        "place_type_label": "continents",
+        "place_type_preferred": "http://vocab.getty.edu/aat/300128176",
+        "tgn_id": "1000001"
+    },
+    "1000003": {
+        "latitude": "56.2",
+        "longitude": "15.016",
+        "part_of": "7029392",
+        "permalink": "http://www.getty.edu/vow/TGNFullDisplay?find=&place=&nation=&subjectid=1000003",
+        "place_label": "Europe",
+        "place_type_label": "continents",
+        "place_type_preferred": "http://vocab.getty.edu/aat/300128176",
+        "tgn_id": "1000003"
+    },
+    "1000066": {
+        "latitude": "56",
+        "longitude": "10",
+        "part_of": "1000003",
+        "permalink": "http://www.getty.edu/vow/TGNFullDisplay?find=&place=&nation=&subjectid=1000066",
+        "place_label": "Denmark",
+        "place_type_label": "nations",
+        "place_type_preferred": "http://vocab.getty.edu/aat/300128207",
+        "tgn_id": "1000066"
+    },
+    "1000088": {
+        "latitude": "62",
+        "longitude": "10",
+        "part_of": "1000003",
+        "permalink": "http://www.getty.edu/vow/TGNFullDisplay?find=&place=&nation=&subjectid=1000088",
+        "place_label": "Norway",
+        "place_type_label": "nations",
+        "place_type_preferred": "http://vocab.getty.edu/aat/300128207",
+        "tgn_id": "1000088"
+    },
+    "1000095": {
+        "latitude": "40",
+        "longitude": "-4",
+        "part_of": "1000003",
+        "permalink": "http://www.getty.edu/vow/TGNFullDisplay?find=&place=&nation=&subjectid=1000095",
+        "place_label": "Spain",
+        "place_type_label": "nations",
+        "place_type_preferred": "http://vocab.getty.edu/aat/300128207",
+        "tgn_id": "1000095"
+    },
+    "1000097": {
+        "latitude": "62",
+        "longitude": "15",
+        "part_of": "1000003",
+        "permalink": "http://www.getty.edu/vow/TGNFullDisplay?find=&place=&nation=&subjectid=1000097",
+        "place_label": "Sweden",
+        "place_type_label": "nations",
+        "place_type_preferred": "http://vocab.getty.edu/aat/300128207",
+        "tgn_id": "1000097"
+    },
+    "1001780": {
+        "latitude": "49.75",
+        "longitude": "15",
+        "part_of": "1000003",
+        "permalink": "http://www.getty.edu/vow/TGNFullDisplay?find=&place=&nation=&subjectid=1001780",
+        "place_label": "Czech Republic",
+        "place_type_label": "nations",
+        "place_type_preferred": "http://vocab.getty.edu/aat/300128207",
+        "tgn_id": "1001780"
+    },
+    "7002444": {
+        "latitude": "57",
+        "longitude": "-4",
+        "part_of": "7008591",
+        "permalink": "http://www.getty.edu/vow/TGNFullDisplay?find=&place=&nation=&subjectid=7002444",
+        "place_label": "Scotland",
+        "place_type_label": "countries (sovereign states)",
+        "place_type_preferred": "http://vocab.getty.edu/aat/300387506",
+        "tgn_id": "7002444"
+    },
+    "7002795": {
+        "latitude": "40.5",
+        "longitude": "-3.6667",
+        "part_of": "1000095",
+        "permalink": "http://www.getty.edu/vow/TGNFullDisplay?find=&place=&nation=&subjectid=7002795",
+        "place_label": "Madrid",
+        "place_type_label": "autonomous communities",
+        "place_type_preferred": "http://vocab.getty.edu/aat/300387113",
+        "tgn_id": "7002795"
+    },
+    "7003474": {
+        "latitude": "55.7167",
+        "longitude": "12.5667",
+        "part_of": "7594005",
+        "permalink": "http://www.getty.edu/vow/TGNFullDisplay?find=&place=&nation=&subjectid=7003474",
+        "place_label": "Copenhagen",
+        "place_type_label": "inhabited places",
+        "place_type_preferred": "http://vocab.getty.edu/aat/300008347",
+        "tgn_id": "7003474"
+    },
+    "7003650": {
+        "latitude": "59.9",
+        "longitude": "10.716",
+        "part_of": "1000088",
+        "permalink": "http://www.getty.edu/vow/TGNFullDisplay?find=&place=&nation=&subjectid=7003650",
+        "place_label": "Oslo",
+        "place_type_label": "counties",
+        "place_type_preferred": "http://vocab.getty.edu/aat/300000771",
+        "tgn_id": "7003650"
+    },
+    "7003777": {
+        "latitude": "59.5",
+        "longitude": "18",
+        "part_of": "1000097",
+        "permalink": "http://www.getty.edu/vow/TGNFullDisplay?find=&place=&nation=&subjectid=7003777",
+        "place_label": "Stockholm",
+        "place_type_label": "counties",
+        "place_type_preferred": "http://vocab.getty.edu/aat/300000771",
+        "tgn_id": "7003777"
+    },
+    "7006464": {
+        "latitude": "50.1",
+        "longitude": "14.4333",
+        "part_of": "7593923",
+        "permalink": "http://www.getty.edu/vow/TGNFullDisplay?find=&place=&nation=&subjectid=7006464",
+        "place_label": "Prague",
+        "place_type_label": "inhabited places",
+        "place_type_preferred": "http://vocab.getty.edu/aat/300008347",
+        "tgn_id": "7006464"
+    },
+    "7007251": {
+        "latitude": "40",
+        "longitude": "-89",
+        "part_of": "7012149",
+        "permalink": "http://www.getty.edu/vow/TGNFullDisplay?find=&place=&nation=&subjectid=7007251",
+        "place_label": "Illinois",
+        "place_type_label": "states (political divisions)",
+        "place_type_preferred": "http://vocab.getty.edu/aat/300000776",
+        "tgn_id": "7007251"
+    },
+    "7008591": {
+        "latitude": "54",
+        "longitude": "-4.5",
+        "part_of": "1000003",
+        "permalink": "http://www.getty.edu/vow/TGNFullDisplay?find=&place=&nation=&subjectid=7008591",
+        "place_label": "United Kingdom",
+        "place_type_label": "nations",
+        "place_type_preferred": "http://vocab.getty.edu/aat/300128207",
+        "tgn_id": "7008591"
+    },
+    "7009573": {
+        "latitude": "59.9333",
+        "longitude": "10.75",
+        "part_of": "7003650",
+        "permalink": "http://www.getty.edu/vow/TGNFullDisplay?find=&place=&nation=&subjectid=7009573",
+        "place_label": "Oslo",
+        "place_type_label": "inhabited places",
+        "place_type_preferred": "http://vocab.getty.edu/aat/300008347",
+        "tgn_id": "7009573"
+    },
+    "7009861": {
+        "latitude": "59.3333",
+        "longitude": "18.0833",
+        "part_of": "7003777",
+        "permalink": "http://www.getty.edu/vow/TGNFullDisplay?find=&place=&nation=&subjectid=7009861",
+        "place_label": "Stockholm",
+        "place_type_label": "inhabited places",
+        "place_type_preferred": "http://vocab.getty.edu/aat/300008347",
+        "tgn_id": "7009861"
+    },
+    "7010413": {
+        "latitude": "40.4",
+        "longitude": "-3.683333",
+        "part_of": "7010420",
+        "permalink": "http://www.getty.edu/vow/TGNFullDisplay?find=&place=&nation=&subjectid=7010413",
+        "place_label": "Madrid",
+        "place_type_label": "inhabited places",
+        "place_type_preferred": "http://vocab.getty.edu/aat/300008347",
+        "tgn_id": "7010413"
+    },
+    "7010420": {
+        "latitude": "40.4",
+        "longitude": "-3.6833",
+        "part_of": "7002795",
+        "permalink": "http://www.getty.edu/vow/TGNFullDisplay?find=&place=&nation=&subjectid=7010420",
+        "place_label": "Madrid",
+        "place_type_label": "provinces",
+        "place_type_preferred": "http://vocab.getty.edu/aat/300000774",
+        "tgn_id": "7010420"
+    },
+    "7012149": {
+        "latitude": "38",
+        "longitude": "-98",
+        "part_of": "1000001",
+        "permalink": "http://www.getty.edu/vow/TGNFullDisplay?find=&place=&nation=&subjectid=7012149",
+        "place_label": "United States",
+        "place_type_label": "nations",
+        "place_type_preferred": "http://vocab.getty.edu/aat/300128207",
+        "tgn_id": "7012149"
+    },
+    "7013596": {
+        "latitude": "41.85",
+        "longitude": "-87.65",
+        "part_of": "7013649",
+        "permalink": "http://www.getty.edu/vow/TGNFullDisplay?find=&place=&nation=&subjectid=7013596",
+        "place_label": "Chicago",
+        "place_type_label": "inhabited places",
+        "place_type_preferred": "http://vocab.getty.edu/aat/300008347",
+        "tgn_id": "7013596"
+    },
+    "7013649": {
+        "latitude": "41.8333",
+        "longitude": "-87.85",
+        "part_of": "7007251",
+        "permalink": "http://www.getty.edu/vow/TGNFullDisplay?find=&place=&nation=&subjectid=7013649",
+        "place_label": "Cook",
+        "place_type_label": "counties",
+        "place_type_preferred": "http://vocab.getty.edu/aat/300000771",
+        "tgn_id": "7013649"
+    },
+    "7017283": {
+        "latitude": "55.833333",
+        "longitude": "-4.25",
+        "part_of": "7019097",
+        "permalink": "http://www.getty.edu/vow/TGNFullDisplay?find=&place=&nation=&subjectid=7017283",
+        "place_label": "Glasgow",
+        "place_type_label": "inhabited places",
+        "place_type_preferred": "http://vocab.getty.edu/aat/300008347",
+        "tgn_id": "7017283"
+    },
+    "7019097": {
+        "latitude": "55.9167",
+        "longitude": "-4.25",
+        "part_of": "7002444",
+        "permalink": "http://www.getty.edu/vow/TGNFullDisplay?find=&place=&nation=&subjectid=7019097",
+        "place_label": "Glasgow",
+        "place_type_label": "unitary authorities",
+        "place_type_preferred": "http://vocab.getty.edu/aat/300387071",
+        "tgn_id": "7019097"
+    },
+    "7029392": {
+        "latitude": "",
+        "longitude": "",
+        "part_of": "",
+        "permalink": "http://www.getty.edu/vow/TGNFullDisplay?find=&place=&nation=&subjectid=7029392",
+        "place_label": "World",
+        "place_type_label": "facets (controlled vocabulary)",
+        "place_type_preferred": "http://vocab.getty.edu/aat/300386699",
+        "tgn_id": "7029392"
+    },
+    "7593923": {
+        "latitude": "50.083",
+        "longitude": "14.466",
+        "part_of": "1001780",
+        "permalink": "http://www.getty.edu/vow/TGNFullDisplay?find=&place=&nation=&subjectid=7593923",
+        "place_label": "Hlavní Město Praha",
+        "place_type_label": "special cities",
+        "place_type_preferred": "http://vocab.getty.edu/aat/300387067",
+        "tgn_id": "7593923"
+    },
+    "7594005": {
+        "latitude": "55.833",
+        "longitude": "12.333",
+        "part_of": "1000066",
+        "permalink": "http://www.getty.edu/vow/TGNFullDisplay?find=&place=&nation=&subjectid=7594005",
+        "place_label": "Region Hovedstaden",
+        "place_type_label": "regions (administrative divisions)",
+        "place_type_preferred": "http://vocab.getty.edu/aat/300236112",
+        "tgn_id": "7594005"
+    }
+}

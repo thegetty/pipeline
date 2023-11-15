@@ -66,6 +66,7 @@ for filename in files:
                                 "_label": "Brief Text"
                             }
                         ]
+            # fix potential problem in a person or group, where a nested "classified_as" inside carried out fields was missing
             if 'carried_out' in data:
                 carried_out = data['carried_out']
 
@@ -77,7 +78,7 @@ for filename in files:
                             if class_as[j]['_label'] == 'Residing' or class_as[j]['_label'] == 'Establishment':
                                 # print("is residing or establishment")
                                 if not 'classified_as' in class_as[j]:
-                                    print("no classified as")
+                                    # print("no classified as")
                                     data['carried_out'][i]['classified_as'][j]['classified_as'] = cla_res
                         # print("filename ", filename)
                         if 'referred_to_by' in carried_out[i]:
@@ -90,7 +91,22 @@ for filename in files:
                                             data['carried_out'][i]['referred_to_by'][j]['classified_as'][z]['classified_as'] = cla_note
                               
 
-                                    
+            if 'identified_by' in data:
+                place_list = data['identified_by']
+                import json 
+
+                unique_dict_set = set()  
+                unique_place_list = []
+
+                for place_dict in place_list:
+                    dict_str = json.dumps(place_dict, sort_keys=True)
+                    if dict_str not in unique_dict_set:
+                        # Add the dictionary to the unique list and update the set
+                        unique_place_list.append(place_dict)
+                        unique_dict_set.add(dict_str)
+                
+                data['identified_by'] = unique_place_list
+
                               
             file.seek(0)
             json.dump(data, file, indent=4)

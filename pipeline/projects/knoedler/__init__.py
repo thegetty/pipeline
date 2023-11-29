@@ -1025,7 +1025,6 @@ class TransactionHandler(ProvenanceBase):
 			# if not joint_owner_also_seller_or_buyer_id:
 			
 			# else:
-			# import pdb; pdb.set_trace()
 			# star csv data is a string containing all csv data, so split it in lines on '\n' to get each value
 			lines = data['star_csv_data'].split('\n')
 			# find price amount value
@@ -1034,29 +1033,30 @@ class TransactionHandler(ProvenanceBase):
 			prcamnt_value = "".join([ele for ele in prcamnt if ele.isdigit()])
 			# check if this value is equal to the current value that is being modeled (may be purch amount and not price amount)
 			# if it is really the price amount set current to that amount, else set current to purchase amount
-			if prcamnt_value == str(amnt.value).rstrip('0').rstrip('.'):
-				currnt = next((line for line in lines if 'price_amount' in line), None)
-				currnt_knoed_part = None
-			else:
-				currnt = next((line for line in lines if 'purch_amount' in line), None)
-				currnt_knoed_part = next((line for line in lines if 'knoedpurch_amt' in line), None)
-			# check if there are brackets in the amount (price or purch, whatever is being modeled currently in the function)			
-			if '[' and ']' in currnt:
+			if 'value' in amnt.__dict__:
+				if prcamnt_value == str(amnt.value).rstrip('0').rstrip('.'):
+					currnt = next((line for line in lines if 'price_amount' in line), None)
+					currnt_knoed_part = None
+				else:
+					currnt = next((line for line in lines if 'purch_amount' in line), None)
+					currnt_knoed_part = next((line for line in lines if 'knoedpurch_amt' in line), None)
+				# check if there are brackets in the amount (price or purch, whatever is being modeled currently in the function)			
+				if '[' and ']' in currnt:
 
-				assignment_id = tx_uri + '-Attribute assignment'
-				assignment = model.AttributeAssignment(ident=assignment_id, label=f"Attribute assignment for {sn_ident}")
-				assignment.assigned = amnt
-				for kp in knoedler_group:
-					assignment.carried_out_by = kp
-				tx.part = assignment
-			
-			else: 
-				paym.paid_amount = amnt
-				for kp in knoedler_group:
-					if incoming:
-						paym.paid_from = kp
-					else:
-						paym.paid_to = kp
+					assignment_id = tx_uri + '-Attribute assignment'
+					assignment = model.AttributeAssignment(ident=assignment_id, label=f"Attribute assignment for {sn_ident}")
+					assignment.assigned = amnt
+					for kp in knoedler_group:
+						assignment.carried_out_by = kp
+					tx.part = assignment
+				
+				else: 
+					paym.paid_amount = amnt
+					for kp in knoedler_group:
+						if incoming:
+							paym.paid_from = kp
+						else:
+							paym.paid_to = kp
 			
 			# prcamnt = next((line for line in lines if 'price_amount' in line), None)
 

@@ -292,14 +292,12 @@ class AddPerson(Configurable):
 			}
 
 		if date:
-			sdata['address_date'] = date
-
+			sdata['address_date'] = date		
 		return self.model_sojourn(data, sdata)
 
 	def model_sojourn(self, data, loc):
 
 		base_uri = self.helper.make_proj_uri('PLACE', '')
-
 		cb = data.get('corporate_body', False)
 		sojourn_type = vocab.Establishment if cb else vocab.Residing
 		if not 'classified_as' in sojourn_type.__dict__['_classification'][0].__dict__:
@@ -410,11 +408,10 @@ class AddPerson(Configurable):
 			data['sojourns'].append(sdata)
 
 		active_cities = {t.strip() for t in data.get('active_city_date', '').split(';')} - {''}
-
 		for i, loc in enumerate(sorted(active_cities)):
 			sdata = self.model_active_city(data, loc)
-
 			if sdata:
+				sdata['active_city'] = 'yes'
 				data['sojourns'].append(sdata)
 				owner_place = None
 
@@ -439,9 +436,9 @@ class AddPerson(Configurable):
 				data['object_type'].append(vocab.MuseumOrg)
 			if 'institution' in type:
 				data['object_type'].append(vocab.Institution)
-			if active_args:
-				a = self.helper.person_identity.professional_activity(name, classified_as=[vocab.ActiveOccupation], **active_args)
-				data['events'].append(a)
+			# if active_args:
+			a = self.helper.person_identity.professional_activity(name, classified_as=[vocab.ActiveOccupation], **active_args)
+			data['events'].append(a)
 				
 			if self.helper.add_group(data):
 				yield data

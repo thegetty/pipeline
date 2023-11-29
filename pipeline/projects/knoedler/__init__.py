@@ -986,7 +986,6 @@ class TransactionHandler(ProvenanceBase):
 		price_data = {}
 		if price_info and 'currency' in price_info:
 			price_data['currency'] = price_info['currency']
-		
 		amnt = get_crom_object(price_info)
 		knoedler_price_part_amnt = get_crom_object(knoedler_price_part)
 		
@@ -1023,20 +1022,44 @@ class TransactionHandler(ProvenanceBase):
 			# P9->E13->p141->E97->P90->full_amount
 			# P9->E13->p141->E97->P180->currency
 			# P9->E13->p141->E97->p67i->E33->P190->note
-			if not joint_owner_also_seller_or_buyer_id:
-				paym.paid_amount = amnt
-				for kp in knoedler_group:
-					if incoming:
-						paym.paid_from = kp
-					else:
-						paym.paid_to = kp
+			# if not joint_owner_also_seller_or_buyer_id:
+			
+			# else:
+			# import pdb; pdb.set_trace()
+			# star csv data is a string containing all csv data, so split it in lines on '\n' to get each value
+			lines = data['star_csv_data'].split('\n')
+			# find price amount value
+			prcamnt = next((line for line in lines if 'price_amount' in line), None)
+			# take the actual value of price amount (only the number)
+			prcamnt_value = "".join([ele for ele in prcamnt if ele.isdigit()])
+			# check if this value is equal to the current value that is being modeled (may be purch amount and not price amount)
+			# if it is really the price amount set current to that amount, else set current to purchase amount
+			if prcamnt_value == str(amnt.value).rstrip('0').rstrip('.'):
+				currnt = next((line for line in lines if 'price_amount' in line), None)
+				currnt_knoed_part = None
 			else:
+				currnt = next((line for line in lines if 'purch_amount' in line), None)
+				currnt_knoed_part = next((line for line in lines if 'knoedpurch_amt' in line), None)
+			# check if there are brackets in the amount (price or purch, whatever is being modeled currently in the function)			
+			if '[' and ']' in currnt:
+
 				assignment_id = tx_uri + '-Attribute assignment'
 				assignment = model.AttributeAssignment(ident=assignment_id, label=f"Attribute assignment for {sn_ident}")
 				assignment.assigned = amnt
 				for kp in knoedler_group:
 					assignment.carried_out_by = kp
 				tx.part = assignment
+			
+			else: 
+				paym.paid_amount = amnt
+				for kp in knoedler_group:
+					if incoming:
+						paym.paid_from = kp
+					else:
+						paym.paid_to = kp
+			
+			# prcamnt = next((line for line in lines if 'price_amount' in line), None)
+
 			for p in shared_people_agents:
 				# when an agent is acting on behalf of the buyer/seller, model their involvement in a sub-activity
 				subpaym_role = 'Buyer' if incoming else 'Seller'
@@ -1057,22 +1080,41 @@ class TransactionHandler(ProvenanceBase):
 				if len(parts) > 1 or different_amount:
 					shared_payment_id = tx_uri + f'-Payment-{i}-share'
 					shared_paym = model.Payment(ident=shared_payment_id, label=f"{person._label} share of payment for {sn_ident}")
-					if part_amnt:
-						shared_paym.paid_amount = part_amnt
-					if incoming:
-						shared_paym.paid_from = person
-						# Partial payment of share from Knoedler to joint owner who is also the seller
-						if joint_owner_also_seller_or_buyer_id:
-							for purchase_buyer in people:
-								shared_paym.paid_to = purchase_buyer
+					# check brackets for purch knoed as well and put it as valuation if true (not partial payment)
+					if currnt_knoed_part and '[' and ']' in currnt_knoed_part:
+						# import pdb; pdb.set_trace()
+						assignment_id = tx_uri + '-Attribute assignment'
+						assignment = model.AttributeAssignment(ident=assignment_id, label=f"Attribute assignment for {sn_ident}")
+						assignment.assigned = part_amnt
+						# import pdb; pdb.set_trace()
+						if 'referred_to_by' in assignment.assigned[0].__dict__:
+							# it's only knoedler's amount, so change the "shared" note in assignment
+							assignment.assigned[0].referred_to_by[0].content = 'Knoedler amount'
+						# it's partial so we only need knoedler
+						assignment.carried_out_by = knoedler
+						# for kp in knoedler_group:
+						# 	assignment.carried_out_by = kp
+						tx.part = assignment
 					else:
-						shared_paym.paid_to = person
-						# Partial payment of share to Knoedler from joint owner who is also the buyer
-						if joint_owner_also_seller_or_buyer_id:
-							for sale_buyer in people:
-								shared_paym.paid_from = sale_buyer
+						# code as it was before the brackets condition
+						if part_amnt:
+							shared_paym.paid_amount = part_amnt
+						
+						if incoming:
+							# import pdb; pdb.set_trace()
+							shared_paym.paid_from = person
+							# Partial payment of share from Knoedler to joint owner who is also the seller
+							if joint_owner_also_seller_or_buyer_id:
+								for purchase_buyer in people:
+									shared_paym.paid_to = purchase_buyer
+						else:
+							shared_paym.paid_to = person
+							# Partial payment of share to Knoedler from joint owner who is also the buyer
+							if joint_owner_also_seller_or_buyer_id:
+								for sale_buyer in people:
+									shared_paym.paid_from = sale_buyer
 
-					paym.part = shared_paym
+						paym.part = shared_paym
 					
 		# If a joint owner is a seller or a buyer the payment node is empty
 		if not joint_owner_also_seller_or_buyer_id:
@@ -1090,6 +1132,8 @@ class TransactionHandler(ProvenanceBase):
 				subpaym.classified_as = vocab.instances[f'{subpaym_role}sAgent']
 				subpaym.carried_out_by = p
 				paym.part = subpaym
+
+
 
 	def _add_prov_entry_acquisition(self, data:dict, tx, from_people, from_agents, to_people, to_agents, date, incoming, purpose=None):
 		rec = data['book_record']
@@ -1285,7 +1329,6 @@ class TransactionHandler(ProvenanceBase):
 			from_agents = knoedler_group_agents
 			to_people = people
 			to_agents = people_agents
-
 		if incoming:
 			self._add_prov_entry_rights(data, tx, shared_people, incoming)
 		self._add_prov_entry_payment(data, tx, knoedler_price_part, price_info, people, people_agents, shared_people, knoedler_group_agents, date, incoming)

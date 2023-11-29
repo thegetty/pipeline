@@ -63,11 +63,18 @@ def fill_prov_name_info(data):
     
     data['identified_by'] = identified
     return data
+# import pdb; pdb.set_trace()
 
 for filename in files:
 	with open(os.path.join(filename), 'r+') as file:
             data = json.load(file)
-        
+            if 'type' in data and data['type'] == 'Activity':
+                if 'part' in data:
+                    for part_item in data['part']:
+                        if 'type' in part_item and part_item['type'] == 'Payment':
+                            if not 'paid_amount' in part_item and not 'paid_from' in part_item and not 'paid_to' in part_item and not 'part' in part_item:
+                                data['part'].remove(part_item)
+
             # Add missing names for Provenance activities
             if 'type' in data and data['type'] == 'Activity' and 'identified_by' not in data:
                 data = fill_prov_name_info(data)

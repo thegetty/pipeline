@@ -377,18 +377,20 @@ class MakeLinkedArtAgent(MakeLinkedArtRecord):
 			thing.exact_match = uri
 		# import pdb; pdb.set_trace()
 		for sdata in data.get('sojourns', []):
-			label = sdata.get('label', 'Sojourn activity')
-			stype = sdata.get('type', model.Activity)
-			act = stype(ident='', label=label)
-			ts = get_crom_object(sdata.get('timespan'))
-			if 'tgn' in sdata:
-				place = sdata['tgn']
-			else:
-				place = get_crom_object(sdata.get('place'))
-			act.timespan = ts
-			act.took_place_at = place
-			thing.carried_out = act
-			self.set_referred_to_by(sdata, act)
+			if 'active_city' not in sdata:
+				label = sdata.get('label', 'Sojourn activity')
+				stype = sdata.get('type', model.Activity)
+				act = stype(ident='', label=label)
+				ts = get_crom_object(sdata.get('timespan'))
+				if 'tgn' in sdata:
+					place = sdata['tgn']
+				else:
+					place = get_crom_object(sdata.get('place'))
+				act.timespan = ts
+				# import pdb; pdb.set_trace()
+				act.took_place_at = place
+				thing.carried_out = act
+				self.set_referred_to_by(sdata, act)
 
 		# Locations are names of residence places (P74 -> E53)
 		# XXX FIXME: Places are their own model
@@ -416,10 +418,27 @@ class MakeLinkedArtOrganization(MakeLinkedArtAgent):
 		super().set_properties(data, thing)
 		with suppress(KeyError):
 			thing._label = str(data['label'])
-
-		for event in data.get('events', []):
-			thing.carried_out = event
-
+		# import pdb; pdb.set_trace()
+		# iterate events only if we want professional activity block to exist (if there is active city). Else, we don't need events, so delete them.
+		if 'active_city_date' in data:
+			for event in data.get('events', []):
+				
+				for sdata in data.get('sojourns', []):
+					if 'active_city' in sdata:
+						if 'Professional activity' in event.__dict__['_label']:
+							if 'tgn' in sdata:
+								place = sdata['tgn']
+							else:
+								place = get_crom_object(sdata.get('place'))
+							event.took_place_at = place
+					
+				thing.carried_out = event
+		else:
+			data['events'] = []
+		# here that we have populated possible professional activity events, 
+		# iterate all events and if not one event has 'took place at', meaning
+		# there is not active city in the data, so group should not have block 'professional activity'
+		
 		for n in data.get('nationality', []):
 			thing.classified_as = n
 
@@ -533,6 +552,7 @@ class MakeLinkedArtPerson(MakeLinkedArtAgent):
 
 		for n in data.get('occupation', []):
 			if isinstance(n, model.BaseResource):
+				# import pdb; pdb.set_trace()
 				who.classified_as = n
 
 		# nationality field can contain other information, but not useful.
@@ -552,6 +572,18 @@ class MakeLinkedArtPerson(MakeLinkedArtAgent):
 			who.carried_out = act
 
 		for event in data.get('events', []):
+			# import pdb; pdb.set_trace()			
+			# MAYBE HERE ITERATE DATA[SOJOURNS] AND TAKE PLACE 
+
+			for sdata in data.get('sojourns', []):
+				if 'active_city' in sdata:
+					if 'Professional activity' in event.__dict__['_label']:
+						if 'tgn' in sdata:
+							place = sdata['tgn']
+						else:
+							place = get_crom_object(sdata.get('place'))
+						event.took_place_at = place
+
 			who.carried_out = event
 
 		if data.get('birth'):

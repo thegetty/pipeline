@@ -190,13 +190,13 @@ class ProvenanceBase(Configurable):
 	def model_person_or_group(self, data:dict, a:dict, attribution_group_types, attribution_group_names, role='artist', seq_no=0, sales_record=None):
 		if get_crom_object(a):
 			return a
-
+		# import pdb; pdb.set_trace()
 		mods = a['modifiers']
 			
 		artist = self.helper.add_person(a, record=sales_record, relative_id=f'artist-{seq_no+1}', role=role)
 		artist_label = a['label']
 		person = get_crom_object(a)
-
+		sales_record = get_crom_object(data['_record'])
 		if mods:
 			GROUP_TYPES = set(attribution_group_types.values())
 			GROUP_MODS = {k for k, v in attribution_group_types.items() if v in GROUP_TYPES}
@@ -218,6 +218,8 @@ class ProvenanceBase(Configurable):
 				formation = model.Formation(ident='', label=f'Formation of {group_label}')
 				formation.influenced_by = person
 				group.formed_by = formation
+				# add referred_to_by, to groups that have mods 
+				group.referred_to_by = sales_record
 				# preceed goupil_object_id, if found, over pi_record_no
 				if a.get('goupil_object_id'):
 					id_number = a['goupil_object_id']
@@ -228,7 +230,8 @@ class ProvenanceBase(Configurable):
 					'uri': group_id,
 					'uri_keys': group_uri_key,
 					'modifiers': mods,
-					'label': group_label
+					'label': group_label,
+					'referred_to_by': sales_record
 				}
 				add_crom_data(group_data, group)
 				data['_organizations'].append(group_data)
@@ -302,7 +305,6 @@ class ProvenanceBase(Configurable):
 		NON_ARTIST_MODS = COPY_AFTER | STYLE_OF
 		GROUP_TYPES = set(attribution_group_types.values())
 		GROUP_MODS = {k for k, v in attribution_group_types.items() if v in GROUP_TYPES}
-
 		non_artist_assertions = people
 
 		if '_record' not in data:
@@ -335,7 +337,6 @@ class ProvenanceBase(Configurable):
 			make_la_org = pipeline.linkedart.MakeLinkedArtOrganization()
 			group_data = make_la_org(group_data)
 			data['_organizations'].append(group_data)
-
 		# 3. Model all the non-artist records as an appropriate property/relationship of the object or production event:
 		for seq_no, a_data in enumerate(non_artist_assertions):
 			a_data = self.model_person_or_group(data, a_data, attribution_group_types, attribution_group_names, seq_no=seq_no, role='NonArtist', sales_record=sales_record)
@@ -412,7 +413,7 @@ class ProvenanceBase(Configurable):
 		EDIT_BY = attribution_modifiers['edit by']
 
 		event_uri = prod_event.id
-
+		# import pdb; pdb.set_trace()
 		if '_record' not in data:
 			sales_record = get_crom_objects(data.get('_records', []))
 		else:
@@ -433,6 +434,7 @@ class ProvenanceBase(Configurable):
 		all_or_modifiers = ['or' in a['modifiers'] for a in artists]
 		artist_group_flag = (not or_anon_records) and len(all_or_modifiers) and all(all_or_modifiers)
 		artist_group = None
+		# HERE IS THE GROUP FLAG??
 		if artist_group_flag:
 			# The artist group URI is just the production event URI with a suffix. When URIs are
 			# reconciled during prev/post sale rewriting, this will allow us to also reconcile
@@ -450,7 +452,6 @@ class ProvenanceBase(Configurable):
 			}
 			add_crom_data(data=group_data, what=artist_group)
 			data['_organizations'].append(group_data)
-
 			# 6. Model all the artist records as sub-production events:
 			prod_event.carried_out_by = artist_group
 			for seq_no, a_data in enumerate(artists):
@@ -460,6 +461,7 @@ class ProvenanceBase(Configurable):
 				artist_label = a_data.get('label') # TODO: this may not be right for groups
 				person = get_crom_object(a_data)
 				verbatim_mods = a_data.get('attrib_mod_auth', '')
+
 				if ATTRIBUTED_TO.intersects(mods):
 					attrib_assignment_classes = [model.AttributeAssignment]
 					attrib_assignment_classes.append(vocab.PossibleAssignment)
@@ -478,10 +480,11 @@ class ProvenanceBase(Configurable):
 				if EDIT_BY.intersects(mods):
 					# goupil only attribution modifier that's modelled seperately and not a sub event of the production
 					continue
-
+				# import pdb; pdb.set_trace()
 				uncertain = all_uncertain
 				verbatim_mods = a_data.get('attrib_mod_auth', '')
 				attribute_assignment_id = self.helper.prepend_uri_key(prod_event.id, f'ASSIGNMENT,Artist-{seq_no}')
+				## HERE MAYBE GROUP IS MODELED
 				a_data = self.model_person_or_group(data, a_data, attribution_group_types, attribution_group_names, seq_no=seq_no, role='Artist', sales_record=sales_record)
 				artist_label = a_data.get('label') # TODO: this may not be right for groups
 				person = get_crom_object(a_data)
@@ -554,7 +557,7 @@ class ProvenanceBase(Configurable):
 	def model_artists_with_modifers(self, data:dict, hmo, attribution_modifiers, attribution_group_types, attribution_group_names):
 		'''Add modeling for artists as people involved in the production of an object'''
 		# sales_record = get_crom_object(data['_record'])
-
+		# import pdb; pdb.set_trace()
 		data.setdefault('_organizations', [])
 		data.setdefault('_original_objects', [])
 
@@ -581,6 +584,7 @@ class ProvenanceBase(Configurable):
 
 		artists = data.get('_artists', [])
 		for a in artists:
+			# here it adds properties like label, modifiers, pi_record_no
 			self.add_properties(data, a)
 
 		# 1. Remove "copy by/after" modifiers when in the presence of "manner of; style of". This combination is not meaningful, and the intended semantics are preserved by keeping only the style assertion (with the understanding that every "copy by" modifier has a paired "copy after" in another artist record, and vice-versa)

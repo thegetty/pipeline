@@ -550,10 +550,22 @@ class ProvenanceBase(Configurable):
 						assignment.referred_to_by = vocab.Note(ident='', content=verbatim_mods)
 						assignment.carried_out_by = self.helper.static_instances.get_instance('Group', 'knoedler')
 					else:
+						attribute_assignment_id = self.helper.prepend_uri_key(prod_event.id, f'ASSIGNMENT,NonArtist-{seq_no}')
+						ident = person.__dict__['_label'] +artist_label
+						assignment = vocab.make_multitype_obj(*attrib_assignment_classes, ident=ident, label='')
+						prod_event.attributed_by = assignment
+						assignment.assigned_property = 'carried_out_by'
+						assignment.assigned = person
+						if isinstance(sales_record, list):
+							for sale in sales_record:
+								assignment.used_specific_object = sale
+						else:
+							assignment.used_specific_object = sales_record
+						assignment.carried_out_by = self.helper.static_instances.get_instance('Group', 'knoedler')
 						subevent = model.Production(ident=subevent_id, label=f'Production sub-event for {artist_label}')
 						subevent.carried_out_by = person
 						prod_event.part = subevent
-
+						
 	def model_artists_with_modifers(self, data:dict, hmo, attribution_modifiers, attribution_group_types, attribution_group_names):
 		'''Add modeling for artists as people involved in the production of an object'''
 		# sales_record = get_crom_object(data['_record'])

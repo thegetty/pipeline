@@ -199,6 +199,11 @@ class AddPerson(Configurable):
 				# TODO: should handle multiple timespans in clean_ts
 				data['period_active_clean'] = ts
 
+	def delete_semi_colons(self, record):
+		
+		new_string = record.replace(";","|")
+		return new_string
+		
 	def handle_statements(self, data):
 		record = get_crom_object(data['_entry_record'])
 		data['referred_to_by'].append(record)
@@ -486,7 +491,18 @@ class AddPerson(Configurable):
 		data.setdefault('events', [])
 		data.setdefault('_places', [])
 		data.setdefault('identifiers', [self.helper.gpi_number_id(star_id)])
-
+		if 'text' in data:
+			data['text'] = self.delete_semi_colons(data['text'])
+		if 'working_notes' in data:
+			data['working_notes'] = self.delete_semi_colons(data['working_notes'])
+		if 'medal_received' in data:
+			data['medal_received'] = self.delete_semi_colons(data['medal_received'])
+		if 'notes' in data:
+			data['notes'] = self.delete_semi_colons(data['notes'])
+		if 'brief_notes' in data:
+			data['brief_notes'] = self.delete_semi_colons(data['brief_notes'])
+		if 'bibliography' in data:
+			data['bibliography'] = self.delete_semi_colons(data['bibliography'])
 		self.clean_dates(data)
 		self.handle_statements(data)
 		self.handle_places(data)

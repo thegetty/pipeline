@@ -101,7 +101,7 @@ class PeopleUtilityHelper(UtilityHelper):
 		
 		# "people" records that are actually groups are recorded here, serialized, and
 		# then used in the Knoedler pipeline so that those records can be properly
-		# asserted as Gorups and not People (since the distinguishing data only appears)
+		# asserted as Groups and not People (since the distinguishing data only appears)
 		# in the PEOPLE dataset, not in Knoedler.
 		key = data['uri_keys']
 		self.services['people_groups']['group_keys'].append(key)
@@ -420,18 +420,20 @@ class AddPerson(Configurable):
 		name = data['auth_name']
 		generic_name = data.get('generic_name')
 		type = {t.strip() for t in data.get('type', '').lower().split(';')} - {''}
-
 		data.setdefault('occupation', [])
 		data.setdefault('object_type', [])
 		if 'object_type' in data and not isinstance(data['object_type'], list):
 			data['object_type'] = [data['object_type']]
 
 		cb = data.get('corporate_body')
+		ga = data.get('generic_name')
 		active_args = self.helper.person_identity.clamped_timespan_args(data, name)
+
 		if cb:
 			# This is an Organization
-			with suppress(KeyError):
-				del data['nationality']
+			# import pdb; pdb.set_trace()
+			# with suppress(KeyError):
+			# 	del data['nationality']
 			if 'museum' in type:
 				data['object_type'].append(vocab.MuseumOrg)
 			if 'institution' in type:
@@ -439,9 +441,9 @@ class AddPerson(Configurable):
 			# if active_args:
 			a = self.helper.person_identity.professional_activity(name, classified_as=[vocab.ActiveOccupation], **active_args)
 			data['events'].append(a)
-				
+			
 			if self.helper.add_group(data):
-				yield data
+				yield data			
 		else:
 			# This is a Person
 			types = []

@@ -115,13 +115,15 @@ class PersonIdentity:
 				warnings.warn(f'*** No identifying property with which to construct a URI key: {e}')
 				print(pprint.pformat(data), file=sys.stderr)
 				raise
-			if record_id:
-				key = ('PERSON', id_key, id_value, record_id)
-				return key, self.make_proj_uri
+			# if record_id:
+			# 	# key = ('PERSON', id_key, id_value, record_id)
+			# 	key = ('PERSON', 'AUTH', auth_name)
+			# 	return key, self.make_proj_uri
 			else:
 				warnings.warn(f'*** No record identifier given for person identified only by {id_key} {id_value}')
-				key = ('PERSON', id_key, id_value)
-				return key, self.make_proj_uri
+				# key = ('PERSON', id_key, id_value)
+				key = ('PERSON', 'AUTH', auth_name)
+				return key, self.make_shared_uri
 
 	def add_person(self, a, record=None, relative_id=None, **kwargs):
 		self.add_uri(a, record_id=relative_id)

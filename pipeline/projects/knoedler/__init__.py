@@ -1180,7 +1180,7 @@ class TransactionHandler(ProvenanceBase):
 		elif purpose == 'exchange':
 			dir_label = 'Knoedler exchange'
 		elif purpose == 'expensed':
-			dir_label = 'Knoedler expensed'
+			dir_label = 'Knoedler expensing'
 		else:
 			dir_label = 'Knoedler Purchase' if incoming else 'Knoedler Sale'
 		acq_id = self.helper.make_proj_uri('ACQ', dir, book_id, page_id, row_id)

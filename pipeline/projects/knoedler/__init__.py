@@ -1387,7 +1387,7 @@ class TransactionHandler(ProvenanceBase):
 		data['_people'].extend(people_data)
 		return tx
 
-	def add_return_tx(self, data, buy_sell_modifiers):
+def add_return_tx(self, data, buy_sell_modifiers):
 		rec = data['book_record']
 		book_id, page_id, row_id = record_id(rec)
 
@@ -1397,8 +1397,17 @@ class TransactionHandler(ProvenanceBase):
 		shared_people = []
 		for p in sellers:
 			self.helper.copy_source_information(p, data)
-		in_tx = self._prov_entry(data, 'entry_date', sellers, purch_info, incoming=True, buy_sell_modifiers=buy_sell_modifiers)
-		out_tx = self._prov_entry(data, 'entry_date', sellers, sale_info, incoming=False, purpose='returning', buy_sell_modifiers=buy_sell_modifiers)
+		
+		if data.get('parent_data').get('Expensed') is not None:
+			in_tx = self._prov_entry(data, 'entry_date', sellers, purch_info, incoming=True, buy_sell_modifiers=buy_sell_modifiers)
+			out_tx = self._prov_entry(data, 'entry_date', sellers, sale_info, incoming=False, purpose='expensed', buy_sell_modifiers=buy_sell_modifiers)
+		elif data.get('parent_data').get('Returned') is not None :
+			in_tx = self._prov_entry(data, 'entry_date', sellers, purch_info, incoming=True, buy_sell_modifiers=buy_sell_modifiers)
+			out_tx = self._prov_entry(data, 'entry_date', sellers, sale_info, incoming=False, purpose='returning', buy_sell_modifiers=buy_sell_modifiers)
+		else :
+			
+			in_tx = self._prov_entry(data, 'entry_date', sellers, purch_info, incoming=True, buy_sell_modifiers=buy_sell_modifiers)
+			out_tx = self._prov_entry(data, 'entry_date', sellers, sale_info, incoming=False, purpose='exchange', buy_sell_modifiers=buy_sell_modifiers)
 		return (in_tx, out_tx)
 
 	def add_incoming_tx(self, data, buy_sell_modifiers):

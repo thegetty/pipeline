@@ -1387,7 +1387,7 @@ class TransactionHandler(ProvenanceBase):
 		data['_people'].extend(people_data)
 		return tx
 
-def add_return_tx(self, data, buy_sell_modifiers):
+	def add_return_tx(self, data, buy_sell_modifiers):
 		rec = data['book_record']
 		book_id, page_id, row_id = record_id(rec)
 

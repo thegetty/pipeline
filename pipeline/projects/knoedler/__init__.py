@@ -146,6 +146,7 @@ class KnoedlerUtilityHelper(SharedUtilityHelper):
 	def add_person(self, data, record, relative_id, **kwargs):
 		self.person_identity.add_uri(data, record_id=relative_id)
 		key = data['uri_keys']
+		# import pdb; pdb.set_trace()
 		if key in self.services['people_groups']:
 			warnings.warn(f'*** TODO: model person record as a GROUP: {pprint.pformat(key)}')
 			person = super().add_group(data, record=record, relative_id=relative_id, **kwargs)
@@ -1390,23 +1391,23 @@ class TransactionHandler(ProvenanceBase):
 	def add_return_tx(self, data, buy_sell_modifiers):
 		rec = data['book_record']
 		book_id, page_id, row_id = record_id(rec)
-
+		shared_people = data.get('purchase_buyer')
 		purch_info = data.get('purchase')
+		knoedler_price_part = data.get('purchase_knoedler_share')
 		sale_info = data.get('sale')
 		sellers = data['purchase_seller']
-		shared_people = []
 		for p in sellers:
 			self.helper.copy_source_information(p, data)
+		#tx = self._prov_entry(data, 'entry_date', sellers, price_info, knoedler_price_part, shared_people, incoming=True, buy_sell_modifiers=buy_sell_modifiers)
 		
 		if data.get('parent_data').get('Expensed') is not None:
-			in_tx = self._prov_entry(data, 'entry_date', sellers, purch_info, incoming=True, buy_sell_modifiers=buy_sell_modifiers)
+			in_tx = self._prov_entry(data, 'entry_date', sellers, purch_info, knoedler_price_part, shared_people, incoming=True, buy_sell_modifiers=buy_sell_modifiers)
 			out_tx = self._prov_entry(data, 'entry_date', sellers, sale_info, incoming=False, purpose='expensed', buy_sell_modifiers=buy_sell_modifiers)
 		elif data.get('parent_data').get('Returned') is not None :
-			in_tx = self._prov_entry(data, 'entry_date', sellers, purch_info, incoming=True, buy_sell_modifiers=buy_sell_modifiers)
+			in_tx = self._prov_entry(data, 'entry_date', sellers, purch_info, knoedler_price_part, shared_people, incoming=True, buy_sell_modifiers=buy_sell_modifiers)
 			out_tx = self._prov_entry(data, 'entry_date', sellers, sale_info, incoming=False, purpose='returning', buy_sell_modifiers=buy_sell_modifiers)
 		else :
-			
-			in_tx = self._prov_entry(data, 'entry_date', sellers, purch_info, incoming=True, buy_sell_modifiers=buy_sell_modifiers)
+			in_tx = self._prov_entry(data, 'entry_date', sellers, purch_info, knoedler_price_part, shared_people, incoming=True, buy_sell_modifiers=buy_sell_modifiers)
 			out_tx = self._prov_entry(data, 'entry_date', sellers, sale_info, incoming=False, purpose='exchange', buy_sell_modifiers=buy_sell_modifiers)
 		return (in_tx, out_tx)
 

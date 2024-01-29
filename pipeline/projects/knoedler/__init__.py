@@ -883,13 +883,16 @@ class TransactionHandler(ProvenanceBase):
 			
 		sellers = data['purchase_seller']
 		
-		if data.get('purchase')['flag'] is True:
+		if 'purpose' in data['purchase']:
+			price_info_pur = data.get('sale')
+		elif data.get('purchase')['flag'] is True:
 			
 			price_info = data.get('purchase')
 		else:
 			price_info = data.get('purchase_knoedler_share')
-					
-		if price_info and not len(sellers):
+
+
+		if 'price_info' in locals() or 'price_info' in globals() and not len(sellers):
 			# this inventorying has a "purchase" amount that is an evaluated worth amount
 			amnt = get_crom_object(price_info)
 			assignment = vocab.AppraisingAssignment(ident='', label=f'Evaluated worth of {sn_ident}')
@@ -903,8 +906,10 @@ class TransactionHandler(ProvenanceBase):
 				data.get('purchase')['flag'] = False 
 				assignment.assigned_to = hmo
 			return assignment
-		elif price_info and not len(data.get('purchase_buyer')) and 'amount' in data['purchase'] :
-			
+
+		elif 'price_info_pur' in locals() or 'price_info_pur' in globals() and len(data.get('sale_buyer')) and 'amount' in data['sale'] :
+			# import pdb;	pdb.set_trace()
+			price_info = data.get('sale')
 			amnt = get_crom_object(price_info)
 			assignment = vocab.AppraisingAssignment(ident='', label=f'Evaluated worth of {sn_ident}')
 			knoedler = self.helper.static_instances.get_instance('Group', 'knoedler')
@@ -1040,11 +1045,13 @@ class TransactionHandler(ProvenanceBase):
 
 		paym = None
 		if amnt:
-			if  (purpose =='exchange' or purpose =='expensed') and not len(data.get('purchase_buyer')):
-				data.get('purchase')['flag'] = True 
-				appraisal = self._apprasing_assignment(data)
-				if appraisal:
-					tx.part = appraisal
+			if  (purpose =='exchange' or purpose =='expensed'):
+				
+				if len(data.get('sale_buyer')):
+					data.get('purchase')['purpose']= purpose	 
+					appraisal = self._apprasing_assignment(data)
+					if appraisal:	
+						tx.part = appraisal
 			else:
 				tx_uri = tx.id
 				payment_id = tx_uri + '-Payment'
@@ -1402,12 +1409,14 @@ class TransactionHandler(ProvenanceBase):
 		
 		if data.get('parent_data').get('Expensed') is not None:
 			in_tx = self._prov_entry(data, 'entry_date', sellers, purch_info, knoedler_price_part, shared_people, incoming=True, buy_sell_modifiers=buy_sell_modifiers)
+			sellers = data['sale_buyer']
 			out_tx = self._prov_entry(data, 'entry_date', sellers, sale_info, incoming=False, purpose='expensed', buy_sell_modifiers=buy_sell_modifiers)
 		elif data.get('parent_data').get('Returned') is not None :
 			in_tx = self._prov_entry(data, 'entry_date', sellers, purch_info, knoedler_price_part, shared_people, incoming=True, buy_sell_modifiers=buy_sell_modifiers)
 			out_tx = self._prov_entry(data, 'entry_date', sellers, sale_info, incoming=False, purpose='returning', buy_sell_modifiers=buy_sell_modifiers)
 		else :
 			in_tx = self._prov_entry(data, 'entry_date', sellers, purch_info, knoedler_price_part, shared_people, incoming=True, buy_sell_modifiers=buy_sell_modifiers)
+			sellers = data['sale_buyer']
 			out_tx = self._prov_entry(data, 'entry_date', sellers, sale_info, incoming=False, purpose='exchange', buy_sell_modifiers=buy_sell_modifiers)
 		return (in_tx, out_tx)
 

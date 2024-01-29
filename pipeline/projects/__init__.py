@@ -524,18 +524,34 @@ class StaticInstanceHolder:
 
 	def get_instance(self, model, name):
 		m = self.instances.get(model)
+		# import pdb; pdb.set_trace()
 		if not m:
 			return None
-		i = m.get(name)
+		if type(m) is tuple:
+			i = m[0].get(name)
+			idesc = m[1].get(name)
+		else:
+			i = m.get(name)
+			idesc = None
 		if i:
 			self.used.add((model, name))
 			return i
+		if idesc:
+			self.used.add((model, name))
+
 		return None
 
 	def used_instances(self):
+		# import pdb; pdb.set_trace()
 		used = defaultdict(dict)
 		for model, name in self.used:
-			used[model][name] = self.instances[model][name]
+			if not type(self.instances[model]) is tuple:
+				used[model][name] = self.instances[model][name]
+			else:
+				try:
+					used[model][name] = self.instances[model][0][name]
+				except KeyError:
+					continue
 		return used
 
 class PipelineBase:
@@ -669,7 +685,8 @@ class PipelineBase:
 			})
 
 		places = self._static_place_instances()
-		places.update({'newyork': newyork})
+		# comment this out if you run sales 
+		# places.update({'newyork': newyork})
 		
 		db_people = self.static_db_instance('PEOPLE', name='STAR Person Authority Database', creator=gpi)
 		db_knoedler = self.static_db_instance('Knoedler', name='STAR Knoedler Database', creator=gpi)
@@ -892,6 +909,7 @@ class UtilityHelper:
 		if name.casefold() in canonical_location_names:
 			name = canonical_location_names.get(name.casefold(), name)
 		si = self.static_instances
+		# import pdb; pdb.set_trace()
 		if si:
 			return si.get_instance('Place', name)
 		return None

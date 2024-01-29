@@ -196,7 +196,8 @@ class ProvenanceBase(Configurable):
 		artist = self.helper.add_person(a, record=sales_record, relative_id=f'artist-{seq_no+1}', role=role)
 		artist_label = a['label']
 		person = get_crom_object(a)
-		sales_record = get_crom_object(data['_record'])
+		if '_record' in data:
+			sales_record = get_crom_object(data['_record'])
 		if mods:
 			GROUP_TYPES = set(attribution_group_types.values())
 			GROUP_MODS = {k for k, v in attribution_group_types.items() if v in GROUP_TYPES}
@@ -399,9 +400,10 @@ class ProvenanceBase(Configurable):
 					assignment.carried_out_by = self.helper.static_instances.get_instance('Group', 'knoedler')
 				else:
 					prod_event.influenced_by = original_hmo
-
+				# import pdb; pdb.set_trace()
 				data['_original_objects'].append(add_crom_data(data={'uri': original_id}, what=original_hmo))
-				self.populate_original_object_visual_item(data['_original_objects'], data['object'], original_hmo, sales_record, original_label, seq_no)
+				if 'object' in data:
+					self.populate_original_object_visual_item(data['_original_objects'], data['object'], original_hmo, sales_record, original_label, seq_no)
 			else:
 				warnings.warn(f'Unrecognized non-artist attribution modifers: {mods}')
 

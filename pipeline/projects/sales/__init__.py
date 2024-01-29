@@ -51,7 +51,8 @@ from pipeline.util import \
 			ExtractKeyedValue, \
 			ExtractKeyedValues, \
 			MatchingFiles, \
-			associate_with_tgn_record,\
+			associate_with_tgn_record_sales, \
+			associate_with_tgn_record, \
 			identity, \
 			replace_key_pattern, \
 			strip_key_prefix
@@ -447,7 +448,7 @@ def add_crom_price(data, parent, services, add_citations=False):
 	Add modeling data for `MonetaryAmount`, `StartingPrice`, or `EstimatedPrice`,
 	based on properties of the supplied `data` dict.
 	'''
-
+	# import pdb; pdb.set_trace()
 	currencies = services['currencies']
 	decimalization = services['currencies_decimalization']
 	region_currencies = services['region_currencies']
@@ -511,7 +512,6 @@ class SalesPipeline(PipelineBase):
 		project_name = 'sales'
 		self.input_path = input_path
 		self.services = None
-
 		helper = SalesUtilityHelper(project_name)
 		self.uid_tag_prefix = UID_TAG_PREFIX
 
@@ -575,13 +575,27 @@ class SalesPipeline(PipelineBase):
 		'''Return a `dict` of named services available to the bonobo pipeline.'''
 		services = super().setup_services()
 
-		# Register tgn files as services
-		tgn_places = services.get('tgn_belgian')
-		sales_tgn = services.get('sales_belgian_tgn')
+		# Register tgn files as services - begin with belgian and add to dictionary all of the rest
+		tgn_places = services.get('tgn_belgian', {})
+		sales_tgn = services.get('sales_belgian_tgn', {})
 
+		list_of_tgn_countries = ['british', 'dutch', 'french', 'german', 'scandi']
+
+		for n in list_of_tgn_countries:
+
+			tgn_places.update(services.get(f'tgn_{n}', {}))
+			sales_tgn.update(services.get(f'sales_{n}_tgn', {}))
+
+		# import pdb; pdb.set_trace()
 		services['tgn'] = tgn_places
 		services['sales_tgn'] = sales_tgn
 
+		# Register description tgn files as services 
+		tgn_places_descr = services.get('tgn_descriptions', {})
+		sales_tgn_descr = services.get('sales_descriptions_tgn', {})
+		
+		services['tgn_descr'] = tgn_places_descr
+		services['sales_tgn_descr'] = sales_tgn_descr
 		# make these case-insensitive by wrapping the value lists in CaseFoldingSet
 		for name in ('transaction_types', 'attribution_modifiers', 'date_modifiers'):
 			if name in services:
@@ -617,13 +631,17 @@ class SalesPipeline(PipelineBase):
 		Create static instances for every place mentioned in the tgn service data.
 		'''
 		super()._static_place_instances()
-		
 		tgn_places = self.services['tgn']
+		tgn_places_descr = self.services['tgn_descr']
 		instances = {}
 		places = {}
-		
+		instances_descr = {}
+		places_descr = {}
+
 		for tgn_id, tgn_data in tgn_places.items():
 			places[tgn_id] = tgn_data
+		for tgn_id, tgn_data in tgn_places_descr.items():
+			places_descr[tgn_id] = tgn_data
 		
 		start = timeit.default_timer()	
 		print("Started the tranformation of Static Places Instances...")
@@ -632,9 +650,15 @@ class SalesPipeline(PipelineBase):
 					
 			place = make_tgn_place(tgn_data, self.helper.make_shared_uri, tgn_places)
 			instances[tgn_id] = place
+
+		for tgn_id, tgn_data in places_descr.items():
+			tgn_id = tgn_data.get('tgn_id')		
+					
+			place = make_tgn_place(tgn_data, self.helper.make_shared_uri, tgn_places_descr)
+			instances_descr[tgn_id] = place
 		# import pdb; pdb.set_trace()
 		print(f"Completed in {timeit.default_timer() - start}")
-		return instances
+		return instances, instances_descr
 
 	def add_physical_catalogs_chain(self, graph, records, serialize=True):
 		'''Add modeling of physical copies of auction catalogs.'''
@@ -669,7 +693,7 @@ class SalesPipeline(PipelineBase):
 			self.add_serialization_chain(graph, los.output, model=self.models['LinguisticObject'], use_memory_writer=False)
 		return los
 
-	def add_auction_events_chain(self, graph, records, serialize=True):
+	def add_auction_events_chain(self, graph, services, records, serialize=True):
 		'''Add modeling of auction events.'''
 		auction_events = graph.add_chain(
 			PreserveCSVFields(key='star_csv_data', order=self.auction_events_headers),
@@ -742,6 +766,7 @@ class SalesPipeline(PipelineBase):
 								)
 							},
 							'location': {
+								'postprocess': [lambda d, p: associate_with_tgn_record_sales(d, p, services['sales_tgn_descr'],"specific_loc")],
 								'properties': (
 									'city_of_sale',
 									'sale_location',
@@ -818,6 +843,7 @@ class SalesPipeline(PipelineBase):
 		return bid_acqs
 
 	def add_sales_chain(self, graph, records, services, serialize=True):
+		# import pdb; pdb.set_trace()
 		'''Add transformation of sales records to the bonobo pipeline.'''
 		sales = graph.add_chain(
 			PreserveCSVFields(key='star_csv_data', order=self.contents_headers),
@@ -949,7 +975,7 @@ class SalesPipeline(PipelineBase):
 									'prev_own_auth_p': 'own_auth_p',
 									'prev_own_ulan': 'own_ulan'
 								},
- 								'postprocess': lambda d, p: associate_with_tgn_record(d, p, services['sales_tgn'],"prev_own_auth_L_1"),
+ 								'postprocess': lambda d, p: associate_with_tgn_record_sales(d, p, services['sales_tgn'],"own_auth_L"),
 								
 								# [
 								#	lambda d, p: associate_with_tgn_record(d, p, services['sales_tgn'],"prev_own_auth_l")
@@ -1036,7 +1062,7 @@ class SalesPipeline(PipelineBase):
 									'post_own_auth_p': 'own_auth_p',
 									'post_own_ulan': 'own_ulan'
 								},
- 								'postprocess': lambda d, p: associate_with_tgn_record(d, p, services['sales_tgn'],"post_own_auth_l"),
+ 								'postprocess': lambda d, p: associate_with_tgn_record_sales(d, p, services['sales_tgn'],"own_auth_L"),
 								# [
 								#	lambda d, p: associate_with_tgn_record(d, p, services['sales_tgn'],"post_own_auth_l")
  								#	lambda x, _: strip_key_prefix('post_', x),
@@ -1056,6 +1082,10 @@ class SalesPipeline(PipelineBase):
 							},
 							'portal': {'prefixes': ('portal_url',)},
 							'present_location': {
+								'postprocess': [
+									lambda x, _: strip_key_prefix('pres_loc_', x),
+									lambda d, p: associate_with_tgn_record_sales(d, p, services['sales_tgn'],"pres_loc_geog"),
+								],
 								'rename_keys': {
 									'pres_loc_geog': 'geog',
 									'pres_loc_inst': 'inst',
@@ -1065,7 +1095,6 @@ class SalesPipeline(PipelineBase):
 									'pres_loc_accq': 'accq',
 									'pres_loc_note': 'note',
 								},
-								'postproccess' : lambda d, p: associate_with_tgn_record(d, p, services['sales_tgn'],"pres_loc_geog"),
 								'prefixes': (
 									'pres_loc_geog',
 									'pres_loc_inst',
@@ -1304,7 +1333,7 @@ class SalesPipeline(PipelineBase):
 # 				AddFieldNames(field_names=self.auction_events_headers)
 			)
 
-			auction_events = self.add_auction_events_chain(g, auction_events_records, serialize=True)
+			auction_events = self.add_auction_events_chain(g, services, auction_events_records, serialize=True)
 			_ = self.add_catalog_linguistic_objects_chain(g, auction_events, serialize=True)
 			_ = self.add_places_chain(g, auction_events, serialize=True)
 
@@ -1336,6 +1365,7 @@ class SalesPipeline(PipelineBase):
 				CurriedCSVReader(fs='fs.data.sales', limit=self.limit, field_names=self.contents_headers),
 # 				AddFieldNames(field_names=self.contents_headers),
 			)
+			# import pdb; pdb.set_trace()
 			sales = self.add_sales_chain(g, contents_records, services, serialize=True)
 			_ = self.add_lot_set_chain(g, sales, serialize=True)
 			_ = self.add_texts_chain(g, sales, serialize=True)
@@ -1359,7 +1389,6 @@ class SalesPipeline(PipelineBase):
 		'''Return a single bonobo.Graph object for the entire pipeline.'''
 		if not self.graph_0:
 			self._construct_graph(single_graph=True, **kwargs)
-
 		return self.graph_0
 
 	def get_graph_1(self, **kwargs):

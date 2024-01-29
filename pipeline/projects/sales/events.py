@@ -8,8 +8,8 @@ from cromulent import model, vocab
 from cromulent.model import factory
 
 import pipeline.execution
-from pipeline.util import implode_date, timespan_from_outer_bounds, timespan_from_bound_components
-from pipeline.util.cleaners import parse_location
+from pipeline.util import implode_date, timespan_from_outer_bounds, timespan_from_bound_components, traverse_static_place_instances
+from pipeline.util.cleaners import parse_location, parse_location_name
 import pipeline.linkedart
 from pipeline.linkedart import add_crom_data, get_crom_object, remove_crom_object
 
@@ -54,7 +54,7 @@ class PopulateAuctionEvent(Configurable):
 	date_modifiers = Service('date_modifiers')
 	link_types = Service('link_types')
 
-	def auction_event_location(self, data:dict):
+	def auction_event_location(self, data:dict, tgn_data):
 		'''
 		Based on location data in the supplied `data` dict, construct a data structure
 		representing a hierarchy of places (e.g. location->city->country), and return it.
@@ -66,38 +66,45 @@ class PopulateAuctionEvent(Configurable):
 		city_name = data.get('city_of_sale')
 		place_verbatim = data.get('sale_location')
 		country_name = data.get('country_auth')
-
+		# import pdb; pdb.set_trace()
 		loc = None
-		with suppress(IndexError, ValueError, AttributeError):
-			if country_name in ('England',):
-				# British records sometimes include the county name in the city field
-				# attempt to split those here so that the counties can be properly modeled
-				city, county = city_name.split(', ', 1)
-				if ' ' not in county:
-					_values = []
-					_types = []
-					allvalues = (specific_name, city, county, country_name)
-					alltypes = ('Place', 'City', 'County', 'Country')
-					for v, t in zip(allvalues, alltypes):
-						if v is not None:
-							_values.append(v)
-							_types.append(t)
-					loc = parse_location(*_values, uri_base=self.helper.uid_tag_prefix, types=_types)
-		if not loc:
-			allvalues = (specific_name, city_name, country_name)
-			alltypes = ('Place', 'City', 'Country')
-			parts = []
-			types = []
-			for v, t in zip(allvalues, alltypes):
-				if v is not None:
-					parts.append(v)
-					types.append(t)
-			if parts:
-				loc = parse_location(*parts, uri_base=self.helper.uid_tag_prefix, types=types)
-		if loc and place_verbatim and place_verbatim != city_name:
-			if 'part_of' in loc:
-				city = loc['part_of']
-				city['names'] = [place_verbatim]
+		if not tgn_data:
+			with suppress(IndexError, ValueError, AttributeError):
+				if country_name in ('England',):
+					# British records sometimes include the county name in the city field
+					# attempt to split those here so that the counties can be properly modeled
+					city, county = city_name.split(', ', 1)
+					if ' ' not in county:
+						_values = []
+						_types = []
+						allvalues = (specific_name, city, county, country_name)
+						alltypes = ('Place', 'City', 'County', 'Country')
+						for v, t in zip(allvalues, alltypes):
+							if v is not None:
+								_values.append(v)
+								_types.append(t)
+						loc = parse_location(*_values, uri_base=self.helper.uid_tag_prefix, types=_types)
+			if not loc:
+				allvalues = (specific_name, city_name, country_name)
+				alltypes = ('Place', 'City', 'Country')
+				parts = []
+				types = []
+				for v, t in zip(allvalues, alltypes):
+					if v is not None:
+						parts.append(v)
+						types.append(t)
+				if parts:
+					loc = parse_location(*parts, uri_base=self.helper.uid_tag_prefix, types=types)
+			if loc and place_verbatim and place_verbatim != city_name:
+				if 'part_of' in loc:
+					city = loc['part_of']
+					city['names'] = [place_verbatim]
+		else:
+			# import pdb; pdb.set_trace()
+			# check in which type of location the tgn refers to
+			tgn_ref = data.get('loc_tgn_ref')
+			l = data.get(tgn_ref)
+			loc = parse_location_name(l, uri_base=self.helper.proj_prefix)
 		return loc
 
 	def __call__(self, data:dict, event_properties, date_modifiers, link_types):
@@ -106,12 +113,15 @@ class PopulateAuctionEvent(Configurable):
 		auction_locations = event_properties['auction_locations']
 		event_experts = event_properties['experts']
 		event_commissaires = event_properties['commissaire']
-		
+		# import pdb; pdb.set_trace()
+
 		auction = get_crom_object(data)
 		catalog = data['_catalog']['_LOD_OBJECT']
 
 		location_data = data['location']
-		current = self.auction_event_location(location_data)
+		tgn_data = location_data.get('loc_tgn', None)
+
+		current = self.auction_event_location(location_data, tgn_data)
 		if not current:
 			print(f'*** Empty location data: {pprint.pformat(location_data)}')
 			pprint.pprint(data)
@@ -121,27 +131,59 @@ class PopulateAuctionEvent(Configurable):
 		# which uses the data to associate the place with auction lots.
 		base_uri = self.helper.make_proj_uri('AUCTION-EVENT', cno, 'PLACE', '')
 		record = get_crom_object(data.get('_record'))
-		
-		current_p = current
-		locs = []
-		while current_p:
-			l = current_p.get('name')
-			if l:
-				locs.append(l)
-			current_p = current_p.get('part_of')
-		loc = ', '.join(locs) if len(locs) else None
-		canonical_place = self.helper.get_canonical_place(loc)
-		if canonical_place:
-			place = canonical_place
-			place_data = add_crom_data(data={'uri': place.id}, what=place)
-		else:
-			place_data = self.helper.make_place(current, base_uri=base_uri, record=record)
-			place = get_crom_object(place_data)
+		if not tgn_data:
+			current_p = current
+			locs = []
+			while current_p:
+				l = current_p.get('name')
+				if l:
+					locs.append(l)
+				current_p = current_p.get('part_of')
+			loc = ', '.join(locs) if len(locs) else None
+			canonical_place = self.helper.get_canonical_place(loc)
+			if canonical_place:
+				place = canonical_place
+				place_data = add_crom_data(data={'uri': place.id}, what=place)
+			else:
+				place_data = self.helper.make_place(current, base_uri=base_uri, record=record)
+				place = get_crom_object(place_data)
 
-		if place:
-			data['_locations'] = [place_data]
-			auction.took_place_at = place
-			auction_locations[cno] = place.clone(minimal=True)
+			if place:
+				data['_locations'] = [place_data]
+				auction.took_place_at = place
+				auction_locations[cno] = place.clone(minimal=True)
+		else:
+			l = current.get('name')
+
+			part_of = tgn_data.get("part_of") # this is a tgn id
+			same_as = tgn_data.get('same_as') # this is a tgn id
+			if part_of:
+				tgn_instance = self.helper.static_instances.get_instance('Place', part_of)
+				traverse_static_place_instances(self, tgn_instance)
+				place_data = self.helper.make_place(current, base_uri=base_uri)
+				o_place = get_crom_object(place_data)
+				o_place.part_of = tgn_instance
+				data['_locations'] = [place_data]
+				auction.took_place_at = o_place
+				auction_locations[cno] = o_place.clone(minimal=True)
+
+			if same_as:
+				# import pdb; pdb.set_trace()
+				tgn_instance = self.helper.static_instances.get_instance('Place', same_as)
+				if tgn_instance:
+					traverse_static_place_instances(self, tgn_instance)
+					alternate_exists=False
+					for id in tgn_instance.identified_by:
+						if isinstance(id, vocab.AlternateName) and id.content == l:
+							alternate_exists = True
+						
+						if not alternate_exists:
+							tgn_instance.identified_by = vocab.AlternateName(ident=self.helper.make_shared_uri(('PLACE',current)), content=l)
+					
+					# owner_place = tgn_instance
+					# sdata['tgn'] = tgn_instance
+
+
 
 		ts, begin, end, uses_following_days_style = timespan_from_bound_components(
 			data,

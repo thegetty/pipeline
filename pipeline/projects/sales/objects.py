@@ -10,12 +10,12 @@ from cromulent import model, vocab
 from cromulent.extract import extract_physical_dimensions
 
 import pipeline.execution
-from pipeline.util import implode_date, timespan_from_outer_bounds, CaseFoldingSet
+from pipeline.util import implode_date, timespan_from_outer_bounds, CaseFoldingSet, traverse_static_place_instances
 from pipeline.util.cleaners import \
 			parse_location_name, \
 			date_cleaner
 import pipeline.linkedart
-from pipeline.linkedart import add_crom_data, get_crom_object
+from pipeline.linkedart import add_crom_data, get_crom_object, make_la_place
 from pipeline.util import truncate_with_ellipsis
 from pipeline.provenance import ProvenanceBase
 
@@ -192,12 +192,41 @@ class PopulateSalesObject(Configurable, pipeline.linkedart.PopulateObject):
 			# self.populate_destruction_events(data, notes, type_map=destruction_types_map)
 			pass
 
+	def new_residence_activity(self, place, group, record):
+		try:
+			res_act = model.Activity(ident=self.helper.make_proj_uri('Activity',  'establishment', group.id, place.id))
+			res_act.took_place_at = place
+			res_type = model.Type(ident='http://vocab.getty.edu/aat/300393212', label="Establishment")
+			location_type = model.Type(ident='http://vocab.getty.edu/aat/300393211', label="Location Activity or State")
+			res_type.classified_as = location_type
+			res_act.classified_as = res_type
+			res_act.referred_to_by = record
+
+		except AttributeError as e:
+			# import pdb; pdb.set_trace()
+			import traceback
+			traceback.print_exc()
+			with open('log_sales_res_act.txt', 'a') as f:
+				f.write(str(e))
+				f.write(str(record.__dict__['_label']))
+				f.write(traceback.format_exc())
+				f.write('\n\n')
+			
+			return None
+		return res_act
+
+
 	def _populate_object_present_location(self, data:dict, now_key, destruction_types_map):
 		hmo = get_crom_object(data)
+		sales_record = get_crom_object(data['_record'])
+
+		# import pdb; pdb.set_trace()
 		locations = data.get('present_location', [])
 		for location in locations:
+
 			loc = location.get('geog')
 			note = location.get('note')
+			tgn_data = location.get('loc_tgn')
 
 			# in these two if blocks, the object was destroyed, so any "present location"
 			# data is actually an indication of the location of destruction.
@@ -211,6 +240,8 @@ class PopulateSalesObject(Configurable, pipeline.linkedart.PopulateObject):
 				note = None
 
 			if loc:
+				# TODO: if `parse_location_name` fails, still preserve the location string somehow
+				current = parse_location_name(loc, uri_base=self.helper.uid_tag_prefix)
 				inst = location.get('inst')
 				if inst:
 					owner_data = {
@@ -233,31 +264,70 @@ class PopulateSalesObject(Configurable, pipeline.linkedart.PopulateObject):
 						'uri': self.helper.make_proj_uri('ORG', 'CURR-OWN', *now_key),
 					}
 
-				# TODO: if `parse_location_name` fails, still preserve the location string somehow
-				current = parse_location_name(loc, uri_base=self.helper.uid_tag_prefix)
+					# It's conceivable that there could be more than one "present location"
+					# for an object that is reconciled based on prev/post sale rewriting.
+					# Therefore, the place URI must not share a prefix with the object URI,
+					# otherwise all such places are liable to be merged during URI
+					# reconciliation as part of the prev/post sale rewriting.
+					
+				owner_place = None
+				if tgn_data:
+					part_of = tgn_data.get("part_of") # this is a tgn id
+					same_as = tgn_data.get('same_as') # this is a tgn id
+					
+					if part_of:
+						tgn_instance = self.helper.static_instances.get_instance('Place', part_of)
+						traverse_static_place_instances(self, tgn_instance)
+						place = make_la_place(
+							{
+								'name': loc,
+								'uri': self.helper.make_shared_uri(('PLACE',loc))
+							},
+						)
+						o_place = get_crom_object(place)
+						o_place.part_of = tgn_instance
+						hmo.current_location = o_place
+						owner_place = o_place
+						data['_locations'].append(place)
+					if same_as:
+						tgn_instance = self.helper.static_instances.get_instance('Place', same_as)
+						traverse_static_place_instances(self, tgn_instance)
+						alternate_exists=False
+						for id in tgn_instance.identified_by:
+							if isinstance(id, vocab.AlternateName) and id.content == loc:
+								alternate_exists = True
 
-				# It's conceivable that there could be more than one "present location"
-				# for an object that is reconciled based on prev/post sale rewriting.
-				# Therefore, the place URI must not share a prefix with the object URI,
-				# otherwise all such places are liable to be merged during URI
-				# reconciliation as part of the prev/post sale rewriting.
-				base_uri = self.helper.prepend_uri_key(hmo.id, 'PLACE')
-				
-				canonical_place = self.helper.get_canonical_place(loc)
-				if canonical_place:
-					place = canonical_place
-					place_data = add_crom_data(data={'uri': place.id}, what=place)
-				else:
-					place_data = self.helper.make_place(current, base_uri=base_uri)
-					place = get_crom_object(place_data)
-				hmo.current_location = place
+						if not alternate_exists:
+							tgn_instance.identified_by = vocab.AlternateName(ident=self.helper.make_shared_uri(('PLACE',loc)), content=loc)
+						
+						hmo.current_location = tgn_instance
+						owner_place = tgn_instance
 
-				make_la_org = pipeline.linkedart.MakeLinkedArtOrganization()
-				owner_data = make_la_org(owner_data)
-				owner = get_crom_object(owner_data)
-				if owner:
+					# base_uri = self.helper.prepend_uri_key(hmo.id, 'PLACE')
+					
+					# canonical_place = self.helper.get_canonical_place(loc)
+					# if canonical_place:
+					# 	place = canonical_place
+					# 	place_data = add_crom_data(data={'uri': place.id}, what=place)
+					# else:
+					# 	place_data = self.helper.make_place(current, base_uri=base_uri)
+					# 	place = get_crom_object(place_data)
+					# hmo.current_location = place
+					# make_la_org = pipeline.linkedart.MakeLinkedArtOrganization()
+					# owner_data = make_la_org(owner_data)
+					# owner = get_crom_object(owner_data)
+					# if owner:
+					# 	hmo.current_owner = owner
+					# 	owner.residence = place
+				owner = None
+				if owner_data:
+					make_la_org = pipeline.linkedart.MakeLinkedArtOrganization()
+					owner_data = make_la_org(owner_data)
+					owner = get_crom_object(owner_data)
 					hmo.current_owner = owner
-					owner.residence = place
+					# import pdb; pdb.set_trace()
+					res_act = self.new_residence_activity(owner_place, owner, sales_record)
+					owner.carried_out = res_act
 
 				if note:
 					owner_data['note'] = note
@@ -273,10 +343,21 @@ class PopulateSalesObject(Configurable, pipeline.linkedart.PopulateObject):
 					acc_number = vocab.AccessionNumber(ident='', content=acc)
 					hmo.identified_by = acc_number
 					assignment = model.AttributeAssignment(ident='')
-					assignment.carried_out_by = owner
+					if owner:
+						assignment = model.AttributeAssignment(ident=self.helper.make_shared_uri('ATTR','ACC',acc,'OWN', owner._label))
+						assignment.carried_out_by = owner
+					else:
+						assignment = model.AttributeAssignment(ident=self.helper.make_shared_uri('ATTR','ACC',acc))
 					acc_number.assigned_by = assignment
+				# if acc:
+				# 	acc_number = vocab.AccessionNumber(ident='', content=acc)
+				# 	hmo.identified_by = acc_number
+				# 	assignment = model.AttributeAssignment(ident='')
+				# 	assignment.carried_out_by = owner
+				# 	acc_number.assigned_by = assignment
 
-				data['_locations'].append(place_data)
+				# data['_locations'].append(place_data)
+				# data['_organizations'].append(owner_data)
 				data['_final_org'].append(owner_data)
 			else:
 				pass # there is no present location place string

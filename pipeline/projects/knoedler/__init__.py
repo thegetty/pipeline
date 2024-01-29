@@ -828,7 +828,7 @@ class PopulateKnoedlerObject(Configurable, pipeline.linkedart.PopulateObject):
 class TransactionSwitch:
 	'''
 	Wrap data values with an index on the transaction field so that different branches
-	can be constructed for each transaction type (by using ExtractKeyedValue).
+	can be constructed for each transaction type (by using ExtractKeyedValue)..
 	'''
 	def __call__(self, data:dict):
 		rec = data['book_record']

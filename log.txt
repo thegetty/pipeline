@@ -1,0 +1,258 @@
+'list' object has no attribute 'get'Traceback (most recent call last):
+  File "/home/vouidaskis/PycharmProjects/getty/pipeline/pipeline/execution.py", line 128, in run_node
+    for r in result:
+  File "/home/vouidaskis/PycharmProjects/getty/pipeline/pipeline/projects/knoedler/__init__.py", line 1743, in __call__
+    in_tx, out_tx = self.add_return_tx(data, buy_sell_modifiers)
+  File "/home/vouidaskis/PycharmProjects/getty/pipeline/pipeline/projects/knoedler/__init__.py", line 1406, in add_return_tx
+    in_tx = self._prov_entry(data, 'entry_date', sellers, purch_info, incoming=True, buy_sell_modifiers=buy_sell_modifiers)
+  File "/home/vouidaskis/PycharmProjects/getty/pipeline/pipeline/projects/knoedler/__init__.py", line 1250, in _prov_entry
+    if shared_people is None:
+  File "/home/vouidaskis/PycharmProjects/getty/pipeline/pipeline/projects/knoedler/__init__.py", line 1015, in _add_prov_entry_payment
+    amnt = get_crom_object(price_info)
+  File "/home/vouidaskis/PycharmProjects/getty/pipeline/pipeline/linkedart.py", line 23, in get_crom_object
+    return data.get('_LOD_OBJECT')
+AttributeError: 'list' object has no attribute 'get'
+
+
+'list' object has no attribute 'get'Traceback (most recent call last):
+  File "/home/vouidaskis/PycharmProjects/getty/pipeline/pipeline/execution.py", line 128, in run_node
+    for r in result:
+  File "/home/vouidaskis/PycharmProjects/getty/pipeline/pipeline/projects/knoedler/__init__.py", line 1744, in __call__
+    in_tx, out_tx = self.add_return_tx(data, buy_sell_modifiers)
+  File "/home/vouidaskis/PycharmProjects/getty/pipeline/pipeline/projects/knoedler/__init__.py", line 1407, in add_return_tx
+    in_tx = self._prov_entry(data, 'entry_date', sellers, purch_info, shared_people, incoming=True, buy_sell_modifiers=buy_sell_modifiers)
+  File "/home/vouidaskis/PycharmProjects/getty/pipeline/pipeline/projects/knoedler/__init__.py", line 1250, in _prov_entry
+    if shared_people is None:
+  File "/home/vouidaskis/PycharmProjects/getty/pipeline/pipeline/projects/knoedler/__init__.py", line 1016, in _add_prov_entry_payment
+    knoedler_price_part_amnt = get_crom_object(knoedler_price_part)
+  File "/home/vouidaskis/PycharmProjects/getty/pipeline/pipeline/linkedart.py", line 23, in get_crom_object
+    return data.get('_LOD_OBJECT')
+AttributeError: 'list' object has no attribute 'get'
+
+
+'list' object has no attribute 'get'Traceback (most recent call last):
+  File "/home/vouidaskis/PycharmProjects/getty/pipeline/pipeline/execution.py", line 128, in run_node
+    for r in result:
+  File "/home/vouidaskis/PycharmProjects/getty/pipeline/pipeline/projects/knoedler/__init__.py", line 1744, in __call__
+    in_tx, out_tx = self.add_return_tx(data, buy_sell_modifiers)
+  File "/home/vouidaskis/PycharmProjects/getty/pipeline/pipeline/projects/knoedler/__init__.py", line 1407, in add_return_tx
+    in_tx = self._prov_entry(data, 'entry_date', sellers, purch_info, shared_people, incoming=True, buy_sell_modifiers=buy_sell_modifiers)
+  File "/home/vouidaskis/PycharmProjects/getty/pipeline/pipeline/projects/knoedler/__init__.py", line 1250, in _prov_entry
+    if shared_people is None:
+  File "/home/vouidaskis/PycharmProjects/getty/pipeline/pipeline/projects/knoedler/__init__.py", line 1016, in _add_prov_entry_payment
+    knoedler_price_part_amnt = get_crom_object(knoedler_price_part)
+  File "/home/vouidaskis/PycharmProjects/getty/pipeline/pipeline/linkedart.py", line 23, in get_crom_object
+    return data.get('_LOD_OBJECT')
+AttributeError: 'list' object has no attribute 'get'
+
+
+local variable 'attribute_assignment_id' referenced before assignmentTraceback (most recent call last):
+  File "/home/vouidaskis/PycharmProjects/getty/pipeline/pipeline/execution.py", line 118, in run_node
+    result = node(input)
+  File "/home/vouidaskis/PycharmProjects/getty/pipeline/pipeline/projects/knoedler/__init__.py", line 556, in __call__
+    self.model_artists_with_modifers(data, hmo, attribution_modifiers, attribution_group_types, attribution_group_names)
+  File "/home/vouidaskis/PycharmProjects/getty/pipeline/pipeline/provenance/__init__.py", line 645, in model_artists_with_modifers
+    self.model_object_influence(data, non_artist_assertions, hmo, prod_event, attribution_modifiers, attribution_group_types, attribution_group_names, all_uncertain=uncertain)
+  File "/home/vouidaskis/PycharmProjects/getty/pipeline/pipeline/provenance/__init__.py", line 402, in model_object_influence
+    assignment = vocab.make_multitype_obj(*attrib_assignment_classes, ident=attribute_assignment_id, label=f'Possibly influenced by {person._label}')
+UnboundLocalError: local variable 'attribute_assignment_id' referenced before assignment
+
+
+Can't set 'transferred_title_to' on resource of type 'crm:E8_Acquisition' to '[{'name': 'Max Rosenberg', 'loc': 'Mt. Vernon N.Y.', 'auth_name': 'Rosenberg, Max', 'auth_addr': '102 Summit Ave., Mount Vernon, NY, USA', 'auth_mod': '', 'loc_tgn': {'part_of': '2527522'}}]'Traceback (most recent call last):
+  File "/home/vouidaskis/PycharmProjects/getty/pipeline/pipeline/execution.py", line 128, in run_node
+    for r in result:
+  File "/home/vouidaskis/PycharmProjects/getty/pipeline/pipeline/projects/knoedler/__init__.py", line 1746, in __call__
+    in_tx, out_tx = self.add_return_tx(data, buy_sell_modifiers)
+  File "/home/vouidaskis/PycharmProjects/getty/pipeline/pipeline/projects/knoedler/__init__.py", line 1414, in add_return_tx
+    out_tx = self._prov_entry(data, 'entry_date', sellers, sale_info, incoming=False, purpose='exchange', buy_sell_modifiers=buy_sell_modifiers)
+  File "/home/vouidaskis/PycharmProjects/getty/pipeline/pipeline/projects/knoedler/__init__.py", line 1380, in _prov_entry
+    self._add_prov_entry_acquisition(data, tx, from_people, from_agents, to_people, to_agents, date, incoming, purpose=purpose)
+  File "/home/vouidaskis/PycharmProjects/getty/pipeline/pipeline/projects/knoedler/__init__.py", line 1213, in _add_prov_entry_acquisition
+    if data.get('sale_buyer') :
+  File "/home/vouidaskis/PycharmProjects/getty/pipeline/venv/lib/python3.8/site-packages/cromulent/model.py", line 771, in __setattr__
+    ok = self._check_prop(which, value)
+  File "/home/vouidaskis/PycharmProjects/getty/pipeline/venv/lib/python3.8/site-packages/cromulent/model.py", line 809, in _check_prop
+    raise DataError("Can't set '%s' on resource of type '%s' to '%r'" % (which, self._type, value), self)
+cromulent.model.DataError: Can't set 'transferred_title_to' on resource of type 'crm:E8_Acquisition' to '[{'name': 'Max Rosenberg', 'loc': 'Mt. Vernon N.Y.', 'auth_name': 'Rosenberg, Max', 'auth_addr': '102 Summit Ave., Mount Vernon, NY, USA', 'auth_mod': '', 'loc_tgn': {'part_of': '2527522'}}]'
+
+
+Can't set 'transferred_title_to' on resource of type 'crm:E8_Acquisition' to '{'name': 'Max Rosenberg', 'loc': 'Mt. Vernon N.Y.', 'auth_name': 'Rosenberg, Max', 'auth_addr': '102 Summit Ave., Mount Vernon, NY, USA', 'auth_mod': '', 'loc_tgn': {'part_of': '2527522'}}'Traceback (most recent call last):
+  File "/home/vouidaskis/PycharmProjects/getty/pipeline/pipeline/execution.py", line 128, in run_node
+    for r in result:
+  File "/home/vouidaskis/PycharmProjects/getty/pipeline/pipeline/projects/knoedler/__init__.py", line 1746, in __call__
+    in_tx, out_tx = self.add_return_tx(data, buy_sell_modifiers)
+  File "/home/vouidaskis/PycharmProjects/getty/pipeline/pipeline/projects/knoedler/__init__.py", line 1414, in add_return_tx
+    out_tx = self._prov_entry(data, 'entry_date', sellers, sale_info, incoming=False, purpose='exchange', buy_sell_modifiers=buy_sell_modifiers)
+  File "/home/vouidaskis/PycharmProjects/getty/pipeline/pipeline/projects/knoedler/__init__.py", line 1380, in _prov_entry
+    self._add_prov_entry_acquisition(data, tx, from_people, from_agents, to_people, to_agents, date, incoming, purpose=purpose)
+  File "/home/vouidaskis/PycharmProjects/getty/pipeline/pipeline/projects/knoedler/__init__.py", line 1213, in _add_prov_entry_acquisition
+    if data.get('sale_buyer') :
+  File "/home/vouidaskis/PycharmProjects/getty/pipeline/venv/lib/python3.8/site-packages/cromulent/model.py", line 771, in __setattr__
+    ok = self._check_prop(which, value)
+  File "/home/vouidaskis/PycharmProjects/getty/pipeline/venv/lib/python3.8/site-packages/cromulent/model.py", line 809, in _check_prop
+    raise DataError("Can't set '%s' on resource of type '%s' to '%r'" % (which, self._type, value), self)
+cromulent.model.DataError: Can't set 'transferred_title_to' on resource of type 'crm:E8_Acquisition' to '{'name': 'Max Rosenberg', 'loc': 'Mt. Vernon N.Y.', 'auth_name': 'Rosenberg, Max', 'auth_addr': '102 Summit Ave., Mount Vernon, NY, USA', 'auth_mod': '', 'loc_tgn': {'part_of': '2527522'}}'
+
+
+add_person() missing 3 required positional arguments: 'data', 'record', and 'relative_id'Traceback (most recent call last):
+  File "/home/vouidaskis/PycharmProjects/getty/pipeline/pipeline/execution.py", line 128, in run_node
+    for r in result:
+  File "/home/vouidaskis/PycharmProjects/getty/pipeline/pipeline/projects/knoedler/__init__.py", line 1748, in __call__
+    in_tx, out_tx = self.add_return_tx(data, buy_sell_modifiers)
+  File "/home/vouidaskis/PycharmProjects/getty/pipeline/pipeline/projects/knoedler/__init__.py", line 1416, in add_return_tx
+    out_tx = self._prov_entry(data, 'entry_date', sellers, sale_info, incoming=False, purpose='exchange', buy_sell_modifiers=buy_sell_modifiers)
+  File "/home/vouidaskis/PycharmProjects/getty/pipeline/pipeline/projects/knoedler/__init__.py", line 1382, in _prov_entry
+    self._add_prov_entry_acquisition(data, tx, from_people, from_agents, to_people, to_agents, date, incoming, purpose=purpose)
+  File "/home/vouidaskis/PycharmProjects/getty/pipeline/pipeline/projects/knoedler/__init__.py", line 1213, in _add_prov_entry_acquisition
+    if data.get('sale_buyer') :
+TypeError: add_person() missing 3 required positional arguments: 'data', 'record', and 'relative_id'
+
+
+add_person() missing 3 required positional arguments: 'data', 'record', and 'relative_id'Traceback (most recent call last):
+  File "/home/vouidaskis/PycharmProjects/getty/pipeline/pipeline/execution.py", line 128, in run_node
+    for r in result:
+  File "/home/vouidaskis/PycharmProjects/getty/pipeline/pipeline/projects/knoedler/__init__.py", line 1747, in __call__
+    in_tx, out_tx = self.add_return_tx(data, buy_sell_modifiers)
+  File "/home/vouidaskis/PycharmProjects/getty/pipeline/pipeline/projects/knoedler/__init__.py", line 1415, in add_return_tx
+    out_tx = self._prov_entry(data, 'entry_date', sellers, sale_info, incoming=False, purpose='exchange', buy_sell_modifiers=buy_sell_modifiers)
+  File "/home/vouidaskis/PycharmProjects/getty/pipeline/pipeline/projects/knoedler/__init__.py", line 1381, in _prov_entry
+    self._add_prov_entry_acquisition(data, tx, from_people, from_agents, to_people, to_agents, date, incoming, purpose=purpose)
+  File "/home/vouidaskis/PycharmProjects/getty/pipeline/pipeline/projects/knoedler/__init__.py", line 1213, in _add_prov_entry_acquisition
+    if data.get('sale_buyer') :
+TypeError: add_person() missing 3 required positional arguments: 'data', 'record', and 'relative_id'
+
+
+'list' object has no attribute 'get'Traceback (most recent call last):
+  File "/home/vouidaskis/PycharmProjects/getty/pipeline/pipeline/execution.py", line 128, in run_node
+    for r in result:
+  File "/home/vouidaskis/PycharmProjects/getty/pipeline/pipeline/projects/knoedler/__init__.py", line 1747, in __call__
+    in_tx, out_tx = self.add_return_tx(data, buy_sell_modifiers)
+  File "/home/vouidaskis/PycharmProjects/getty/pipeline/pipeline/projects/knoedler/__init__.py", line 1409, in add_return_tx
+    elif data.get('sale_buyer').get('Returned') is not None :
+AttributeError: 'list' object has no attribute 'get'
+
+
+'list' object has no attribute 'get'Traceback (most recent call last):
+  File "/home/vouidaskis/PycharmProjects/getty/pipeline/pipeline/execution.py", line 128, in run_node
+    for r in result:
+  File "/home/vouidaskis/PycharmProjects/getty/pipeline/pipeline/projects/knoedler/__init__.py", line 1750, in __call__
+    in_tx, out_tx = self.add_return_tx(data, buy_sell_modifiers)
+  File "/home/vouidaskis/PycharmProjects/getty/pipeline/pipeline/projects/knoedler/__init__.py", line 1412, in add_return_tx
+    elif data.get('sale_buyer').get('Returned') is not None :
+AttributeError: 'list' object has no attribute 'get'
+
+
+local variable 'price_info' referenced before assignmentTraceback (most recent call last):
+  File "/home/vouidaskis/PycharmProjects/getty/pipeline/pipeline/execution.py", line 128, in run_node
+    for r in result:
+  File "/home/vouidaskis/PycharmProjects/getty/pipeline/pipeline/projects/knoedler/__init__.py", line 1753, in __call__
+    in_tx, out_tx = self.add_return_tx(data, buy_sell_modifiers)
+  File "/home/vouidaskis/PycharmProjects/getty/pipeline/pipeline/projects/knoedler/__init__.py", line 1421, in add_return_tx
+    out_tx = self._prov_entry(data, 'entry_date', sellers, sale_info, incoming=False, purpose='exchange', buy_sell_modifiers=buy_sell_modifiers)
+  File "/home/vouidaskis/PycharmProjects/getty/pipeline/pipeline/projects/knoedler/__init__.py", line 1384, in _prov_entry
+    self._add_prov_entry_payment(data, tx, knoedler_price_part, price_info, people, people_agents, shared_people, knoedler_group_agents, date, incoming, purpose=purpose)
+  File "/home/vouidaskis/PycharmProjects/getty/pipeline/pipeline/projects/knoedler/__init__.py", line 1052, in _add_prov_entry_payment
+    appraisal = self._apprasing_assignment(data)
+  File "/home/vouidaskis/PycharmProjects/getty/pipeline/pipeline/projects/knoedler/__init__.py", line 894, in _apprasing_assignment
+    if price_info and not len(sellers):
+UnboundLocalError: local variable 'price_info' referenced before assignment
+
+
+local variable 'price_info' referenced before assignmentTraceback (most recent call last):
+  File "/home/vouidaskis/PycharmProjects/getty/pipeline/pipeline/execution.py", line 128, in run_node
+    for r in result:
+  File "/home/vouidaskis/PycharmProjects/getty/pipeline/pipeline/projects/knoedler/__init__.py", line 1753, in __call__
+    in_tx, out_tx = self.add_return_tx(data, buy_sell_modifiers)
+  File "/home/vouidaskis/PycharmProjects/getty/pipeline/pipeline/projects/knoedler/__init__.py", line 1421, in add_return_tx
+    out_tx = self._prov_entry(data, 'entry_date', sellers, sale_info, incoming=False, purpose='exchange', buy_sell_modifiers=buy_sell_modifiers)
+  File "/home/vouidaskis/PycharmProjects/getty/pipeline/pipeline/projects/knoedler/__init__.py", line 1384, in _prov_entry
+    self._add_prov_entry_payment(data, tx, knoedler_price_part, price_info, people, people_agents, shared_people, knoedler_group_agents, date, incoming, purpose=purpose)
+  File "/home/vouidaskis/PycharmProjects/getty/pipeline/pipeline/projects/knoedler/__init__.py", line 1052, in _add_prov_entry_payment
+    appraisal = self._apprasing_assignment(data)
+  File "/home/vouidaskis/PycharmProjects/getty/pipeline/pipeline/projects/knoedler/__init__.py", line 894, in _apprasing_assignment
+    if price_info and not len(sellers):
+UnboundLocalError: local variable 'price_info' referenced before assignment
+
+
+local variable 'price_info' referenced before assignmentTraceback (most recent call last):
+  File "/home/vouidaskis/PycharmProjects/getty/pipeline/pipeline/execution.py", line 128, in run_node
+    for r in result:
+  File "/home/vouidaskis/PycharmProjects/getty/pipeline/pipeline/projects/knoedler/__init__.py", line 1753, in __call__
+    in_tx, out_tx = self.add_return_tx(data, buy_sell_modifiers)
+  File "/home/vouidaskis/PycharmProjects/getty/pipeline/pipeline/projects/knoedler/__init__.py", line 1421, in add_return_tx
+    out_tx = self._prov_entry(data, 'entry_date', sellers, sale_info, incoming=False, purpose='exchange', buy_sell_modifiers=buy_sell_modifiers)
+  File "/home/vouidaskis/PycharmProjects/getty/pipeline/pipeline/projects/knoedler/__init__.py", line 1384, in _prov_entry
+    self._add_prov_entry_payment(data, tx, knoedler_price_part, price_info, people, people_agents, shared_people, knoedler_group_agents, date, incoming, purpose=purpose)
+  File "/home/vouidaskis/PycharmProjects/getty/pipeline/pipeline/projects/knoedler/__init__.py", line 1052, in _add_prov_entry_payment
+    appraisal = self._apprasing_assignment(data)
+  File "/home/vouidaskis/PycharmProjects/getty/pipeline/pipeline/projects/knoedler/__init__.py", line 894, in _apprasing_assignment
+    if price_info and not len(sellers):
+UnboundLocalError: local variable 'price_info' referenced before assignment
+
+
+'star_record_no'Traceback (most recent call last):
+  File "/home/vouidaskis/PycharmProjects/getty/pipeline/pipeline/execution.py", line 118, in run_node
+    result = node(input)
+  File "/home/vouidaskis/PycharmProjects/getty/pipeline/pipeline/nodes/basic.py", line 158, in __call__
+    subd = p(subd, data)
+  File "/home/vouidaskis/PycharmProjects/getty/pipeline/pipeline/projects/people.py", line 614, in <lambda>
+    lambda d, p: associate_with_tgn_record_people(d, p, services['people_tgn'],"address")
+  File "/home/vouidaskis/PycharmProjects/getty/pipeline/pipeline/util/__init__.py", line 702, in associate_with_tgn_record_people
+    tgn_rec = tgn[star_record_no]
+KeyError: 'star_record_no'
+
+
+'star_record_no'Traceback (most recent call last):
+  File "/home/vouidaskis/PycharmProjects/getty/pipeline/pipeline/execution.py", line 118, in run_node
+    result = node(input)
+  File "/home/vouidaskis/PycharmProjects/getty/pipeline/pipeline/nodes/basic.py", line 158, in __call__
+    subd = p(subd, data)
+  File "/home/vouidaskis/PycharmProjects/getty/pipeline/pipeline/projects/people.py", line 614, in <lambda>
+    lambda d, p: associate_with_tgn_record_people(d, p, services['people_tgn'],"address")
+  File "/home/vouidaskis/PycharmProjects/getty/pipeline/pipeline/util/__init__.py", line 702, in associate_with_tgn_record_people
+    tgn_rec = tgn[star_record_no]
+KeyError: 'star_record_no'
+
+
+invalid literal for int() with base 10: '22-1819'Traceback (most recent call last):
+  File "/home/vouidaskis/PycharmProjects/getty/pipeline/pipeline/execution.py", line 128, in run_node
+    for r in result:
+  File "/home/vouidaskis/PycharmProjects/getty/pipeline/pipeline/projects/people.py", line 508, in __call__
+    self.handle_places(data)
+  File "/home/vouidaskis/PycharmProjects/getty/pipeline/pipeline/projects/people.py", line 412, in handle_places
+    sdata = self.model_sojourn(data, loc)
+  File "/home/vouidaskis/PycharmProjects/getty/pipeline/pipeline/projects/people.py", line 318, in model_sojourn
+    date_range = date_cleaner(verbatim_date)
+  File "/home/vouidaskis/PycharmProjects/getty/pipeline/pipeline/util/cleaners.py", line 547, in date_cleaner
+    return date_parse(value, '/')
+  File "/home/vouidaskis/PycharmProjects/getty/pipeline/pipeline/util/cleaners.py", line 407, in date_parse
+    d = int(bits[2])
+ValueError: invalid literal for int() with base 10: '22-1819'
+
+
+invalid literal for int() with base 10: '22-1819'Traceback (most recent call last):
+  File "/home/vouidaskis/PycharmProjects/getty/pipeline/pipeline/execution.py", line 128, in run_node
+    for r in result:
+  File "/home/vouidaskis/PycharmProjects/getty/pipeline/pipeline/projects/people.py", line 508, in __call__
+    self.handle_places(data)
+  File "/home/vouidaskis/PycharmProjects/getty/pipeline/pipeline/projects/people.py", line 412, in handle_places
+    sdata = self.model_sojourn(data, loc)
+  File "/home/vouidaskis/PycharmProjects/getty/pipeline/pipeline/projects/people.py", line 318, in model_sojourn
+    date_range = date_cleaner(verbatim_date)
+  File "/home/vouidaskis/PycharmProjects/getty/pipeline/pipeline/util/cleaners.py", line 547, in date_cleaner
+    return date_parse(value, '/')
+  File "/home/vouidaskis/PycharmProjects/getty/pipeline/pipeline/util/cleaners.py", line 407, in date_parse
+    d = int(bits[2])
+ValueError: invalid literal for int() with base 10: '22-1819'
+
+
+'acc'Traceback (most recent call last):
+  File "/home/vouidaskis/PycharmProjects/getty/pipeline/pipeline/execution.py", line 118, in run_node
+    result = node(input)
+  File "/home/vouidaskis/PycharmProjects/getty/pipeline/pipeline/projects/knoedler/__init__.py", line 694, in __call__
+    self._populate_object_present_location(data['_object'])
+  File "/home/vouidaskis/PycharmProjects/getty/pipeline/pipeline/projects/knoedler/__init__.py", line 746, in _populate_object_present_location
+    now_key = (data['present_location']['acc'], data['present_location']['geog'])
+KeyError: 'acc'
+
+

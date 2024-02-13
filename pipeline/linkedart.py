@@ -209,7 +209,6 @@ class MakeLinkedArtLinguisticObject(MakeLinkedArtRecord):
 	# TODO: document the expected format of data['identifiers']
 	def set_properties(self, data, thing):
 		super().set_properties(data, thing)
-
 		# TODO: this whole title_type thing isn't right. most of the identifiers below aren't titles
 		title_type = model.Type(ident='http://vocab.getty.edu/aat/300417193', label='Title')
 		name = None

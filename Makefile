@@ -263,6 +263,7 @@ goupilpostprocessing: postprocessing_rewrite_uris
 	PYTHONPATH=`pwd` $(PYTHON) ./scripts/remove_meaningless_ids.py
 	# Reorganizing JSON files...
 	find $(GETTY_PIPELINE_OUTPUT) -name '*.json' | PYTHONPATH=`pwd` xargs -n 256 -P $(CONCURRENCY) $(PYTHON) ./scripts/reorganize_json.py
+	find $(GETTY_PIPELINE_OUTPUT) -name '*.json' | PYTHONPATH=`pwd` xargs -n 256 -P $(CONCURRENCY) $(PYTHON) ./scripts/patch_data_goupil.py
 
 #######################
 

@@ -44,8 +44,11 @@ from pipeline.util import (
     strip_key_prefix,
     truncate_with_ellipsis,
     associate_with_tgn_record_goupil,
-    traverse_static_place_instances
+    traverse_static_place_instances,
+    timespan_from_outer_bounds
 )
+
+from pipeline.nodes.basic import PreserveCSVFields
 from pipeline.util.cleaners import parse_location_name
 
 
@@ -701,7 +704,7 @@ class AddBooks(Configurable, GoupilProvenance):
     make_la_lo = Service("make_la_lo")
     make_la_hmo = Service("make_la_hmo")
     static_instances = Option(default="static_instances")
-    # link_types = Service('link_types')
+    
 
     def __call__(self, data: dict, make_la_lo, make_la_hmo):
         books = data.get("_book_records", [])
@@ -717,23 +720,7 @@ class AddBooks(Configurable, GoupilProvenance):
             book_type = model.Type(ident="http://vocab.getty.edu/aat/300028051", label="Book")
             book_type.classified_as = model.Type(ident="http://vocab.getty.edu/aat/300444970", label="Form")
             label = f"Goupil Stock Book {book_id}"
-            notes = []
-            # url = book.get('link')
-            # if url:
-            #     link_data = link_types['link']
-            #     label = link_data.get('label', url)
-            #     description = link_data.get('field-description')
-            #     if url.startswith('http'):
-            #         page = vocab.DigitalImage(ident='', label=label)
-            #         page._validate_range = False
-            #         page.access_point = [vocab.DigitalObject(ident=url, label=url)]
-            #         if description:
-            #             page.referred_to_by = vocab.Note(ident='', content=description)
-                
-            #         notes.append(page)
-            #     else:
-            #         warnings.warn(f'*** Link value does not appear to be a valid URL: {url}')
-
+            
             book = {
                 "uri": self.helper.make_proj_uri("Text", "Book", book_id),
                 "object_type": vocab.AccountBookText,
@@ -767,9 +754,10 @@ class AddPages(Configurable, GoupilProvenance):
     helper = Option(required=True)
     make_la_lo = Service("make_la_lo")
     make_la_hmo = Service("make_la_hmo")
+    link_types = Service('link_types')
     static_instances = Option(default="static_instances")
 
-    def __call__(self, data: dict, make_la_lo, make_la_hmo):
+    def __call__(self, data: dict, make_la_lo, make_la_hmo, link_types):
         books = data.get("_book_records", [])
         physical_books = data.get("_physical_books", [])
         data.setdefault("_text_pages", [])
@@ -787,11 +775,32 @@ class AddPages(Configurable, GoupilProvenance):
             page_type.classified_as = model.Type(ident="http://vocab.getty.edu/aat/300444970", label="Form")
             label = f"Goupil Stock Book {book_id}, Page {page}"
 
+
+            notes = []
+            url = data.get('book_record').get('rosetta_handle')
+            if url:
+                link_data = link_types['link']
+                url_label = link_data.get('label', url)
+                description = link_data.get('field-description')
+                if url.startswith('http'):
+                    page_dig = vocab.DigitalImage(ident='', label=url_label)
+                    page_dig._validate_range = False
+                    page_dig.access_point = [vocab.DigitalObject(ident=url, label=url)]
+                    if description:
+                        page_dig.referred_to_by = vocab.Note(ident='', content=description)
+                
+                    notes.append(page_dig)
+                else:
+                    warnings.warn(f'*** Link value does not appear to be a valid URL: {url}')
+
+
+
             page = {
                 "uri": self.helper.make_proj_uri("Text", "Book", book_id, "Page", page),
                 "object_type": vocab.AccountBookText,
                 "classified_as": [page_type],
                 "label": (label, vocab.instances["english"]),
+                "referred_to_by": notes,
                 "identifiers": [
                     self.helper.goupil_number_id(page, id_class=vocab.PageNumber),
                 ],
@@ -827,18 +836,18 @@ class AddRows(Configurable, GoupilProvenance):
         pages = data.get("_text_pages", [])
         data.setdefault("_records", [])
 
-        notes = []
-        for k in ("working_note", "verbatim_notes", "editor notes", "no_name_notes"):
-            if data["book_record"].get(k):
-                notes.append(vocab.Note(ident="", content=data["book_record"][k]))
+        # notes = []
+        #for k in ("working_note", "verbatim_notes", "editor notes", "no_name_notes"):
+        #    if data["book_record"].get(k):
+        #        notes.append(vocab.Note(ident="", content=data["book_record"][k]))
 
-        if data["book_record"].get("rosetta_handle"):
-            page = vocab.DigitalImage(
-                ident=data["book_record"]["rosetta_handle"], label=data["book_record"]["rosetta_handle"]
-            )
-            page._validate_range = False
-            page.access_point = [vocab.DigitalObject(ident=data["book_record"]["rosetta_handle"])]
-            notes.append(page)
+        #if data["book_record"].get("rosetta_handle"):
+        #    page = vocab.DigitalImage(
+        #        ident=data["book_record"]["rosetta_handle"], label=data["book_record"]["rosetta_handle"]
+        #    )
+        #    page._validate_range = False
+        #    page.access_point = [vocab.DigitalObject(ident=data["book_record"]["rosetta_handle"])]
+        #    notes.append(page)
 
         for seq_no, p_data in enumerate(pages):
             book_id, _, page, row = record_id(p_data)
@@ -852,6 +861,17 @@ class AddRows(Configurable, GoupilProvenance):
             row_type = model.Type(ident="http://vocab.getty.edu/aat/300438434", label="Entry")
             row_type.classified_as = model.Type(ident="http://vocab.getty.edu/aat/300444970", label="Form")
             label = f"Goupil Stock Book {book_id}, Page {page}, Row {row}"
+
+            ## Transcription #####
+            transctiption = vocab.Transcription(ident='', content=data['star_csv_data'])
+            transctiption.part_of = self.helper.static_instances.get_instance('LinguisticObject', 'db-goupil')
+            trans_creation = vocab.TranscriptionProcess(ident='')
+            trans_creation.carried_out_by = self.helper.static_instances.get_instance('Group', 'gpi')
+            transctiption.created_by = trans_creation
+            transctiption.identified_by = self.helper.gpi_number_id(data["star_record_no"], vocab.StarNumber)
+
+            ######################
+
 
             row = {
                 "uri": self.helper.make_proj_uri("Text", "Book", book_id, "Page", page, "Row", row),
@@ -867,7 +887,8 @@ class AddRows(Configurable, GoupilProvenance):
                     self.helper.goupil_gpi_number_id(data["pi_record_no"], vocab.StarNumber),
                     # self.helper.static_instances.get_instance('LinguisticObject', 'db-goupil')
                 ],
-                "referred_to_by": notes,
+                "also_found_on": transctiption
+               # "referred_to_by": notes,
                 # "part_of": [self.helper.static_instances.get_instance('LinguisticObject', 'db-goupil')]
             }
             row.update(
@@ -895,17 +916,16 @@ class AddRows(Configurable, GoupilProvenance):
                 warnings.warn(f"*** No classification found for transaction type: {transaction!r}")
 
             data["_records"].append(row)
-            self.add_goupil_creation_data(row)
-            # TODO Uncomment the following lines in order to have date information for the text records
-            # creation = self.add_goupil_creation_data(row)
-            # date = implode_date(data['entry_date'])
-            # if date:
-            #     begin_date = implode_date(data['entry_date'], clamp='begin')
-            #     end_date = implode_date(data['entry_date'], clamp='end')
-            #     bounds = [begin_date, end_date]
-            #     ts = timespan_from_outer_bounds(*bounds, inclusive=True)
-            #     ts.identified_by = model.Name(ident='', content=date)
-            #     creation.timespan = ts
+            # self.add_goupil_creation_data(row)
+            trans_creation = self.add_goupil_creation_data(row)
+            date = implode_date(data['entry_date'])
+            if date:
+                begin_date = implode_date(data['entry_date'], clamp='begin')
+                end_date = implode_date(data['entry_date'], clamp='end')
+                bounds = [begin_date, end_date]
+                ts = timespan_from_outer_bounds(*bounds, inclusive=True)
+                ts.identified_by = model.Name(ident='', content=date)
+                trans_creation.timespan = ts
         data['part_of'] = self.helper.static_instances.get_instance('LinguisticObject', 'db-goupil')
         return data
 
@@ -1846,6 +1866,7 @@ class GoupilPipeline(PipelineBase):
         """Add transformation of sales records to the bonobo pipeline."""
 
         sales_records = graph.add_chain(
+            PreserveCSVFields(key='star_csv_data', order=self.headers),
             KeyManagement(
                 drop_empty=True,
                 operations=[

@@ -198,6 +198,8 @@ class ProvenanceBase(Configurable):
 		person = get_crom_object(a)
 		if '_record' in data:
 			sales_record = get_crom_object(data['_record'])
+	#	elif '_records' in data:
+	#		sales_record = get_crom_object(data['_records'])
 		if mods:
 			GROUP_TYPES = set(attribution_group_types.values())
 			GROUP_MODS = {k for k, v in attribution_group_types.items() if v in GROUP_TYPES}
@@ -220,7 +222,14 @@ class ProvenanceBase(Configurable):
 				formation.influenced_by = person
 				group.formed_by = formation
 				# add referred_to_by, to groups that have mods 
-				group.referred_to_by = sales_record
+				if '_records' in data:
+					if len(sales_record) > 1:
+						group.referred_to_by = sales_record
+					else:
+						group.referred_to_by = sales_record[0]
+				elif '_record' in data:
+					group.referred_to_by = sales_record
+
 				# preceed goupil_object_id, if found, over pi_record_no
 				if a.get('goupil_object_id'):
 					id_number = a['goupil_object_id']
@@ -345,7 +354,11 @@ class ProvenanceBase(Configurable):
 			person = get_crom_object(a_data)
 
 			mods = a_data['modifiers']
-			verbatim_mod = a_data.get('attrib_mod_auth', '')
+			if 'attrib_mod_auth' in a_data and a_data.get('attrib_mod_auth', '') != '':
+				verbatim_mod = a_data.get('attrib_mod_auth', '')
+			elif 'attrib_mod' in a_data and a_data.get('attrib_mod', '') != '' :
+				verbatim_mod = a_data.get('attrib_mod', '')
+				
 			attrib_assignment_classes = [model.AttributeAssignment]
 			uncertain = all_uncertain
 			if uncertain or 'or' in mods:
@@ -418,6 +431,12 @@ class ProvenanceBase(Configurable):
 		# import pdb; pdb.set_trace()
 		if '_record' not in data:
 			sales_record = get_crom_objects(data.get('_records', []))
+			if len(sales_record) > 1:
+				with open("number_of_records.txt", "w") as file:
+					file.write("multiple records found for record: " + data['pi_record_no'] + "\n")
+
+					for s in sales_record:
+						file.write(s.identified_by[0].content + "\n")
 		else:
 			sales_record = get_crom_object(data['_record'])
 

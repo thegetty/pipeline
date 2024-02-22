@@ -975,6 +975,8 @@ class GoupilTransactionHandler(TransactionHandler):
         act.classified_as = model.Type(
             ident="http://vocab.getty.edu/aat/300393212", label="establishment (action or condition)"
         )
+        
+        person = get_crom_object(p_data)
         if isinstance(sojourn, str):
 
             # places = make_place_with_cities_db(
@@ -1006,7 +1008,7 @@ class GoupilTransactionHandler(TransactionHandler):
                     # person.carried_out = res_act
                     
                     person.residence = o_place					
-                    act.took_place_at = place
+                    act.took_place_at = o_place
                     data['_locations'].append(place)
                 
                 if same_as:
@@ -1031,7 +1033,6 @@ class GoupilTransactionHandler(TransactionHandler):
 
         else:
             act.took_place_at = sojourn
-        person = get_crom_object(p_data)
         person.carried_out = act
         
         for record in sales_records:

@@ -157,6 +157,7 @@ def add_crom_price(data, parent, services, add_citations=False):
     return data
 
 
+
 class GoupilPersonIdentity(PersonIdentity):
     pass
 
@@ -1010,20 +1011,20 @@ class GoupilTransactionHandler(TransactionHandler):
                     person.residence = o_place					
                     act.took_place_at = o_place
                     data['_locations'].append(place)
-                
-                if same_as:
-                    tgn_instance = self.helper.static_instances.get_instance('Place', same_as)
-                    traverse_static_place_instances(self, tgn_instance)
+                ##### tgn no work####
+                # if same_as:
+                #     tgn_instance = self.helper.static_instances.get_instance('Place', same_as)
+                #     traverse_static_place_instances(self, tgn_instance)
                     
-                    alternate_exists=False
-                    for id in tgn_instance.identified_by:
-                        if 'content' in id.__dict__:
-                            if isinstance(id, vocab.AlternateName) and id.content == location_name:
-                                alternate_exists = True
-                    if not alternate_exists: 
-                        tgn_instance.identified_by = vocab.AlternateName(ident=self.helper.make_shared_uri(('PLACE',location_name)), content=location_name)
-                    res_act = self.new_residence_activity(tgn_instance, person, sales_records)
-                    person.carried_out = res_act
+                #     alternate_exists=False
+                #     for id in tgn_instance.identified_by:
+                #         if 'content' in id.__dict__:
+                #             if isinstance(id, vocab.AlternateName) and id.content == location_name:
+                #                 alternate_exists = True
+                #     if not alternate_exists: 
+                #         tgn_instance.identified_by = vocab.AlternateName(ident=self.helper.make_shared_uri(('PLACE',location_name)), content=location_name)
+                #     res_act = self.new_residence_activity(tgn_instance, person, sales_records)
+                #     person.carried_out = res_act
             # places = data['_locations'][0]['_LOD_OBJECT']
             # if not places and sojourn:
             #     act.referred_to_by = vocab.Note(ident="", content=sojourn)
@@ -1121,15 +1122,18 @@ class GoupilTransactionHandler(TransactionHandler):
     def _empty_tx(self, data, incoming=False, purpose=None):
         tx_uri = self.helper.transaction_uri_for_record(data, incoming)
         tx_type = data.get("book_record", {}).get("transaction", "Sold")
-        if purpose == "returning":
+        
+        if purpose == "Returning":
             tx = vocab.make_multitype_obj(vocab.SaleAsReturn, vocab.ProvenanceEntry, ident=tx_uri)
+        elif purpose== "Exchange":
+            tx = vocab.make_multitype_obj(vocab.Exchange, vocab.ProvenanceEntry, ident=tx_uri)
+        elif purpose == "Gift":
+            tx = vocab.make_multitype_obj(vocab.Expensed, vocab.ProvenanceEntry, ident=tx_uri)
         else:
             tx = vocab.ProvenanceEntry(ident=tx_uri)
         sales_records = get_crom_objects(data["_records"])
-
         for sales_record in sales_records:
             tx.referred_to_by = sales_record
-
         return tx
 
     def new_residence_activity(self, place, person, sales_record):
@@ -1140,7 +1144,6 @@ class GoupilTransactionHandler(TransactionHandler):
             location_type = model.Type(ident='http://vocab.getty.edu/aat/300393211', label="Location Activity or State")
             res_type.classified_as = location_type
             res_act.classified_as = res_type
-            # import pdb; pdb.set_trace()
             res_act.referred_to_by = sales_record[0]
         elif isinstance(person, vocab.Group):
             res_act = model.Activity(ident=self.helper.make_proj_uri('Activity',  'establishment', person.id, place.id))
@@ -1208,8 +1211,12 @@ class GoupilTransactionHandler(TransactionHandler):
                     tgn_instance.identified_by = vocab.AlternateName(ident=self.helper.make_shared_uri(('PLACE',location_name)), content=location_name)
         
         dir = "In" if incoming else "Out"
-        if purpose == "returning":
+        if purpose == "Returning":
             dir_label = "Goupil return"
+        elif purpose == "Exchange":
+            dir_label = "Goupil exchange"
+        elif purpose == "Gift":
+            dir_label = 'Goupil expensing'
         else:
             dir_label = "Goupil Purchase" if incoming else "Goupil Sale"
         # We have a different way of creating the uri, becuases there are multiple rows in each entry and we don't want to create multiple Acquisition events
@@ -1251,20 +1258,7 @@ class GoupilTransactionHandler(TransactionHandler):
 
         tx.part = acq
 
-    def _add_prov_entry_payment(
-        self,
-        data: dict,
-        tx,
-        goupil_price_part,
-        price_info,
-        people,
-        people_agents,
-        shared_people,
-        shared_people_agents,
-        date,
-        incoming,
-        people_groups=None,
-    ):
+    def _add_prov_entry_payment( self, data: dict, tx, goupil_price_part, price_info, people, people_agents, shared_people, shared_people_agents, date, incoming, people_groups=None):
         goupil = self.helper.static_instances.get_instance("Group", "goupil")
         goupil_group = [goupil]
 
@@ -1411,22 +1405,19 @@ class GoupilTransactionHandler(TransactionHandler):
 
         if shared_people is None:
             shared_people = []
-
         date = implode_date(data[date_key]) if date_key in data else None
 
         sales_records = get_crom_objects(data["_records"])
-
         tx = self._empty_tx(data, incoming, purpose=purpose)
         tx_uri = tx.id
-
         tx_data = add_crom_data(data={"uri": tx_uri}, what=tx)
+        
         if date_key:
             self.set_date(tx, data, date_key)
 
         role = "seller" if incoming else "buyer"
 
         people_data = [self.helper.copy_source_information(p, data) for p in participants]
-        # import pdb; pdb.set_trace()
 
         people = []
         people_agents = []
@@ -1441,7 +1432,6 @@ class GoupilTransactionHandler(TransactionHandler):
                 part_of = tgn_data.get("part_of") # this is a tgn id
                 same_as = tgn_data.get('same_as') # this is a tgn id
                 location_name = p_data.get('auth_loc', None) or p_data.get('auth_addr', None) or p_data.get('loc', None) or p_data.get('location')
-                # import pdb; pdb.set_trace()
 
                 if part_of:
                    
@@ -1462,22 +1452,22 @@ class GoupilTransactionHandler(TransactionHandler):
                     # person.residence = res_act					
                     
                     data['_locations'].append(place)
-                
-                if same_as:
-                    tgn_instance = self.helper.static_instances.get_instance('Place', same_as)
-                    traverse_static_place_instances(self, tgn_instance)
+                ##### tgn no work####
+                # if same_as:
+                #     tgn_instance = self.helper.static_instances.get_instance('Place', same_as)
+                #     traverse_static_place_instances(self, tgn_instance)
                     
-                    alternate_exists=False
-                    for id in tgn_instance.identified_by:
-                        if 'content' in id.__dict__:
-                            if isinstance(id, vocab.AlternateName) and id.content == location_name:
-                                alternate_exists = True
-                    if not alternate_exists: 
-                        tgn_instance.identified_by = vocab.AlternateName(ident=self.helper.make_shared_uri(('PLACE',location_name)), content=location_name)
+                #     alternate_exists=False
+                #     import pdb; pdb.set_trace()
+                #     for id in tgn_instance.identified_by:
+                #         if 'content' in id.__dict__:
+                #             if isinstance(id, vocab.AlternateName) and id.content == location_name:
+                #                 alternate_exists = True
+                #     if not alternate_exists: 
+                #         tgn_instance.identified_by = vocab.AlternateName(ident=self.helper.make_shared_uri(('PLACE',location_name)), content=location_name)
                     
-                    res_act = self.new_residence_activity(tgn_instance, person, sales_records)
-                    # import pdb; pdb.set_trace()
-                    person.carried_out = res_act
+                #     res_act = self.new_residence_activity(tgn_instance, person, sales_records)
+                #     person.carried_out = res_act
             # places = make_place_with_cities_db(
             #     p_data,
             #     data,
@@ -1551,7 +1541,31 @@ class GoupilTransactionHandler(TransactionHandler):
         data["_prov_entries"].append(tx_data)
         data["_people"].extend(people_data)
         return tx
+    def add_return_tx(self, data, buy_sell_modifiers):
+        #rec = data['book_record']
+        #book_id, page_id, row_id = record_id(rec)
+        shared_people = data.get('purchase_buyer')
+        purch_info = data.get('purchase')
+        knoedler_price_part = data.get('purchase_knoedler_share')
+        sale_info = data.get('sale')
+        sellers = data['purchase_seller']
+        for p in sellers:
+            self.helper.copy_source_information(p, data)
+		#tx = self._prov_entry(data, 'entry_date', sellers, price_info, knoedler_price_part, shared_people, incoming=True, buy_sell_modifiers=buy_sell_modifiers)
 
+        if data.get('parent_data').get('Exchange') is not None:
+            in_tx = self._prov_entry(data, 'entry_date', sellers, purch_info, knoedler_price_part, shared_people, incoming=True, buy_sell_modifiers=buy_sell_modifiers)
+            sellers = data['sale_buyer']
+            out_tx = self._prov_entry(data, 'entry_date', sellers, sale_info, incoming=False, purpose='Exchange', buy_sell_modifiers=buy_sell_modifiers)
+        elif data.get('parent_data').get('Returning') is not None :
+            in_tx = self._prov_entry(data, 'entry_date', sellers, purch_info, knoedler_price_part, shared_people, incoming=True, buy_sell_modifiers=buy_sell_modifiers)
+            out_tx = self._prov_entry(data, 'entry_date', sellers, sale_info, incoming=False, purpose='Returning', buy_sell_modifiers=buy_sell_modifiers)
+        else :
+            in_tx = self._prov_entry(data, 'entry_date', sellers, purch_info, knoedler_price_part, shared_people, incoming=True, buy_sell_modifiers=buy_sell_modifiers)
+            sellers = data['sale_buyer']
+            out_tx = self._prov_entry(data, 'entry_date', sellers, sale_info, incoming=False, purpose='Gift', buy_sell_modifiers=buy_sell_modifiers)
+        return (in_tx, out_tx)
+    
     def add_incoming_tx(self, data, buy_sell_modifiers, people_groups=None):
         price_info = data.get("purchase")
 
@@ -1560,16 +1574,12 @@ class GoupilTransactionHandler(TransactionHandler):
 
         for p in sellers:
             self.helper.copy_source_information(p, data)
-        tx = self._prov_entry(
-            data,
-            "entry_date",
-            sellers,
-            price_info,
-            shared_people=shared_people,
-            incoming=True,
-            buy_sell_modifiers=buy_sell_modifiers,
-            people_groups=people_groups,
-        )
+        # add transaction 
+        purpose = data.get('book_record').get('transaction')
+
+        tx = self._prov_entry(data, "entry_date", sellers, price_info, shared_people=shared_people, incoming=True, purpose = purpose, buy_sell_modifiers=buy_sell_modifiers, people_groups=people_groups)
+        #out_tx = self._prov_entry(data, "entry_date", sellers, price_info, shared_people=shared_people, incoming=True, buy_sell_modifiers=buy_sell_modifiers, people_groups=people_groups)
+
         prev_owners = data.get("prev_own", {})
         if prev_owners:
             self.model_prev_post_owners(data, prev_owners, "prev_own", people_groups)
@@ -1580,19 +1590,10 @@ class GoupilTransactionHandler(TransactionHandler):
         price_info = data.get("sale")
         shared_people = data.get("shared_buyer")
         buyers = data["sale_buyer"]
-        # import pdb; pdb.set_trace()
         for p in buyers:
             self.helper.copy_source_information(p, data)
-        tx = self._prov_entry(
-            data,
-            "sale_date",
-            buyers,
-            price_info,
-            shared_people=shared_people,
-            incoming=False,
-            buy_sell_modifiers=buy_sell_modifiers,
-            people_groups=people_groups,
-        )
+        purpose = data.get('book_record').get('transaction')
+        tx = self._prov_entry( data, "sale_date", buyers, price_info, shared_people=shared_people, incoming=False, purpose=purpose, buy_sell_modifiers=buy_sell_modifiers, people_groups=people_groups)
         post_own = data.get("post_own", {})
         if post_own:
             self.model_prev_post_owners(data, post_own, "post_own", people_groups)
@@ -1624,7 +1625,7 @@ class ModelSale(GoupilTransactionHandler):
         cities_auth_db=None,
     ):
         sellers = data["purchase_seller"]
-
+        
         if not in_tx:
             if len(sellers):
                 in_tx = self.add_incoming_tx(data, buy_sell_modifiers, people_groups)
@@ -1633,6 +1634,7 @@ class ModelSale(GoupilTransactionHandler):
                 inv = self._new_inventorying(data)
                 appraisal = self._apprasing_assignment(data)
                 inv_label = inv._label
+
                 in_tx = self._empty_tx(data, incoming=True)
                 in_tx.part = inv
                 if appraisal:
@@ -1646,7 +1648,6 @@ class ModelSale(GoupilTransactionHandler):
             out_tx = self.add_outgoing_tx(data, buy_sell_modifiers, people_groups)
         in_tx.ends_before_the_start_of = out_tx
         out_tx.starts_after_the_end_of = in_tx
-        # import pdb; pdb.set_trace()
         purch_loc_note = data["purchase"].get("location_note")
         purch_loc = data["purchase"].get("location")
 
@@ -1657,7 +1658,6 @@ class ModelSale(GoupilTransactionHandler):
         out_tx = self.helper.add_transaction_place(out_tx, purch_loc_note, data)
 
         for seller in sellers:
-            # import pdb; pdb.set_trace()
             self.person_sojourn(seller, seller.get("location"), data)
             seller = self.helper.add_person_residence(seller, seller.get("loc"), data)
             in_tx = self.helper.add_transaction_place(in_tx, seller.get("location"), data)
@@ -1665,6 +1665,26 @@ class ModelSale(GoupilTransactionHandler):
 
         yield data
 
+class ModelReturn(ModelSale):
+    helper = Option(required=True)
+    make_la_person = Service('make_la_person')
+    buy_sell_modifiers = Service("buy_sell_modifiers")
+    transaction_classification = Service('transaction_classification')
+    cities_auth_db = Service("cities_auth_db")
+    people_groups = Service("people_groups")
+    
+    def __call__(self, data:dict, make_la_person, buy_sell_modifiers, transaction_classification, cities_auth_db, people_groups):
+        sellers = data.get('purchase_seller', [])
+        buyers = data.get('sale_buyer', [])
+        if not buyers:
+            buyers = sellers.copy()
+            data['sale_buyer'] = buyers
+        in_tx, out_tx = self.add_return_tx(data, buy_sell_modifiers)
+        in_tx_cl = transaction_classification.get('Vendu')
+        
+        in_tx.classified_as = model.Type(ident=in_tx_cl.get('url'), label=in_tx_cl.get('label'))
+        
+        yield from super().__call__(data, make_la_person, buy_sell_modifiers, transaction_classification,in_tx=in_tx, out_tx=out_tx)
 
 class ModelInventorying(GoupilTransactionHandler):
     helper = Option(required=True)
@@ -1687,7 +1707,7 @@ class ModelInventorying(GoupilTransactionHandler):
         inv = self._new_inventorying(data)
         appraisal = self._apprasing_assignment(data)
         inv_label = inv._label
-
+        
         tx_out = self._empty_tx(data, incoming=False)
         tx_out._label = inv_label
         tx_out.identified_by = model.Name(ident="", content=inv_label)
@@ -1706,14 +1726,82 @@ class ModelInventorying(GoupilTransactionHandler):
         purch_loc = data["purchase"].get("location")
         tx_out = self.helper.add_transaction_place(tx_out, purch_loc_note, data)
         tx_out = self.helper.add_transaction_place(tx_out, purch_loc, data)
-        # import pdb; pdb.set_trace()
 
         for seller in sellers:
             seller = self.helper.add_person_residence(seller, seller.get("loc"), data)
             tx_out = self.helper.add_transaction_place(tx_out, seller.get("location"), data)
-
+        import pdb; pdb.set_trace()
         yield data
 
+
+class ModelTheftOrLoss(GoupilTransactionHandler):
+    helper = Option(required=True)
+    make_la_person = Service("make_la_person")
+    buy_sell_modifiers = Service("buy_sell_modifiers")
+    people_groups = Service("people_groups")
+    transaction_classification = Service('transaction_classification')
+    cities_auth_db = Service("cities_auth_db")
+
+    def __call__(self, data: dict, make_la_person, buy_sell_modifiers, people_groups, transaction_classification, cities_auth_db):
+        rec = data["book_record"]
+        pi_rec = data['pi_record_no']
+        hmo = get_crom_object(data["_object"])
+        sn_ident = self.helper.stock_number_identifier(data['_object'], None)
+
+        in_tx = self.add_incoming_tx(data, buy_sell_modifiers)
+        in_tx_cl = transaction_classification.get('Vendu')
+        in_tx.classified_as = model.Type(ident=in_tx_cl.get('url'), label=in_tx_cl.get('label'))
+        tx_out = self._empty_tx(data, incoming=False)
+        
+        tx_type = rec['transaction']
+        label_type = None
+        if tx_type == 'Lost':
+            label_type = 'Goupil Loss'
+            transfer_class = vocab.Loss
+            value_type = "Perdu"
+        else:
+            label_type = 'Theft'
+            transfer_class = vocab.Theft
+
+        tx_cl = transaction_classification.get(value_type)
+        if tx_cl:
+            label = tx_cl.get('label')	
+            url = tx_cl.get('url')
+            tx_out.classified_as = model.Type(ident=url,label=label)
+        else:
+            warnings.warn(f'*** No classification found for transaction type: {tx_type!r}')
+       
+        tx_out._label = f'{label_type} of {sn_ident}'
+        tx_out.identified_by = model.Name(ident='', content=tx_out._label)
+        tx_out_data = add_crom_data(data={'uri': tx_out.id, 'label': tx_out._label}, what=tx_out)
+
+        title = self.helper.title_value(data['_object'].get('title'))
+        short_title = truncate_with_ellipsis(title, 100) or title
+
+		# It's conceivable that there could be more than one theft of an object (if it was
+		# recovered after the first theft). Therefore, the theft URI must not share a
+		# prefix with the object URI, otherwise all such thefts would be merged during
+		# URI reconciliation as part of the prev/post sale rewriting.
+        theft_uri = hmo.id.replace('#', f'#{label_type.upper()},')
+
+        warnings.warn('TODO: parse Theft/Loss note for date and location')
+		# Examples:
+		#     "Dec 1947 Looted by Germans during war"
+		#     "July 1959 Lost in Paris f.111"
+		#     "Lost at Sea on board Str Europe lost April 4/74"
+
+        notes = rec.get('verbatim_notes')
+        if notes and 'Looted' in notes:
+            transfer_class = vocab.Looting
+        t = transfer_class(ident=theft_uri, label=f'{label_type} of “{short_title}”')
+        t.transferred_custody_from = self.helper.static_instances.get_instance('Group', 'goupil')
+        t.transferred_custody_of = hmo
+        if notes:
+            t.referred_to_by = vocab.Note(ident='', content=notes)
+
+        tx_out.part = t
+        data['_prov_entries'].append(tx_out_data)
+        return data
 
 class ModelUnsoldPurchases(GoupilTransactionHandler):
     helper = Option(required=True)
@@ -1725,18 +1813,17 @@ class ModelUnsoldPurchases(GoupilTransactionHandler):
     def __call__(self, data: dict, make_la_person, buy_sell_modifiers, people_groups, cities_auth_db):
         odata = data["_object"]
         date = implode_date(data["entry_date"])
-        # import pdb; pdb.set_trace()
+
         sellers = data["purchase_seller"]
         if len(sellers) == 0:
             return
-
+        import pdb; pdb.set_trace()
         hmo = get_crom_object(odata)
         object_label = f"“{hmo._label}”"
 
         sn_ident = self.helper.stock_number_identifier(odata, date)
-
+        
         in_tx = self.add_incoming_tx(data, buy_sell_modifiers, people_groups)
-
         purch_loc_note = data["purchase"].get("location_note")
         purch_loc = data["purchase"].get("location")
 
@@ -1746,8 +1833,7 @@ class ModelUnsoldPurchases(GoupilTransactionHandler):
         for seller in sellers:
             seller = self.helper.add_person_residence(seller, seller.get("loc"), data)
             in_tx = self.helper.add_transaction_place(in_tx, seller.get("location"), data)
-
-        yield data
+        return data
 
 
 class GoupilPipeline(PipelineBase):
@@ -2130,11 +2216,22 @@ class GoupilPipeline(PipelineBase):
             _input=tx.output,
         )
 
-        # returned = graph.add_chain(
-        #     ExtractKeyedValue(key="Returned"),
-        #     ModelReturn(helper=self.helper),
-        #     _input=tx.output,
-        # )
+        returned = graph.add_chain(
+            ExtractKeyedValue(key="Returning"),
+            ModelReturn(helper=self.helper),
+            _input=tx.output,
+        )
+        exchanged = graph.add_chain(
+            ExtractKeyedValue(key="Exchange"),
+            ModelReturn(helper=self.helper),
+            _input=tx.output,
+        )
+
+        expensed = graph.add_chain(
+            ExtractKeyedValue(key="Gift"),
+            ModelReturn(helper=self.helper),
+            _input=tx.output,
+        )
 
         # destruction = graph.add_chain(
         #     ExtractKeyedValue(key="Destroyed"),
@@ -2148,11 +2245,11 @@ class GoupilPipeline(PipelineBase):
         #     _input=tx.output,
         # )
 
-        # loss = graph.add_chain(
-        #     ExtractKeyedValue(key="Lost"),
-        #     ModelTheftOrLoss(helper=self.helper),
-        #     _input=tx.output,
-        # )
+        loss = graph.add_chain(
+            ExtractKeyedValue(key='Lost'),
+			ModelTheftOrLoss(helper=self.helper),
+			_input=tx.output
+        )
 
         # activities are specific to the inventorying chain
         activities = graph.add_chain(ExtractKeyedValues(key="_activities"), _input=inventorying.output)
@@ -2160,22 +2257,17 @@ class GoupilPipeline(PipelineBase):
             self.add_serialization_chain(graph, activities.output, model=self.models["Inventorying"])
 
         # # people and prov entries can come from any of these chains:
-        for branch in (
-            sale,
-            # destruction,
-            # theft,
-            # loss,
-            inventorying,
-            unsold_purchases,
-            # returned,
-        ):
+        for branch in (sale, inventorying, unsold_purchases, returned, exchanged, expensed, loss, expensed):
             prov_entry = graph.add_chain(ExtractKeyedValues(key="_prov_entries"), _input=branch.output)
             people = graph.add_chain(ExtractKeyedValues(key="_people"), _input=branch.output)
             groups = graph.add_chain(ExtractKeyedValues(key="_organizations"), _input=sale.output)
+            #deference knoedler
             _ = self.add_places_chain(graph, branch, key="_locations", serialize=serialize, include_self=True)
 
             if serialize:
+                
                 self.add_serialization_chain(graph, prov_entry.output, model=self.models["ProvenanceEntry"])
+                #deference knoedler
                 self.add_person_or_group_chain(graph, people)
                 self.add_person_or_group_chain(graph, groups)
 

@@ -666,6 +666,7 @@ class PopulateKnoedlerObject(Configurable, pipeline.linkedart.PopulateObject):
 			identifiers.append(self.helper.knoedler_number_id(stock_number, vocab.StockNumber))
 		except:
 			uri_key = ('Object', 'Internal', data['pi_record_no'])
+		import pdb; pdb.set_trace()
 		uri = self.helper.make_object_uri(data['pi_record_no'], *uri_key)
 		data['_object']['uri'] = uri
 		data['_object']['uri_key'] = uri_key

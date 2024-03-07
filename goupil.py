@@ -22,7 +22,7 @@ if __name__ == "__main__":
     # fmt: off
     data = {
         'header_file': 'goupil_0.csv',
-        'files_pattern': 'goupil.csv',
+        'files_pattern': 'ex.csv',
     }
     # fmt: on
 

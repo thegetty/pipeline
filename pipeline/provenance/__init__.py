@@ -59,10 +59,19 @@ class ProvenanceBase(Configurable):
 		'''
 
 		def _make_label_default(helper, sale_type, transaction, rel, *args):
-			strs = [str(x) for x in args]
-			return ', '.join(strs)
+			# import pdb; pdb.set_trace()
+			str = f'Provenance Entry {rel} object identified in book {args[2]}, page {args[3]}, row {args[4]}'
+			
+			#strs = [str(x) for x in args]
+			
+			# import pdb; pdb.set_trace()
+			#return ', '.join(strs)
+			return str
+		
 		if make_label is None:
+			
 			make_label = _make_label_default
+
 
 		tx = vocab.ProvenanceEntry(ident=ident)
 		if sales_record:
@@ -147,8 +156,10 @@ class ProvenanceBase(Configurable):
 		# we run the rist of provenance entries being accidentally merged during URI
 		# reconciliation as part of the prev/post sale rewriting.
 		tx_uri = self.helper.prepend_uri_key(hmo.id, f'PROV-{record_id}')
+		
 		tx_label_args = tuple([self.helper, sale_type, 'Event', rel] + list(lot_object_key))
 		tx, _ = self.related_procurement(hmo, tx_label_args, current_tx, ts, buyer=owner, previous=rev, ident=tx_uri, make_label=make_label, sales_record=sales_record)
+		
 		if owner_record.get('own_auth_e'):
 			content = owner_record['own_auth_e']
 			tx.referred_to_by = vocab.Note(ident='', content=content)

@@ -217,12 +217,14 @@ class AddArtists(ProvenanceBase, GoupilProvenance):
     attribution_group_names = Service("attribution_group_names")
 
     def modifiers(self, a: dict):
+        
         mod = a.get("attrib_mod_auth", "")
         if not mod:
             mod = a.get("attrib_mod", "")
         # Matt:  as per George, semantics for 'or' are different in buyer/seller field than in artwork production role. The first does not to my knowledge exist in Goupil.
         # basically treat or as attributed to!
         if "or " in mod or " or" in mod:
+            import pdb; pdb.set_trace()
             # matched 'or' a separate word
             mod = mod.replace("or", "attributed to")
         mods = CaseFoldingSet({m.strip() for m in mod.split(";")} - {""})
@@ -248,11 +250,11 @@ class AddArtists(ProvenanceBase, GoupilProvenance):
         EDIT_BY = attribution_modifiers["edit by"]
         hmo = get_crom_object(data["_object"])
         self.model_object_artists_authority(data.get("_artists", []))
-
         sales_records = get_crom_objects(data["_records"])
 
         for seq_no, artist in enumerate(data.get("_artists", [])):
             mods = self.modifiers(artist)
+            
             if not mods:
                 mods = artist.get("attrib_mod", "")
             if EDIT_BY.intersects(mods):
@@ -270,6 +272,7 @@ class AddArtists(ProvenanceBase, GoupilProvenance):
                 person = get_crom_object(a_data)
 
                 mod_uri = self.helper.make_shared_uri((hmo.id, "-Modification-By", artist_label))
+                
                 modification = model.Modification(ident=mod_uri, label=f'Modification Event for {artist["label"]}')
                 modification.carried_out_by = person
                 for mod in mods:
@@ -283,13 +286,14 @@ class AddArtists(ProvenanceBase, GoupilProvenance):
         self.model_artists_with_modifers(
             data, hmo, attribution_modifiers, attribution_group_types, attribution_group_names
         )
-
+        
         attrs = hmo.produced_by.attributed_by if hasattr(hmo.produced_by, "attributed_by") else []
+        import pdb; pdb.set_trace()
         for production_assingment in attrs:
             production_assingment.carried_out_by = None
             production_assingment.carried_out_by = self.helper.static_instances.get_instance("Group", "goupil")
-
-        return data
+        
+        yield data
 
 
 class GoupilUtilityHelper(SharedUtilityHelper):
@@ -508,7 +512,6 @@ class PopulateGoupilObject(Configurable, PopulateObject):
                 identifiers.append(self.helper.goupil_number_id(stock_nook_gno, vocab.StockNumber))
             except:
                 warnings.warn(f"*** Object has no gno identifier: {pprint.pformat(data)}")
-
         uri = self.helper.make_object_uri(data["pi_record_no"], *uri_key)
         data["_object"]["uri"] = uri
         data["_object"]["uri_key"] = uri_key
@@ -519,7 +522,6 @@ class PopulateGoupilObject(Configurable, PopulateObject):
             data["_object"]["object_type"] = otype
         else:
             data["_object"]["object_type"] = model.HumanMadeObject
-
         make_la_object = MakeLinkedArtHumanMadeObject()
         make_la_object(data["_object"])
 
@@ -544,7 +546,6 @@ class PopulateGoupilObject(Configurable, PopulateObject):
         tgn_data = present_location.get('loc_tgn')
 
         if present_location_verbatim:
-            # import pdb; pdb.set_trace()
 
             current_places = make_place_with_cities_db(
                 present_location, data, services=self.helper.services, base_uri=self.uid_tag_prefix
@@ -579,8 +580,8 @@ class PopulateGoupilObject(Configurable, PopulateObject):
             owner_data["referred_to_by"] = sales_records
 
             for curr_place in current_places:
-                hmo.current_location = curr_place
-
+                curr_place = curr_place
+            import pdb; pdb.set_trace()
             if tgn_data:
                 part_of = tgn_data.get("part_of") # this is a tgn id
                 same_as = tgn_data.get('same_as') # this is a tgn id
@@ -611,18 +612,17 @@ class PopulateGoupilObject(Configurable, PopulateObject):
 
                     if not alternate_exists:
                         tgn_instance.identified_by = vocab.AlternateName(ident=self.helper.make_shared_uri(('PLACE',curr_place)), content=curr_place)
-                    
                     hmo.current_location = tgn_instance
-                    owner_place = tgn_instance
-
-
+                    #owner_place = tgn_instance
+            
             owner = None
             if owner_data:
                 make_la_org = MakeLinkedArtOrganization()
                 owner_data = make_la_org(owner_data)
                 owner = get_crom_object(owner_data)
                 hmo.current_owner = owner
-                owner.residence = o_place
+                
+                #owner.residence = o_place
                 # for curr_place in current_places:
                 #     owner.residence = curr_place
 
@@ -765,7 +765,7 @@ class AddPages(Configurable, GoupilProvenance):
 
         for seq_no, b_data in enumerate(books):
             book_id, _, page, _ = record_id(b_data)
-
+            
             if not page:
                 warnings.warn(
                     f"Record with id {data['pi_record_no']}, has book with id {book_id} but no page assosiated with it."
@@ -1012,19 +1012,19 @@ class GoupilTransactionHandler(TransactionHandler):
                     act.took_place_at = o_place
                     data['_locations'].append(place)
                 ##### tgn no work####
-                # if same_as:
-                #     tgn_instance = self.helper.static_instances.get_instance('Place', same_as)
-                #     traverse_static_place_instances(self, tgn_instance)
+                if same_as:
+                    tgn_instance = self.helper.static_instances.get_instance('Place', same_as)
+                    traverse_static_place_instances(self, tgn_instance)
                     
-                #     alternate_exists=False
-                #     for id in tgn_instance.identified_by:
-                #         if 'content' in id.__dict__:
-                #             if isinstance(id, vocab.AlternateName) and id.content == location_name:
-                #                 alternate_exists = True
-                #     if not alternate_exists: 
-                #         tgn_instance.identified_by = vocab.AlternateName(ident=self.helper.make_shared_uri(('PLACE',location_name)), content=location_name)
-                #     res_act = self.new_residence_activity(tgn_instance, person, sales_records)
-                #     person.carried_out = res_act
+                    alternate_exists=False
+                    for id in tgn_instance.identified_by:
+                        if 'content' in id.__dict__:
+                            if isinstance(id, vocab.AlternateName) and id.content == location_name:
+                                alternate_exists = True
+                    if not alternate_exists: 
+                        tgn_instance.identified_by = vocab.AlternateName(ident=self.helper.make_shared_uri(('PLACE',location_name)), content=location_name)
+                    res_act = self.new_residence_activity(tgn_instance, person, sales_records)
+                    person.carried_out = res_act
             # places = data['_locations'][0]['_LOD_OBJECT']
             # if not places and sojourn:
             #     act.referred_to_by = vocab.Note(ident="", content=sojourn)
@@ -1040,12 +1040,14 @@ class GoupilTransactionHandler(TransactionHandler):
             act.referred_to_by = record
 
     def model_prev_post_owners(self, data, owner: str, role, people_groups):
-        splitOwners = [{k: v if k != "name" else x for k, v in owner.items()} for x in owner["name"].split("; ")]
+
+        splitOwners =  [{k: (v if k != "name" else x) for k, v in person.items()} for person in owner for x in person["name"].split("; ")]
         for i, p in enumerate(splitOwners):
             person_dict = self.helper.copy_source_information(p, data)
             person = self.helper.add_group_or_person(
                 person_dict, relative_id=f"{role}_{i+1}", people_groups=people_groups, data=data
             )
+            
             data["_people"].append(person_dict)
 
     def _apprasing_assignment(self, data):
@@ -1453,21 +1455,20 @@ class GoupilTransactionHandler(TransactionHandler):
                     
                     data['_locations'].append(place)
                 ##### tgn no work####
-                # if same_as:
-                #     tgn_instance = self.helper.static_instances.get_instance('Place', same_as)
-                #     traverse_static_place_instances(self, tgn_instance)
+                if same_as:
+                    tgn_instance = self.helper.static_instances.get_instance('Place', same_as)
+                    traverse_static_place_instances(self, tgn_instance)
                     
-                #     alternate_exists=False
-                #     import pdb; pdb.set_trace()
-                #     for id in tgn_instance.identified_by:
-                #         if 'content' in id.__dict__:
-                #             if isinstance(id, vocab.AlternateName) and id.content == location_name:
-                #                 alternate_exists = True
-                #     if not alternate_exists: 
-                #         tgn_instance.identified_by = vocab.AlternateName(ident=self.helper.make_shared_uri(('PLACE',location_name)), content=location_name)
+                    alternate_exists=False
+                    for id in tgn_instance.identified_by:
+                        if 'content' in id.__dict__:
+                            if isinstance(id, vocab.AlternateName) and id.content == location_name:
+                                alternate_exists = True
+                    if not alternate_exists: 
+                        tgn_instance.identified_by = vocab.AlternateName(ident=self.helper.make_shared_uri(('PLACE',location_name)), content=location_name)
                     
-                #     res_act = self.new_residence_activity(tgn_instance, person, sales_records)
-                #     person.carried_out = res_act
+                    res_act = self.new_residence_activity(tgn_instance, person, sales_records)
+                    person.carried_out = res_act
             # places = make_place_with_cities_db(
             #     p_data,
             #     data,
@@ -1566,6 +1567,15 @@ class GoupilTransactionHandler(TransactionHandler):
             out_tx = self._prov_entry(data, 'entry_date', sellers, sale_info, incoming=False, purpose='Gift', buy_sell_modifiers=buy_sell_modifiers)
         return (in_tx, out_tx)
     
+    def creat_json_list(self, data, number):
+        name = data.get("prev_own_"+str(number), {})
+        auth_name = data.get("prev_own_auth_"+str(number), {})
+        loc = data.get("prev_own_loc_"+str(number), {})
+        json = {"name": name,
+                "auth_name": auth_name,
+                "loc": loc}
+        return json
+    
     def add_incoming_tx(self, data, buy_sell_modifiers, people_groups=None):
         price_info = data.get("purchase")
 
@@ -1579,12 +1589,89 @@ class GoupilTransactionHandler(TransactionHandler):
 
         tx = self._prov_entry(data, "entry_date", sellers, price_info, shared_people=shared_people, incoming=True, purpose = purpose, buy_sell_modifiers=buy_sell_modifiers, people_groups=people_groups)
         #out_tx = self._prov_entry(data, "entry_date", sellers, price_info, shared_people=shared_people, incoming=True, buy_sell_modifiers=buy_sell_modifiers, people_groups=people_groups)
+        prev_owners = []
+        lot_object_key = self.helper.transaction_key_for_record(data, incoming=True)
+        for i in range(1, 8):
+            
+            if data.get("prev_own_"+str(i), {}):
+                prev_owners.append(self.creat_json_list(data, i))
 
-        prev_owners = data.get("prev_own", {})
         if prev_owners:
-            self.model_prev_post_owners(data, prev_owners, "prev_own", people_groups)
+            self.model_prev_owners(data, prev_owners, tx, lot_object_key)
+            #self.model_prev_post_owners(data, prev_owners, "prev_own", people_groups)
 
         return tx
+
+    def model_prev_owners(self, data, prev_owners, tx, lot_object_key):
+        sales_record = get_crom_object(data['_records'][0])
+        
+        for i, p in enumerate(prev_owners):
+            
+            role = 'prev_own'
+            person_dict = self.helper.copy_source_information(p, data)
+            person = self.helper.add_person(
+				person_dict,
+				record=sales_record,
+				relative_id=f'{role}_{i+1}'
+            )
+
+            location_name = p.get('loc', None)
+            if location_name:
+                tgn_data = p.get('loc_tgn')
+                if tgn_data:
+                    part_of = tgn_data.get("part_of") # this is a tgn id
+                    same_as = tgn_data.get('same_as') # this is a tgn id
+
+                    if part_of:
+                        tgn_instance = self.helper.static_instances.get_instance('Place', part_of)
+                        traverse_static_place_instances(self, tgn_instance)					
+                        place = make_la_place(
+							{
+								'name': location_name,
+								'uri': self.helper.make_shared_uri(('PLACE',location_name))
+							},
+						)
+                        o_place = get_crom_object(place)
+                        o_place.part_of = tgn_instance
+                        res_act = self.new_residence_activity(o_place, person, sales_record)
+                        person.carried_out = res_act
+					#	person.residence = o_place					
+                        data['_locations'].append(place)
+                    if same_as:
+                        tgn_instance = self.helper.static_instances.get_instance('Place', same_as)
+                        traverse_static_place_instances(self, tgn_instance)
+						
+                        alternate_exists=False
+                        for id in tgn_instance.identified_by:
+                            if isinstance(id, vocab.AlternateName) and id.content == location_name:
+                                alternate_exists = True
+                        if not alternate_exists:
+                            tgn_instance.identified_by = vocab.AlternateName(ident=self.helper.make_shared_uri(('PLACE',location_name)), content=location_name)
+				
+                        res_act = self.new_residence_activity(tgn_instance, person, sales_record)
+                        person.carried_out = res_act
+						#person.residence = tgn_instance
+            data['_people'].append(person_dict)
+        
+        ts = None # TODO
+        prev_post_owner_records = [(prev_owners, True)]
+        
+        data['_records'][0] = data['_records'][0]
+        hmo = get_crom_object(data['_object'])
+        for owner_data, rev in prev_post_owner_records:
+            if rev:
+                rev_name = 'prev-owner'
+            else:
+                rev_name = 'post-owner'
+# 			ignore_fields = {'own_so', 'own_auth_l', 'own_auth_d'}
+            tx_data = add_crom_data(data={}, what=tx)
+            for seq_no, owner_record in enumerate(owner_data):
+                record_id = f'{rev_name}-{seq_no+1}'
+# 				if not any([bool(owner_record.get(k)) for k in owner_record.keys() if k not in ignore_fields]):
+# 					# some records seem to have metadata (source information, location, or notes)
+# 					# but no other fields set these should not constitute actual records of a prev/post owner.
+# 					continue
+                self.handle_prev_post_owner(data, hmo, tx_data, 'Sold', lot_object_key, owner_record, record_id, rev, ts)
 
     def add_outgoing_tx(self, data, buy_sell_modifiers, people_groups=None):
         price_info = data.get("sale")
@@ -1730,9 +1817,7 @@ class ModelInventorying(GoupilTransactionHandler):
         for seller in sellers:
             seller = self.helper.add_person_residence(seller, seller.get("loc"), data)
             tx_out = self.helper.add_transaction_place(tx_out, seller.get("location"), data)
-        import pdb; pdb.set_trace()
         yield data
-
 
 class ModelTheftOrLoss(GoupilTransactionHandler):
     helper = Option(required=True)
@@ -1817,7 +1902,6 @@ class ModelUnsoldPurchases(GoupilTransactionHandler):
         sellers = data["purchase_seller"]
         if len(sellers) == 0:
             return
-        import pdb; pdb.set_trace()
         hmo = get_crom_object(odata)
         object_label = f"“{hmo._label}”"
 
@@ -1833,7 +1917,7 @@ class ModelUnsoldPurchases(GoupilTransactionHandler):
         for seller in sellers:
             seller = self.helper.add_person_residence(seller, seller.get("loc"), data)
             in_tx = self.helper.add_transaction_place(in_tx, seller.get("location"), data)
-        return data
+        yield data
 
 
 class GoupilPipeline(PipelineBase):
@@ -1898,7 +1982,6 @@ class GoupilPipeline(PipelineBase):
 		# lookup dictionary that maps knoedler a field and its value to a place 
 		# either as same as or as falling within a place in tgn_places dict
         goupil_tgn = services.get('goupil_tgn', {}) 
-		
         services['tgn'] = tgn_places
         services['goupil_tgn'] = goupil_tgn
 

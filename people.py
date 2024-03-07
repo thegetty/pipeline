@@ -22,7 +22,7 @@ if __name__ == '__main__':
 
 	contents = {
 		'header_file': 'people_authority_0.csv',
-		'files_pattern': 'people_authority-merged-cb-ga.csv',
+		'files_pattern': 'people_authority.csv',
 		# 'files_pattern': 'people_authority1.csv'
 	}
 

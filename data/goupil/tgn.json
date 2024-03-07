@@ -9,6 +9,16 @@
         "place_type_preferred": "http://vocab.getty.edu/aat/300128176",
         "tgn_id": "1000001"
     },
+    "1000002": {
+        "latitude": "-3.55",
+        "longitude": "-56.683",
+        "part_of": "7029392",
+        "permalink": "http://www.getty.edu/vow/TGNFullDisplay?find=&place=&nation=&subjectid=1000002",
+        "place_label": "South America",
+        "place_type_label": "continents",
+        "place_type_preferred": "http://vocab.getty.edu/aat/300128176",
+        "tgn_id": "1000002"
+    },
     "1000003": {
         "latitude": "56.2",
         "longitude": "15.016",
@@ -2018,6 +2028,36 @@
         "place_type_label": "counties",
         "place_type_preferred": "http://vocab.getty.edu/aat/300000771",
         "tgn_id": "7029504"
+    },
+    "7006477": {
+        "latitude": "-34",
+        "longitude": "-64",
+        "part_of": "1000002",
+        "permalink": "http://www.getty.edu/vow/TGNFullDisplay?find=&place=&nation=&subjectid=7006477",
+        "place_label": "Argentina",
+        "place_type_label": "nations",
+        "place_type_preferred": "http://vocab.getty.edu/aat/300128207",
+        "tgn_id": "7006477"
+    },
+    "7593303": {
+        "latitude": "-34.6",
+        "longitude": "-58.45",
+        "part_of": "7006477",
+        "permalink": "http://www.getty.edu/vow/TGNFullDisplay?find=&place=&nation=&subjectid=7593303",
+        "place_label": "Ciudad Autónoma de Buenos Aires",
+        "place_type_label": "autonomous cities",
+        "place_type_preferred": "http://vocab.getty.edu/aat/300387069",
+        "tgn_id": "7593303"
+    },
+    "7006287": {
+        "latitude": "-34.6667",
+        "longitude": "-58.5",
+        "part_of": "7593303",
+        "permalink": "http://www.getty.edu/vow/TGNFullDisplay?find=&place=&nation=&subjectid=7006287",
+        "place_label": "Buenos Aires",
+        "place_type_label": "inhabited places",
+        "place_type_preferred": "http://vocab.getty.edu/aat/300008347",
+        "tgn_id": "7006287"
     },
     "7031499": {
         "latitude": "43.299999",

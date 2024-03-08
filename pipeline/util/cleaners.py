@@ -445,6 +445,10 @@ def date_cleaner(value):
 	# YYYY Mon
 	# YYYY Month DD
 
+	#for matching dates like 1785/10/22-1819
+	p = re.compile('\d{4}\/\d{2}\/\d{2}-\d{4}')
+	q = re.compile('\d{4}, \d{4}')
+
 	if value:
 		value = value.replace("?",'')
 		value = value.replace('est', '')
@@ -452,7 +456,9 @@ def date_cleaner(value):
 		value = value.replace(' or ', '/')
 		value = value.strip()
 		value = value.replace('by ', 'bef.')
+		value = value.replace('until', 'bef.')
 		value = value.replace('c.', 'ca.')
+		value = value.replace('until ca.', 'ca.')
 		value = value.replace('CA.', 'ca.')
 		value = value.replace('af.', 'aft.')
 
@@ -480,9 +486,36 @@ def date_cleaner(value):
 			warnings.warn("Bad YYYYs date: %s" % value)
 			return None
 
+	elif p.match(value):
+		dates = value.split('-')
+		x = dates[0]		
+		f = date_parse(x, '/')
+		
+		return[f[0], datetime(int(dates[1]),12,31, 23, 59, 00)] 
+	
+	elif q.match(value):
+		dates = value.split(',')
+		x = dates[0]
+		y = dates[1]
+
+		return [datetime(int(x),1,1), datetime(int(x)+1,1,1), datetime(int(y),1,1), datetime(int(y)+1,1,1)]
+
 	elif len(value) == 5 and value[:4].isdigit() and value.endswith('-'):
 		y = int(value[:4])
 		return [datetime(y,1,1), None]
+	
+	elif value.startswith("through") or value.startswith("in") or value.startswith("both in"):
+		#through x
+		value = value.replace('through ', '')
+		value = value.replace('both in ', '')
+		value = value.replace('in ', '')
+		value = value.strip()
+		try:
+			y = int(value)
+		except:
+			warnings.warn("Bad through value: %s" % value)
+			return None
+		return [datetime(y,1,1), datetime(y+1,1,1)] # GRI guideline says that 'after 1900' really means (1900 or later)
 
 	elif value.startswith("ca"):
 		# circa x
@@ -516,15 +549,26 @@ def date_cleaner(value):
 			y = int(value)
 		except:
 			warnings.warn("Bad aft value: %s" % value)
-			return None
-		return [datetime(y,1,1), datetime(y+CIRCA+1,1,1)] # GRI guideline says that 'after 1900' really means (1900 or later)
+			y = int(value.split(' ')[0])
+			return [datetime(y,1,1), None] 
+		return [datetime(y,1,1), None] # GRI guideline says that 'after 1900' really means (1900 or later)
 
 	elif value.startswith('bef'):
 		value = value.replace('bef.', '')
 		value = value.replace('before ', '')
 		value = value.strip()
-		y = int(value)
-		return [datetime(y-CIRCA,1,1), datetime(y+1,1,1)] # GRI guideline says that 'before 1900' really means (up to and including 1900)
+		if value.isdigit():
+			y = int(value)
+			return [None, datetime(y+1,1,1)] # GRI guideline says that 'before 1900' really means (up to and including 1900)
+		elif value.startswith('April'):
+			value = value.replace('April', '')
+			value = value.strip()
+			y = int(value)
+			return [None, datetime(y,4,1)] # GRI guideline says that 'before 1900' really means (up to and including 1900)
+
+	elif value == 'November 1814':
+		y = int(value.split(' ')[1])
+		return [datetime(y,11,1), datetime(y,12,1)]
 
 	elif len(value) <= 4 and (value.endswith('st') or value.endswith('nd') or value.endswith('rd') or value.endswith('th')):
 		century = value[:len(value)-2]
@@ -556,6 +600,7 @@ def date_cleaner(value):
 		return date_parse(value, ';')
 
 	else:
+		print(value)
 		with c_locale(), suppress(ValueError):
 			yearmonthday = datetime.strptime(value, '%Y %B %d')
 			if yearmonthday:

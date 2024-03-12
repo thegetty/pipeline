@@ -646,7 +646,7 @@ class PipelineBase:
 		KNOEDLER_URI = self.helper.make_shared_uri('ORGANIZATION', 'ULAN', str(knoedler_ulan))
 		GOUPIL_URI = self.helper.make_shared_uri('PERSON', 'AUTH', goupil_name) # produce a uri which is the same as the one produced from the people database
 		NEWYORK_URI = self.helper.make_shared_uri('PLACE', 'USA', 'NY', 'New York')
-
+		
 		gci = model.Group(ident=GETTY_GCI_URI, label='Getty Conservation Institute')
 		gci.identified_by = vocab.PrimaryName(ident='', content='Getty Conservation Institute')
 		gci.exact_match = model.BaseResource(ident=f'http://vocab.getty.edu/ulan/{gci_ulan}')
@@ -693,7 +693,12 @@ class PipelineBase:
 		db_goupil = self.static_db_instance('Goupil', name='STAR Goupil Database', creator=gpi)
 		db_sales_events = self.static_db_instance('Sales', 'Descriptions', name='STAR Sales Catalogue Database', creator=gpi)
 		db_sales_catalogs = self.static_db_instance('Sales', 'Catalogue', name='STAR Physical Sales Catalogue Database', creator=gpi)
-		db_sales_contents = self.static_db_instance('Sales', 'Contents', name='STAR Sales Contents Database', creator=gpi)
+		db_sales_Belgium = self.static_db_instance('Sales', 'ContentsBe', name='STAR Sales Belgian Contents Database', creator=gpi)
+		db_sales_british = self.static_db_instance('Sales', 'ContentsBr', name='STAR Sales British Contents Database', creator=gpi)
+		db_sales_Dutch = self.static_db_instance('Sales', 'ContentsDu', name='STAR Sales DUTCH Contents Database', creator=gpi)
+		db_sales_French = self.static_db_instance('Sales', 'ContentsFr', name='STAR Sales FRENCH Contents Database', creator=gpi)
+		db_sales_German = self.static_db_instance('Sales', 'ContentsGe', name='STAR Sales GERMAN Contents Database', creator=gpi)
+		db_sales_Sandi = self.static_db_instance('Sales', 'Contents', name='STAR Sales SCANDINAVIAN Contents Database', creator=gpi)
 
 		instances = defaultdict(dict)
 		instances.update({
@@ -702,7 +707,12 @@ class PipelineBase:
 				'db-knoedler': db_knoedler,
 				'db-sales_events': db_sales_events,
 				'db-sales_catalogs': db_sales_catalogs,
-				'db-sales_contents': db_sales_contents,
+				'db-sales_Belgium': db_sales_Belgium,
+				'db-sales_British': db_sales_british,
+				'db-sales_Dutch': db_sales_Dutch,
+				'db-sales_French': db_sales_French,
+				'db-sales_German' : db_sales_German,
+				'db-sales_Sandi':db_sales_Sandi,
 				'db-goupil' : db_goupil
 			},
 			'Group': {
@@ -848,6 +858,7 @@ class PipelineBase:
 				print('Running with PARALLEL bonobo executor')
 			bonobo.run(graph, services=services)
 		else:
+			
 			if self.verbose:
 				print('Running with SERIAL custom executor')
 			e = pipeline.execution.GraphExecutor(graph, services)

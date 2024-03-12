@@ -79,7 +79,6 @@ class ProvenanceBase(Configurable):
 		tx_label = make_label(*tx_label_args)
 		tx._label = tx_label
 		tx.identified_by = model.Name(ident='', content=tx_label)
-
 		if current_tx:
 			if previous:
 				tx.ends_before_the_start_of = current_tx
@@ -144,7 +143,6 @@ class ProvenanceBase(Configurable):
 				place = get_crom_object(place_data)
 			owner.residence = place
 			data['_owner_locations'].append(place_data)
-
 		if owner_record.get('own_auth_p'):
 			content = owner_record['own_auth_p']
 			owner.referred_to_by = vocab.Note(ident='', content=content)
@@ -597,14 +595,28 @@ class ProvenanceBase(Configurable):
 						subevent = model.Production(ident=subevent_id, label=f'Production sub-event for {artist_label}')
 						subevent.carried_out_by = person
 						prod_event.part = subevent
-						
+
+	def select_county(self, data):
+		if data['auction_of_lot']['catalog_number'][:2] == "B-":
+			return self.helper.static_instances.get_instance('LinguisticObject', 'db-sales_Belgium')
+		if data['auction_of_lot']['catalog_number'][:2] == "Br":
+			return self.helper.static_instances.get_instance('LinguisticObject', 'db-sales_British')
+		if data['auction_of_lot']['catalog_number'][:2] == "N-":
+			return self.helper.static_instances.get_instance('LinguisticObject', 'db-sales_Dutch')
+		if data['auction_of_lot']['catalog_number'][:2] == "F-":
+			return self.helper.static_instances.get_instance('LinguisticObject', 'db-sales_British')
+		if data['auction_of_lot']['catalog_number'][:2] == "D-2":
+			return self.helper.static_instances.get_instance('LinguisticObject', 'db-sales_German')
+		if data['auction_of_lot']['catalog_number'][:2] == "SC":
+			return self.helper.static_instances.get_instance('LinguisticObject', 'db-sales_Sandi')
+
 	def model_artists_with_modifers(self, data:dict, hmo, attribution_modifiers, attribution_group_types, attribution_group_names):
 		'''Add modeling for artists as people involved in the production of an object'''
 		# sales_record = get_crom_object(data['_record'])
 		# import pdb; pdb.set_trace()
 		data.setdefault('_organizations', [])
 		data.setdefault('_original_objects', [])
-
+		
 		try:
 			hmo_label = f'{hmo._label}'
 		except AttributeError:
@@ -625,7 +637,8 @@ class ProvenanceBase(Configurable):
 		event_uri = hmo.id + '-Production'
 		prod_event = model.Production(ident=event_uri, label=f'Production event for {hmo_label}')
 		hmo.produced_by = prod_event
-
+		if "help_sales" in data:
+			hmo.referred_to_by = self.select_county(data)
 		artists = data.get('_artists', [])
 		for a in artists:
 			# here it adds properties like label, modifiers, pi_record_no
@@ -720,6 +733,8 @@ class ProvenanceBase(Configurable):
 			g_label = f'Group containing the {label.lower()} of {object_key}'
 			g = vocab.UncertainMemberClosedGroup(ident=group_uri, label=g_label)
 			g.identified_by = model.Name(ident='', content=group_name)
+			import pdb; pdb.set_trace()
+			
 			for person_data in people:
 				person = get_crom_object(person_data)
 				person.member_of = g

@@ -21,8 +21,8 @@ if __name__ == '__main__':
 		LIMIT		= int(os.environ.get('GETTY_PIPELINE_LIMIT', 10000000))
 
 	contents = {
-		'header_file': 'people_authority_0.csv',
-		'files_pattern': 'people_authority.csv',
+		'header_file': 'people_0.csv',
+		'files_pattern': 'people.csv',
 		# 'files_pattern': 'people_authority1.csv'
 	}
 

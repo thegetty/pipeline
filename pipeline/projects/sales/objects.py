@@ -51,7 +51,8 @@ class PopulateSalesObject(Configurable, pipeline.linkedart.PopulateObject):
 		destruction_types_map = type_map
 		hmo = get_crom_object(data)
 		title = data.get('title')
-		short_title = truncate_with_ellipsis(title, 100) or title
+		#short_title = truncate_with_ellipsis(title, 100) or title
+		short_title = title
 
 		r = re.compile(r'[Dd]estroyed(?: (?:by|during) (\w+))?(?: in (\d{4})[.]?)?')
 		m = r.search(note)
@@ -101,7 +102,7 @@ class PopulateSalesObject(Configurable, pipeline.linkedart.PopulateObject):
 	def _populate_object_visual_item(self, data:dict, subject_genre, modified_title, record):
 		hmo = get_crom_object(data)
 		title = data.get('title')
-		title = truncate_with_ellipsis(title, 100) or title
+		#title = truncate_with_ellipsis(title, 100) or title
 
 		# The visual item URI is just the object URI with a suffix. When URIs are
 		# reconciled during prev/post sale rewriting, this will allow us to also reconcile
@@ -548,7 +549,8 @@ class PopulateSalesObject(Configurable, pipeline.linkedart.PopulateObject):
 				typestring = data.get('object_type', 'Object')
 				hmo._label = f'{typestring}: “{title}”'
 			del data['title']
-			shorter = truncate_with_ellipsis(title, 100)
+			#shorter = truncate_with_ellipsis(title, 100)
+			shorter = title
 			if shorter:
 				description = vocab.Description(ident='', content=title)
 				description.referred_to_by = record

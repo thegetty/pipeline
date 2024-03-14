@@ -530,6 +530,21 @@ class AddAcquisitionOrBidding(ProvenanceBase):
 		if ask_price:
 			self.add_valuation(data, ask_price, lot_object_key, current_tx, valuation_type=vocab.AppraisingAssignment, valuation_label='Appraising')
 		
+	def copy_monetary_amnt(self, amnt_old):
+		identifier = "urn:uuid:%s" % uuid.uuid4()
+		label = amnt_old._label
+		amnt_new = model.MonetaryAmount(identifier=identifier, label=label)
+		amnt_new.currency = amnt_old.currency
+		amnt_new.classified_as = model.Type(identifier=amnt_old.classified_as[0].id, label=amnt_old.classified_as[0]._label)
+		#amnt_new.classified_as[0].type = amnt_old.classified_as[0].type
+		amnt_new.identified_by = []
+		for i in range(0, len(amnt_old.identified_by)):
+			amnt_new.identified_by.append(amnt_old.identified_by[i])
+			i=i-1
+		amnt_new.value = amnt_old.value
+
+		return amnt_new
+
 
 	def add_valuation(self, data:dict, amnt_data, lot_object_key, current_tx, buyers=None, valuation_type=None, valuation_label=None):
 		if valuation_type is None:
@@ -540,6 +555,8 @@ class AddAcquisitionOrBidding(ProvenanceBase):
 			buyers = []
 		cno, lno, date = lot_object_key
 		amnt = self.copy_object_with_new_id(get_crom_object(amnt_data))
+		#amnt = get_crom_object(amnt_data)
+		#amnt_copy = self.copy_monetary_amnt(amnt)
 		attrib_assignment_classes = [model.AttributeAssignment, valuation_type]
 		assignment = vocab.make_multitype_obj(*attrib_assignment_classes, label=f'{valuation_label} valuation of {cno} {lno} {date}')
 		assignment.assigned_property = 'dimension'
@@ -585,6 +602,7 @@ class AddAcquisitionOrBidding(ProvenanceBase):
 		# where the provenance entry is merged, the payment should be merged as well.
 		sell_payment_id = current_tx.id + '-Pay-to-Seller'
 		buy_payment_id = current_tx.id + '-Pay-from-Buyer'
+		payment_id = current_tx.id + '-Payment'
 
 		# The acquisition URI is just the provenance entry URI with a suffix. In any case
 		# where the provenance entry is merged, the acquisition should be merged as well.
@@ -596,15 +614,18 @@ class AddAcquisitionOrBidding(ProvenanceBase):
 
 		multi = tx_data.get('multi_lot_tx')
 		paym_label = f'multiple lots {multi}' if multi else object_label
-# 		paym = model.Payment(ident=payment_id, label=f'Payment for {paym_label}')
-		payments = {
-			'buy': model.Payment(ident=buy_payment_id, label=f'Payment from buyer for {paym_label}'),
-			'sell': model.Payment(ident=sell_payment_id, label=f'Payment to seller for {paym_label}'),
-		}
+		paym = model.Payment(ident=payment_id, label=f'Payment for {paym_label}')
+		#payments = {
+		#	'buy': model.Payment(ident=buy_payment_id, label=f'Payment from buyer for {paym_label}'),
+		#	'sell': model.Payment(ident=sell_payment_id, label=f'Payment to seller for {paym_label}'),
+		#}
 		for house_data in houses:
 			house = get_crom_object(house_data)
-			payments['buy'].paid_to = house
-			payments['sell'].paid_from = house
+			#payments['buy'].paid_to = house
+			#payments['sell'].paid_from = house
+			paym.paid_from = house
+			paym.paid_to = house
+
 		payments_used = set()
 
 		THROUGH = CaseFoldingSet(buy_sell_modifiers['through'])
@@ -634,7 +655,8 @@ class AddAcquisitionOrBidding(ProvenanceBase):
 				subpaym = model.Activity(ident=subpaym_id, label="Seller's agent's role in payment")
 				subpaym.classified_as = vocab.instances['SellersAgent']
 				subpaym.carried_out_by = seller
-				payments['sell'].part = subpaym
+			#	payments['sell'].part = subpaym
+				paym.part = subpaym ##DIMITRA: Added this
 
 				subacq_id = self.helper.prepend_uri_key(hmo.id, f'Acquisition,SellerAgent,{seq_no}')
 				subacq = model.Activity(ident=subacq_id, label="Seller's agent's role in acquisition")
@@ -643,14 +665,16 @@ class AddAcquisitionOrBidding(ProvenanceBase):
 				acq.part = subacq
 			elif FOR.intersects(mod):
 				acq.transferred_title_from = seller
-				payments['sell'].paid_to = seller
+			#	payments['sell'].paid_to = seller
+				paym.paid_to = seller   ##DIMITRA: Added this
 				payments_used.add('sell')
 			elif uncertain_attribution: # this is true if ANY of the sellers have an 'or anonymous' modifier
 				# The assignment URIs are just the acquisition URI with a suffix.
 				# In any case where the acquisition is merged, the assignments should be
 				# merged as well.
 				acq_assignment_uri = acq.id + f'-seller-assignment-{seq_no}'
-				paym_assignment_uri = payments['sell'].id + f'-seller-assignment-{seq_no}'
+				#paym_assignment_uri = payments['sell'].id + f'-seller-assignment-{seq_no}'
+				paym_assignment_uri = paym.id + f'-seller-assignment-{seq_no}'
 
 				acq_assignment_label = f'Uncertain seller as previous title holder in acquisition'
 				acq_assignment = vocab.PossibleAssignment(ident=acq_assignment_uri, label=acq_assignment_label)
@@ -664,15 +688,17 @@ class AddAcquisitionOrBidding(ProvenanceBase):
 				paym_assignment.referred_to_by = vocab.Note(ident='', content=paym_assignment_label)
 				paym_assignment.assigned_property = 'paid_to'
 				paym_assignment.assigned = seller
-				payments['sell'].attributed_by = paym_assignment
+				#payments['sell'].attributed_by = paym_assignment
+				paym.attributed_by = paym_assignment   ##DIMITRA: Added this
 				payments_used.add('sell')
 			else:
 				# covers non-modified
 # 				acq.carried_out_by = seller
 				acq.transferred_title_from = seller
 # 				payments['sell'].carried_out_by = seller
-				payments['sell'].paid_to = seller
+				#payments['sell'].paid_to = seller
 				payments_used.add('sell')
+				paym.paid_to = seller  ##DIMITRA: Added this
 
 		for seq_no, buyer_data in enumerate(buyers):
 			buyer = get_crom_object(buyer_data)
@@ -692,7 +718,8 @@ class AddAcquisitionOrBidding(ProvenanceBase):
 				subpaym = model.Activity(ident=subpaym_id, label="Buyer's agent's role in payment")
 				subpaym.classified_as = vocab.instances['BuyersAgent']
 				subpaym.carried_out_by = buyer
-				payments['buy'].part = subpaym
+				#payments['buy'].part = subpaym
+				paym.part = subpaym ##DIMITRA: Added this
 
 				subacq_id = self.helper.prepend_uri_key(hmo.id, f'Acquisition,BuyerAgent,{seq_no}')
 				subacq = model.Activity(ident=subacq_id, label="Buyer's agent's role in acquisition")
@@ -701,13 +728,15 @@ class AddAcquisitionOrBidding(ProvenanceBase):
 				acq.part = subacq
 			elif FOR.intersects(mod):
 				acq.transferred_title_to = buyer
-				payments['buy'].paid_from = buyer
+			#	payments['buy'].paid_from = buyer
+				paym.paid_from = buyer   ##DIMITRA: Added this
 				payments_used.add('buy')
 			else:
 				# covers FOR modifiers and non-modified
 # 				acq.carried_out_by = buyer
 				acq.transferred_title_to = buyer
-				payments['buy'].paid_from = buyer
+				#payments['buy'].paid_from = buyer
+				paym.paid_from = buyer ##DIMITRA: Added this
 # 				payments['buy'].carried_out_by = buyer
 				payments_used.add('buy')
 
@@ -720,28 +749,35 @@ class AddAcquisitionOrBidding(ProvenanceBase):
 			amnt_data = prices[0]
 			amnt = self.copy_object_with_new_id(get_crom_object(amnt_data))
 			add_crom_data(amnt_data, amnt)
-			for paym in payments.values():
-				self.set_possible_attribute(paym, 'paid_amount', amnt_data)
-				for price in prices[1:]:
-					content = self._price_note(price)
-					if content:
-						paym.referred_to_by = vocab.PriceStatement(ident='', content=content)
-					
+			#for p in payments.values():
+			#	self.set_possible_attribute(p, 'paid_amount', amnt_data)
+		#		for price in prices[1:]:
+			#		content = self._price_note(price)
+			#		if content:
+			#			p.referred_to_by = vocab.PriceStatement(ident='', content=content)
+
+			self.set_possible_attribute(paym, 'paid_amount', amnt_data)
+			for price in prices[1:]:
+				content = self._price_note(price)
+				if content:
+					paym.referred_to_by = vocab.PriceStatement(ident='', content=content)
+
 		elif ask_price:
 			# for non-auction sales, the ask price is the amount paid for the acquisition
-			for paym in payments.values():
-				self.set_possible_attribute(paym, 'paid_amount', ask_price)
-
+			#for p in payments.values(): #Dimitra 
+			#	self.set_possible_attribute(p, 'paid_amount', ask_price)  #Dimitra
+			self.set_possible_attribute(paym, 'paid amount', ask_price)
 
 		ts = tx_data.get('_date')
 		if ts:
 			acq.timespan = ts
 
 		current_tx.part = acq
-		for pay_key in payments_used:
-			paym = payments[pay_key]
-			current_tx.part = paym
-# 		current_tx.part = paym
+		#for pay_key in payments_used:
+		#	p = payments[pay_key]
+	    #		current_tx.part = p
+		
+		current_tx.part = paym
 		data['_prov_entries'] += [add_crom_data(data={}, what=current_tx)]
 	# 	lot_uid, lot_uri = helper.shared_lot_number_ids(cno, lno)
 		# TODO: `annotation` here is from add_physical_catalog_objects

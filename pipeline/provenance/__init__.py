@@ -59,8 +59,10 @@ class ProvenanceBase(Configurable):
 		'''
 
 		def _make_label_default(helper, sale_type, transaction, rel, *args):
-			strs = [str(x) for x in args]
-			return ', '.join(strs)
+			
+			str = f'Provenance Entry {rel} object identified in book {args[2]}, page {args[3]}, row {args[4]}'
+			return str
+		
 		if make_label is None:
 			make_label = _make_label_default
 
@@ -70,7 +72,6 @@ class ProvenanceBase(Configurable):
 		tx_label = make_label(*tx_label_args)
 		tx._label = tx_label
 		tx.identified_by = model.Name(ident='', content=tx_label)
-
 		if current_tx:
 			if previous:
 				tx.ends_before_the_start_of = current_tx

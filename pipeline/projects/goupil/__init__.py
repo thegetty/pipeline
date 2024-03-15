@@ -399,8 +399,8 @@ class GoupilUtilityHelper(SharedUtilityHelper):
         if not place_verbatim:
             tx.referred_to_by = vocab.Note(ident="", content=place_verbatim)
 
-        for place in places:
-            tx.took_place_at = place
+        # for place in places:
+        #     tx.took_place_at = place
         return tx
 
     def add_person_residence(self, person: dict, place_verbatim: str, data: dict):
@@ -997,7 +997,8 @@ class GoupilTransactionHandler(TransactionHandler):
         act.classified_as = model.Type(
             ident="http://vocab.getty.edu/aat/300393212", label="establishment (action or condition)"
         )
-        
+        import pdb; pdb.set_trace()
+
         person = get_crom_object(p_data)
         if isinstance(sojourn, str):
 
@@ -1046,15 +1047,15 @@ class GoupilTransactionHandler(TransactionHandler):
                         tgn_instance.identified_by = vocab.AlternateName(ident=self.helper.make_shared_uri(('PLACE',location_name)), content=location_name)
                     res_act = self.new_residence_activity(tgn_instance, person, sales_records)
                     person.carried_out = res_act
-            # places = data['_locations'][0]['_LOD_OBJECT']
-            # if not places and sojourn:
-            #     act.referred_to_by = vocab.Note(ident="", content=sojourn)
+            places = data['_locations'][0]['_LOD_OBJECT']
+            if not places and sojourn:
+                act.referred_to_by = vocab.Note(ident="", content=sojourn)
             # for place in places:
-            # act.took_place_at = places
-            # act.took_place_at = sojourn
+            act.took_place_at = places
+            act.took_place_at = sojourn
 
         else:
-            act.took_place_at = sojourn
+            act.took_place_at = get_crom_object(sojourn)
         person.carried_out = act
         
         for record in sales_records:
@@ -1504,19 +1505,20 @@ class GoupilTransactionHandler(TransactionHandler):
             # )
             # import pdb; pdb.set_trace()
             # if data['_locations']:
+            #     import pdb; pdb.set_trace()
             #     for place in data['_locations']:
             #         person.residence = place
-            # else:
-            #     loc_verbatim = p_data.get("location")
-            #     if loc_verbatim:
-            #         tx.referred_to_by = vocab.Note(content=loc_verbatim)
-
-            # for place in data['_locations']:
-            #     self.person_sojourn(p_data, place, data)
-            #     if THROUGH.intersects(mod):
-            #         people_agents.append(person)
-            #     else:
-            #         people.append(person)
+            else:
+                pass
+                # loc_verbatim = p_data.get("location")
+                # if loc_verbatim:
+                #     tx.referred_to_by = vocab.Note(content=loc_verbatim)
+            for place in data['_locations']:
+                #self.person_sojourn(p_data, place, data)
+                if THROUGH.intersects(mod):
+                    people_agents.append(person)
+                else:
+                    people.append(person)
 
         goupil_group = [self.helper.static_instances.get_instance("Group", "goupil")]
         goupil_group_agents = []
@@ -1768,7 +1770,7 @@ class ModelSale(GoupilTransactionHandler):
         out_tx = self.helper.add_transaction_place(out_tx, purch_loc_note, data)
         
         for seller in sellers:
-            self.person_sojourn(seller, seller.get("location"), data)
+            #self.person_sojourn(seller, seller.get("location"), data)
             seller = self.helper.add_person_residence(seller, seller.get("loc"), data)
             in_tx = self.helper.add_transaction_place(in_tx, seller.get("location"), data)
             out_tx = self.helper.add_transaction_place(out_tx, seller.get("location"), data)

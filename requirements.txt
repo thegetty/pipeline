@@ -11,4 +11,4 @@ objgraph==3.4.1
 xmltodict==0.12.0
 rdflib==5.0.0
 isort==5.10.1
-black==22.8.0
+black==24.3.0

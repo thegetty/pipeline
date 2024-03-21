@@ -201,6 +201,7 @@ class AddAuctionOfLot(ProvenanceBase):
 						ma = vocab.add_classification(price, vocab.AskingPrice)
 						if data.get('ask_price'):
 							warnings.warn(f'*** Overwriting ask_price data on {lot_object_key}')
+						import pdb; pdb.set_trace()
 						data['ask_price'] = add_crom_data(price_data, ma)
 
 		shared_lot_number = self.helper.shared_lot_number_from_lno(lno)
@@ -755,7 +756,6 @@ class AddAcquisitionOrBidding(ProvenanceBase):
 			#		content = self._price_note(price)
 			#		if content:
 			#			p.referred_to_by = vocab.PriceStatement(ident='', content=content)
-
 			self.set_possible_attribute(paym, 'paid_amount', amnt_data)
 			for price in prices[1:]:
 				content = self._price_note(price)
@@ -766,7 +766,8 @@ class AddAcquisitionOrBidding(ProvenanceBase):
 			# for non-auction sales, the ask price is the amount paid for the acquisition
 			#for p in payments.values(): #Dimitra 
 			#	self.set_possible_attribute(p, 'paid_amount', ask_price)  #Dimitra
-			self.set_possible_attribute(paym, 'paid amount', ask_price)
+			
+			self.set_possible_attribute(paym, 'paid_amount', ask_price)
 
 		ts = tx_data.get('_date')
 		if ts:
@@ -815,9 +816,13 @@ class AddAcquisitionOrBidding(ProvenanceBase):
 		auction_data = parent['auction_of_lot']
 		lot_object_key = object_key(auction_data)
 		cno, lno, date = lot_object_key
-		lot = get_crom_object(parent.get('_event_causing_prov_entry'))
-		lot.referred_to_by = self.select_county(data)
-		ts = getattr(lot, 'timespan', None)
+
+		if '_event_causing_prov_entry' in parent:
+
+			lot = get_crom_object(parent.get('_event_causing_prov_entry'))
+			lot.referred_to_by = self.select_county(data)
+			ts = getattr(lot, 'timespan', None)
+		else: ts = None
 
 		prev_procurements = []
 		tx_label_args = tuple([self.helper, sale_type, 'Event', rel] + list(lot_object_key))

@@ -214,7 +214,14 @@ class PopulateSalesObject(Configurable, pipeline.linkedart.PopulateObject):
 
 	def new_residence_activity(self, place, group, record):
 		try:
-			res_act = model.Activity(ident=self.helper.make_proj_uri('Activity',  'establishment', group.id, place.id))
+			if place==None:
+				res_act = model.Activity(ident=self.helper.make_proj_uri('Activity',  'establishment', group.id))
+			elif group==None:
+				res_act = model.Activity(ident=self.helper.make_proj_uri('Activity',  'establishment', place.id))
+			elif group==None and place==None:
+				res_act = model.Activity(ident=self.helper.make_proj_uri('Activity',  'establishment'))			
+			else:	
+				res_act = model.Activity(ident=self.helper.make_proj_uri('Activity',  'establishment', group.id, place.id))
 			res_act.took_place_at = place
 			res_type = model.Type(ident='http://vocab.getty.edu/aat/300393212', label="Establishment")
 			location_type = model.Type(ident='http://vocab.getty.edu/aat/300393211', label="Location Activity or State")
@@ -250,12 +257,11 @@ class PopulateSalesObject(Configurable, pipeline.linkedart.PopulateObject):
 			# in these two if blocks, the object was destroyed, so any "present location"
 			# data is actually an indication of the location of destruction.
 			if isinstance(loc, str) and 'destroyed ' in loc.lower():
-				import pdb; pdb.set_trace()
 				# Issue AR-122 removed modeling of object destruction.
 				# self.populate_destruction_events(data, loc, type_map=destruction_types_map)
 				loc = None
 			elif isinstance(note, str) and 'destroyed ' in note.lower():
-				import pdb; pdb.set_trace()
+				
 				# Issue AR-122 removed modeling of object destruction.
 				# self.populate_destruction_events(data, note, type_map=destruction_types_map, location=loc)
 				note = None

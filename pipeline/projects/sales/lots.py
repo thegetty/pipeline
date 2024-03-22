@@ -154,19 +154,6 @@ class AddAuctionOfLot(ProvenanceBase):
 			creation.timespan = ts
 		coll.created_by = creation
 
-
-		est_price = data.get('estimated_price')
-		if est_price:
-			self.set_possible_attribute(coll, 'dimension', est_price)
-
-		start_price = data.get('start_price')
-		if start_price:
-			self.set_possible_attribute(coll, 'dimension', start_price)
-
-		ask_price = data.get('ask_price')
-		if ask_price:
-			self.set_possible_attribute(coll, 'dimension', ask_price)
-
 		lot.used_specific_object = coll
 		
 		data['_lot_object_set'] = add_crom_data(data={}, what=coll)
@@ -602,6 +589,7 @@ class AddAcquisitionOrBidding(ProvenanceBase):
 			assignment.assigned_property = 'dimension'
 			assignment.assigned = amnt
 		else:
+		##################
 			attrib_assignment_classes = [model.AttributeAssignment, valuation_type]
 			# lno = self.helper.shared_lot_number_from_lno(lno)
 			assignment = vocab.make_multitype_obj(*attrib_assignment_classes, label=f'{valuation_label} valuation of {cno} {lno} {date}')
@@ -866,6 +854,13 @@ class AddAcquisitionOrBidding(ProvenanceBase):
 		lot = get_crom_object(parent.get('_event_causing_prov_entry'))
 		lot.referred_to_by = self.select_county(data)
 		ts = getattr(lot, 'timespan', None)
+		
+		if '_event_causing_prov_entry' in parent:
+
+			lot = get_crom_object(parent.get('_event_causing_prov_entry'))
+			lot.referred_to_by = self.select_county(data)
+			ts = getattr(lot, 'timespan', None)
+		else: ts = None
 
 		prev_procurements = []
 		tx_label_args = tuple([self.helper, sale_type, 'Event', rel] + list(lot_object_key))

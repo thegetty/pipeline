@@ -57,7 +57,7 @@ class ProvenanceBase(Configurable):
 		  * rel: a string describing the relationship between this provenance entry and the object (e.g. "leading to Ownership of")
 		  * N trailing arguments used that are the contents of the `lot_object_key` tuple passed to `handle_prev_post_owner`
 		'''
-
+		
 		def _make_label_default(helper, sale_type, transaction, rel, *args):
 			# import pdb; pdb.set_trace()
 			str = f'Provenance Entry {rel} object identified in book {args[2]}, page {args[3]}, row {args[4]}'
@@ -172,6 +172,7 @@ class ProvenanceBase(Configurable):
 		data['_prov_entries'].append(add_crom_data(data=ptx_data, what=tx))
 
 	def set_possible_attribute(self, obj, prop, data):
+		
 		value = get_crom_object(data)
 		if not value:
 			return
@@ -733,7 +734,6 @@ class ProvenanceBase(Configurable):
 			g_label = f'Group containing the {label.lower()} of {object_key}'
 			g = vocab.UncertainMemberClosedGroup(ident=group_uri, label=g_label)
 			g.identified_by = model.Name(ident='', content=group_name)
-			import pdb; pdb.set_trace()
 			
 			for person_data in people:
 				person = get_crom_object(person_data)

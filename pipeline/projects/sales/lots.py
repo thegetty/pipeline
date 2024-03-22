@@ -519,53 +519,63 @@ class AddAcquisitionOrBidding(ProvenanceBase):
 			self.add_valuation(data, ask_price, lot_object_key, current_tx, valuation_type=vocab.AppraisingAssignment, valuation_label='Appraising')
 		
 	def copy_monetary_amnt(self, amnt_old):
-		identifier = "urn:uuid:%s" % uuid.uuid4()
-		label = amnt_old._label
-		amnt_new = model.MonetaryAmount(identifier=identifier, label=label)
-		if 'currency' in amnt_old.__dict__:
-			amnt_new.currency = amnt_old.currency
-			
-		if 'classified_as' in amnt_old.__dict__:
-			amnt_new.classified_as = []
-			for j in range(0, len(amnt_old.classified_as)):
-				old_type = amnt_old.classified_as[j]
-				cl_type = model.Type()
-				cl_type.id = 'http://vocab.getty.edu/aat/300417245'
-				cl_type._label = old_type._label
-				amnt_new.classified_as.append(cl_type)
 		
-		amnt_new.value = amnt_old.value
+		if amnt_old:
+			identifier = "urn:uuid:%s" % uuid.uuid4()
 
-		if 'identified_by' in amnt_old.__dict__:
-			amnt_new.identified_by = []
-			for i in range(0, len(amnt_old.identified_by)):
-				name = model.Name(id='')
-				name.content = amnt_old.identified_by[i].content
-				amnt_new.identified_by.append(name)
-		
-		if 'referred_to_by' in amnt_old.__dict__:
-			amnt_new.referred_to_by = []
-			for k in range(0, len(amnt_old.referred_to_by)):
-				note_old = amnt_old.referred_to_by[k]
-				note_content = note_old.content
-				note_new = vocab.Note(ident='', content=note_content)
-				# note_new.classified_as = []
-				# for m in range(0, len(note_old.classified_as)):
-				# 	m_type_old = note_old.classified_as[m]
-				# 	m_type = model.Type()
-				# 	m_type.id='http://vocab.getty.edu/aat/300027200'
-				# 	m_label = m_type_old._label
-				# 	m_type._label = m_label
-				# 	m_type.classified_as = []
-				# 	for n in range(0, len(amnt_old.referred_to_by[k].classified_as[m].classified_as)):
-				# 		n_type = model.Type()
-				# 		n_type.id = 'http://vocab.getty.edu/aat/300418049'
-				# 		m_type.classified_as.append(n_type)
-					# note_new.classified_as.append(m_type)
-				amnt_new.referred_to_by.append(note_new)
+			if 'label' in amnt_old.__dict__:
+				label = amnt_old._label
+				amnt_new = model.MonetaryAmount(identifier=identifier, label=label)
+			else:
+				amnt_new = model.MonetaryAmount(identifier=identifier, label='')
+
+			if 'currency' in amnt_old.__dict__:
+				amnt_new.currency = amnt_old.currency
+				
+			if 'classified_as' in amnt_old.__dict__:
+				amnt_new.classified_as = []
+				for j in range(0, len(amnt_old.classified_as)):
+					old_type = amnt_old.classified_as[j]
+					cl_type = model.Type()
+					cl_type.id = 'http://vocab.getty.edu/aat/300417245'
+					cl_type._label = old_type._label
+					amnt_new.classified_as.append(cl_type)
+
+			if 'value' in amnt_old.__dict__:
+				amnt_new.value = amnt_old.value
+
+			if 'identified_by' in amnt_old.__dict__:
+				amnt_new.identified_by = []
+				for i in range(0, len(amnt_old.identified_by)):
+					name = model.Name(id='')
+					name.content = amnt_old.identified_by[i].content
+					amnt_new.identified_by.append(name)
 			
+			if 'referred_to_by' in amnt_old.__dict__:
+				amnt_new.referred_to_by = []
+				for k in range(0, len(amnt_old.referred_to_by)):
+					note_old = amnt_old.referred_to_by[k]
+					note_content = note_old.content
+					note_new = vocab.Note(ident='', content=note_content)
+					# note_new.classified_as = []
+					# for m in range(0, len(note_old.classified_as)):
+					# 	m_type_old = note_old.classified_as[m]
+					# 	m_type = model.Type()
+					# 	m_type.id='http://vocab.getty.edu/aat/300027200'
+					# 	m_label = m_type_old._label
+					# 	m_type._label = m_label
+					# 	m_type.classified_as = []
+					# 	for n in range(0, len(amnt_old.referred_to_by[k].classified_as[m].classified_as)):
+					# 		n_type = model.Type()
+					# 		n_type.id = 'http://vocab.getty.edu/aat/300418049'
+					# 		m_type.classified_as.append(n_type)
+						# note_new.classified_as.append(m_type)
+					amnt_new.referred_to_by.append(note_new)
+				
 
-		return amnt_new
+			return amnt_new
+		else:
+			return None
 
 
 	def add_valuation(self, data:dict, amnt_data, lot_object_key, current_tx, buyers=None, valuation_type=None, valuation_label=None):

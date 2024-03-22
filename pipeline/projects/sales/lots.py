@@ -861,7 +861,6 @@ class AddAcquisitionOrBidding(ProvenanceBase):
 		auction_data = parent['auction_of_lot']
 		lot_object_key = object_key(auction_data)
 		cno, lno, date = lot_object_key
-		lot = get_crom_object(parent.get('_event_causing_prov_entry'))
 				
 		if '_event_causing_prov_entry' in parent:
 

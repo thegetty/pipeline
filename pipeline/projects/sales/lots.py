@@ -152,20 +152,7 @@ class AddAuctionOfLot(ProvenanceBase):
 			ts, begin, end, uses_following_days_style = event_dates
 			creation.timespan = ts
 		coll.created_by = creation
-
-
-		est_price = data.get('estimated_price')
-		if est_price:
-			self.set_possible_attribute(coll, 'dimension', est_price)
-
-		start_price = data.get('start_price')
-		if start_price:
-			self.set_possible_attribute(coll, 'dimension', start_price)
-
-		ask_price = data.get('ask_price')
-		if ask_price:
-			self.set_possible_attribute(coll, 'dimension', ask_price)
-
+		
 		lot.used_specific_object = coll
 		
 		data['_lot_object_set'] = add_crom_data(data={}, what=coll)
@@ -509,7 +496,6 @@ class AddAcquisitionOrBidding(ProvenanceBase):
 					phys_catalogs[source_catalog_key] = catalog
 					catalog.carries = hand_notes
 				acq.referred_to_by = hand_notes
-				import pdb; pdb.set_trace()
 		data['_phys_catalog_notes'] = [add_crom_data(data={}, what=n) for n in phys_catalog_notes.values()]
 		data['_phys_catalogs'] = [add_crom_data(data={}, what=c) for c in phys_catalogs.values()]
 

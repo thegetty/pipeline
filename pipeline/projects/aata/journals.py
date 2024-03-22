@@ -111,9 +111,9 @@ class ModelJournal(Configurable):
 		if title:
 			issue_label = f'{journal_label}: “{title}”'
 			if volume and number:
-			   issue_label = f'{issue_label} (v. {volume}, n. {number})'
+				issue_label = f'{issue_label} (v. {volume}, n. {number})'
 		elif volume and number:
-		   issue_label = f'{journal_label} (v. {volume}, n. {number})'
+			issue_label = f'{journal_label} (v. {volume}, n. {number})'
 
 		jid = record['record_desc_group']['record_id']
 		issue = {

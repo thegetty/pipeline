@@ -862,9 +862,7 @@ class AddAcquisitionOrBidding(ProvenanceBase):
 		lot_object_key = object_key(auction_data)
 		cno, lno, date = lot_object_key
 		lot = get_crom_object(parent.get('_event_causing_prov_entry'))
-		lot.referred_to_by = self.select_county(data)
-		ts = getattr(lot, 'timespan', None)
-		
+				
 		if '_event_causing_prov_entry' in parent:
 
 			lot = get_crom_object(parent.get('_event_causing_prov_entry'))

@@ -605,7 +605,7 @@ class ProvenanceBase(Configurable):
 		if data['auction_of_lot']['catalog_number'][:2] == "N-":
 			return self.helper.static_instances.get_instance('LinguisticObject', 'db-sales_Dutch')
 		if data['auction_of_lot']['catalog_number'][:2] == "F-":
-			return self.helper.static_instances.get_instance('LinguisticObject', 'db-sales_British')
+			return self.helper.static_instances.get_instance('LinguisticObject', 'db-sales_French')
 		if data['auction_of_lot']['catalog_number'][:2] == "D-2":
 			return self.helper.static_instances.get_instance('LinguisticObject', 'db-sales_German')
 		if data['auction_of_lot']['catalog_number'][:2] == "SC":

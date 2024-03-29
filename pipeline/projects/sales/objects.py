@@ -41,7 +41,7 @@ class PopulateSalesObject(Configurable, pipeline.linkedart.PopulateObject):
 		if data['parent_data']['auction_of_lot']['catalog_number'][:2] == "N-":
 			return self.helper.static_instances.get_instance('LinguisticObject', 'db-sales_Dutch')
 		if data['parent_data']['auction_of_lot']['catalog_number'][:2] == "F-":
-			return self.helper.static_instances.get_instance('LinguisticObject', 'db-sales_British')
+			return self.helper.static_instances.get_instance('LinguisticObject', 'db-sales_French')
 		if data['parent_data']['auction_of_lot']['catalog_number'][:2] == "D-":
 			return self.helper.static_instances.get_instance('LinguisticObject', 'db-sales_German')
 		if data['parent_data']['auction_of_lot']['catalog_number'][:2] == "SC":
@@ -635,7 +635,7 @@ class AddArtists(ProvenanceBase):
 		if data['parent_data']['auction_of_lot']['catalog_number'][:2] == "N-":
 			return self.helper.static_instances.get_instance('LinguisticObject', 'db-sales_Dutch')
 		if data['parent_data']['auction_of_lot']['catalog_number'][:2] == "F-":
-			return self.helper.static_instances.get_instance('LinguisticObject', 'db-sales_British')
+			return self.helper.static_instances.get_instance('LinguisticObject', 'db-sales_French')
 		if data['parent_data']['auction_of_lot']['catalog_number'][:2] == "D-":
 			return self.helper.static_instances.get_instance('LinguisticObject', 'db-sales_German')
 		if data['parent_data']['auction_of_lot']['catalog_number'][:2] == "SC":

@@ -109,7 +109,7 @@ class AddAuctionOfLot(ProvenanceBase):
 		if data['auction_of_lot']['catalog_number'][:2] == "N-":
 			return self.helper.static_instances.get_instance('LinguisticObject', 'db-sales_Dutch')
 		if data['auction_of_lot']['catalog_number'][:2] == "F-":
-			return self.helper.static_instances.get_instance('LinguisticObject', 'db-sales_British')
+			return self.helper.static_instances.get_instance('LinguisticObject', 'db-sales_French')
 		if data['auction_of_lot']['catalog_number'][:2] == "D-":
 			return self.helper.static_instances.get_instance('LinguisticObject', 'db-sales_German')
 		if data['auction_of_lot']['catalog_number'][:2] == "SC":
@@ -350,7 +350,7 @@ class AddAcquisitionOrBidding(ProvenanceBase):
 		if data['parent_data']['auction_of_lot']['catalog_number'][:2] == "N-":
 			return self.helper.static_instances.get_instance('LinguisticObject', 'db-sales_Dutch')
 		if data['parent_data']['auction_of_lot']['catalog_number'][:2] == "F-":
-			return self.helper.static_instances.get_instance('LinguisticObject', 'db-sales_British')
+			return self.helper.static_instances.get_instance('LinguisticObject', 'db-sales_French')
 		if data['parent_data']['auction_of_lot']['catalog_number'][:2] == "D-":
 			return self.helper.static_instances.get_instance('LinguisticObject', 'db-sales_German')
 		if data['parent_data']['auction_of_lot']['catalog_number'][:2] == "SC":
@@ -664,11 +664,13 @@ class AddAcquisitionOrBidding(ProvenanceBase):
 		# 	'buy': model.Payment(ident=buy_payment_id, label=f'Payment from buyer for {paym_label}'),
 		# 	'sell': model.Payment(ident=sell_payment_id, label=f'Payment to seller for {paym_label}'),
 		# }
+		
 		for house_data in houses:
 			house = get_crom_object(house_data)
 			# payments['buy'].paid_to = house
 			# payments['sell'].paid_from = house
 			paym.paid_from = house
+			import pdb; pdb.set_trace()
 			paym.paid_to = house
 
 		payments_used = set()
@@ -711,6 +713,7 @@ class AddAcquisitionOrBidding(ProvenanceBase):
 			elif FOR.intersects(mod):
 				acq.transferred_title_from = seller
 				# payments['sell'].paid_to = seller
+				import pdb; pdb.set_trace()
 				paym.paid_to = seller   
 				payments_used.add('sell')
 			elif uncertain_attribution: # this is true if ANY of the sellers have an 'or anonymous' modifier
@@ -743,6 +746,7 @@ class AddAcquisitionOrBidding(ProvenanceBase):
 # 				payments['sell'].carried_out_by = seller
 				# payments['sell'].paid_to = seller
 				payments_used.add('sell')
+				
 				paym.paid_to = seller 
 
 		for seq_no, buyer_data in enumerate(buyers):

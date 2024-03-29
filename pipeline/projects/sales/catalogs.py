@@ -24,7 +24,7 @@ class AddAuctionCatalog(Configurable):
 		if data['auction_of_lot']['catalog_number'][:2] == "N-":
 			return self.helper.static_instances.get_instance('LinguisticObject', 'db-sales_Dutch')
 		if data['auction_of_lot']['catalog_number'][:2] == "F-":
-			return self.helper.static_instances.get_instance('LinguisticObject', 'db-sales_British')
+			return self.helper.static_instances.get_instance('LinguisticObject', 'db-sales_French')
 		if data['auction_of_lot']['catalog_number'][:2] == "D-":
 			return self.helper.static_instances.get_instance('LinguisticObject', 'db-sales_German')
 		if data['auction_of_lot']['catalog_number'][:2] == "SC":
@@ -126,9 +126,9 @@ class AddPhysicalCatalogOwners(Configurable):
 					model.Identifier(ident='', content=str(owner_code))
 				],
 			}
+			#data['referred_to_by'] = [entry_record, entry_record1]
 			owner = model.Group(ident=owner_uri)
 			owner.referred_to_by = entry_record
-			
 			add_crom_data(data['_owner'], owner)
 			if not owner_code:
 				warnings.warn(f'Setting empty identifier on {owner.id}')
@@ -214,7 +214,7 @@ class AddAuctionCatalogEntry(Configurable):
 		if data['auction_of_lot']['catalog_number'][:2] == "N-":
 			return self.helper.static_instances.get_instance('LinguisticObject', 'db-sales_Dutch')
 		if data['auction_of_lot']['catalog_number'][:2] == "F-":
-			return self.helper.static_instances.get_instance('LinguisticObject', 'db-sales_British')
+			return self.helper.static_instances.get_instance('LinguisticObject', 'db-sales_French')
 		if data['auction_of_lot']['catalog_number'][:2] == "D-":
 			return self.helper.static_instances.get_instance('LinguisticObject', 'db-sales_German')
 		if data['auction_of_lot']['catalog_number'][:2] == "SC":

@@ -20,6 +20,20 @@ class AddAuctionEvent(Configurable):
 	event_properties = Service('event_properties')
 	date_modifiers = Service('date_modifiers')
 
+	def select_county(self, data):
+		if data['catalog_number'][:2] == "B-":
+			return self.helper.static_instances.get_instance('LinguisticObject', 'db-sales_Belgium')
+		if data['catalog_number'][:2] == "Br":
+			return self.helper.static_instances.get_instance('LinguisticObject', 'db-sales_British')
+		if data['catalog_number'][:2] == "N-":
+			return self.helper.static_instances.get_instance('LinguisticObject', 'db-sales_Dutch')
+		if data['catalog_number'][:2] == "F-":
+			return self.helper.static_instances.get_instance('LinguisticObject', 'db-sales_French')
+		if data['catalog_number'][:2] == "D-":
+			return self.helper.static_instances.get_instance('LinguisticObject', 'db-sales_German')
+		if data['catalog_number'][:2] == "SC":
+			return self.helper.static_instances.get_instance('LinguisticObject', 'db-sales_Sandi')
+		
 	def __call__(self, data:dict, event_properties, date_modifiers):
 
 		'''Add modeling for an auction event based on properties of the supplied `data` dict.'''
@@ -42,7 +56,7 @@ class AddAuctionEvent(Configurable):
 		auction.referred_to_by = record
 		
 		auction.referred_to_by = self.helper.static_instances.get_instance('LinguisticObject', 'db-sales_events')
-		 
+		auction.referred_to_by = self.select_county(data)
 		auction.identified_by = model.Name(ident='', content=auction._label)
 		data['uid'] = uid
 		data['uri'] = uri
@@ -58,6 +72,20 @@ class PopulateAuctionEvent(Configurable):
 	date_modifiers = Service('date_modifiers')
 	link_types = Service('link_types')
 
+	def select_county(self, data):
+		if data['catalog_number'][:2] == "B-":
+			return self.helper.static_instances.get_instance('LinguisticObject', 'db-sales_Belgium')
+		if data['catalog_number'][:2] == "Br":
+			return self.helper.static_instances.get_instance('LinguisticObject', 'db-sales_British')
+		if data['catalog_number'][:2] == "N-":
+			return self.helper.static_instances.get_instance('LinguisticObject', 'db-sales_Dutch')
+		if data['catalog_number'][:2] == "F-":
+			return self.helper.static_instances.get_instance('LinguisticObject', 'db-sales_French')
+		if data['catalog_number'][:2] == "D-":
+			return self.helper.static_instances.get_instance('LinguisticObject', 'db-sales_German')
+		if data['catalog_number'][:2] == "SC":
+			return self.helper.static_instances.get_instance('LinguisticObject', 'db-sales_Sandi')
+		
 	def auction_event_location(self, data:dict, tgn_data):
 		'''
 		Based on location data in the supplied `data` dict, construct a data structure
@@ -119,7 +147,7 @@ class PopulateAuctionEvent(Configurable):
 		event_experts = event_properties['experts']
 		event_commissaires = event_properties['commissaire']
 		# import pdb; pdb.set_trace()
-		
+		import pdb; pdb.set_trace
 		auction = get_crom_object(data)
 		catalog = data['_catalog']['_LOD_OBJECT']
 
@@ -170,7 +198,7 @@ class PopulateAuctionEvent(Configurable):
 				#place Database description
 
 				o_place.referred_to_by = self.helper.static_instances.get_instance('LinguisticObject', 'db-sales_events')
-				
+				o_place.referred_to_by = self.select_county(data)
 				data['_locations'] = [place_data]
 				auction.took_place_at = o_place
 				auction_locations[cno] = o_place.clone(minimal=True)
@@ -223,7 +251,9 @@ class PopulateAuctionEvent(Configurable):
 				role='commissaire'
 			)
 			event_commissaires[cno].append(person.clone(minimal=True))
+
 			data['_organizers'].append(add_crom_data(data={}, what=person))
+			
 			role_id = '' # self.helper.make_proj_uri('AUCTION-EVENT', cno, 'Commissaire', seq_no)
 			role = vocab.CommissairePriseur(ident=role_id, label=f'Role of Commissaire-priseur in the event {cno}')
 			role.carried_out_by = person
@@ -284,13 +314,27 @@ class PopulateAuctionEvent(Configurable):
 		#activite database sales
 		
 		auction.referred_to_by = self.helper.static_instances.get_instance('LinguisticObject', 'db-sales_events')
-
+		auction.referred_to_by = self.select_county(data)
 		return data
 
 class AddAuctionHouses(Configurable):
 	helper = Option(required=True)
 	event_properties = Service('event_properties')
 
+	def select_county(self, data):
+		if data['catalog_number'][:2] == "B-":
+			return self.helper.static_instances.get_instance('LinguisticObject', 'db-sales_Belgium')
+		if data['catalog_number'][:2] == "Br":
+			return self.helper.static_instances.get_instance('LinguisticObject', 'db-sales_British')
+		if data['catalog_number'][:2] == "N-":
+			return self.helper.static_instances.get_instance('LinguisticObject', 'db-sales_Dutch')
+		if data['catalog_number'][:2] == "F-":
+			return self.helper.static_instances.get_instance('LinguisticObject', 'db-sales_French')
+		if data['catalog_number'][:2] == "D-":
+			return self.helper.static_instances.get_instance('LinguisticObject', 'db-sales_German')
+		if data['catalog_number'][:2] == "SC":
+			return self.helper.static_instances.get_instance('LinguisticObject', 'db-sales_Sandi')
+		
 	def __call__(self, data:dict, event_properties):
 		'''
 		Add modeling data for the auction house organization(s) associated with an auction
@@ -300,25 +344,34 @@ class AddAuctionHouses(Configurable):
 		auction = get_crom_object(data)
 		event_record = get_crom_object(data['_record'])
 		catalog = data['_catalog']['_LOD_OBJECT']
-		d = data.copy()
+		d1 = data.copy()
+		
 		houses = data.get('auction_house', [])
 		cno = data['catalog_number']
 		house_dicts = []
-		event_record = get_crom_object(data['_record'])
-		d['_organizers'] = []
-		for i, h in enumerate(houses):
-			house_dict = self.helper.copy_source_information(h, data)
+		
+		d1['_organizers'] = []
+		
+		for i, h1 in enumerate(houses):
+			house_dict = self.helper.copy_source_information(h1, data)
 			house_dict_copy = house_dict.copy()
-			h['_catalog'] = catalog
+			h1['_catalog'] = catalog
 			self.helper.add_auction_house_data(house_dict, sequence=i, event_record=event_record)
 			house_dict_copy['uri'] = house_dict['uri']
 			house_dicts.append(house_dict_copy)
-			house = get_crom_object(h)
+			house = get_crom_object(h1)
 			act = vocab.AuctionHouseActivity(ident='', label=f'Activity of {house._label}')
 			act.carried_out_by = house
-			auction.referred_to_by = self.helper.static_instances.get_instance('LinguisticObject', 'db-sales_events')
-
+			if 'identified_by' in house.__dict__:
+					
+					for k, identified in enumerate(house.__dict__['identified_by']):
+						if 'referred_to_by' in  identified.__dict__:
+							for j, referred in enumerate(house.__dict__['identified_by'][0].__dict__['referred_to_by']):
+								house.referred_to_by = referred
+			house.referred_to_by = self.helper.static_instances.get_instance('LinguisticObject', 'db-sales_events')
+			house.referred_to_by = self.select_county(data)
 			auction.part = act
-			d['_organizers'].append(h)
+			d1['_organizers'].append(h1)
 		event_properties['auction_houses'][cno] += house_dicts
-		return d
+		
+		return d1

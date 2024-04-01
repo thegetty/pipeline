@@ -305,8 +305,8 @@ class AddPerson(Configurable):
 		base_uri = self.helper.make_proj_uri('PLACE', '')
 		cb = data.get('corporate_body', False)
 		sojourn_type = vocab.Establishment if cb else vocab.Residing
-		if not 'classified_as' in sojourn_type.__dict__['_classification'][0].__dict__:
-			print('hi')
+		#if not 'classified_as' in sojourn_type.__dict__['_classification'][0].__dict__:
+		#	print('hi')
 
 		sdata = {
 			'type': sojourn_type,
@@ -314,14 +314,25 @@ class AddPerson(Configurable):
 		}
 		 
 		verbatim_date = loc.get('address_date')
+		#print(data['star_record_no'])
 		if verbatim_date:
 			date_range = date_cleaner(verbatim_date)
 			if date_range:
-				begin, end = date_range
-				ts = timespan_from_outer_bounds(*date_range)
-				ts.identified_by = model.Name(ident='', content=verbatim_date)
-				sdata['timespan'] = add_crom_data({'address_date': verbatim_date, 'begin': begin, 'end': end}, ts)
-		
+				if len(date_range)==2:
+					begin, end = date_range
+					ts = timespan_from_outer_bounds(*date_range)
+					ts.identified_by = model.Name(ident='', content=verbatim_date)
+					
+					sdata['timespan'] = add_crom_data({'address_date': verbatim_date, 'begin': begin, 'end': end}, ts)
+				elif len(date_range) == 4:
+					begin1, end1, begin2, end2 = date_range
+					date_range1 = [begin1, end1]
+					date_range2 = [begin2, end2]
+					ts = timespan_from_outer_bounds(begin1, end2)
+					ts.identified_by = model.Name(ident='', content=verbatim_date)
+					
+					sdata['timespan'] = add_crom_data({'address_date': verbatim_date, 'begin1': begin1, 'end1': end1, 'begin2': begin2, 'end2': end2}, ts)
+				#	sdata['timespan'] = add_crom_data({'address_date': verbatim_date, 'begin': begin2, 'end': end2}, ts2)
 		current = None
 		l = loc.get('location')
 		tgn_data = loc.get('loc_tgn')

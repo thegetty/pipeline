@@ -611,7 +611,7 @@ class AddAcquisitionOrBidding(ProvenanceBase):
 			assignment.carried_out_by = buyer
 			# in case the seller isn't modeled elsewhere (if there was no sale, and this is just a Bidding valuation),
 			# we ensure that the seller is added to the list of entries to be serialized.
-			data['seller'].append(buyer_data)
+			# data['seller'].append(buyer_data)
 		for object_set in data.get('member_of', []):
 			assignment.assigned_to = object_set
 		current_tx.part = assignment

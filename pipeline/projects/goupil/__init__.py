@@ -217,14 +217,12 @@ class AddArtists(ProvenanceBase, GoupilProvenance):
     attribution_group_names = Service("attribution_group_names")
 
     def modifiers(self, a: dict):
-        
         mod = a.get("attrib_mod_auth", "")
         if not mod:
             mod = a.get("attrib_mod", "")
         # Matt:  as per George, semantics for 'or' are different in buyer/seller field than in artwork production role. The first does not to my knowledge exist in Goupil.
         # basically treat or as attributed to!
         if "or " in mod or " or" in mod:
-            import pdb; pdb.set_trace()
             # matched 'or' a separate word
             mod = mod.replace("or", "attributed to")
         mods = CaseFoldingSet({m.strip() for m in mod.split(";")} - {""})
@@ -250,11 +248,11 @@ class AddArtists(ProvenanceBase, GoupilProvenance):
         EDIT_BY = attribution_modifiers["edit by"]
         hmo = get_crom_object(data["_object"])
         self.model_object_artists_authority(data.get("_artists", []))
+
         sales_records = get_crom_objects(data["_records"])
 
         for seq_no, artist in enumerate(data.get("_artists", [])):
             mods = self.modifiers(artist)
-            
             if not mods:
                 mods = artist.get("attrib_mod", "")
             if EDIT_BY.intersects(mods):
@@ -272,7 +270,6 @@ class AddArtists(ProvenanceBase, GoupilProvenance):
                 person = get_crom_object(a_data)
 
                 mod_uri = self.helper.make_shared_uri((hmo.id, "-Modification-By", artist_label))
-                
                 modification = model.Modification(ident=mod_uri, label=f'Modification Event for {artist["label"]}')
                 modification.carried_out_by = person
                 for mod in mods:
@@ -286,14 +283,13 @@ class AddArtists(ProvenanceBase, GoupilProvenance):
         self.model_artists_with_modifers(
             data, hmo, attribution_modifiers, attribution_group_types, attribution_group_names
         )
-        
+
         attrs = hmo.produced_by.attributed_by if hasattr(hmo.produced_by, "attributed_by") else []
-        import pdb; pdb.set_trace()
         for production_assingment in attrs:
             production_assingment.carried_out_by = None
             production_assingment.carried_out_by = self.helper.static_instances.get_instance("Group", "goupil")
-        
-        yield data
+
+        return data
 
 
 class GoupilUtilityHelper(SharedUtilityHelper):
@@ -510,6 +506,7 @@ class PopulateGoupilObject(Configurable, PopulateObject):
                 identifiers.append(self.helper.goupil_number_id(stock_nook_gno, vocab.StockNumber))
             except:
                 warnings.warn(f"*** Object has no gno identifier: {pprint.pformat(data)}")
+
         uri = self.helper.make_object_uri(data["pi_record_no"], *uri_key)
         data["_object"]["uri"] = uri
         data["_object"]["uri_key"] = uri_key
@@ -520,6 +517,7 @@ class PopulateGoupilObject(Configurable, PopulateObject):
             data["_object"]["object_type"] = otype
         else:
             data["_object"]["object_type"] = model.HumanMadeObject
+
         make_la_object = MakeLinkedArtHumanMadeObject()
         make_la_object(data["_object"])
 
@@ -612,8 +610,9 @@ class PopulateGoupilObject(Configurable, PopulateObject):
                         tgn_instance.identified_by = vocab.AlternateName(ident=self.helper.make_shared_uri(('PLACE',present_location_verbatim)), content=present_location_verbatim)
                     
                     hmo.current_location = tgn_instance
-                    #owner_place = tgn_instance
-            
+                    owner_place = tgn_instance
+
+
             owner = None
             if owner_data:
                 make_la_org = MakeLinkedArtOrganization()
@@ -789,7 +788,7 @@ class AddPages(Configurable, GoupilProvenance):
 
         for seq_no, b_data in enumerate(books):
             book_id, _, page, _ = record_id(b_data)
-            
+
             if not page:
                 warnings.warn(
                     f"Record with id {data['pi_record_no']}, has book with id {book_id} but no page assosiated with it."
@@ -1063,14 +1062,12 @@ class GoupilTransactionHandler(TransactionHandler):
             act.referred_to_by = record
 
     def model_prev_post_owners(self, data, owner: str, role, people_groups):
-
-        splitOwners =  [{k: (v if k != "name" else x) for k, v in person.items()} for person in owner for x in person["name"].split("; ")]
+        splitOwners = [{k: v if k != "name" else x for k, v in owner.items()} for x in owner["name"].split("; ")]
         for i, p in enumerate(splitOwners):
             person_dict = self.helper.copy_source_information(p, data)
             person = self.helper.add_group_or_person(
                 person_dict, relative_id=f"{role}_{i+1}", people_groups=people_groups, data=data
             )
-            
             data["_people"].append(person_dict)
 
     def _apprasing_assignment(self, data):
@@ -1846,6 +1843,7 @@ class ModelInventorying(GoupilTransactionHandler):
             tx_out = self.helper.add_transaction_place(tx_out, seller.get("location"), data)
         yield data
 
+
 class ModelTheftOrLoss(GoupilTransactionHandler):
     helper = Option(required=True)
     make_la_person = Service("make_la_person")
@@ -2009,6 +2007,7 @@ class GoupilPipeline(PipelineBase):
 		# lookup dictionary that maps knoedler a field and its value to a place 
 		# either as same as or as falling within a place in tgn_places dict
         goupil_tgn = services.get('goupil_tgn', {}) 
+		
         services['tgn'] = tgn_places
         services['goupil_tgn'] = goupil_tgn
 

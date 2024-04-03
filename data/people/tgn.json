@@ -24919,15 +24919,15 @@
         "place_type_preferred": "http://vocab.getty.edu/aat/300387356",
         "tgn_id": "7016786"
     },
-    "7016816": {
+    "7210657": {
         "latitude": "",
         "longitude": "",
-        "part_of": "",
+        "part_of": "7003688",
         "permalink": "",
-        "place_label": "Beograd",
+        "place_label": "Belgrad",
         "place_type_label": "",
         "place_type_preferred": "",
-        "tgn_id": "7016816"
+        "tgn_id": "7210657"
     },
     "7016833": {
         "latitude": "27",
@@ -31139,15 +31139,15 @@
         "place_type_preferred": "http://vocab.getty.edu/aat/300008347",
         "tgn_id": "8724359"
     },
-    "8724746": {
+    "7059537": {
         "latitude": "",
         "longitude": "",
-        "part_of": "",
+        "part_of": "7003669",
         "permalink": "",
         "place_label": "Allgau",
         "place_type_label": "",
         "place_type_preferred": "",
-        "tgn_id": "8724746"
+        "tgn_id": "7059537"
     },
     "8730134": {
         "latitude": "",

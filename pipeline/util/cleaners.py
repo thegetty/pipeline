@@ -378,30 +378,43 @@ def ymd_to_datetime(year, month, day, which="begin"):
 
 def date_parse(value, delim):
 	# parse a / or - or . date or range
-
+	
 	bits = value.split(delim)
-	if len(bits) == 2:
+	
+	if len(bits)==3 and len(bits[1])==10:
+		bits = [number.strip() for element in bits for number in element.split(',')]
+	if len(bits[0])==7:
+		bits = [number.strip() for element in bits for number in (element.split('-') if '-' in element else element.split(' '))]
+		bits.remove('ca')
+	if len(bits) == 2 or len(bits) == 4:
 		# YYYY/ range
 		b1 = bits[0].strip()
 		b2 = bits[1].strip()
+		if len(bits) == 4:
+			b3 = bits[2].strip()
+			b4 = bits[3].strip()
 		if len(b2) < 3 :
 			b2 = "%s%s" % (b1[:len(b1)-len(b2)], b2)
 		elif len(b2) > 4:
 			print("Bad range: %s" % value)
 			return None
 		try:
-			return [datetime(int(b1),1,1), datetime(int(b2)+1,1,1)]
+			if len(bits) == 4:
+				return [datetime(int(b1),1,1), datetime(int(b2)+1,1,1), datetime(int(b3),1,1), datetime(int(b4)+1,1,1)]
+			else: return [datetime(int(b1),1,1), datetime(int(b2)+1,1,1)]
 		except:
 			print("Broken delim: %s" % value)
 			return None
 	elif len(bits) == 3:
 		# YYYY/MM/DD or YY/YY/YYYY or DD.MM.YYYY or YYYY.MM.DD
-		if 'et' or 'de' in bits[1]:
+		if 'et' or 'de'  in bits[1]:
 			with open('log_et_date.txt', 'a') as f:
 				f.write(bits[1])
 				f.write(value)
-
-		m = int(bits[1])
+		if bits[1] =="":
+			m=0
+		else:
+			m = int(bits[1])
 		if len(bits[0]) == 4:
 			y = int(bits[0])
 			d = int(bits[2])
@@ -549,8 +562,11 @@ def date_cleaner(value):
 			y = int(value)
 		except:
 			warnings.warn("Bad aft value: %s" % value)
-			y = int(value.split(' ')[0])
-			return [datetime(y,1,1), None] 
+			if value.split(' ')[0].isdigit():
+				y = int(value.split(' ')[0])
+				return [datetime(y,1,1), None]
+			else:
+				return None
 		return [datetime(y,1,1), None] # GRI guideline says that 'after 1900' really means (1900 or later)
 
 	elif value.startswith('bef'):

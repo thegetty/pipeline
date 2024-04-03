@@ -425,6 +425,7 @@ class AddPerson(Configurable):
 
 		active_cities = {t.strip() for t in data.get('active_city_date', '').split(';')} - {''}
 		for i, loc in enumerate(sorted(active_cities)):
+			#print("ssssssssssssssss",loc)
 			sdata = self.model_active_city(data, loc)
 			if sdata:
 				sdata['active_city'] = 'yes'

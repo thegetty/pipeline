@@ -57,14 +57,16 @@ class ProvenanceBase(Configurable):
 		  * rel: a string describing the relationship between this provenance entry and the object (e.g. "leading to Ownership of")
 		  * N trailing arguments used that are the contents of the `lot_object_key` tuple passed to `handle_prev_post_owner`
 		'''
-
+		
 		def _make_label_default(helper, sale_type, transaction, rel, *args):
 			
 			str = f'Provenance Entry {rel} object identified in book {args[2]}, page {args[3]}, row {args[4]}'
 			return str
 		
 		if make_label is None:
+			
 			make_label = _make_label_default
+
 
 		tx = vocab.ProvenanceEntry(ident=ident)
 		if sales_record:
@@ -136,7 +138,6 @@ class ProvenanceBase(Configurable):
 				place = get_crom_object(place_data)
 			owner.residence = place
 			data['_owner_locations'].append(place_data)
-
 		if owner_record.get('own_auth_p'):
 			content = owner_record['own_auth_p']
 			owner.referred_to_by = vocab.Note(ident='', content=content)
@@ -148,8 +149,10 @@ class ProvenanceBase(Configurable):
 		# we run the rist of provenance entries being accidentally merged during URI
 		# reconciliation as part of the prev/post sale rewriting.
 		tx_uri = self.helper.prepend_uri_key(hmo.id, f'PROV-{record_id}')
+		
 		tx_label_args = tuple([self.helper, sale_type, 'Event', rel] + list(lot_object_key))
 		tx, _ = self.related_procurement(hmo, tx_label_args, current_tx, ts, buyer=owner, previous=rev, ident=tx_uri, make_label=make_label, sales_record=sales_record)
+		
 		if owner_record.get('own_auth_e'):
 			content = owner_record['own_auth_e']
 			tx.referred_to_by = vocab.Note(ident='', content=content)
@@ -164,6 +167,7 @@ class ProvenanceBase(Configurable):
 		data['_prov_entries'].append(add_crom_data(data=ptx_data, what=tx))
 
 	def set_possible_attribute(self, obj, prop, data):
+		
 		value = get_crom_object(data)
 		if not value:
 			return
@@ -587,14 +591,28 @@ class ProvenanceBase(Configurable):
 						subevent = model.Production(ident=subevent_id, label=f'Production sub-event for {artist_label}')
 						subevent.carried_out_by = person
 						prod_event.part = subevent
-						
+
+	def select_county(self, data):
+		if data['auction_of_lot']['catalog_number'][:2] == "B-":
+			return self.helper.static_instances.get_instance('LinguisticObject', 'db-sales_Belgium')
+		if data['auction_of_lot']['catalog_number'][:2] == "Br":
+			return self.helper.static_instances.get_instance('LinguisticObject', 'db-sales_British')
+		if data['auction_of_lot']['catalog_number'][:2] == "N-":
+			return self.helper.static_instances.get_instance('LinguisticObject', 'db-sales_Dutch')
+		if data['auction_of_lot']['catalog_number'][:2] == "F-":
+			return self.helper.static_instances.get_instance('LinguisticObject', 'db-sales_French')
+		if data['auction_of_lot']['catalog_number'][:2] == "D-2":
+			return self.helper.static_instances.get_instance('LinguisticObject', 'db-sales_German')
+		if data['auction_of_lot']['catalog_number'][:2] == "SC":
+			return self.helper.static_instances.get_instance('LinguisticObject', 'db-sales_Sandi')
+
 	def model_artists_with_modifers(self, data:dict, hmo, attribution_modifiers, attribution_group_types, attribution_group_names):
 		'''Add modeling for artists as people involved in the production of an object'''
 		# sales_record = get_crom_object(data['_record'])
 		# import pdb; pdb.set_trace()
 		data.setdefault('_organizations', [])
 		data.setdefault('_original_objects', [])
-
+		
 		try:
 			hmo_label = f'{hmo._label}'
 		except AttributeError:
@@ -615,7 +633,8 @@ class ProvenanceBase(Configurable):
 		event_uri = hmo.id + '-Production'
 		prod_event = model.Production(ident=event_uri, label=f'Production event for {hmo_label}')
 		hmo.produced_by = prod_event
-
+		if "help_sales" in data:
+			hmo.referred_to_by = self.select_county(data)
 		artists = data.get('_artists', [])
 		for a in artists:
 			# here it adds properties like label, modifiers, pi_record_no
@@ -710,6 +729,7 @@ class ProvenanceBase(Configurable):
 			g_label = f'Group containing the {label.lower()} of {object_key}'
 			g = vocab.UncertainMemberClosedGroup(ident=group_uri, label=g_label)
 			g.identified_by = model.Name(ident='', content=group_name)
+			
 			for person_data in people:
 				person = get_crom_object(person_data)
 				person.member_of = g

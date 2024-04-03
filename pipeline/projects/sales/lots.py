@@ -670,7 +670,6 @@ class AddAcquisitionOrBidding(ProvenanceBase):
 			# payments['buy'].paid_to = house
 			# payments['sell'].paid_from = house
 			paym.paid_from = house
-			import pdb; pdb.set_trace()
 			paym.paid_to = house
 
 		payments_used = set()
@@ -811,11 +810,11 @@ class AddAcquisitionOrBidding(ProvenanceBase):
 				if content:
 					paym.referred_to_by = vocab.PriceStatement(ident='', content=content)
 
-		elif ask_price:
-			# for non-auction sales, the ask price is the amount paid for the acquisition
-			# for p in payments.values():  
-			# 	self.set_possible_attribute(p, 'paid_amount', ask_price)  
-			self.set_possible_attribute(paym, 'paid_amount', ask_price)
+		# elif ask_price:
+		# 	# for non-auction sales, the ask price is the amount paid for the acquisition
+		# 	# for p in payments.values():  
+		# 	# 	self.set_possible_attribute(p, 'paid_amount', ask_price)  
+		# 	self.set_possible_attribute(paym, 'paid_amount', ask_price)
 
 		ts = tx_data.get('_date')
 		if ts:
@@ -1119,7 +1118,6 @@ class AddAcquisitionOrBidding(ProvenanceBase):
 		else:
 			prev_procurements = self.add_non_sale_sellers(data, sellers, sale_type, transaction, transaction_types)
 			lot = get_crom_object(parent['_event_causing_prov_entry'])
-			import pdb; pdb.set_trace()
 			for tx_data in prev_procurements:
 				tx = get_crom_object(tx_data)
 				lot.starts_after_the_end_of = tx

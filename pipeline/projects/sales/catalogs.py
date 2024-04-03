@@ -15,21 +15,19 @@ class AddAuctionCatalog(Configurable):
 	helper = Option(required=True)
 	non_auctions = Service('non_auctions')
 	
-
 	def select_county(self, data):
-		if data['auction_of_lot']['catalog_number'][:2] == "B-":
+		if data['catalog_number'][:2] == "B-":
 			return self.helper.static_instances.get_instance('LinguisticObject', 'db-sales_Belgium')
-		if data['auction_of_lot']['catalog_number'][:2] == "Br":
+		if data['catalog_number'][:2] == "Br":
 			return self.helper.static_instances.get_instance('LinguisticObject', 'db-sales_British')
-		if data['auction_of_lot']['catalog_number'][:2] == "N-":
+		if data['catalog_number'][:2] == "N-":
 			return self.helper.static_instances.get_instance('LinguisticObject', 'db-sales_Dutch')
-		if data['auction_of_lot']['catalog_number'][:2] == "F-":
+		if data['catalog_number'][:2] == "F-":
 			return self.helper.static_instances.get_instance('LinguisticObject', 'db-sales_French')
-		if data['auction_of_lot']['catalog_number'][:2] == "D-":
+		if data['catalog_number'][:2] == "D-":
 			return self.helper.static_instances.get_instance('LinguisticObject', 'db-sales_German')
-		if data['auction_of_lot']['catalog_number'][:2] == "SC":
+		if data['catalog_number'][:2] == "SC":
 			return self.helper.static_instances.get_instance('LinguisticObject', 'db-sales_Sandi')
-		
 	def __call__(self, data:dict, non_auctions):
 
 		'''Add modeling for auction catalogs as linguistirecord_uric objects'''
@@ -51,10 +49,12 @@ class AddAuctionCatalog(Configurable):
 		row = vocab.Transcription(ident='', content=content)
 		if "sale_code" not in data:
 			catalog.referred_to_by = self.helper.static_instances.get_instance('LinguisticObject', 'db-sales_catalogs')
+			catalog.referred_to_by = self.select_county(data)
 		elif "pi_record_no" in data:
 			catalog.referred_to_by = self.select_county(data)
 		else:
 			catalog.referred_to_by = self.helper.static_instances.get_instance('LinguisticObject', 'db-sales_events')
+			catalog.referred_to_by = self.select_county(data)
 		creation = vocab.TranscriptionProcess(ident='')
 		creation.carried_out_by = self.helper.static_instances.get_instance('Group', 'gpi')
 		row.created_by = creation
@@ -76,6 +76,20 @@ class AddPhysicalCatalogObjects(Configurable):
 	helper = Option(required=True)
 	non_auctions = Service('non_auctions')
 
+	def select_county(self, data):
+		if data['catalog_number'][:2] == "B-":
+			return self.helper.static_instances.get_instance('LinguisticObject', 'db-sales_Belgium')
+		if data['catalog_number'][:2] == "Br":
+			return self.helper.static_instances.get_instance('LinguisticObject', 'db-sales_British')
+		if data['catalog_number'][:2] == "N-":
+			return self.helper.static_instances.get_instance('LinguisticObject', 'db-sales_Dutch')
+		if data['catalog_number'][:2] == "F-":
+			return self.helper.static_instances.get_instance('LinguisticObject', 'db-sales_French')
+		if data['catalog_number'][:2] == "D-":
+			return self.helper.static_instances.get_instance('LinguisticObject', 'db-sales_German')
+		if data['catalog_number'][:2] == "SC":
+			return self.helper.static_instances.get_instance('LinguisticObject', 'db-sales_Sandi')
+		
 	def __call__(self, data:dict, non_auctions):
 		'''Add modeling for physical copies of an auction catalog'''
 		catalog = get_crom_object(data['_catalog'])
@@ -92,6 +106,7 @@ class AddPhysicalCatalogObjects(Configurable):
 		if info:
 			catalogObject.referred_to_by = vocab.Note(ident='', content=info)
 		catalogObject.referred_to_by =	self.helper.static_instances.get_instance('LinguisticObject', 'db-sales_catalogs')
+		catalogObject.referred_to_by = self.select_county(data)
 		catalogObject.carries = catalog
 
 		add_crom_data(data=data, what=catalogObject)
@@ -101,6 +116,20 @@ class AddPhysicalCatalogOwners(Configurable):
 	helper = Option(required=True)
 	location_codes = Service('location_codes')
 	unique_catalogs = Service('unique_catalogs')
+
+	def select_county(self, data):
+		if data['catalog_number'][:2] == "B-":
+			return self.helper.static_instances.get_instance('LinguisticObject', 'db-sales_Belgium')
+		if data['catalog_number'][:2] == "Br":
+			return self.helper.static_instances.get_instance('LinguisticObject', 'db-sales_British')
+		if data['catalog_number'][:2] == "N-":
+			return self.helper.static_instances.get_instance('LinguisticObject', 'db-sales_Dutch')
+		if data['catalog_number'][:2] == "F-":
+			return self.helper.static_instances.get_instance('LinguisticObject', 'db-sales_French')
+		if data['catalog_number'][:2] == "D-":
+			return self.helper.static_instances.get_instance('LinguisticObject', 'db-sales_German')
+		if data['catalog_number'][:2] == "SC":
+			return self.helper.static_instances.get_instance('LinguisticObject', 'db-sales_Sandi')
 
 	def __call__(self, data:dict, location_codes, unique_catalogs):
 		'''Add information about the ownership of a physical copy of an auction catalog'''
@@ -114,13 +143,14 @@ class AddPhysicalCatalogOwners(Configurable):
 		entry_record = get_crom_object(data.get('_catalog'))
 		
 		entry_record1 = self.helper.static_instances.get_instance('LinguisticObject', 'db-sales_catalogs')
+		entry_record2 = self.select_county(data)
 		with suppress(KeyError):
 			owner_name = location_codes[owner_code]
 			owner_uri = self.helper.make_proj_uri('ORGANIZATION', 'LOCATION-CODE', owner_code)
 			data['_owner'] = {
 				'label': owner_name,
 				'uri': owner_uri,
-				'referred_to_by': [entry_record, entry_record1],
+				'referred_to_by': [entry_record, entry_record1, entry_record2],
 				'identifiers': [
 					model.Name(ident='', content=owner_name),
 					model.Identifier(ident='', content=str(owner_code))
@@ -160,6 +190,20 @@ class PopulateAuctionCatalog(Configurable):
 
 		return lugt_id
 
+	def select_county(self, data):
+		if data['parent_data']['catalog_number'][:2] == "B-":
+			return self.helper.static_instances.get_instance('LinguisticObject', 'db-sales_Belgium')
+		if data['parent_data']['catalog_number'][:2] == "Br":
+			return self.helper.static_instances.get_instance('LinguisticObject', 'db-sales_British')
+		if data['parent_data']['catalog_number'][:2] == "N-":
+			return self.helper.static_instances.get_instance('LinguisticObject', 'db-sales_Dutch')
+		if data['parent_data']['catalog_number'][:2] == "F-":
+			return self.helper.static_instances.get_instance('LinguisticObject', 'db-sales_French')
+		if data['parent_data']['catalog_number'][:2] == "D-":
+			return self.helper.static_instances.get_instance('LinguisticObject', 'db-sales_German')
+		if data['parent_data']['catalog_number'][:2] == "SC":
+			return self.helper.static_instances.get_instance('LinguisticObject', 'db-sales_Sandi')
+		
 	def __call__(self, data):
 		d = {k: v for k, v in data.items()}
 		parent = data['parent_data']
@@ -189,6 +233,7 @@ class PopulateAuctionCatalog(Configurable):
 			note = vocab.Note(ident='', content=parent['notes'])
 			catalog.referred_to_by = note
 		catalog.referred_to_by = self.helper.static_instances.get_instance('LinguisticObject', 'db-sales_catalogs')
+		catalog.referred_to_by = self.select_county(data)
 		return d
 
 class AddAuctionCatalogEntry(Configurable):
@@ -267,6 +312,20 @@ class AddPhysicalCatalogEntry(Configurable):
 	helper = Option(required=True)
 	non_auctions = Service('non_auctions')
 	
+	def select_county(self, data):
+		if data['catalog_number'][:2] == "B-":
+			return self.helper.static_instances.get_instance('LinguisticObject', 'db-sales_Belgium')
+		if data['catalog_number'][:2] == "Br":
+			return self.helper.static_instances.get_instance('LinguisticObject', 'db-sales_British')
+		if data['catalog_number'][:2] == "N-":
+			return self.helper.static_instances.get_instance('LinguisticObject', 'db-sales_Dutch')
+		if data['catalog_number'][:2] == "F-":
+			return self.helper.static_instances.get_instance('LinguisticObject', 'db-sales_French')
+		if data['catalog_number'][:2] == "D-":
+			return self.helper.static_instances.get_instance('LinguisticObject', 'db-sales_German')
+		if data['catalog_number'][:2] == "SC":
+			return self.helper.static_instances.get_instance('LinguisticObject', 'db-sales_Sandi')
+		
 	def __call__(self, data:dict, non_auctions):
 		
 		'''Add modeling for the entry describing a physical auction catalog in the PSCP dataset.'''
@@ -283,7 +342,6 @@ class AddPhysicalCatalogEntry(Configurable):
 		row_name = f'STAR Entry for Physical {catalog_label}'
 		row = vocab.EntryTextForm(ident=record_uri, content=content, label=row_name)
 		
-		# row.part_of = self.helper.static_instances.get_instance('LinguisticObject', 'db-sales_catalogs')
 		creation = model.Creation(ident='')
 		creation.carried_out_by = self.helper.static_instances.get_instance('Group', 'gpi')
 		row.created_by = creation
@@ -293,6 +351,7 @@ class AddPhysicalCatalogEntry(Configurable):
 		er_classification.classified_as = vocab.instances["object type"]
 		row.classified_as = er_classification
 		row.referred_to_by = self.helper.static_instances.get_instance('LinguisticObject', 'db-sales_catalogs')
+		row.referred_to_by = self.select_county(data)
 		data['_catalog_record'] = add_crom_data({'uri': record_uri}, row)
 
 		yield data

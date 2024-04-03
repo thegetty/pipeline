@@ -207,7 +207,6 @@ class PopulateSalesObject(Configurable, pipeline.linkedart.PopulateObject):
 	def _populate_object_destruction(self, data:dict, parent, destruction_types_map):
 		notes = parent.get('auction_of_lot', {}).get('lot_notes')
 		if notes and notes.lower().startswith('destroyed'):
-			import pdb; pdb.set_trace()
 			# Issue AR-122 removed modeling of object destruction.
 			# self.populate_destruction_events(data, notes, type_map=destruction_types_map)
 			pass

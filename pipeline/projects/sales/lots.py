@@ -1082,10 +1082,9 @@ class AddAcquisitionOrBidding(ProvenanceBase):
 			custody_recievers = houses + [add_crom_data(data={}, what=r) for r in experts + commissaires]
 			bid_count = 0
 			for data in self.add_bidding(data, buyers, sellers, buy_sell_modifiers, sale_type, transaction, transaction_types, custody_recievers, include_custody_transfer=True):
-				import pdb; pdb.set_trace()
 				tx_data = parent.get('_prov_entry_data')
 				current_tx = get_crom_object(tx_data)
-				self.add_non_sale_valuations(parent, lot_object_key, current_tx)
+				self.add_non_sale_valuations(data, parent, lot_object_key, current_tx)
 
 				bid_count += 1
 				act = get_crom_object(data.get('_bidding'))
@@ -1112,8 +1111,7 @@ class AddAcquisitionOrBidding(ProvenanceBase):
 				for data in self.add_bidding(data, buyers, sellers, buy_sell_modifiers, sale_type, transaction, transaction_types, houses, include_custody_transfer=True):
 					tx_data = parent.get('_prov_entry_data')
 					current_tx = get_crom_object(tx_data)
-					import pdb; pdb.set_trace()
-					self.add_non_sale_valuations(parent, lot_object_key, current_tx)
+					self.add_non_sale_valuations(data, parent, lot_object_key, current_tx)
 
 					act = get_crom_object(data.get('_bidding'))
 					self.add_mod_notes(act, all_seller_mods, label=f'Seller modifier', classification=vocab.instances["seller description"])

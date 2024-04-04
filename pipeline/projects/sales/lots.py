@@ -505,16 +505,16 @@ class AddAcquisitionOrBidding(ProvenanceBase):
 		mods = CaseFoldingSet({m.strip() for m in mod.split(';')} - {''})
 		return mods
 
-	def add_non_sale_valuations(self, data:dict, lot_object_key, current_tx):
-		est_price = data.get('estimated_price')
+	def add_non_sale_valuations(self,data:dict, parent:dict, lot_object_key, current_tx):
+		est_price = parent.get('estimated_price')
 		if est_price:
 			self.add_valuation(data, est_price, lot_object_key, current_tx, valuation_type=vocab.AppraisingAssignment, valuation_label='Appraising')
 
-		start_price = data.get('start_price')
+		start_price = parent.get('start_price')
 		if start_price:
 			self.add_valuation(data, start_price, lot_object_key, current_tx, valuation_type=vocab.AppraisingAssignment, valuation_label='Appraising')
 
-		ask_price = data.get('ask_price')
+		ask_price = parent.get('ask_price')
 		if ask_price:
 			self.add_valuation(data, ask_price, lot_object_key, current_tx, valuation_type=vocab.AppraisingAssignment, valuation_label='Appraising')
 		
@@ -613,6 +613,7 @@ class AddAcquisitionOrBidding(ProvenanceBase):
 			# we ensure that the seller is added to the list of entries to be serialized.
 			# data['seller'].append(buyer_data)
 		for object_set in data.get('member_of', []):
+			
 			assignment.assigned_to = object_set
 		current_tx.part = assignment
 		
@@ -1041,7 +1042,8 @@ class AddAcquisitionOrBidding(ProvenanceBase):
 			
 
 			for data, current_tx in self.add_acquisition(data, buyers, sellers, houses, non_auctions, buy_sell_modifiers, transaction, transaction_types):
-				self.add_non_sale_valuations(parent, lot_object_key, current_tx)
+				
+				self.add_non_sale_valuations(data, parent, lot_object_key, current_tx)
 				acq = get_crom_object(data['_acquisition'])
 				self.add_mod_notes(acq, all_seller_mods, label=f'Seller modifier', classification=vocab.instances["seller description"])
 				self.add_mod_notes(acq, all_buyer_mods, label=f'Buyer modifier', classification=vocab.instances["buyer description"])
@@ -1080,6 +1082,7 @@ class AddAcquisitionOrBidding(ProvenanceBase):
 			custody_recievers = houses + [add_crom_data(data={}, what=r) for r in experts + commissaires]
 			bid_count = 0
 			for data in self.add_bidding(data, buyers, sellers, buy_sell_modifiers, sale_type, transaction, transaction_types, custody_recievers, include_custody_transfer=True):
+				import pdb; pdb.set_trace()
 				tx_data = parent.get('_prov_entry_data')
 				current_tx = get_crom_object(tx_data)
 				self.add_non_sale_valuations(parent, lot_object_key, current_tx)
@@ -1109,6 +1112,7 @@ class AddAcquisitionOrBidding(ProvenanceBase):
 				for data in self.add_bidding(data, buyers, sellers, buy_sell_modifiers, sale_type, transaction, transaction_types, houses, include_custody_transfer=True):
 					tx_data = parent.get('_prov_entry_data')
 					current_tx = get_crom_object(tx_data)
+					import pdb; pdb.set_trace()
 					self.add_non_sale_valuations(parent, lot_object_key, current_tx)
 
 					act = get_crom_object(data.get('_bidding'))

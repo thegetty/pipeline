@@ -309,8 +309,17 @@ class PersonIdentity:
 			death = death_pair[1]
 			if 'date_range' in args:
 				a_begin, a_end = args['date_range']
-				end = min([d for d in (a_end, death) if d is not None])
-				args['date_range'] = (a_begin, end)
+				if a_end and death:
+					end = min([d for d in (a_end, death) if d is not None])
+					args['date_range'] = (a_begin, end)
+				elif a_end:
+					args['date_range'] = (a_begin,a_end)
+				elif death:
+					
+					args['date_range'] = (a_begin, death)
+				else:
+					args['date_range'] = (a_begin, None)
+
 			elif 'century' in args:
 				a_begin, a_end = dates_for_century(args['century'])
 				del args['century']

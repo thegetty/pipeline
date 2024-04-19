@@ -54,7 +54,6 @@ class AddAuctionEvent(Configurable):
 		event_date_label = event_properties['auction_date_label'].get(cno)
 		auction, uid, uri = self.helper.sale_event_for_catalog_number(cno, sale_type, date_label=event_date_label)
 		auction.referred_to_by = record
-		
 		auction.referred_to_by = self.helper.static_instances.get_instance('LinguisticObject', 'db-sales_events')
 		auction.referred_to_by = self.select_county(data)
 		auction.identified_by = model.Name(ident='', content=auction._label)
@@ -142,12 +141,22 @@ class PopulateAuctionEvent(Configurable):
 
 	def __call__(self, data:dict, event_properties, date_modifiers, link_types):
 		'''Add modeling data for an auction event'''
-		cno = data['catalog_number']
+		
+		if 'specific_loc' in data['location']:
+			cno = data['location']['specific_loc']#data['catalog_number']
+			if 'same_as' in data['location']['loc_tgn']:
+				part = data['location']['loc_tgn']['same_as']
+			else: part = data['location']['loc_tgn']['part_of']
+		else:
+			cno = data['location']['sale_location']
+			if 'same_as' in data['location']['loc_tgn']:
+				part = data['location']['loc_tgn']['same_as']
+			else: part = data['location']['loc_tgn']['part_of']
+
 		auction_locations = event_properties['auction_locations']
 		event_experts = event_properties['experts']
 		event_commissaires = event_properties['commissaire']
 		# import pdb; pdb.set_trace()
-		import pdb; pdb.set_trace
 		auction = get_crom_object(data)
 		catalog = data['_catalog']['_LOD_OBJECT']
 
@@ -162,7 +171,7 @@ class PopulateAuctionEvent(Configurable):
 		# helper.make_place is called here instead of using make_la_place as a separate graph node because the Place object
 		# gets stored in the `auction_locations` object to be used in the second graph component
 		# which uses the data to associate the place with auction lots.
-		base_uri = self.helper.make_proj_uri('AUCTION-EVENT', cno, 'PLACE', '')
+		base_uri = self.helper.make_proj_uri('AUCTION-EVENT', cno, 'PLACE', part)
 		record = get_crom_object(data.get('_record'))
 		if not tgn_data:
 			current_p = current

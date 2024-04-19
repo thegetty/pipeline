@@ -666,12 +666,13 @@ class AddAcquisitionOrBidding(ProvenanceBase):
 		# 	'sell': model.Payment(ident=sell_payment_id, label=f'Payment to seller for {paym_label}'),
 		# }
 		
-		for house_data in houses:
-			house = get_crom_object(house_data)
-			# payments['buy'].paid_to = house
-			# payments['sell'].paid_from = house
-			paym.paid_from = house
-			paym.paid_to = house
+		# for house_data in houses:
+		# 	house = get_crom_object(house_data)
+		# 	# payments['buy'].paid_to = house
+		# 	# payments['sell'].paid_from = house
+		# 	import pdb; pdb.set_trace()
+		# 	paym.paid_from = house
+		# 	paym.paid_to = house
 
 		payments_used = set()
 
@@ -785,7 +786,7 @@ class AddAcquisitionOrBidding(ProvenanceBase):
 # 				acq.carried_out_by = buyer
 				acq.transferred_title_to = buyer
 				# payments['buy'].paid_from = buyer
-				paym.paid_from = buyer 
+				paym.paid_from = buyer
 # 				payments['buy'].carried_out_by = buyer
 				payments_used.add('buy')
 
@@ -836,7 +837,6 @@ class AddAcquisitionOrBidding(ProvenanceBase):
 		#paym.__dict__.get('id').split('#PROV', 1)[1][1]
 		
 		data['_acquisition'] = add_crom_data(data={'uri': acq_id}, what=acq)
-
 		self.add_final_owner_orgs(data, lot_object_key, sale_type, ts, current_tx=current_tx)
 		self.add_prev_post_owners(data, hmo, tx_data, sale_type, lot_object_key, ts)
 		yield data, current_tx

@@ -140,7 +140,12 @@ class AddPhysicalCatalogOwners(Configurable):
 		owner_code = data['owner_code']
 		copy_number = data.get('copy_number', '')
 		owner_name = None
+		# if data['gri_has_copy'] == "No":
+		# 	import pdb; pdb.set_trace()
 		entry_record = get_crom_object(data.get('_catalog'))
+		# else:
+		# 	import pdb; pdb.set_trace()
+		# 	entry_record = None
 		
 		entry_record1 = self.helper.static_instances.get_instance('LinguisticObject', 'db-sales_catalogs')
 		entry_record2 = self.select_county(data)
@@ -150,7 +155,7 @@ class AddPhysicalCatalogOwners(Configurable):
 			data['_owner'] = {
 				'label': owner_name,
 				'uri': owner_uri,
-				'referred_to_by': [entry_record, entry_record1, entry_record2],
+				'referred_to_by': [entry_record1, entry_record2],
 				'identifiers': [
 					model.Name(ident='', content=owner_name),
 					model.Identifier(ident='', content=str(owner_code))
@@ -158,7 +163,8 @@ class AddPhysicalCatalogOwners(Configurable):
 			}
 			#data['referred_to_by'] = [entry_record, entry_record1]
 			owner = model.Group(ident=owner_uri)
-			owner.referred_to_by = entry_record
+			#owner.referred_to_by = entry_record
+
 			add_crom_data(data['_owner'], owner)
 			if not owner_code:
 				warnings.warn(f'Setting empty identifier on {owner.id}')
@@ -240,18 +246,7 @@ class AddAuctionCatalogEntry(Configurable):
 	helper = Option(required=True)
 	non_auctions = Service('non_auctions')
 	def select_county(self, data):
-		# if data.get("persistent_puid")[:8] == "BELGIANS":
-		# 	return self.helper.static_instances.get_instance('LinguisticObject', 'db-sales_Belgium')
-		# if data.get("persistent_puid")[:7] == "BRITISH":
-		# 	return self.helper.static_instances.get_instance('LinguisticObject', 'db-sales_British')
-		# if data.get("persistent_puid")[:5] == "DUTCH":
-		# 	return self.helper.static_instances.get_instance('LinguisticObject', 'db-sales_Dutch')
-		# if data.get("persistent_puid")[:6] == "FRENCH":
-		# 	return self.helper.static_instances.get_instance('LinguisticObject', 'db-sales_British')
-		# if data.get("persistent_puid")[:6] == "GERMAN":
-		# 	return self.helper.static_instances.get_instance('LinguisticObject', 'db-sales_German')
-		# if data.get("persistent_puid")[:6] == "SCANDI":
-		# 	return self.helper.static_instances.get_instance('LinguisticObject', 'db-sales_Sandi')
+		
 		if data['auction_of_lot']['catalog_number'][:2] == "B-":
 			return self.helper.static_instances.get_instance('LinguisticObject', 'db-sales_Belgium')
 		if data['auction_of_lot']['catalog_number'][:2] == "Br":
@@ -275,9 +270,9 @@ class AddAuctionCatalogEntry(Configurable):
 
 		page_id = data.get('pg')
 		pdf_page_id = data.get('ppg')
-		# if not page_id:
-		# 	yield data
-		# 	return
+		if not page_id:
+			yield data
+			return
 
 		sale_type = non_auctions.get(cno, data.get('non_auction_flag'))
 		if sale_type:
@@ -291,18 +286,19 @@ class AddAuctionCatalogEntry(Configurable):
 		]
 		entry_record = get_crom_object(data.get('_catalog'))
 		entry_record1 = self.select_county(data)
+		entry_record2 = self.helper.static_instances.get_instance('LinguisticObject', 'db-sales_catalogs')
 		if pdf_page_id:
 			idents.append(vocab.make_multitype_obj(vocab.PageNumber, vocab.OrderNumber, ident='', content=pdf_page_id, label=f'Page Order'))
+		
 		data['_text_page'] = {
 			'uri': self.helper.make_proj_uri('CATALOG', cno, 'Page', page_id),
 			'object_type': [vocab.PageTextForm,self.helper.catalog_type(cno,sale_type)],
 			'label': f'Sale Catalog {cno}, Page {page_id}',
 			'identifiers': idents,
-			'referred_to_by': [entry_record,entry_record1],
+			'referred_to_by': [entry_record,entry_record1, entry_record2],
 			'part_of': [cdata],
 			'part': [],
 		}
-
 		mlo = MakeLinkedArtLinguisticObject()
 		mlo(data['_text_page'])
 		

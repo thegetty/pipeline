@@ -503,6 +503,7 @@ def add_crom_price(data, parent, services, add_citations=False):
 						data[k] = decimalized_value
 
 	amnt = extract_monetary_amount(data, currency_mapping=c, add_citations=add_citations)
+	#import pdb; pdb.set_trace()
 	if amnt:
 		for v in verbatim:
 			amnt.identified_by = model.Name(ident='', content=v)
@@ -663,7 +664,6 @@ class SalesPipeline(PipelineBase):
 					
 			place = make_tgn_place(tgn_data, self.helper.make_shared_uri, tgn_places_descr)
 			instances_descr[tgn_id] = place
-		# import pdb; pdb.set_trace()
 		print(f"Completed in {timeit.default_timer() - start}")
 		return instances, instances_descr
 

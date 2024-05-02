@@ -105,30 +105,19 @@ class SalesUtilityHelper(UtilityHelper):
 				dst[k] = src[k]
 		return dst
 
-	def add_person(self, data, **kwargs):
-		if data.get('name_so'):
-			# handling of the name_so field happens here and not in the SalesPersonIdentity methods,
-			# because it requires access to the services data on catalogs
-			source = data.get('name_so', '').strip()
-			components = source.split(' ')
-			if len(components) == 2:
-				owner_code, copy_number = components
-			else:
-				owner_code = source
-				copy_number = ''
-			cno = kwargs['catalog_number']
-			owner_uri = self.physical_catalog_uri(cno, owner_code, None)
-			copy_uri = self.physical_catalog_uri(cno, owner_code, copy_number)
-			unique_catalogs = self.services['unique_catalogs']
-			owned_copies = unique_catalogs.get(owner_uri)
-			if owned_copies:
-				if copy_uri in owned_copies:
-					data['_name_source_catalog_key'] = (cno, owner_code, copy_number)
-				else:
-					warnings.warn(f'*** SPECIFIC PHYSICAL CATALOG COPY NOT FOUND FOR NAME SOURCE {source} in catalog {cno}')
-			else:
-				warnings.warn(f'*** NO CATALOG OWNER FOUND FOR NAME SOURCE {source} on catalog {cno}')
-		return super().add_person(data, **kwargs)
+	def add_person(self, data, record, relative_id, **kwargs):
+		self.person_identity.add_uri(data, record_id=relative_id)
+		key = data['uri_keys']
+		# import pdb; pdb.set_trace()
+		if key in self.services['people_groups']:
+			warnings.warn(f'*** TODO: model person record as a GROUP: {pprint.pformat(key)}')
+			person = super().add_group(data, record=record, relative_id=relative_id, **kwargs)
+		else :
+			person = super().add_person(data, record=record, relative_id=relative_id, **kwargs)
+
+		if record:
+			person.referred_to_by = record
+		return person
 
 	def event_type_for_sale_type(self, sale_type):
 		if sale_type in ('Private Contract Sale', 'Stock List'):
@@ -375,11 +364,11 @@ class SalesUtilityHelper(UtilityHelper):
 		ulan = None
 		with suppress(ValueError, TypeError):
 			ulan = int(data.get('ulan'))
-		auth_name = data.get('auth')
+		auth_name = data.get('auth_name')
 		if ulan:
 			return ('HOUSE', 'ULAN', ulan)
 		elif auth_name and auth_name not in self.ignore_house_authnames:
-			return ('HOUSE', 'AUTH', auth_name)
+			return ('PERSON', 'AUTH', auth_name)
 		else:
 			# not enough information to identify this house uniquely, so use the source location in the input file
 			if 'pi_record_no' in data:
@@ -582,7 +571,14 @@ class SalesPipeline(PipelineBase):
 	# Set up environment
 		'''Return a `dict` of named services available to the bonobo pipeline.'''
 		services = super().setup_services()
-
+		people_groups = set()
+		pg_file = pathlib.Path(settings.pipeline_tmp_path).joinpath('people_groups.json')
+		with suppress(FileNotFoundError):
+			with pg_file.open('r') as fh:
+				data = json.load(fh)
+				for key in data['group_keys']:
+					people_groups.add(tuple(key))
+		services['people_groups'] = people_groups
 		# Register tgn files as services - begin with belgian and add to dictionary all of the rest
 		tgn_places = services.get('tgn_belgian', {})
 		sales_tgn = services.get('sales_belgian_tgn', {})

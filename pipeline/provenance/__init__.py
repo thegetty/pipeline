@@ -19,7 +19,6 @@ from pipeline.util import \
 from pipeline.util.cleaners import parse_location_name
 from pipeline.linkedart import add_crom_data, get_crom_object, get_crom_objects
 
-
 class ProvenanceBase(Configurable):
 	'''
 	This is a base class providing common functionality in the handling of Provenance Entries.
@@ -37,7 +36,7 @@ class ProvenanceBase(Configurable):
 		self.helper.add_person(data, record=record, relative_id=relative_id, **kwargs)
 		return data
 
-	def related_procurement(self, hmo, tx_label_args, current_tx=None, current_ts=None, buyer=None, seller=None, previous=False, ident=None, make_label=None, sales_record=None):
+	def related_procurement(self, hmo, tx_label_args, current_tx=None, current_ts=None, buyer=None, seller=None, previous=False, ident=None, make_label=None, sales_record=None, owner_record=None, seq_no=0, parent=None):
 		'''
 		Returns a new `vocab.ProvenanceEntry` object (and related acquisition) that is temporally
 		related to the supplied procurement and associated data. The new procurement is for
@@ -72,7 +71,6 @@ class ProvenanceBase(Configurable):
 			
 			make_label = _make_label_default
 
-
 		tx = vocab.ProvenanceEntry(ident=ident)
 		if sales_record:
 			tx.referred_to_by = sales_record
@@ -99,10 +97,22 @@ class ProvenanceBase(Configurable):
 		if buyer:
 			pacq.transferred_title_to = buyer
 			pxfer.transferred_custody_to = buyer
+			
 		if seller:
 			pacq.transferred_title_from = seller
 			pxfer.transferred_custody_from = seller
+		
+		if owner_record and 'own_auth_q' in owner_record:
 
+			if '[?]' in owner_record['own_auth_q'] or '?' in owner_record['own_auth_q']:
+				owner = get_crom_object(owner_record)
+				ident="http://www.cidoc-crm.org/cidoc-crm/P29_custody_received_by"
+				label="P29 custody received by"
+				pxfer.attributed_by = self.create_uncertainty_atribute(owner, seq_no, label, ident, parent)
+				ident="http://www.cidoc-crm.org/cidoc-crm/P22_transferred_title_to"
+				label="transferred title to"
+				pacq.attributed_by = self.create_uncertainty_atribute(owner, seq_no, label, ident, parent)
+				
 		tx.part = pacq
 		tx.part = pxfer
 		if current_ts:
@@ -112,8 +122,10 @@ class ProvenanceBase(Configurable):
 				pacq.timespan = timespan_after(current_ts)
 		return tx, pacq
 
-	def handle_prev_post_owner(self, data, hmo, tx_data, sale_type, lot_object_key, owner_record, record_id, rev, ts=None, make_label=None):
+
+	def handle_prev_post_owner(self, data, hmo, tx_data, sale_type, lot_object_key, owner_record, record_id, rev, ts=None, make_label=None, rev_name="", seq_no=0):
 		current_tx = get_crom_object(tx_data)
+		parent = data['parent_data']
 		sales_record = get_crom_object(data.get('_record', data.get('_text_row')))
 		if rev:
 			rel = f'leading to Ownership of'
@@ -156,7 +168,7 @@ class ProvenanceBase(Configurable):
 		tx_uri = self.helper.prepend_uri_key(hmo.id, f'PROV-{record_id}')
 		
 		tx_label_args = tuple([self.helper, sale_type, 'Event', rel] + list(lot_object_key))
-		tx, _ = self.related_procurement(hmo, tx_label_args, current_tx, ts, buyer=owner, previous=rev, ident=tx_uri, make_label=make_label, sales_record=sales_record)
+		tx, _ = self.related_procurement(hmo, tx_label_args, current_tx, ts, buyer=owner, previous=rev, ident=tx_uri, make_label=make_label, sales_record=sales_record, owner_record=owner_record, seq_no=seq_no, parent=parent)
 		
 		if owner_record.get('own_auth_e'):
 			content = owner_record['own_auth_e']

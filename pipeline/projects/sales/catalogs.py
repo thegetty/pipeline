@@ -336,8 +336,8 @@ class AddPhysicalCatalogEntry(Configurable):
 		
 		catalog_label = self.helper.physical_catalog_label(cno, sale_type, owner, copy)
 		row_name = f'STAR Entry for Physical {catalog_label}'
-		row = vocab.EntryTextForm(ident=record_uri, content=content, label=row_name)
-		
+		row = vocab.EntryTextForm(ident=record_uri, label=row_name)
+
 		creation = model.Creation(ident='')
 		creation.carried_out_by = self.helper.static_instances.get_instance('Group', 'gpi')
 		row.created_by = creation
@@ -346,6 +346,8 @@ class AddPhysicalCatalogEntry(Configurable):
 		er_classification = model.Type(ident='http://vocab.getty.edu/aat/300379790', label='Electronic Records')
 		er_classification.classified_as = vocab.instances["object type"]
 		row.classified_as = er_classification
+		row._validate_profile = False
+		row.features_are_also_found_on = vocab.Transcription(ident='', content=content)
 		row.referred_to_by = self.helper.static_instances.get_instance('LinguisticObject', 'db-sales_catalogs')
 		row.referred_to_by = self.select_county(data)
 		data['_catalog_record'] = add_crom_data({'uri': record_uri}, row)

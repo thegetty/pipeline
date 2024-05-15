@@ -14,7 +14,7 @@ from pipeline.linkedart import add_crom_data, get_crom_object, \
 class AddAuctionCatalog(Configurable):
 	helper = Option(required=True)
 	non_auctions = Service('non_auctions')
-	
+
 	def __call__(self, data:dict, non_auctions):
 		'''Add modeling for auction catalogs as linguistic objects'''
 		cno = data['catalog_number']
@@ -46,7 +46,7 @@ class AddAuctionCatalog(Configurable):
 			puid_id = self.helper.gpi_number_id(puid)
 			catalog.identified_by = puid_id
 			cdata['identifiers'] = [puid_id]
-		
+
 		data['_catalog'] = add_crom_data(data=cdata, what=catalog)
 		yield data
 
@@ -142,11 +142,11 @@ class PopulateAuctionCatalog(Configurable):
 			catalog.identified_by = self.lugt_number_id(lugt_no)
 
 		for seller_verbatim in parent.get('title_pg_sell', {}).values():
-			catalog.referred_to_by = vocab.TitlePageText(ident='', content=seller_verbatim)	
+			catalog.referred_to_by = vocab.TitlePageText(ident='', content=seller_verbatim)
 
 		if not cno:
 			warnings.warn(f'Setting empty identifier on {catalog.id}')
-		
+
 		catalog.identified_by = self.helper.gpi_number_id(cno, vocab.LocalNumber)
 
 		if not sno:
@@ -161,7 +161,7 @@ class PopulateAuctionCatalog(Configurable):
 class AddAuctionCatalogEntry(Configurable):
 	helper = Option(required=True)
 	non_auctions = Service('non_auctions')
-	
+
 	def __call__(self, data:dict, non_auctions):
 		'''Add modeling for auction catalogs as linguistic objects'''
 		cno = data['auction_of_lot']['catalog_number']
@@ -169,7 +169,7 @@ class AddAuctionCatalogEntry(Configurable):
 		record_uri = self.helper.make_proj_uri('CATALOG', cno, 'RECORD', rec_num)
 		record = vocab.ParagraphText(ident=record_uri, label=f'Sale recorded in catalog (record number {rec_num})')
 		data['_sale_record'] = add_crom_data({'uri': record_uri}, record)
-		
+
 		page_id = data.get('pg')
 		pdf_page_id = data.get('ppg')
 		if not page_id:
@@ -206,7 +206,7 @@ class AddAuctionCatalogEntry(Configurable):
 class AddPhysicalCatalogEntry(Configurable):
 	helper = Option(required=True)
 	non_auctions = Service('non_auctions')
-	
+
 	def __call__(self, data:dict, non_auctions):
 		'''Add modeling for the entry describing a physical auction catalog in the PSCP dataset.'''
 		cno = data['catalog_number']
@@ -217,10 +217,10 @@ class AddPhysicalCatalogEntry(Configurable):
 		keys = [v for v in [cno, owner, copy] if v]
 		record_uri = self.helper.make_proj_uri('ENTRY', 'PHYS-CAT', *keys)
 		content = data['star_csv_data']
-		
+
 		catalog_label = self.helper.physical_catalog_label(cno, sale_type, owner, copy)
 		row_name = f'STAR Entry for Physical {catalog_label}'
-		row = vocab.EntryTextForm(ident=record_uri, content=content, label=row_name)
+		row = vocab.EntryTextForm(ident=record_uri, label=row_name)
 		row.part_of = self.helper.static_instances.get_instance('LinguisticObject', 'db-sales_catalogs')
 		creation = model.Creation(ident='')
 		creation.carried_out_by = self.helper.static_instances.get_instance('Group', 'gpi')
@@ -230,6 +230,9 @@ class AddPhysicalCatalogEntry(Configurable):
 		er_classification = model.Type(ident='http://vocab.getty.edu/aat/300379790', label='Electronic Records')
 		er_classification.classified_as = vocab.instances["object type"]
 		row.classified_as = er_classification
+        row._validate_profile = False
+        row.features_are_also_found_on = vocab.Transcription(ident='', content=content)
 		data['_catalog_record'] = add_crom_data({'uri': record_uri}, row)
 
 		yield data
+

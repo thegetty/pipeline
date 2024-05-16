@@ -172,6 +172,11 @@ class PopulateSalesObject(Configurable, pipeline.linkedart.PopulateObject):
 		record._validate_profile = False
 		record.features_are_also_found_on = row
 
+		if 'lot_notes' in parent['auction_of_lot']:
+			lot_notes = parent['auction_of_lot']['lot_notes']
+			note_uri = self.helper.prepend_uri_key(lot, 'NOTE')
+			record.referred_to_by = vocab.Note(ident=note_uri, content=lot_notes)
+
 		transaction = data['parent_data']['transaction']
 		tx_cl = transaction_classification.get(transaction)
 		if tx_cl:

@@ -44,8 +44,8 @@ class AddAuctionCatalog(Configurable):
 		catalog = self.helper.catalog_text(cno, sale_type)
 				
 
-		content = data['star_record_no']
-		
+		content = data['star_csv_data']
+
 		row = vocab.Transcription(ident='', content=content)
 		if "sale_code" not in data:
 			catalog.referred_to_by = self.helper.static_instances.get_instance('LinguisticObject', 'db-sales_catalogs')

@@ -231,8 +231,8 @@ class AddPhysicalCatalogEntry(Configurable):
 		er_classification = model.Type(ident='http://vocab.getty.edu/aat/300379790', label='Electronic Records')
 		er_classification.classified_as = vocab.instances["object type"]
 		row.classified_as = er_classification
-        row._validate_profile = False
-        row.features_are_also_found_on = vocab.Transcription(ident='', content=content)
+		row._validate_profile = False
+		row.features_are_also_found_on = vocab.Transcription(ident='', content=content)
 		data['_catalog_record'] = add_crom_data({'uri': record_uri}, row)
 
 		yield data

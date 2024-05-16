@@ -30,6 +30,7 @@ class AddAuctionCatalog(Configurable):
 		catalog = self.helper.catalog_text(cno, sale_type)
 
 		content = data['star_csv_data']
+
 		row = vocab.Transcription(ident='', content=content)
 		row.part_of = self.helper.static_instances.get_instance('LinguisticObject', 'db-sales_events')
 		creation = vocab.TranscriptionProcess(ident='')
@@ -235,4 +236,5 @@ class AddPhysicalCatalogEntry(Configurable):
 		data['_catalog_record'] = add_crom_data({'uri': record_uri}, row)
 
 		yield data
+
 

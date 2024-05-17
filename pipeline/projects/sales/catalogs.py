@@ -55,6 +55,11 @@ class AddAuctionCatalog(Configurable):
 		else:
 			catalog.referred_to_by = self.helper.static_instances.get_instance('LinguisticObject', 'db-sales_events')
 			catalog.referred_to_by = self.select_county(data)
+		
+		page = data['page']
+		if page:
+			catalog.referred_to_by = vocab.PaginationStatement(ident='', content=page)
+			
 		creation = vocab.TranscriptionProcess(ident='')
 		creation.carried_out_by = self.helper.static_instances.get_instance('Group', 'gpi')
 		row.created_by = creation
@@ -164,7 +169,7 @@ class AddPhysicalCatalogOwners(Configurable):
 			#data['referred_to_by'] = [entry_record, entry_record1]
 			owner = model.Group(ident=owner_uri)
 			#owner.referred_to_by = entry_record
-
+			owner._label = owner_name
 			add_crom_data(data['_owner'], owner)
 			if not owner_code:
 				warnings.warn(f'Setting empty identifier on {owner.id}')

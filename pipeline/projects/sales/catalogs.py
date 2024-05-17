@@ -62,6 +62,10 @@ class AddAuctionCatalog(Configurable):
 		catalog._validate_profile = False
 		catalog.features_are_also_found_on = row
 
+		if 'title_pg_sell' in data:
+			for seller_verbatim in data['title_pg_sell'].values():
+				catalog.part = vocab.TitlePageText(ident='', content=seller_verbatim)
+
 		cdata = {'uri': catalog.id}
 		puid = data.get('persistent_puid')
 		if puid:

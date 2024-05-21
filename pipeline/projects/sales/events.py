@@ -38,6 +38,7 @@ class AddAuctionEvent(Configurable):
 
 		'''Add modeling for an auction event based on properties of the supplied `data` dict.'''
 		record = get_crom_object(data['_catalog'])
+
 		cno = data['catalog_number']
 		sale_type = data.get('non_auction_flag', 'Auction')
 		
@@ -60,7 +61,6 @@ class AddAuctionEvent(Configurable):
 		data['uid'] = uid
 		data['uri'] = uri
 		add_crom_data(data=data, what=auction)
-		
 		catalog = get_crom_object(data['_catalog'])
 		data['_record'] = data['_catalog']
 		return data
@@ -131,7 +131,6 @@ class PopulateAuctionEvent(Configurable):
 					city['names'] = [place_verbatim]
 
 		else:
-			# import pdb; pdb.set_trace()
 			# check in which type of location the tgn refers to
 			tgn_ref = data.get('loc_tgn_ref')
 			l = data.get(tgn_ref)
@@ -156,7 +155,6 @@ class PopulateAuctionEvent(Configurable):
 		auction_locations = event_properties['auction_locations']
 		event_experts = event_properties['experts']
 		event_commissaires = event_properties['commissaire']
-		# import pdb; pdb.set_trace()
 		auction = get_crom_object(data)
 		catalog = data['_catalog']['_LOD_OBJECT']
 
@@ -171,7 +169,9 @@ class PopulateAuctionEvent(Configurable):
 		# helper.make_place is called here instead of using make_la_place as a separate graph node because the Place object
 		# gets stored in the `auction_locations` object to be used in the second graph component
 		# which uses the data to associate the place with auction lots.
-		base_uri = self.helper.make_proj_uri('AUCTION-EVENT', cno, 'PLACE', part)
+		#base_uri = self.helper.make_proj_uri('AUCTION-EVENT', cno, 'PLACE', part)
+		base_uri = self.helper.make_proj_uri('PLACE', '')
+		
 		record = get_crom_object(data.get('_record'))
 		if not tgn_data:
 			current_p = current
@@ -187,7 +187,8 @@ class PopulateAuctionEvent(Configurable):
 				place = canonical_place
 				place_data = add_crom_data(data={'uri': place.id}, what=place)
 			else:
-				place_data = self.helper.make_place(current, base_uri=base_uri, record=record)
+				#place_data = self.helper.make_place(current, base_uri=base_uri, record=record)
+				place_data = self.helper.make_place(current, base_uri=base_uri)
 				place = get_crom_object(place_data)
 
 			if place:
@@ -212,7 +213,6 @@ class PopulateAuctionEvent(Configurable):
 				auction.took_place_at = o_place
 				auction_locations[cno] = o_place.clone(minimal=True)
 			if same_as:
-				# import pdb; pdb.set_trace()
 				tgn_instance = self.helper.static_instances.get_instance('Place', same_as)
 				if tgn_instance:
 					traverse_static_place_instances(self, tgn_instance)
@@ -260,7 +260,6 @@ class PopulateAuctionEvent(Configurable):
 				role='commissaire'
 			)
 			event_commissaires[cno].append(person.clone(minimal=True))
-
 			data['_organizers'].append(add_crom_data(data={}, what=person))
 			
 			role_id = '' # self.helper.make_proj_uri('AUCTION-EVENT', cno, 'Commissaire', seq_no)
@@ -274,6 +273,7 @@ class PopulateAuctionEvent(Configurable):
 
 		sellers = { **data.get('auc_copy', {}), **data.get('other_seller', {}) }
 		for seller in sellers.values():
+			
 			seller_description = vocab.SellerDescription(ident='', content=seller)
 			seller_description.referred_to_by = record
 			auction.referred_to_by = seller_description
@@ -292,6 +292,7 @@ class PopulateAuctionEvent(Configurable):
 					page._validate_range = False
 					page.access_point = [vocab.DigitalObject(ident=url, label=url)]
 					if description:
+						
 						page.referred_to_by = vocab.Note(ident='', content=description)
 					event_record.referred_to_by = page
 				else:

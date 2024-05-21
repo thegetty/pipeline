@@ -58,12 +58,10 @@ class ProvenanceBase(Configurable):
 		'''
 		
 		def _make_label_default(helper, sale_type, transaction, rel, *args):
-			# import pdb; pdb.set_trace()
 			str = f'Provenance Entry {rel} object identified in book {args[2]}, page {args[3]}, row {args[4]}'
 			
 			#strs = [str(x) for x in args]
 			
-			# import pdb; pdb.set_trace()
 			#return ', '.join(strs)
 			return str
 		
@@ -102,16 +100,16 @@ class ProvenanceBase(Configurable):
 			pacq.transferred_title_from = seller
 			pxfer.transferred_custody_from = seller
 		
-		if owner_record and 'own_auth_q' in owner_record:
+		# if owner_record and 'own_auth_q' in owner_record:
 
-			if '[?]' in owner_record['own_auth_q'] or '?' in owner_record['own_auth_q']:
-				owner = get_crom_object(owner_record)
-				ident="http://www.cidoc-crm.org/cidoc-crm/P29_custody_received_by"
-				label="P29 custody received by"
-				pxfer.attributed_by = self.create_uncertainty_atribute(owner, seq_no, label, ident, parent)
-				ident="http://www.cidoc-crm.org/cidoc-crm/P22_transferred_title_to"
-				label="transferred title to"
-				pacq.attributed_by = self.create_uncertainty_atribute(owner, seq_no, label, ident, parent)
+		# 	if '[?]' in owner_record['own_auth_q'] or '?' in owner_record['own_auth_q']:
+		# 		owner = get_crom_object(owner_record)
+		# 		ident="http://www.cidoc-crm.org/cidoc-crm/P29_custody_received_by"
+		# 		label="P29 custody received by"
+		# 		pxfer.attributed_by = self.create_uncertainty_atribute(owner, seq_no, label, ident, parent)
+		# 		ident="http://www.cidoc-crm.org/cidoc-crm/P22_transferred_title_to"
+		# 		label="transferred title to"
+		# 		pacq.attributed_by = self.create_uncertainty_atribute(owner, seq_no, label, ident, parent)
 				
 		tx.part = pacq
 		tx.part = pxfer
@@ -150,8 +148,9 @@ class ProvenanceBase(Configurable):
 				place = canonical_place
 				place_data = add_crom_data(data={'uri': place.id}, what=place)
 			else:
+				base_uri = self.helper.make_proj_uri('PLACE', '')
 				current = parse_location_name(loc, uri_base=self.helper.uid_tag_prefix)
-				place_data = self.helper.make_place(current)
+				place_data = self.helper.make_place(current, base_uri=base_uri)
 				place = get_crom_object(place_data)
 			owner.residence = place
 			data['_owner_locations'].append(place_data)
@@ -212,7 +211,6 @@ class ProvenanceBase(Configurable):
 	def model_person_or_group(self, data:dict, a:dict, attribution_group_types, attribution_group_names, role='artist', seq_no=0, sales_record=None):
 		if get_crom_object(a):
 			return a
-		# import pdb; pdb.set_trace()
 		mods = a['modifiers']
 			
 		artist = self.helper.add_person(a, record=sales_record, relative_id=f'artist-{seq_no+1}', role=role)
@@ -435,7 +433,6 @@ class ProvenanceBase(Configurable):
 					assignment.carried_out_by = self.helper.static_instances.get_instance('Group', 'knoedler')
 				else:
 					prod_event.influenced_by = original_hmo
-				# import pdb; pdb.set_trace()
 				data['_original_objects'].append(add_crom_data(data={'uri': original_id}, what=original_hmo))
 				if 'object' in data:
 					self.populate_original_object_visual_item(data['_original_objects'], data['object'], original_hmo, sales_record, original_label, seq_no)
@@ -450,7 +447,6 @@ class ProvenanceBase(Configurable):
 		EDIT_BY = attribution_modifiers['edit by']
 
 		event_uri = prod_event.id
-		# import pdb; pdb.set_trace()
 		if '_record' not in data:
 			sales_record = get_crom_objects(data.get('_records', []))
 			if len(sales_record) > 1:
@@ -523,7 +519,6 @@ class ProvenanceBase(Configurable):
 				if EDIT_BY.intersects(mods):
 					# goupil only attribution modifier that's modelled seperately and not a sub event of the production
 					continue
-				# import pdb; pdb.set_trace()
 				uncertain = all_uncertain
 				verbatim_mods = a_data.get('attrib_mod_auth', '')
 				attribute_assignment_id = self.helper.prepend_uri_key(prod_event.id, f'ASSIGNMENT,Artist-{seq_no}')
@@ -626,7 +621,6 @@ class ProvenanceBase(Configurable):
 	def model_artists_with_modifers(self, data:dict, hmo, attribution_modifiers, attribution_group_types, attribution_group_names):
 		'''Add modeling for artists as people involved in the production of an object'''
 		# sales_record = get_crom_object(data['_record'])
-		# import pdb; pdb.set_trace()
 		data.setdefault('_organizations', [])
 		data.setdefault('_original_objects', [])
 		

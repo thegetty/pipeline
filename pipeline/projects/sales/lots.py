@@ -459,11 +459,11 @@ class AddAcquisitionOrBidding(ProvenanceBase):
 				xfer.part = subxfer
 			else:
 				xfer.transferred_custody_from = seller
-				if 'auth_nameq' in seller_data:
-					if '[?]' in seller_data['auth_nameq']:
-						ident="http://www.cidoc-crm.org/cidoc-crm/P28_custody_surrendered_by"
-						label="P28 custody surrendered by"
-						xfer.attributed_by = self.create_uncertainty_atribute(seller, agent_seq, label, ident, parent)
+				# if 'auth_nameq' in seller_data:
+				# 	if '[?]' in seller_data['auth_nameq']:
+				# 		ident="http://www.cidoc-crm.org/cidoc-crm/P28_custody_surrendered_by"
+				# 		label="P28 custody surrendered by"
+				# 		xfer.attributed_by = self.create_uncertainty_atribute(seller, agent_seq, label, ident, parent)
 
 		for agent_seq, buyer_data in enumerate(buyers):
 			buyer = get_crom_object(buyer_data)
@@ -478,27 +478,27 @@ class AddAcquisitionOrBidding(ProvenanceBase):
 			else:
 				
 				xfer.transferred_custody_to = buyer
-				if 'auth_nameq' in buyer_data:
-					if '[?]' in buyer_data['auth_nameq']:
-						ident="http://www.cidoc-crm.org/cidoc-crm/P29_custody_received_by"
-						label="P29 custody received by"
-						xfer.attributed_by = self.create_uncertainty_atribute(buyer, agent_seq, label, ident, parent)
+				# if 'auth_nameq' in buyer_data:
+				# 	if '[?]' in buyer_data['auth_nameq']:
+				# 		ident="http://www.cidoc-crm.org/cidoc-crm/P29_custody_received_by"
+				# 		label="P29 custody received by"
+				# 		xfer.attributed_by = self.create_uncertainty_atribute(buyer, agent_seq, label, ident, parent)
 
 		current_tx.part = xfer
 
-	def create_uncertainty_atribute(self, seller, agent_seq, label, ident, parent):
+	# def create_uncertainty_atribute(self, seller, agent_seq, label, ident, parent):
 		
-		attrib_assignment_classes = [model.AttributeAssignment]
-		prod_event = model.Production(ident=seller.id, label=f'Production event for {seller._label}')
-		attribute_assignment_id =  self.helper.prepend_uri_key(prod_event.id, f'ASSIGNMENT,Seller-{agent_seq}')
-		assignment = vocab.make_multitype_obj(*attrib_assignment_classes, ident=attribute_assignment_id, label=f'Possibly attributed to {seller._label}')
-		# assignment.carried_out_by = self.helper.static_instances.get_instance('Group', 'gpi')
-		assignment.referred_to_by = vocab.Note(ident='', content='attributed')
-		assignment.classified_as = model.Type(ident="http://vocab.getty.edu/aat/300435722", label="Possibly")
-		assignment.used_specific_object = get_crom_object(parent['_sale_record'])
-		assignment.assigned_property = model.Type(ident=ident, label=label)
-		assignment.assigned = seller
-		return assignment
+	# 	attrib_assignment_classes = [model.AttributeAssignment]
+	# 	prod_event = model.Production(ident=seller.id, label=f'Production event for {seller._label}')
+	# 	attribute_assignment_id =  self.helper.prepend_uri_key(prod_event.id, f'ASSIGNMENT,Seller-{agent_seq}')
+	# 	assignment = vocab.make_multitype_obj(*attrib_assignment_classes, ident=attribute_assignment_id, label=f'Possibly attributed to {seller._label}')
+	# 	# assignment.carried_out_by = self.helper.static_instances.get_instance('Group', 'gpi')
+	# 	assignment.referred_to_by = vocab.Note(ident='', content='attributed')
+	# 	assignment.classified_as = model.Type(ident="http://vocab.getty.edu/aat/300435722", label="Possibly")
+	# 	assignment.used_specific_object = get_crom_object(parent['_sale_record'])
+	# 	assignment.assigned_property = model.Type(ident=ident, label=label)
+	# 	assignment.assigned = seller
+	# 	return assignment
 
 	def copy_object_with_new_id(self, value):
 		# Some objects had trouble in the JSON-LD merging that occurs during post-processing,
@@ -749,18 +749,18 @@ class AddAcquisitionOrBidding(ProvenanceBase):
 			elif FOR.intersects(mod):
 				acq.transferred_title_from = seller
 				import pdb; pdb.set_trace()
-				if 'auth_nameq' in seller_data:
-					if '[?]' in seller_data['auth_nameq']:
-						ident="http://www.cidoc-crm.org/cidoc-crm/P23_transferred_title_from"
-						label="transferred title from"
-						acq.attributed_by = self.create_uncertainty_atribute(seller, seq_no, label, ident, parent)
+				# if 'auth_nameq' in seller_data:
+				# 	if '[?]' in seller_data['auth_nameq']:
+				# 		ident="http://www.cidoc-crm.org/cidoc-crm/P23_transferred_title_from"
+				# 		label="transferred title from"
+				# 		acq.attributed_by = self.create_uncertainty_atribute(seller, seq_no, label, ident, parent)
 				# payments['sell'].paid_to = seller
 				paym.paid_to = seller
-				if 'auth_nameq' in seller_data:
-					if '[?]' in seller_data['auth_nameq']:
-						ident="https://linked.art/ns/terms/paid_to"
-						label="paid to"
-						paym.attributed_by = self.create_uncertainty_atribute(seller, seq_no, label, ident, parent)   
+				# if 'auth_nameq' in seller_data:
+				# 	if '[?]' in seller_data['auth_nameq']:
+				# 		ident="https://linked.art/ns/terms/paid_to"
+				# 		label="paid to"
+				# 		paym.attributed_by = self.create_uncertainty_atribute(seller, seq_no, label, ident, parent)   
 				payments_used.add('sell')
 			elif uncertain_attribution: # this is true if ANY of the sellers have an 'or anonymous' modifier
 				# The assignment URIs are just the acquisition URI with a suffix.
@@ -789,21 +789,21 @@ class AddAcquisitionOrBidding(ProvenanceBase):
 				# covers non-modified
 # 				acq.carried_out_by = seller
 				acq.transferred_title_from = seller
-				if 'auth_nameq' in seller_data:
-					if '[?]' in seller_data['auth_nameq']:
-						ident="http://www.cidoc-crm.org/cidoc-crm/P23_transferred_title_from"
-						label="transferred title from"
-						acq.attributed_by = self.create_uncertainty_atribute(seller, seq_no, label, ident, parent)
+				# if 'auth_nameq' in seller_data:
+				# 	if '[?]' in seller_data['auth_nameq']:
+				# 		ident="http://www.cidoc-crm.org/cidoc-crm/P23_transferred_title_from"
+				# 		label="transferred title from"
+				# 		acq.attributed_by = self.create_uncertainty_atribute(seller, seq_no, label, ident, parent)
 # 				payments['sell'].carried_out_by = seller
 				# payments['sell'].paid_to = seller
 				payments_used.add('sell')
 				
 				paym.paid_to = seller
-				if 'auth_nameq' in seller_data:
-					if '[?]' in seller_data['auth_nameq']:
-						ident="https://linked.art/ns/terms/paid_to"
-						label="paid to"
-						paym.attributed_by = self.create_uncertainty_atribute(seller, seq_no, label, ident, parent)
+				# if 'auth_nameq' in seller_data:
+				# 	if '[?]' in seller_data['auth_nameq']:
+				# 		ident="https://linked.art/ns/terms/paid_to"
+				# 		label="paid to"
+				# 		paym.attributed_by = self.create_uncertainty_atribute(seller, seq_no, label, ident, parent)
 
 		for seq_no, buyer_data in enumerate(buyers):
 			buyer = get_crom_object(buyer_data)
@@ -834,38 +834,38 @@ class AddAcquisitionOrBidding(ProvenanceBase):
 			elif FOR.intersects(mod):
 
 				acq.transferred_title_to = buyer
-				if 'auth_nameq' in buyer_data:
-					if '[?]' in buyer_data['auth_nameq']:
-						ident="http://www.cidoc-crm.org/cidoc-crm/P22_transferred_title_to"
-						label="transferred title to"
-						acq.attributed_by = self.create_uncertainty_atribute(buyer, seq_no, label, ident, parent)		
+				# if 'auth_nameq' in buyer_data:
+				# 	if '[?]' in buyer_data['auth_nameq']:
+				# 		ident="http://www.cidoc-crm.org/cidoc-crm/P22_transferred_title_to"
+				# 		label="transferred title to"
+				# 		acq.attributed_by = self.create_uncertainty_atribute(buyer, seq_no, label, ident, parent)		
 				
 				# payments['buy'].paid_from = buyer
 				paym.paid_from = buyer
-				if 'auth_nameq' in buyer_data:
-					if '[?]' in buyer_data['auth_nameq']:
-						ident="https://linked.art/ns/terms/paid_from"
-						label="paid from"
-						paym.attributed_by = self.create_uncertainty_atribute(buyer, seq_no, label, ident, parent)
+				# if 'auth_nameq' in buyer_data:
+				# 	if '[?]' in buyer_data['auth_nameq']:
+				# 		ident="https://linked.art/ns/terms/paid_from"
+				# 		label="paid from"
+				# 		paym.attributed_by = self.create_uncertainty_atribute(buyer, seq_no, label, ident, parent)
 				payments_used.add('buy')
 			else:
 				# covers FOR modifiers and non-modified
 # 				acq.carried_out_by = buyer
 
 				acq.transferred_title_to = buyer
-				if 'auth_nameq' in buyer_data:
-					if '[?]' in buyer_data['auth_nameq']:
-						ident="http://www.cidoc-crm.org/cidoc-crm/P22_transferred_title_to"
-						label="transferred title to"
-						acq.attributed_by = self.create_uncertainty_atribute(buyer, seq_no, label, ident, parent)			
+				# if 'auth_nameq' in buyer_data:
+				# 	if '[?]' in buyer_data['auth_nameq']:
+				# 		ident="http://www.cidoc-crm.org/cidoc-crm/P22_transferred_title_to"
+				# 		label="transferred title to"
+				# 		acq.attributed_by = self.create_uncertainty_atribute(buyer, seq_no, label, ident, parent)			
 				# payments['buy'].paid_from = buyer
 				paym.paid_from = buyer
 # 				payments['buy'].carried_out_by = buyer
-				if 'auth_nameq' in buyer_data:
-					if '[?]' in buyer_data['auth_nameq']:
-						ident="https://linked.art/ns/terms/paid_from"
-						label="paid from"
-						paym.attributed_by = self.create_uncertainty_atribute(buyer, seq_no, label, ident, parent)
+				# if 'auth_nameq' in buyer_data:
+				# 	if '[?]' in buyer_data['auth_nameq']:
+				# 		ident="https://linked.art/ns/terms/paid_from"
+				# 		label="paid from"
+				# 		paym.attributed_by = self.create_uncertainty_atribute(buyer, seq_no, label, ident, parent)
 				payments_used.add('buy')
 
 		if prices:

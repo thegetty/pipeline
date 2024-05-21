@@ -89,11 +89,11 @@ class PopulateSalesObject(Configurable, pipeline.linkedart.PopulateObject):
 				# a suffix. When URIs are reconciled during prev/post sale rewriting, this
 				# will allow us to also reconcile the URIs for the places of destruction
 				# (of which there should only be one hierarchy per object)
-				base_uri = hmo.id + '-Destruction-Place,'
+				#base_uri = hmo.id + '-Destruction-Place,'
+				base_uri = self.helper.make_proj_uri('PLACE', '')
 				place_data = self.helper.make_place(current, base_uri=base_uri)
 				place = get_crom_object(place_data)
 				if place:
-					import pdb; pdb.set_trace()
 					data['_locations'].append(place_data)
 					d.took_place_at = place
 
@@ -160,10 +160,11 @@ class PopulateSalesObject(Configurable, pipeline.linkedart.PopulateObject):
 		
 		puid = parent.get('persistent_puid')
 		puid_id = self.helper.gpi_number_id(puid)
-
+		
 		content = data['star_csv_data']
 		row = vocab.Transcription(ident='', content=content)
 		creation = vocab.TranscriptionProcess(ident='')
+		
 		creation.carried_out_by = self.helper.static_instances.get_instance('Group', 'gpi')
 		row.created_by = creation
 		row.identified_by = self.helper.gpi_number_id(rec_num, vocab.StarNumber)
@@ -303,6 +304,7 @@ class PopulateSalesObject(Configurable, pipeline.linkedart.PopulateObject):
 					if part_of:
 						tgn_instance = self.helper.static_instances.get_instance('Place', part_of)
 						traverse_static_place_instances(self, tgn_instance)
+						import pdb; pdb.set_trace()
 						place = make_la_place(
 							{
 								'name': loc,
@@ -349,6 +351,7 @@ class PopulateSalesObject(Configurable, pipeline.linkedart.PopulateObject):
 					# 	owner.residence = place
 				owner = None
 				if owner_data:
+					
 					make_la_org = pipeline.linkedart.MakeLinkedArtOrganization()
 					owner_data = make_la_org(owner_data)
 					owner = get_crom_object(owner_data)
@@ -675,7 +678,6 @@ class AddArtists(ProvenanceBase):
 			return a
 
 		mods = a['modifiers']
-			
 		artist = self.helper.add_person(a, record=sales_record, relative_id=f'artist-{seq_no+1}', role=role)
 		artist.referred_to_by = sales_record
 		artist.referred_to_by = self.select_county(data)
@@ -875,6 +877,7 @@ class AddArtists(ProvenanceBase):
 				'uri': group_uri,
 				'role_label': 'uncertain influencer'
 			}
+
 			make_la_org = pipeline.linkedart.MakeLinkedArtOrganization()
 			group_data = make_la_org(group_data)
 			data['_organizations'].append(group_data)

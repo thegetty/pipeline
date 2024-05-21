@@ -69,7 +69,7 @@ class AddAuctionCatalog(Configurable):
 		# part model in arches does not accept the Brief Text classified_as and breaking the loading process
 		# The following piece of code removes the classified_as from the part model to resolve the issue
 		# the path that removes is part -> classified_as -> classified_as. The last part is removed from the output
-		for part in catalog.__dict__['part']:
+		for part in catalog.__dict__.get('part', []):
 			if 'classified_as' in part.__dict__['classified_as'][0].__dict__:
 				part.__dict__['classified_as'][0].__dict__['classified_as'] = []
 

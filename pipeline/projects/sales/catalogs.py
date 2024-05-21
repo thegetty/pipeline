@@ -66,6 +66,13 @@ class AddAuctionCatalog(Configurable):
 			for seller_verbatim in data['title_pg_sell'].values():
 				catalog.part = vocab.TitlePageText(ident='', content=seller_verbatim)
 
+		# part model in arches does not accept the Brief Text classified_as and breaking the loading process
+		# The following piece of code removes the classified_as from the part model to resolve the issue
+		# the path that removes is part -> classified_as -> classified_as. The last part is removed from the output
+		for part in catalog.__dict__['part']:
+			if 'classified_as' in part.__dict__['classified_as'][0].__dict__:
+				part.__dict__['classified_as'][0].__dict__['classified_as'] = []
+
 		cdata = {'uri': catalog.id}
 		puid = data.get('persistent_puid')
 		if puid:

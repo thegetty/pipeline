@@ -225,10 +225,7 @@ class PopulateAuctionCatalog(Configurable):
 			if not lugt_no:
 				warnings.warn(f'Setting empty identifier on {catalog.id}')
 			catalog.identified_by = self.lugt_number_id(lugt_no)
-		
-		for seller_verbatim in parent.get('title_pg_sell', {}).values():
-			catalog.referred_to_by = vocab.TitlePageText(ident='', content=seller_verbatim)	
-		
+
 		if not cno:
 			warnings.warn(f'Setting empty identifier on {catalog.id}')
 		

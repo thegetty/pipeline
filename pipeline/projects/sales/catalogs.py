@@ -57,7 +57,7 @@ class AddAuctionCatalog(Configurable):
 			catalog.referred_to_by = self.select_county(data)
 		
 		if 'page' in data:
-			page = data['page']
+			page = data['page'] 
 			if page:
 				catalog.referred_to_by = vocab.PaginationStatement(ident='', content=page)
 		 

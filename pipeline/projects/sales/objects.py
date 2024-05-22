@@ -675,7 +675,7 @@ class AddArtists(ProvenanceBase):
 			return a
 
 		mods = a['modifiers']
-		import pdb; pdb.set_trace()
+			
 		artist = self.helper.add_person(a, record=sales_record, relative_id=f'artist-{seq_no+1}', role=role)
 		artist.referred_to_by = sales_record
 		artist.referred_to_by = self.select_county(data)
@@ -787,7 +787,7 @@ class AddArtists(ProvenanceBase):
 		else:
 			
 			for seq_no, a_data in enumerate(artists):
-				import pdb; pdb.set_trace()
+				
 				uncertain = all_uncertain
 				attribute_assignment_id = self.helper.prepend_uri_key(prod_event.id, f'ASSIGNMENT,Artist-{seq_no}')
 				artist_label = a_data.get('label') # TODO: this may not be right for groups

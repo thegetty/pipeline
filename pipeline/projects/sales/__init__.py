@@ -364,8 +364,8 @@ class SalesUtilityHelper(UtilityHelper):
 		ulan = None
 		with suppress(ValueError, TypeError):
 			ulan = int(data.get('ulan'))
+		import pdb; pdb.set_trace()
 		if 'auth_name' in data:
-
 			auth_name = data.get('auth_name')
 		elif 'sell_auth_name' in data :
 			auth_name = data.get('sell_auth_name')
@@ -393,7 +393,12 @@ class SalesUtilityHelper(UtilityHelper):
 		ulan = None
 		with suppress(ValueError, TypeError):
 			ulan = int(a.get('ulan'))
-		auth_name = a.get('auth_name', a.get('auth'))
+			import pdb; pdb.set_trace()
+		if 'auth_name' in a:
+			auth_name = a.get('auth_name', a.get('auth'))
+		elif 'sell_auth_name' in a:
+			auth_name = a.get('sell_auth_name', a.get('auth'))
+
 		a['identifiers'] = []
 		if ulan:
 			a['ulan'] = ulan
@@ -532,6 +537,7 @@ class SalesPipeline(PipelineBase):
 		vocab.register_vocab_class('UncertainMemberClosedGroup', {'parent': model.Group, 'id': '300448855', 'label': 'Closed Group Representing an Uncertain Person'})
 		vocab.register_vocab_class('ConstructedTitle', {'parent': model.Name, 'id': '300417205', 'label': 'Constructed Title'})
 		vocab.register_vocab_class('AuctionHouseActivity', {'parent': model.Activity, 'id': '300417515', 'label': 'Auction House'})
+		vocab.register_vocab_class('SellerActivity', {'parent': model.Activity, 'id': '300445696', 'label': 'Seller'})
 
 		vocab.register_vocab_class('EntryNumber', {"parent": model.Identifier, "id":"300445023", "label": "Entry Number"})
 		vocab.register_vocab_class('PageNumber', {"parent": model.Identifier, "id":"300445022", "label": "Page Number"})

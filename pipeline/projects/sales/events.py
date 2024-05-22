@@ -380,7 +380,6 @@ class AddAuctionHouses(Configurable):
 		d1['_organizers'] = []
 		
 		for i, h1 in enumerate(houses):
-			import pdb; pdb.set_trace()
 			house_dict = self.helper.copy_source_information(h1, data)
 			house_dict_copy = house_dict.copy()
 			h1['_catalog'] = catalog
@@ -401,7 +400,6 @@ class AddAuctionHouses(Configurable):
 			d1['_organizers'].append(h1)		
 			
 			auction.part = act
-			import pdb; pdb.set_trace()
 			
 		sellers = data.get('seller', [])
 		all_sellers = []
@@ -410,12 +408,15 @@ class AddAuctionHouses(Configurable):
 			seller_dict = self.helper.copy_source_information(seller_q, data)
 			seller_dict_copy = seller_dict.copy()
 			seller_q['_catalog'] = catalog
-			import pdb; pdb.set_trace()
 			self.helper.add_auction_house_data(seller_dict, sequence=agent_seq, event_record=event_record)
 			seller_dict_copy['uri'] = seller_dict['uri']
 			all_sellers.append(seller_dict_copy)
 			seller = get_crom_object(seller_q)
+			act = vocab.SellerActivity(ident='', label=f'Activity of {seller._label}')
+			act.carried_out_by = seller
+			auction.part = act
 			d1['_organizers'].append(seller_q)
+			
 			#act.attributed_by = seller
 			
 			
@@ -429,7 +430,6 @@ class AddAuctionHouses(Configurable):
 			# 		act.attributed_by = self.create_uncertainty_atribute(seller_data, agent_seq, label, ident, parent)
 			# 		import pdb; pdb.set_trace()
 			# 		print("")
-		import pdb; pdb.set_trace()
-		event_properties['auction_houses'][cno] += all_sellers
+		event_properties['auction_houses'][cno] += house_dicts
 		
 		return d1

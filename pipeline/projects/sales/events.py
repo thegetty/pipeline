@@ -246,10 +246,13 @@ class PopulateAuctionEvent(Configurable):
 				role='expert'
 			)
 			event_experts[cno].append(person.clone(minimal=True))
+			import pdb; pdb.set_trace()
+
 			data['_organizers'].append(add_crom_data(data={}, what=person))
 			role_id = '' # self.helper.make_proj_uri('AUCTION-EVENT', cno, 'Expert', seq_no)
 			role = vocab.Expert(ident=role_id, label=f'Role of Expert in the event {cno}')
 			role.carried_out_by = person
+			import pdb; pdb.set_trace()
 			auction.part = role
 		for seq_no, commissaire in enumerate(data.get('commissaire', [])):
 			self.helper.copy_source_information(commissaire, data),
@@ -260,12 +263,14 @@ class PopulateAuctionEvent(Configurable):
 				role='commissaire'
 			)
 			event_commissaires[cno].append(person.clone(minimal=True))
+			import pdb; pdb.set_trace()
 
 			data['_organizers'].append(add_crom_data(data={}, what=person))
 			
 			role_id = '' # self.helper.make_proj_uri('AUCTION-EVENT', cno, 'Commissaire', seq_no)
 			role = vocab.CommissairePriseur(ident=role_id, label=f'Role of Commissaire-priseur in the event {cno}')
 			role.carried_out_by = person
+			
 			auction.part = role
 
 		notes = data.get('notes')
@@ -277,6 +282,7 @@ class PopulateAuctionEvent(Configurable):
 			seller_description = vocab.SellerDescription(ident='', content=seller)
 			seller_description.referred_to_by = record
 			auction.referred_to_by = seller_description
+			
 
 		if 'links' in data:
 			event_record = get_crom_object(data['_record'])
@@ -343,6 +349,18 @@ class AddAuctionHouses(Configurable):
 			return self.helper.static_instances.get_instance('LinguisticObject', 'db-sales_German')
 		if data['catalog_number'][:2] == "SC":
 			return self.helper.static_instances.get_instance('LinguisticObject', 'db-sales_Sandi')
+			
+	def create_uncertainty_atribute(self, seller, agent_seq, label, ident, parent):
+		import pdb; pdb.set_trace()
+		attrib_assignment_classes = [model.AttributeAssignment]
+		prod_event = model.Production(ident=seller.id, label=f'Production event for {seller._label}')
+		attribute_assignment_id =  self.helper.prepend_uri_key(prod_event.id, f'ASSIGNMENT,Seller-{agent_seq}')
+		assignment = vocab.make_multitype_obj(*attrib_assignment_classes, ident=attribute_assignment_id, label=f'Possibly attributed to {seller._label}')
+		assignment.classified_as = model.Type(ident="http://vocab.getty.edu/aat/300435722", label="Possibly")
+		assignment.used_specific_object = get_crom_object(parent['_sale_record'])
+		assignment.assigned_property = model.Type(ident=ident, label=label)
+		assignment.assigned = seller
+		return assignment
 		
 	def __call__(self, data:dict, event_properties):
 		'''
@@ -362,6 +380,7 @@ class AddAuctionHouses(Configurable):
 		d1['_organizers'] = []
 		
 		for i, h1 in enumerate(houses):
+			import pdb; pdb.set_trace()
 			house_dict = self.helper.copy_source_information(h1, data)
 			house_dict_copy = house_dict.copy()
 			h1['_catalog'] = catalog
@@ -379,8 +398,38 @@ class AddAuctionHouses(Configurable):
 								house.referred_to_by = referred
 			house.referred_to_by = self.helper.static_instances.get_instance('LinguisticObject', 'db-sales_events')
 			house.referred_to_by = self.select_county(data)
+			d1['_organizers'].append(h1)		
+			
 			auction.part = act
-			d1['_organizers'].append(h1)
-		event_properties['auction_houses'][cno] += house_dicts
+			import pdb; pdb.set_trace()
+			
+		sellers = data.get('seller', [])
+		all_sellers = []
+		for agent_seq, seller_q in enumerate(sellers):
+			
+			seller_dict = self.helper.copy_source_information(seller_q, data)
+			seller_dict_copy = seller_dict.copy()
+			seller_q['_catalog'] = catalog
+			import pdb; pdb.set_trace()
+			self.helper.add_auction_house_data(seller_dict, sequence=agent_seq, event_record=event_record)
+			seller_dict_copy['uri'] = seller_dict['uri']
+			all_sellers.append(seller_dict_copy)
+			seller = get_crom_object(seller_q)
+			d1['_organizers'].append(seller_q)
+			#act.attributed_by = seller
+			
+			
+			# if 'sell_auth_q' in seller:
+			# 	seller_data = get_crom_object(seller)
+			# 	if '?' in  seller['sell_auth_q'] or '[?]' in seller['sell_auth_q']:
+			# 		parent = data['_record']
+			# 		ident="http://www.cidoc-crm.org/cidoc-crm/P28_custody_surrendered_by"
+			# 		label="P28 custody surrendered by"
+			# 		import pdb; pdb.set_trace()
+			# 		act.attributed_by = self.create_uncertainty_atribute(seller_data, agent_seq, label, ident, parent)
+			# 		import pdb; pdb.set_trace()
+			# 		print("")
+		import pdb; pdb.set_trace()
+		event_properties['auction_houses'][cno] += all_sellers
 		
 		return d1

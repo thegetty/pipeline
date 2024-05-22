@@ -364,10 +364,15 @@ class SalesUtilityHelper(UtilityHelper):
 		ulan = None
 		with suppress(ValueError, TypeError):
 			ulan = int(data.get('ulan'))
-		auth_name = data.get('auth_name')
+		if 'auth_name' in data:
+
+			auth_name = data.get('auth_name')
+		elif 'sell_auth_name' in data :
+			auth_name = data.get('sell_auth_name')
+		
 		if ulan:
 			return ('HOUSE', 'ULAN', ulan)
-		elif auth_name and auth_name not in self.ignore_house_authnames:
+		elif auth_name not in self.ignore_house_authnames:
 			return ('PERSON', 'AUTH', auth_name)
 		else:
 			# not enough information to identify this house uniquely, so use the source location in the input file

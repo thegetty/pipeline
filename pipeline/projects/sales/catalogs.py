@@ -56,9 +56,10 @@ class AddAuctionCatalog(Configurable):
 			catalog.referred_to_by = self.helper.static_instances.get_instance('LinguisticObject', 'db-sales_events')
 			catalog.referred_to_by = self.select_county(data)
 		
-		page = data['page']
-		if page:
-			catalog.referred_to_by = vocab.PaginationStatement(ident='', content=page)
+		if 'page' in data:
+			page = data['page']
+			if page:
+				catalog.referred_to_by = vocab.PaginationStatement(ident='', content=page)
 			
 		creation = vocab.TranscriptionProcess(ident='')
 		creation.carried_out_by = self.helper.static_instances.get_instance('Group', 'gpi')

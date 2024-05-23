@@ -350,14 +350,14 @@ class AddAuctionHouses(Configurable):
 		if data['catalog_number'][:2] == "SC":
 			return self.helper.static_instances.get_instance('LinguisticObject', 'db-sales_Sandi')
 			
-	def create_uncertainty_atribute(self, seller, agent_seq, label, ident, parent):
+	def create_uncertainty_atribute1(self, seller, agent_seq, label, ident, parent):
 		import pdb; pdb.set_trace()
 		attrib_assignment_classes = [model.AttributeAssignment]
 		prod_event = model.Production(ident=seller.id, label=f'Production event for {seller._label}')
 		attribute_assignment_id =  self.helper.prepend_uri_key(prod_event.id, f'ASSIGNMENT,Seller-{agent_seq}')
 		assignment = vocab.make_multitype_obj(*attrib_assignment_classes, ident=attribute_assignment_id, label=f'Possibly attributed to {seller._label}')
 		assignment.classified_as = model.Type(ident="http://vocab.getty.edu/aat/300435722", label="Possibly")
-		assignment.used_specific_object = get_crom_object(parent['_sale_record'])
+		assignment.used_specific_object = get_crom_object(parent['_record'])
 		assignment.assigned_property = model.Type(ident=ident, label=label)
 		assignment.assigned = seller
 		return assignment
@@ -420,16 +420,14 @@ class AddAuctionHouses(Configurable):
 			#act.attributed_by = seller
 			
 			
-			# if 'sell_auth_q' in seller:
-			# 	seller_data = get_crom_object(seller)
-			# 	if '?' in  seller['sell_auth_q'] or '[?]' in seller['sell_auth_q']:
-			# 		parent = data['_record']
-			# 		ident="http://www.cidoc-crm.org/cidoc-crm/P28_custody_surrendered_by"
-			# 		label="P28 custody surrendered by"
-			# 		import pdb; pdb.set_trace()
-			# 		act.attributed_by = self.create_uncertainty_atribute(seller_data, agent_seq, label, ident, parent)
-			# 		import pdb; pdb.set_trace()
-			# 		print("")
+			if 'sell_auth_q' in seller_q:
+				
+				if '?' in  seller_q['sell_auth_q'] or '[?]' in seller_q['sell_auth_q']:
+					
+					ident="http://www.cidoc-crm.org/cidoc-crm/P14_carried_out_by"
+					label="carried out by"
+					act.attributed_by = self.create_uncertainty_atribute1(seller, agent_seq, label, ident, data)
+					
 		event_properties['auction_houses'][cno] += house_dicts
 		
 		return d1

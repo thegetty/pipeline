@@ -884,11 +884,18 @@ class AddAcquisitionOrBidding(ProvenanceBase):
 			# 		if content:
 			# 			p.referred_to_by = vocab.PriceStatement(ident='', content=content)
 
-			self.set_possible_attribute(paym, 'paid_amount', amnt_data)
-			for price in prices[1:]:
-				content = self._price_note(price)
-				if content:
-					paym.referred_to_by = vocab.PriceStatement(ident='', content=content)
+            self.set_possible_attribute(paym, 'paid_amount', amnt_data)
+
+            if hasattr(paym, 'paid_amount'):
+                price_statement = vocab.PriceStatement(ident='', content='price')
+                price_statement.identified_by = vocab.Name(ident='', content=f'{amnt_data.get("price", "")} {amnt_data.get("currency", "")}'.strip())
+
+                paym.paid_amount.referred_to_by = price_statement
+
+            for price in prices[1:]:
+                content = self._price_note(price)
+                if content:
+                    paym.referred_to_by = vocab.PriceStatement(ident='', content=content)
 
 		# elif ask_price:
 		# 	# for non-auction sales, the ask price is the amount paid for the acquisition

@@ -423,7 +423,6 @@ class PopulateSalesObject(Configurable, pipeline.linkedart.PopulateObject):
 		hmo = get_crom_object(data)
 		post_sales = data.get('post_sale', [])
 		prev_sales = data.get('prev_sale', [])
-		import pdb; pdb.set_trace()
 		prev_post_sales_records = [(post_sales, False), (prev_sales, True)]
 		for sales_data, rev in prev_post_sales_records:
 			for sale_record in sales_data:

@@ -416,7 +416,7 @@ class AddAuctionHouses(Configurable):
 			act.carried_out_by = seller
 			auction.part = act
 			d1['_organizers'].append(seller_q)
-			
+			import pdb; pdb.set_trace()
 			#act.attributed_by = seller
 			
 			

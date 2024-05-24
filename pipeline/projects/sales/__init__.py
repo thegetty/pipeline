@@ -448,6 +448,7 @@ def add_crom_price(data, parent, services, add_citations=False):
 		c.update(region_currencies[region])
 
 	verbatim = []
+	data['currency'] = data.get('currency', '').strip(' [?]')
 	for k in ('price', 'est_price', 'start_price', 'ask_price'):
 		# Each data record can only have one of these. We put the decimalized
 		# value back using the same key, but the verbatim strings are just
@@ -468,6 +469,9 @@ def add_crom_price(data, parent, services, add_citations=False):
 					
 					for price in pr_array:
 						currency = data['currency']
+						if '[or]' in currency:
+							continue
+
 						currency = c.get(currency.lower(), currency)
 						parts = [int(v) for v in price.split('-')]
 						if currency in decimalization:
@@ -491,14 +495,12 @@ def add_crom_price(data, parent, services, add_citations=False):
 							warnings.warn(f'No decimalization rules for currency {currency!r}')
 							verbatim.append(price)
 						# handle decimalization of £sd price, and preserve the original value in verbatim
-						data[k] = decimalized_value
+						if '[or]' not in data.get('price', ''):
+							data[k] = decimalized_value
 
-	data['currency'] = data.get('currency', '').strip(' [?]')
 	amnt = extract_monetary_amount(data, currency_mapping=c, add_citations=add_citations)
 	#import pdb; pdb.set_trace()
 	if amnt:
-		for v in verbatim:
-			amnt.identified_by = model.Name(ident='', content=v)
 		add_crom_data(data=data, what=amnt)
 
 	return data

@@ -454,6 +454,8 @@ def add_crom_price(data, parent, services, add_citations=False):
 		# associated with the MonetaryAmount object, regardless of the presence
 		# of any classification (estimated/starting/asking)
 		if k in data:
+			if '[?]' in data.get('price', '') or '[or]' in data.get('price', '') or '[?]' in data.get('currency', '') or '[or]' in data.get('currency', ''):
+				data['full'] = f'{data.get(k, "")} {data.get("currency", "")}'.strip()
 			price = data.get(k)
 			if '-' in price:
 				with suppress(ValueError, KeyError):
@@ -491,6 +493,7 @@ def add_crom_price(data, parent, services, add_citations=False):
 						# handle decimalization of £sd price, and preserve the original value in verbatim
 						data[k] = decimalized_value
 
+	data['currency'] = data.get('currency', '').strip(' [?]')
 	amnt = extract_monetary_amount(data, currency_mapping=c, add_citations=add_citations)
 	#import pdb; pdb.set_trace()
 	if amnt:

@@ -885,12 +885,11 @@ class AddAcquisitionOrBidding(ProvenanceBase):
 			# 			p.referred_to_by = vocab.PriceStatement(ident='', content=content)
 
             self.set_possible_attribute(paym, 'paid_amount', amnt_data)
+            if hasattr(paym, 'paid_amount') and 'full' in amnt_data:
+                price_statement = vocab.Name(ident='', content=amnt_data.get("full"))
+                price_statement.classified_as = model.Type(ident='http://vocab.getty.edu/aat/300055694', label='prices')
 
-            if hasattr(paym, 'paid_amount'):
-                price_statement = vocab.PriceStatement(ident='', content='price')
-                price_statement.identified_by = vocab.Name(ident='', content=f'{amnt_data.get("price", "")} {amnt_data.get("currency", "")}'.strip())
-
-                paym.paid_amount.referred_to_by = price_statement
+                paym.paid_amount.identified_by = price_statement
 
             for price in prices[1:]:
                 content = self._price_note(price)

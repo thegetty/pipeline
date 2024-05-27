@@ -173,6 +173,7 @@ class PopulateSalesObject(Configurable, pipeline.linkedart.PopulateObject):
 		record.features_are_also_found_on = row
 
 		transaction = data['parent_data']['transaction']
+		transaction = transaction.replace('[?]', '').rstrip()
 		tx_cl = transaction_classification.get(transaction)
 		if tx_cl:
 			label = tx_cl.get('label')
@@ -197,6 +198,7 @@ class PopulateSalesObject(Configurable, pipeline.linkedart.PopulateObject):
 			record.part_of = catalog
 		
 		if parent.get('transaction'):
+			import pdb; pdb.set_trace()
 			record.referred_to_by = vocab.PropertyStatusStatement(ident='', label='Transaction type for sales record', content=parent['transaction'])
 		record.referred_to_by = self.select_county(data)
 		record.about = hmo

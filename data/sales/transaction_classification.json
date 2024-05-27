@@ -3,15 +3,7 @@
         "url": "http://vocab.getty.edu/aat/300417642",
         "label": "Purchase"
     },
-    "Sold [?]": {
-        "url": "http://vocab.getty.edu/aat/300417642",
-        "label": "Purchase"
-    },
     "Vendu": {
-        "url": "http://vocab.getty.edu/aat/300417642",
-        "label": "Purchase"
-    },
-    "Vendu [?]": {
         "url": "http://vocab.getty.edu/aat/300417642",
         "label": "Purchase"
     },
@@ -19,15 +11,7 @@
         "url": "http://vocab.getty.edu/aat/300417642",
         "label": "Purchase"
     },
-    "Verkauft [?]": {
-        "url": "http://vocab.getty.edu/aat/300417642",
-        "label": "Purchase"
-    },
     "Non Vendu": {
-        "url": "http://vocab.getty.edu/aat/300438599",
-        "label": "Bought In"
-    },
-    "Non Vendu [?]": {
         "url": "http://vocab.getty.edu/aat/300438599",
         "label": "Bought In"
     },
@@ -39,15 +23,7 @@
         "url": "http://vocab.getty.edu/aat/300438599",
         "label": "Bought In"
     },
-    "Unverkauft [?]": {
-        "url": "http://vocab.getty.edu/aat/300438599",
-        "label": "Bought In"
-    },
     "Bought In": {
-        "url": "http://vocab.getty.edu/aat/300438599",
-        "label": "Bought In"
-    },
-    "Bought In [?]": {
         "url": "http://vocab.getty.edu/aat/300438599",
         "label": "Bought In"
     },
@@ -67,15 +43,7 @@
         "url": "http://vocab.getty.edu/aat/300438600",
         "label": "Withdrawn"
     },
-    "Retiré [?]": {
-        "url": "http://vocab.getty.edu/aat/300438600",
-        "label": "Withdrawn"
-    },
     "Withdrawn": {
-        "url": "http://vocab.getty.edu/aat/300438600",
-        "label": "Withdrawn"
-    },
-    "Withdrawn [?]": {
         "url": "http://vocab.getty.edu/aat/300438600",
         "label": "Withdrawn"
     },

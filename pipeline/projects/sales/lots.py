@@ -162,7 +162,6 @@ class AddAuctionOfLot(ProvenanceBase):
 		self.helper.copy_source_information(data['_object'], data)
 
 		auction_houses_data = event_properties['auction_houses']
-		
 		auction_locations = event_properties['auction_locations']
 		auction_data = data['auction_of_lot']
 		try:
@@ -237,6 +236,8 @@ class AddAuctionOfLot(ProvenanceBase):
 			lot.referred_to_by = cite
 
 		transaction = data.get('transaction')
+		import pdb; pdb.set_trace()
+		transaction = transaction.replace('[?]', '').rstrip()
 		SOLD = transaction_types['sold']
 		WITHDRAWN = transaction_types['withdrawn']
 		self.set_lot_objects(lot, cno, lno, sale_data['uri'], data, lot_object_key, sale_type, non_auctions, event_properties)
@@ -275,6 +276,7 @@ class AddAuctionOfLot(ProvenanceBase):
 			tx._label = tx_label
 			tx.identified_by = model.Name(ident='', content=tx_label)
 			tx_cl = transaction_classification.get(transaction)
+			import pdb; pdb.set_trace()
 			if tx_cl:
 				label = tx_cl.get('label')
 				url = tx_cl.get('url')
@@ -1081,6 +1083,7 @@ class AddAcquisitionOrBidding(ProvenanceBase):
 
 		sales_record = get_crom_object(data['_record'])
 		transaction = parent['transaction']
+		import pdb; pdb.set_trace()
 		transaction = transaction.replace('[?]', '').rstrip()
 		auction_data = parent['auction_of_lot']
 		lot_object_key = object_key(auction_data)

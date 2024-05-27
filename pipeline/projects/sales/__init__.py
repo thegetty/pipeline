@@ -448,6 +448,9 @@ def add_crom_price(data, parent, services, add_citations=False):
 		c.update(region_currencies[region])
 
 	verbatim = []
+
+	if '[?]' in data.get('price', '') or '[or]' in data.get('price', '') or '[?]' in data.get('currency', '') or '[or]' in data.get('currency', ''):
+		data['full'] = f'{data.get("price", "")} {data.get("currency", "")}'.strip()
 	data['currency'] = data.get('currency', '').strip(' [?]')
 	for k in ('price', 'est_price', 'start_price', 'ask_price'):
 		# Each data record can only have one of these. We put the decimalized
@@ -455,8 +458,6 @@ def add_crom_price(data, parent, services, add_citations=False):
 		# associated with the MonetaryAmount object, regardless of the presence
 		# of any classification (estimated/starting/asking)
 		if k in data:
-			if '[?]' in data.get('price', '') or '[or]' in data.get('price', '') or '[?]' in data.get('currency', '') or '[or]' in data.get('currency', ''):
-				data['full'] = f'{data.get(k, "")} {data.get("currency", "")}'.strip()
 			price = data.get(k)
 			if '-' in price:
 				with suppress(ValueError, KeyError):
@@ -472,7 +473,7 @@ def add_crom_price(data, parent, services, add_citations=False):
 						if '[or]' in currency:
 							continue
 
-						currency = c.get(currency.lower(), currency)
+						currency = c.get(currency.lower(), c.get(currency, currency))
 						parts = [int(v) for v in price.split('-')]
 						if currency in decimalization:
 							decimalization_data = decimalization[currency]
@@ -501,6 +502,8 @@ def add_crom_price(data, parent, services, add_citations=False):
 	amnt = extract_monetary_amount(data, currency_mapping=c, add_citations=add_citations)
 	#import pdb; pdb.set_trace()
 	if amnt:
+		if '[or]' in data.get('price', ''):
+			amnt.identified_by.clear()
 		add_crom_data(data=data, what=amnt)
 
 	return data

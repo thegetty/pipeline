@@ -304,7 +304,6 @@ class PopulateSalesObject(Configurable, pipeline.linkedart.PopulateObject):
 					if part_of:
 						tgn_instance = self.helper.static_instances.get_instance('Place', part_of)
 						traverse_static_place_instances(self, tgn_instance)
-						import pdb; pdb.set_trace()
 						place = make_la_place(
 							{
 								'name': loc,

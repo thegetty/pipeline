@@ -748,7 +748,7 @@ class AddAcquisitionOrBidding(ProvenanceBase):
 				acq.part = subacq
 			elif FOR.intersects(mod):
 				acq.transferred_title_from = seller
-				import pdb; pdb.set_trace()
+				
 				# if 'auth_nameq' in seller_data:
 				# 	if '[?]' in seller_data['auth_nameq']:
 				# 		ident="http://www.cidoc-crm.org/cidoc-crm/P23_transferred_title_from"

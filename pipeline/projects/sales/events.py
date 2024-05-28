@@ -246,13 +246,10 @@ class PopulateAuctionEvent(Configurable):
 				role='expert'
 			)
 			event_experts[cno].append(person.clone(minimal=True))
-			import pdb; pdb.set_trace()
-
 			data['_organizers'].append(add_crom_data(data={}, what=person))
 			role_id = '' # self.helper.make_proj_uri('AUCTION-EVENT', cno, 'Expert', seq_no)
 			role = vocab.Expert(ident=role_id, label=f'Role of Expert in the event {cno}')
 			role.carried_out_by = person
-			import pdb; pdb.set_trace()
 			auction.part = role
 		for seq_no, commissaire in enumerate(data.get('commissaire', [])):
 			self.helper.copy_source_information(commissaire, data),

@@ -634,9 +634,14 @@ class AddAcquisitionOrBidding(ProvenanceBase):
 			assignment = vocab.make_multitype_obj(*attrib_assignment_classes, label=f'{valuation_label} valuation of {cno} {lno} {date}')
 			assignment.assigned_property = 'dimension'
 			assignment.assigned = amnt
-		
-		for buyer_data in buyers:
+		for seq_no, buyer_data in enumerate(buyers):
 			buyer = get_crom_object(buyer_data)
+			if 'auth_nameq' in buyer_data:
+					if '[?]' in buyer_data['auth_nameq']:
+						parent = data['parent_data']
+						ident="http://www.cidoc-crm.org/cidoc-crm/P14_carried_out_by"
+						label="carried out by"
+						assignment.attributed_by = self.create_uncertainty_atribute(buyer, seq_no, label, ident, parent)
 			assignment.carried_out_by = buyer
 			# in case the seller isn't modeled elsewhere (if there was no sale, and this is just a Bidding valuation),
 			# we ensure that the seller is added to the list of entries to be serialized.

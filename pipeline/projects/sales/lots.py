@@ -746,6 +746,7 @@ class AddAcquisitionOrBidding(ProvenanceBase):
 				subacq.classified_as = vocab.instances['SellersAgent']
 				subacq.carried_out_by = seller
 				acq.part = subacq
+				#test added
 			elif FOR.intersects(mod):
 				acq.transferred_title_from = seller
 				import pdb; pdb.set_trace()

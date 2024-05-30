@@ -392,7 +392,6 @@ class SalesUtilityHelper(UtilityHelper):
 		ulan = None
 		with suppress(ValueError, TypeError):
 			ulan = int(a.get('ulan'))
-			import pdb; pdb.set_trace()
 		if 'auth_name' in a:
 			auth_name = a.get('auth_name', a.get('auth'))
 		elif 'sell_auth_name' in a:

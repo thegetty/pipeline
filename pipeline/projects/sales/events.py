@@ -260,7 +260,6 @@ class PopulateAuctionEvent(Configurable):
 				role='commissaire'
 			)
 			event_commissaires[cno].append(person.clone(minimal=True))
-			import pdb; pdb.set_trace()
 
 			data['_organizers'].append(add_crom_data(data={}, what=person))
 			
@@ -348,7 +347,6 @@ class AddAuctionHouses(Configurable):
 			return self.helper.static_instances.get_instance('LinguisticObject', 'db-sales_Sandi')
 			
 	def create_uncertainty_atribute1(self, seller, agent_seq, label, ident, parent):
-		import pdb; pdb.set_trace()
 		attrib_assignment_classes = [model.AttributeAssignment]
 		prod_event = model.Production(ident=seller.id, label=f'Production event for {seller._label}')
 		attribute_assignment_id =  self.helper.prepend_uri_key(prod_event.id, f'ASSIGNMENT,Seller-{agent_seq}')
@@ -413,9 +411,8 @@ class AddAuctionHouses(Configurable):
 			act.carried_out_by = seller
 			auction.part = act
 			d1['_organizers'].append(seller_q)
-			import pdb; pdb.set_trace()
 			#act.attributed_by = seller
-			
+
 			
 			if 'sell_auth_q' in seller_q:
 				

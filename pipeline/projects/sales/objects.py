@@ -93,7 +93,6 @@ class PopulateSalesObject(Configurable, pipeline.linkedart.PopulateObject):
 				place_data = self.helper.make_place(current, base_uri=base_uri)
 				place = get_crom_object(place_data)
 				if place:
-					import pdb; pdb.set_trace()
 					data['_locations'].append(place_data)
 					d.took_place_at = place
 

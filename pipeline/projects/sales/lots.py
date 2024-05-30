@@ -236,7 +236,6 @@ class AddAuctionOfLot(ProvenanceBase):
 			lot.referred_to_by = cite
 
 		transaction = data.get('transaction')
-		import pdb; pdb.set_trace()
 		transaction = transaction.replace('[?]', '').rstrip()
 		SOLD = transaction_types['sold']
 		WITHDRAWN = transaction_types['withdrawn']
@@ -269,6 +268,10 @@ class AddAuctionOfLot(ProvenanceBase):
 			tx = vocab.ProvenanceEntry(ident=tx_uri)
 			tx.used_specific_object = get_crom_object(data['_lot_object_set'])
 			tx_label = prov_entry_label(self.helper, sale_type, transaction, 'of', cno, lots, date)
+			if data.get('transaction'):
+				import pdb; pdb.set_trace()
+				tx.referred_to_by = vocab.PropertyStatusStatement(ident='', label='Transaction type for sales record', content=data['transaction'])
+		
 			tx.referred_to_by = get_crom_object(data['_sale_record'])
 			#provenance data country
 			tx.referred_to_by = self.select_county(data)
@@ -276,7 +279,6 @@ class AddAuctionOfLot(ProvenanceBase):
 			tx._label = tx_label
 			tx.identified_by = model.Name(ident='', content=tx_label)
 			tx_cl = transaction_classification.get(transaction)
-			import pdb; pdb.set_trace()
 			if tx_cl:
 				label = tx_cl.get('label')
 				url = tx_cl.get('url')
@@ -750,7 +752,6 @@ class AddAcquisitionOrBidding(ProvenanceBase):
 				acq.part = subacq
 			elif FOR.intersects(mod):
 				acq.transferred_title_from = seller
-				import pdb; pdb.set_trace()
 				if 'auth_nameq' in seller_data:
 					if '[?]' in seller_data['auth_nameq']:
 						ident="http://www.cidoc-crm.org/cidoc-crm/P23_transferred_title_from"

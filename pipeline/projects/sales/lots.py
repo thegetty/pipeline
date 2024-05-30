@@ -30,7 +30,7 @@ class AddAuctionOfLot(ProvenanceBase):
 	non_auctions = Service('non_auctions')
 	transaction_types = Service('transaction_types')
 	transaction_classification = Service('transaction_classification')
-	
+
 	def __init__(self, *args, **kwargs):
 		self.lot_cache = {}
 		super().__init__(*args, **kwargs)
@@ -74,7 +74,7 @@ class AddAuctionOfLot(ProvenanceBase):
 					bounds[1] = None
 			ts = timespan_from_outer_bounds(*bounds)
 			label = label_for_timespan_range(*bounds)
-			
+
 			# We re-set the label here because it might have changed based on the modifiers
 			# In that case, we have inherited an end date that is a guess, and so the label
 			# shouldn't include the end, but instead have the '[DATE] onwards' style label.
@@ -82,7 +82,7 @@ class AddAuctionOfLot(ProvenanceBase):
 				# Here we change the label to be a in the '[DATE] onwards' style.
 				label = label_for_timespan_range(bounds[0], None)
 				ts._label = label
-			
+
 			ts.identified_by = model.Name(ident='', content=label)
 			lot.timespan = ts
 
@@ -200,8 +200,8 @@ class AddAuctionOfLot(ProvenanceBase):
 		lot = self.helper.sale_for_sale_type(sale_type, lot_object_key)
 		sales_record = get_crom_object(data.get('_sale_record'))
 		lot.referred_to_by = sales_record
-		
-		data['lot_object_id'] = f'{cno} {lno} ({date})'
+
+		data['lot_object_id'] = f'{cno} Lot {lno} ({date})'
 
 		if 'link_to_pdf' in auction_data:
 			url = auction_data['link_to_pdf']
@@ -546,7 +546,7 @@ class AddAcquisitionOrBidding(ProvenanceBase):
 		ask_price = parent.get('ask_price')
 		if ask_price:
 			self.add_valuation(data, ask_price, lot_object_key, current_tx, valuation_type=vocab.AppraisingAssignment, valuation_label='Appraising')
-		
+
 	def copy_monetary_amnt(self, amnt_old):
 		
 		if amnt_old:
@@ -628,7 +628,6 @@ class AddAcquisitionOrBidding(ProvenanceBase):
 			assignment.assigned_property = 'dimension'
 			assignment.assigned = amnt
 		else:
-		##################
 			attrib_assignment_classes = [model.AttributeAssignment, valuation_type]
 			# lno = self.helper.shared_lot_number_from_lno(lno)
 			assignment = vocab.make_multitype_obj(*attrib_assignment_classes, label=f'{valuation_label} valuation of {cno} {lno} {date}')
@@ -1202,4 +1201,5 @@ class AddAcquisitionOrBidding(ProvenanceBase):
 				tx = get_crom_object(tx_data)
 				lot.starts_after_the_end_of = tx
 			warnings.warn(f'Cannot create acquisition data for unrecognized transaction type: {transaction!r}')
+
 			yield data

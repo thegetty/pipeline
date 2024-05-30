@@ -883,18 +883,17 @@ class AddAcquisitionOrBidding(ProvenanceBase):
 			# 		content = self._price_note(price)
 			# 		if content:
 			# 			p.referred_to_by = vocab.PriceStatement(ident='', content=content)
+			self.set_possible_attribute(paym, 'paid_amount', amnt_data)
+			if hasattr(paym, 'paid_amount') and 'full' in amnt_data:
+				price_statement = vocab.Name(ident='', content=amnt_data.get("full"))
+				price_statement.classified_as = model.Type(ident='http://vocab.getty.edu/aat/300456607', label='verbatim text/texts')
 
-            self.set_possible_attribute(paym, 'paid_amount', amnt_data)
-            if hasattr(paym, 'paid_amount') and 'full' in amnt_data:
-                price_statement = vocab.Name(ident='', content=amnt_data.get("full"))
-                price_statement.classified_as = model.Type(ident='http://vocab.getty.edu/aat/300055694', label='prices')
+				paym.paid_amount.identified_by = price_statement
 
-                paym.paid_amount.identified_by = price_statement
-
-            for price in prices[1:]:
-                content = self._price_note(price)
-                if content:
-                    paym.referred_to_by = vocab.PriceStatement(ident='', content=content)
+			for price in prices[1:]:
+				content = self._price_note(price)
+				if content:
+					paym.referred_to_by = vocab.PriceStatement(ident='', content=content)
 
 		# elif ask_price:
 		# 	# for non-auction sales, the ask price is the amount paid for the acquisition

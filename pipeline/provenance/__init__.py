@@ -19,7 +19,6 @@ from pipeline.util import \
 from pipeline.util.cleaners import parse_location_name
 from pipeline.linkedart import add_crom_data, get_crom_object, get_crom_objects
 
-
 class ProvenanceBase(Configurable):
 	'''
 	This is a base class providing common functionality in the handling of Provenance Entries.
@@ -37,7 +36,7 @@ class ProvenanceBase(Configurable):
 		self.helper.add_person(data, record=record, relative_id=relative_id, **kwargs)
 		return data
 
-	def related_procurement(self, hmo, tx_label_args, current_tx=None, current_ts=None, buyer=None, seller=None, previous=False, ident=None, make_label=None, sales_record=None):
+	def related_procurement(self, hmo, tx_label_args, current_tx=None, current_ts=None, buyer=None, seller=None, previous=False, ident=None, make_label=None, sales_record=None, owner_record=None, seq_no=0, parent=None):
 		'''
 		Returns a new `vocab.ProvenanceEntry` object (and related acquisition) that is temporally
 		related to the supplied procurement and associated data. The new procurement is for
@@ -57,11 +56,19 @@ class ProvenanceBase(Configurable):
 		  * rel: a string describing the relationship between this provenance entry and the object (e.g. "leading to Ownership of")
 		  * N trailing arguments used that are the contents of the `lot_object_key` tuple passed to `handle_prev_post_owner`
 		'''
-
+		
 		def _make_label_default(helper, sale_type, transaction, rel, *args):
-			strs = [str(x) for x in args]
-			return ', '.join(strs)
+			# import pdb; pdb.set_trace()
+			str = f'Provenance Entry {rel} object identified in book {args[2]}, page {args[3]}, row {args[4]}'
+			
+			#strs = [str(x) for x in args]
+			
+			# import pdb; pdb.set_trace()
+			#return ', '.join(strs)
+			return str
+		
 		if make_label is None:
+			
 			make_label = _make_label_default
 
 		tx = vocab.ProvenanceEntry(ident=ident)
@@ -70,7 +77,6 @@ class ProvenanceBase(Configurable):
 		tx_label = make_label(*tx_label_args)
 		tx._label = tx_label
 		tx.identified_by = model.Name(ident='', content=tx_label)
-
 		if current_tx:
 			if previous:
 				tx.ends_before_the_start_of = current_tx
@@ -91,10 +97,22 @@ class ProvenanceBase(Configurable):
 		if buyer:
 			pacq.transferred_title_to = buyer
 			pxfer.transferred_custody_to = buyer
+			
 		if seller:
 			pacq.transferred_title_from = seller
 			pxfer.transferred_custody_from = seller
+		
+		if owner_record and 'own_auth_q' in owner_record:
 
+			if '[?]' in owner_record['own_auth_q'] or '?' in owner_record['own_auth_q']:
+				owner = get_crom_object(owner_record)
+				ident="http://www.cidoc-crm.org/cidoc-crm/P29_custody_received_by"
+				label="P29 custody received by"
+				pxfer.attributed_by = self.create_uncertainty_atribute(owner, seq_no, label, ident, parent)
+				ident="http://www.cidoc-crm.org/cidoc-crm/P22_transferred_title_to"
+				label="transferred title to"
+				pacq.attributed_by = self.create_uncertainty_atribute(owner, seq_no, label, ident, parent)
+				
 		tx.part = pacq
 		tx.part = pxfer
 		if current_ts:
@@ -104,8 +122,10 @@ class ProvenanceBase(Configurable):
 				pacq.timespan = timespan_after(current_ts)
 		return tx, pacq
 
-	def handle_prev_post_owner(self, data, hmo, tx_data, sale_type, lot_object_key, owner_record, record_id, rev, ts=None, make_label=None):
+
+	def handle_prev_post_owner(self, data, hmo, tx_data, sale_type, lot_object_key, owner_record, record_id, rev, ts=None, make_label=None, rev_name="", seq_no=0):
 		current_tx = get_crom_object(tx_data)
+		parent = data['parent_data']
 		sales_record = get_crom_object(data.get('_record', data.get('_text_row')))
 		if rev:
 			rel = f'leading to Ownership of'
@@ -135,7 +155,6 @@ class ProvenanceBase(Configurable):
 				place = get_crom_object(place_data)
 			owner.residence = place
 			data['_owner_locations'].append(place_data)
-
 		if owner_record.get('own_auth_p'):
 			content = owner_record['own_auth_p']
 			owner.referred_to_by = vocab.Note(ident='', content=content)
@@ -147,8 +166,10 @@ class ProvenanceBase(Configurable):
 		# we run the rist of provenance entries being accidentally merged during URI
 		# reconciliation as part of the prev/post sale rewriting.
 		tx_uri = self.helper.prepend_uri_key(hmo.id, f'PROV-{record_id}')
+		
 		tx_label_args = tuple([self.helper, sale_type, 'Event', rel] + list(lot_object_key))
-		tx, _ = self.related_procurement(hmo, tx_label_args, current_tx, ts, buyer=owner, previous=rev, ident=tx_uri, make_label=make_label, sales_record=sales_record)
+		tx, _ = self.related_procurement(hmo, tx_label_args, current_tx, ts, buyer=owner, previous=rev, ident=tx_uri, make_label=make_label, sales_record=sales_record, owner_record=owner_record, seq_no=seq_no, parent=parent)
+		
 		if owner_record.get('own_auth_e'):
 			content = owner_record['own_auth_e']
 			tx.referred_to_by = vocab.Note(ident='', content=content)
@@ -163,6 +184,7 @@ class ProvenanceBase(Configurable):
 		data['_prov_entries'].append(add_crom_data(data=ptx_data, what=tx))
 
 	def set_possible_attribute(self, obj, prop, data):
+		
 		value = get_crom_object(data)
 		if not value:
 			return
@@ -198,6 +220,8 @@ class ProvenanceBase(Configurable):
 		person = get_crom_object(a)
 		if '_record' in data:
 			sales_record = get_crom_object(data['_record'])
+	#	elif '_records' in data:
+	#		sales_record = get_crom_object(data['_records'])
 		if mods:
 			GROUP_TYPES = set(attribution_group_types.values())
 			GROUP_MODS = {k for k, v in attribution_group_types.items() if v in GROUP_TYPES}
@@ -220,7 +244,14 @@ class ProvenanceBase(Configurable):
 				formation.influenced_by = person
 				group.formed_by = formation
 				# add referred_to_by, to groups that have mods 
-				group.referred_to_by = sales_record
+				if '_records' in data:
+					if len(sales_record) > 1:
+						group.referred_to_by = sales_record
+					else:
+						group.referred_to_by = sales_record[0]
+				elif '_record' in data:
+					group.referred_to_by = sales_record
+
 				# preceed goupil_object_id, if found, over pi_record_no
 				if a.get('goupil_object_id'):
 					id_number = a['goupil_object_id']
@@ -345,7 +376,11 @@ class ProvenanceBase(Configurable):
 			person = get_crom_object(a_data)
 
 			mods = a_data['modifiers']
-			verbatim_mod = a_data.get('attrib_mod_auth', '')
+			if 'attrib_mod_auth' in a_data and a_data.get('attrib_mod_auth', '') != '':
+				verbatim_mod = a_data.get('attrib_mod_auth', '')
+			elif 'attrib_mod' in a_data and a_data.get('attrib_mod', '') != '' :
+				verbatim_mod = a_data.get('attrib_mod', '')
+				
 			attrib_assignment_classes = [model.AttributeAssignment]
 			uncertain = all_uncertain
 			if uncertain or 'or' in mods:
@@ -418,6 +453,12 @@ class ProvenanceBase(Configurable):
 		# import pdb; pdb.set_trace()
 		if '_record' not in data:
 			sales_record = get_crom_objects(data.get('_records', []))
+			if len(sales_record) > 1:
+				with open("number_of_records.txt", "w") as file:
+					file.write("multiple records found for record: " + data['pi_record_no'] + "\n")
+
+					for s in sales_record:
+						file.write(s.identified_by[0].content + "\n")
 		else:
 			sales_record = get_crom_object(data['_record'])
 
@@ -567,14 +608,28 @@ class ProvenanceBase(Configurable):
 						subevent = model.Production(ident=subevent_id, label=f'Production sub-event for {artist_label}')
 						subevent.carried_out_by = person
 						prod_event.part = subevent
-						
+
+	def select_county(self, data):
+		if data['auction_of_lot']['catalog_number'][:2] == "B-":
+			return self.helper.static_instances.get_instance('LinguisticObject', 'db-sales_Belgium')
+		if data['auction_of_lot']['catalog_number'][:2] == "Br":
+			return self.helper.static_instances.get_instance('LinguisticObject', 'db-sales_British')
+		if data['auction_of_lot']['catalog_number'][:2] == "N-":
+			return self.helper.static_instances.get_instance('LinguisticObject', 'db-sales_Dutch')
+		if data['auction_of_lot']['catalog_number'][:2] == "F-":
+			return self.helper.static_instances.get_instance('LinguisticObject', 'db-sales_French')
+		if data['auction_of_lot']['catalog_number'][:2] == "D-2":
+			return self.helper.static_instances.get_instance('LinguisticObject', 'db-sales_German')
+		if data['auction_of_lot']['catalog_number'][:2] == "SC":
+			return self.helper.static_instances.get_instance('LinguisticObject', 'db-sales_Sandi')
+
 	def model_artists_with_modifers(self, data:dict, hmo, attribution_modifiers, attribution_group_types, attribution_group_names):
 		'''Add modeling for artists as people involved in the production of an object'''
 		# sales_record = get_crom_object(data['_record'])
 		# import pdb; pdb.set_trace()
 		data.setdefault('_organizations', [])
 		data.setdefault('_original_objects', [])
-
+		
 		try:
 			hmo_label = f'{hmo._label}'
 		except AttributeError:
@@ -595,7 +650,8 @@ class ProvenanceBase(Configurable):
 		event_uri = hmo.id + '-Production'
 		prod_event = model.Production(ident=event_uri, label=f'Production event for {hmo_label}')
 		hmo.produced_by = prod_event
-
+		if "help_sales" in data:
+			hmo.referred_to_by = self.select_county(data)
 		artists = data.get('_artists', [])
 		for a in artists:
 			# here it adds properties like label, modifiers, pi_record_no
@@ -690,6 +746,7 @@ class ProvenanceBase(Configurable):
 			g_label = f'Group containing the {label.lower()} of {object_key}'
 			g = vocab.UncertainMemberClosedGroup(ident=group_uri, label=g_label)
 			g.identified_by = model.Name(ident='', content=group_name)
+			
 			for person_data in people:
 				person = get_crom_object(person_data)
 				person.member_of = g

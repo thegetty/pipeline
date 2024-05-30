@@ -93,7 +93,6 @@ class PopulateSalesObject(Configurable, pipeline.linkedart.PopulateObject):
 				place_data = self.helper.make_place(current, base_uri=base_uri)
 				place = get_crom_object(place_data)
 				if place:
-					import pdb; pdb.set_trace()
 					data['_locations'].append(place_data)
 					d.took_place_at = place
 
@@ -423,7 +422,6 @@ class PopulateSalesObject(Configurable, pipeline.linkedart.PopulateObject):
 		hmo = get_crom_object(data)
 		post_sales = data.get('post_sale', [])
 		prev_sales = data.get('prev_sale', [])
-		
 		prev_post_sales_records = [(post_sales, False), (prev_sales, True)]
 		for sales_data, rev in prev_post_sales_records:
 			for sale_record in sales_data:

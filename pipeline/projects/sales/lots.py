@@ -487,13 +487,10 @@ class AddAcquisitionOrBidding(ProvenanceBase):
 		current_tx.part = xfer
 
 	def create_uncertainty_atribute(self, seller, agent_seq, label, ident, parent):
-		
 		attrib_assignment_classes = [model.AttributeAssignment]
 		prod_event = model.Production(ident=seller.id, label=f'Production event for {seller._label}')
 		attribute_assignment_id =  self.helper.prepend_uri_key(prod_event.id, f'ASSIGNMENT,Seller-{agent_seq}')
 		assignment = vocab.make_multitype_obj(*attrib_assignment_classes, ident=attribute_assignment_id, label=f'Possibly attributed to {seller._label}')
-		# assignment.carried_out_by = self.helper.static_instances.get_instance('Group', 'gpi')
-		assignment.referred_to_by = vocab.Note(ident='', content='attributed')
 		assignment.classified_as = model.Type(ident="http://vocab.getty.edu/aat/300435722", label="Possibly")
 		assignment.used_specific_object = get_crom_object(parent['_sale_record'])
 		assignment.assigned_property = model.Type(ident=ident, label=label)
@@ -637,9 +634,14 @@ class AddAcquisitionOrBidding(ProvenanceBase):
 			assignment = vocab.make_multitype_obj(*attrib_assignment_classes, label=f'{valuation_label} valuation of {cno} {lno} {date}')
 			assignment.assigned_property = 'dimension'
 			assignment.assigned = amnt
-		
-		for buyer_data in buyers:
+		for seq_no, buyer_data in enumerate(buyers):
 			buyer = get_crom_object(buyer_data)
+			if 'auth_nameq' in buyer_data:
+					if '[?]' in buyer_data['auth_nameq']:
+						parent = data['parent_data']
+						ident="http://www.cidoc-crm.org/cidoc-crm/P14_carried_out_by"
+						label="carried out by"
+						assignment.attributed_by = self.create_uncertainty_atribute(buyer, seq_no, label, ident, parent)
 			assignment.carried_out_by = buyer
 			# in case the seller isn't modeled elsewhere (if there was no sale, and this is just a Bidding valuation),
 			# we ensure that the seller is added to the list of entries to be serialized.
@@ -748,7 +750,6 @@ class AddAcquisitionOrBidding(ProvenanceBase):
 				acq.part = subacq
 			elif FOR.intersects(mod):
 				acq.transferred_title_from = seller
-				import pdb; pdb.set_trace()
 				if 'auth_nameq' in seller_data:
 					if '[?]' in seller_data['auth_nameq']:
 						ident="http://www.cidoc-crm.org/cidoc-crm/P23_transferred_title_from"

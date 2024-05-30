@@ -74,7 +74,7 @@ class AddAuctionCatalog(Configurable):
 			puid_id = self.helper.gpi_number_id(puid)
 			catalog.identified_by = puid_id
 			cdata['identifiers'] = [puid_id]
-		
+
 		data['_catalog'] = add_crom_data(data=cdata, what=catalog)
 		yield data
 
@@ -229,11 +229,11 @@ class PopulateAuctionCatalog(Configurable):
 			catalog.identified_by = self.lugt_number_id(lugt_no)
 		
 		for seller_verbatim in parent.get('title_pg_sell', {}).values():
-			catalog.referred_to_by = vocab.TitlePageText(ident='', content=seller_verbatim)	
-		
+			catalog.referred_to_by = vocab.TitlePageText(ident='', content=seller_verbatim)
+
 		if not cno:
 			warnings.warn(f'Setting empty identifier on {catalog.id}')
-		
+
 		catalog.identified_by = self.helper.gpi_number_id(cno, vocab.LocalNumber)
 
 		if not sno:
@@ -251,8 +251,8 @@ class PopulateAuctionCatalog(Configurable):
 class AddAuctionCatalogEntry(Configurable):
 	helper = Option(required=True)
 	non_auctions = Service('non_auctions')
-	def select_county(self, data):
-		
+
+	def select_county(self, data):		
 		if data['auction_of_lot']['catalog_number'][:2] == "B-":
 			return self.helper.static_instances.get_instance('LinguisticObject', 'db-sales_Belgium')
 		if data['auction_of_lot']['catalog_number'][:2] == "Br":
@@ -327,7 +327,7 @@ class AddPhysicalCatalogEntry(Configurable):
 			return self.helper.static_instances.get_instance('LinguisticObject', 'db-sales_German')
 		if data['catalog_number'][:2] == "SC":
 			return self.helper.static_instances.get_instance('LinguisticObject', 'db-sales_Sandi')
-		
+
 	def __call__(self, data:dict, non_auctions):
 		
 		'''Add modeling for the entry describing a physical auction catalog in the PSCP dataset.'''
@@ -339,7 +339,7 @@ class AddPhysicalCatalogEntry(Configurable):
 		keys = [v for v in [cno, owner, copy] if v]
 		record_uri = self.helper.make_proj_uri('ENTRY', 'PHYS-CAT', *keys)
 		content = data['star_csv_data']
-		
+
 		catalog_label = self.helper.physical_catalog_label(cno, sale_type, owner, copy)
 		row_name = f'STAR Entry for Physical {catalog_label}'
 		row = vocab.EntryTextForm(ident=record_uri, label=row_name)

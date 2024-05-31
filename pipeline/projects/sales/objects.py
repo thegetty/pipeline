@@ -93,7 +93,6 @@ class PopulateSalesObject(Configurable, pipeline.linkedart.PopulateObject):
 				place_data = self.helper.make_place(current, base_uri=base_uri)
 				place = get_crom_object(place_data)
 				if place:
-					import pdb; pdb.set_trace()
 					data['_locations'].append(place_data)
 					d.took_place_at = place
 
@@ -171,6 +170,11 @@ class PopulateSalesObject(Configurable, pipeline.linkedart.PopulateObject):
 		record = vocab.make_multitype_obj(catalog_type,vocab.EntryTextForm,ident=record_uri, label=f'Sale recorded in catalog: {lot_object_id} (record number {rec_num})')
 		record._validate_profile = False
 		record.features_are_also_found_on = row
+
+		if 'lot_notes' in parent['auction_of_lot']:
+			lot_notes = parent['auction_of_lot']['lot_notes']
+			note_uri = self.helper.prepend_uri_key(lot, 'NOTE')
+			record.referred_to_by = vocab.Note(ident=note_uri, content=lot_notes)
 
 		transaction = data['parent_data']['transaction']
 		tx_cl = transaction_classification.get(transaction)
@@ -423,7 +427,6 @@ class PopulateSalesObject(Configurable, pipeline.linkedart.PopulateObject):
 		hmo = get_crom_object(data)
 		post_sales = data.get('post_sale', [])
 		prev_sales = data.get('prev_sale', [])
-		
 		prev_post_sales_records = [(post_sales, False), (prev_sales, True)]
 		for sales_data, rev in prev_post_sales_records:
 			for sale_record in sales_data:

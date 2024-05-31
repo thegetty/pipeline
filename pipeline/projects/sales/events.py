@@ -266,6 +266,7 @@ class PopulateAuctionEvent(Configurable):
 			role_id = '' # self.helper.make_proj_uri('AUCTION-EVENT', cno, 'Commissaire', seq_no)
 			role = vocab.CommissairePriseur(ident=role_id, label=f'Role of Commissaire-priseur in the event {cno}')
 			role.carried_out_by = person
+			
 			auction.part = role
 
 		notes = data.get('notes')
@@ -277,6 +278,7 @@ class PopulateAuctionEvent(Configurable):
 			seller_description = vocab.SellerDescription(ident='', content=seller)
 			seller_description.referred_to_by = record
 			auction.referred_to_by = seller_description
+			
 
 		if 'links' in data:
 			event_record = get_crom_object(data['_record'])
@@ -343,6 +345,17 @@ class AddAuctionHouses(Configurable):
 			return self.helper.static_instances.get_instance('LinguisticObject', 'db-sales_German')
 		if data['catalog_number'][:2] == "SC":
 			return self.helper.static_instances.get_instance('LinguisticObject', 'db-sales_Sandi')
+			
+	def create_uncertainty_atribute1(self, seller, agent_seq, label, ident, parent):
+		attrib_assignment_classes = [model.AttributeAssignment]
+		prod_event = model.Production(ident=seller.id, label=f'Production event for {seller._label}')
+		attribute_assignment_id =  self.helper.prepend_uri_key(prod_event.id, f'ASSIGNMENT,Seller-{agent_seq}')
+		assignment = vocab.make_multitype_obj(*attrib_assignment_classes, ident=attribute_assignment_id, label=f'Possibly attributed to {seller._label}')
+		assignment.classified_as = model.Type(ident="http://vocab.getty.edu/aat/300435722", label="Possibly")
+		assignment.used_specific_object = get_crom_object(parent['_record'])
+		assignment.assigned_property = model.Type(ident=ident, label=label)
+		assignment.assigned = seller
+		return assignment
 		
 	def __call__(self, data:dict, event_properties):
 		'''
@@ -379,8 +392,36 @@ class AddAuctionHouses(Configurable):
 								house.referred_to_by = referred
 			house.referred_to_by = self.helper.static_instances.get_instance('LinguisticObject', 'db-sales_events')
 			house.referred_to_by = self.select_county(data)
+			d1['_organizers'].append(h1)		
+			
 			auction.part = act
-			d1['_organizers'].append(h1)
+			
+		sellers = data.get('seller', [])
+		all_sellers = []
+		for agent_seq, seller_q in enumerate(sellers):
+			
+			seller_dict = self.helper.copy_source_information(seller_q, data)
+			seller_dict_copy = seller_dict.copy()
+			seller_q['_catalog'] = catalog
+			self.helper.add_auction_house_data(seller_dict, sequence=agent_seq, event_record=event_record)
+			seller_dict_copy['uri'] = seller_dict['uri']
+			all_sellers.append(seller_dict_copy)
+			seller = get_crom_object(seller_q)
+			act = vocab.SellerActivity(ident='', label=f'Activity of {seller._label}')
+			act.carried_out_by = seller
+			auction.part = act
+			d1['_organizers'].append(seller_q)
+			#act.attributed_by = seller
+
+			
+			if 'sell_auth_q' in seller_q:
+				
+				if '?' in  seller_q['sell_auth_q'] or '[?]' in seller_q['sell_auth_q']:
+					
+					ident="http://www.cidoc-crm.org/cidoc-crm/P14_carried_out_by"
+					label="carried out by"
+					act.attributed_by = self.create_uncertainty_atribute1(seller, agent_seq, label, ident, data)
+					
 		event_properties['auction_houses'][cno] += house_dicts
 		
 		return d1

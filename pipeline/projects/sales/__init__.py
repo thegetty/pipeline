@@ -364,10 +364,14 @@ class SalesUtilityHelper(UtilityHelper):
 		ulan = None
 		with suppress(ValueError, TypeError):
 			ulan = int(data.get('ulan'))
-		auth_name = data.get('auth_name')
+		if 'auth_name' in data:
+			auth_name = data.get('auth_name')
+		elif 'sell_auth_name' in data :
+			auth_name = data.get('sell_auth_name')
+		
 		if ulan:
 			return ('HOUSE', 'ULAN', ulan)
-		elif auth_name and auth_name not in self.ignore_house_authnames:
+		elif auth_name not in self.ignore_house_authnames:
 			return ('PERSON', 'AUTH', auth_name)
 		else:
 			# not enough information to identify this house uniquely, so use the source location in the input file
@@ -388,7 +392,11 @@ class SalesUtilityHelper(UtilityHelper):
 		ulan = None
 		with suppress(ValueError, TypeError):
 			ulan = int(a.get('ulan'))
-		auth_name = a.get('auth_name', a.get('auth'))
+		if 'auth_name' in a:
+			auth_name = a.get('auth_name', a.get('auth'))
+		elif 'sell_auth_name' in a:
+			auth_name = a.get('sell_auth_name', a.get('auth'))
+
 		a['identifiers'] = []
 		if ulan:
 			a['ulan'] = ulan
@@ -448,6 +456,9 @@ def add_crom_price(data, parent, services, add_citations=False):
 		c.update(region_currencies[region])
 
 	verbatim = []
+
+	if '[?]' in data.get('price', '') or '[or]' in data.get('price', '') or '[?]' in data.get('currency', '') or '[or]' in data.get('currency', ''):
+		data['full'] = f'{data.get("price", "")} {data.get("currency", "")}'.strip()
 	for k in ('price', 'est_price', 'start_price', 'ask_price'):
 		# Each data record can only have one of these. We put the decimalized
 		# value back using the same key, but the verbatim strings are just
@@ -466,7 +477,10 @@ def add_crom_price(data, parent, services, add_citations=False):
 					
 					for price in pr_array:
 						currency = data['currency']
-						currency = c.get(currency.lower(), currency)
+						if '[or]' in currency:
+							continue
+
+						currency = c.get(currency.lower(), c.get(currency, currency))
 						parts = [int(v) for v in price.split('-')]
 						if currency in decimalization:
 							decimalization_data = decimalization[currency]
@@ -489,13 +503,14 @@ def add_crom_price(data, parent, services, add_citations=False):
 							warnings.warn(f'No decimalization rules for currency {currency!r}')
 							verbatim.append(price)
 						# handle decimalization of £sd price, and preserve the original value in verbatim
-						data[k] = decimalized_value
+						if '[or]' not in data.get('price', ''):
+							data[k] = decimalized_value
 
 	amnt = extract_monetary_amount(data, currency_mapping=c, add_citations=add_citations)
 	#import pdb; pdb.set_trace()
 	if amnt:
-		for v in verbatim:
-			amnt.identified_by = model.Name(ident='', content=v)
+		if '[or]' in data.get('price', ''):
+			amnt.identified_by.clear()
 		add_crom_data(data=data, what=amnt)
 
 	return data
@@ -527,6 +542,7 @@ class SalesPipeline(PipelineBase):
 		vocab.register_vocab_class('UncertainMemberClosedGroup', {'parent': model.Group, 'id': '300448855', 'label': 'Closed Group Representing an Uncertain Person'})
 		vocab.register_vocab_class('ConstructedTitle', {'parent': model.Name, 'id': '300417205', 'label': 'Constructed Title'})
 		vocab.register_vocab_class('AuctionHouseActivity', {'parent': model.Activity, 'id': '300417515', 'label': 'Auction House'})
+		vocab.register_vocab_class('SellerActivity', {'parent': model.Activity, 'id': '300445696', 'label': 'Seller'})
 
 		vocab.register_vocab_class('EntryNumber', {"parent": model.Identifier, "id":"300445023", "label": "Entry Number"})
 		vocab.register_vocab_class('PageNumber', {"parent": model.Identifier, "id":"300445022", "label": "Page Number"})

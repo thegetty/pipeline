@@ -244,7 +244,6 @@ class AddAuctionOfLot(ProvenanceBase):
 		event_dates = event_properties['auction_dates'].get(cno)
 		event_date_label = event_properties['auction_date_label'].get(cno)
 		auction, _, _ = self.helper.sale_event_for_catalog_number(cno, sale_type, date_label=event_date_label)
-		import pdb; pdb.set_trace()
 		if transaction not in WITHDRAWN:
 			lot.part_of = auction
 			uses_following_days_style = False
@@ -270,7 +269,6 @@ class AddAuctionOfLot(ProvenanceBase):
 			tx.used_specific_object = get_crom_object(data['_lot_object_set'])
 			tx_label = prov_entry_label(self.helper, sale_type, transaction, 'of', cno, lots, date)
 			if '[?]' in data.get('transaction'):
-				import pdb; pdb.set_trace()
 				tx.referred_to_by = vocab.PropertyStatusStatement(ident='', label='Transaction type for sales record', content=data['transaction'])
 		
 			tx.referred_to_by = get_crom_object(data['_sale_record'])
@@ -1085,7 +1083,6 @@ class AddAcquisitionOrBidding(ProvenanceBase):
 
 		sales_record = get_crom_object(data['_record'])
 		transaction = parent['transaction']
-		import pdb; pdb.set_trace()
 		transaction = transaction.replace('[?]', '').rstrip()
 		auction_data = parent['auction_of_lot']
 		lot_object_key = object_key(auction_data)

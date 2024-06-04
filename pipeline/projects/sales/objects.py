@@ -198,7 +198,6 @@ class PopulateSalesObject(Configurable, pipeline.linkedart.PopulateObject):
 			record.part_of = catalog
 		
 		if parent.get('transaction'):
-			import pdb; pdb.set_trace()
 			record.referred_to_by = vocab.PropertyStatusStatement(ident='', label='Transaction type for sales record', content=parent['transaction'])
 
 		record.referred_to_by = self.select_county(data)

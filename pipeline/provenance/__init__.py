@@ -745,6 +745,7 @@ class ProvenanceBase(Configurable):
 				}
 			g_label = f'Group containing the {label.lower()} of {object_key}'
 			g = vocab.UncertainMemberClosedGroup(ident=group_uri, label=g_label)
+			import pdb; pdb.set_trace()
 			g.identified_by = model.Name(ident='', content=group_name)
 			
 			for person_data in people:

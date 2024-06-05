@@ -1092,7 +1092,6 @@ class AddAcquisitionOrBidding(ProvenanceBase):
 		cno, lno, date = lot_object_key
 		tx_data = parent.get('_prov_entry_data')
 		shared_lot_number = self.helper.shared_lot_number_from_lno(lno)
-		import pdb; pdb.set_trace()
 		buyers = [
 			self.add_person(
 				self.helper.copy_source_information(p, parent),
@@ -1101,9 +1100,7 @@ class AddAcquisitionOrBidding(ProvenanceBase):
 				catalog_number=cno
 			) for i, p in enumerate(parent['buyer'])
 		]
-		import pdb; pdb.set_trace()
 		buyers, all_buyer_mods = self.model_people_as_possible_group(buyers, tx_data, data, object_key_string(cno, lno, date), 'Buyer')
-		import pdb; pdb.set_trace()
 
 		sellers = [
 			self.add_person(

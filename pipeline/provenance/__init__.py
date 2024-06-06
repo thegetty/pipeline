@@ -104,14 +104,14 @@ class ProvenanceBase(Configurable):
 		
 		if owner_record and 'own_auth_q' in owner_record:
 
-			if '[?]' in owner_record['own_auth_q'] or '?' in owner_record['own_auth_q']:
+			if '?' in owner_record['own_auth_q']:
 				owner = get_crom_object(owner_record)
 				ident="http://www.cidoc-crm.org/cidoc-crm/P29_custody_received_by"
 				label="P29 custody received by"
-				pxfer.attributed_by = self.create_uncertainty_atribute(owner, seq_no, label, ident, parent)
+				pxfer.attributed_by = self.helper.create_uncertainty_atribute(owner, seq_no, label, ident, parent)
 				ident="http://www.cidoc-crm.org/cidoc-crm/P22_transferred_title_to"
 				label="transferred title to"
-				pacq.attributed_by = self.create_uncertainty_atribute(owner, seq_no, label, ident, parent)
+				pacq.attributed_by = self.helper.create_uncertainty_atribute(owner, seq_no, label, ident, parent)
 				
 		tx.part = pacq
 		tx.part = pxfer
@@ -649,6 +649,19 @@ class ProvenanceBase(Configurable):
 		# the URIs for the production events (of which there should only be one per object)
 		event_uri = hmo.id + '-Production'
 		prod_event = model.Production(ident=event_uri, label=f'Production event for {hmo_label}')
+		if 'present_location' in data:
+			for present_location  in data['present_location']:
+				if '?' in present_location['accq']:
+					for identified in hmo.identified_by:
+						if present_location['acc'] in identified.content:
+							identified.classified_as = model.Type(ident="http://vocab.getty.edu/aat/300435722", label="Possibly")
+				if '?' in present_location['insq']:
+					parent = data['parent_data']
+					for seq_no, name in enumerate(hmo.current_owner):
+						ident="http://www.cidoc-crm.org/cidoc-crm/P52_has_current_owner"
+						label="P52 has current owner"
+						hmo.attributed_by = self.helper.create_uncertainty_atribute(name, seq_no, label, ident, parent)
+
 		hmo.produced_by = prod_event
 		if "help_sales" in data:
 			hmo.referred_to_by = self.select_county(data)

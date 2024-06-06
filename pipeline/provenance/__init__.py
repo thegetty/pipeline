@@ -654,7 +654,9 @@ class ProvenanceBase(Configurable):
 				if '?' in present_location['accq']:
 					for identified in hmo.identified_by:
 						if present_location['acc'] in identified.content:
-							identified.classified_as = model.Type(ident="http://vocab.getty.edu/aat/300435722", label="Possibly")
+							
+							for assign in identified.assigned_by:
+								assign.classified_as = model.Type(ident="http://vocab.getty.edu/aat/300435722", label="Possibly")
 				if '?' in present_location['insq']:
 					parent = data['parent_data']
 					for seq_no, name in enumerate(hmo.current_owner):

@@ -32,6 +32,8 @@ class PopulateSalesObject(Configurable, pipeline.linkedart.PopulateObject):
 	title_modifiers = Service('title_modifiers')
 	event_properties = Service('event_properties')
 	transaction_classification = Service('transaction_classification')
+	attribution_group_types = Service('attribution_group_types')
+	attribution_group_names = Service('attribution_group_names')
 	
 	def select_county(self, data):
 		if data['parent_data']['auction_of_lot']['catalog_number'][:2] == "B-":
@@ -246,8 +248,54 @@ class PopulateSalesObject(Configurable, pipeline.linkedart.PopulateObject):
 			return None
 		return res_act
 
+	def model_person_or_group(self, data:dict, a:dict, attribution_group_types, attribution_group_names, role='artist', seq_no=0, sales_record=None):
+		if get_crom_object(a):
+			return a
 
-	def _populate_object_present_location(self, data:dict, now_key, destruction_types_map):
+		mods = a['modifiers']
+			
+		artist = self.helper.add_person(a, record=sales_record, relative_id=f'artist-{seq_no+1}', role=role)
+		artist.referred_to_by = sales_record
+		artist.referred_to_by = self.select_county(data)
+		artist_label = a['label']
+		person = get_crom_object(a)
+		
+		if mods:
+			GROUP_TYPES = set(attribution_group_types.values())
+			GROUP_MODS = {k for k, v in attribution_group_types.items() if v in GROUP_TYPES}
+
+			if mods.intersects(GROUP_MODS):
+				mod_name = list(GROUP_MODS & mods)[0] # TODO: use all matching types?
+				clsname = attribution_group_types[mod_name]
+				cls = getattr(vocab, clsname)
+				group_name = attribution_group_names[clsname]
+				group_label = f'{group_name} {artist_label}'
+				# The group URI is just the person URI with a suffix. In any case
+				# where the person is merged, the group should be merged as well.
+				# For example, when if "RUBENS" is merged, "School of RUBENS" should
+				# also be merged.
+				group_id = a['uri'] + f'-{clsname}'
+				group = cls(ident=group_id, label=group_label)
+				group.referred_to_by = sales_record
+				group.referred_to_by = self.select_county(data)
+				group.identified_by = model.Name(ident='', content=group_label)
+				formation = model.Formation(ident='', label=f'Formation of {group_label}')
+				formation.influenced_by = person
+				group.formed_by = formation
+				pi_record_no = data['pi_record_no']
+				group_uri_key = ('GROUP', 'PI', pi_record_no, f'{role}Group')
+				group_data = {
+					'uri': group_id,
+					'uri_keys': group_uri_key,
+					'modifiers': mods,
+				}
+				add_crom_data(group_data, group)
+				data['_organizations'].append(group_data)
+				return group_data
+
+		add_crom_data(a, artist)
+		return a
+	def _populate_object_present_location(self, data:dict, now_key, destruction_types_map, attribution_group_types, attribution_group_names):
 		hmo = get_crom_object(data)
 		sales_record = get_crom_object(data['_record'])
 		locations = data.get('present_location', [])
@@ -355,7 +403,10 @@ class PopulateSalesObject(Configurable, pipeline.linkedart.PopulateObject):
 				if owner_data:
 					make_la_org = pipeline.linkedart.MakeLinkedArtOrganization()
 					owner_data = make_la_org(owner_data)
-					owner = get_crom_object(owner_data)
+					data_a = self.model_person_or_group(data, owner_data, attribution_group_types, attribution_group_names, seq_no= 0, role='Artist', sales_record=sales_record)
+					#data_a['nationality']=owner_place
+					data_a['name_org']=data_a['label']
+					owner = get_crom_object(data_a)
 					hmo.current_owner = owner
 					# import pdb; pdb.set_trace()
 					res_act = self.new_residence_activity(owner_place, owner, sales_record)
@@ -394,10 +445,9 @@ class PopulateSalesObject(Configurable, pipeline.linkedart.PopulateObject):
 				# 	assignment.carried_out_by = owner
 				# 	acc_number.assigned_by = assignment
 
-				# data['_locations'].append(place_data)
-				# data['_organizations'].append(owner_data)
-				data['_final_org'].append(owner_data)
-				
+				# data['_locations'].append(place_data)			
+				data['_organizations'].append(data_a)
+				data['_final_org'].append(data_a)
 
 			else:
 				pass # there is no present location place string
@@ -508,7 +558,7 @@ class PopulateSalesObject(Configurable, pipeline.linkedart.PopulateObject):
 		return handled
 
 
-	def __call__(self, data:dict, post_sale_map, unique_catalogs, subject_genre, destruction_types_map, materials_map, non_auctions, title_modifiers, event_properties, transaction_classification):
+	def __call__(self, data:dict, post_sale_map, unique_catalogs, subject_genre, destruction_types_map, materials_map, non_auctions, title_modifiers, event_properties, transaction_classification, attribution_group_types, attribution_group_names):
 		'''Add modeling for an object described by a sales record'''
 		parent = data['parent_data']
 		
@@ -536,12 +586,13 @@ class PopulateSalesObject(Configurable, pipeline.linkedart.PopulateObject):
 		data['_locations'] = []
 		data['_final_org'] = []
 		data['_events'] = []
+		data['_organizations'] = []
 		
 		record = self._populate_object_catalog_record(data, parent, lot, cno, parent['pi_record_no'], transaction_classification,non_auctions)
 		self._populate_object_destruction(data, parent, destruction_types_map)
 		self.populate_object_statements(data)
 		self._populate_object_materials(data, materials_map)
-		self._populate_object_present_location(data, now_key, destruction_types_map)
+		self._populate_object_present_location(data, now_key, destruction_types_map, attribution_group_types, attribution_group_names)
 		self._populate_object_notes(data, parent, unique_catalogs)
 		self._populate_object_prev_post_sales(data, now_key, post_sale_map)
 

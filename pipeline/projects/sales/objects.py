@@ -864,6 +864,7 @@ class AddArtists(ProvenanceBase):
 		non_artist_all_mods = {m.lower().strip() for a in non_artist_assertions for m in a.get('attrib_mod_auth', '').split(';')} - {''}
 		non_artist_group_flag = len(non_artist_assertions) and all(['or' in a['modifiers'] for a in non_artist_assertions])
 		non_artist_group = None
+		import pdb; pdb.set_trace()
 		if non_artist_group_flag:
 			non_artist_mod = list(NON_ARTIST_MODS.intersection(non_artist_all_mods))[0]
 			# The artist group URI is just the production event URI with a suffix. When URIs are
@@ -897,7 +898,6 @@ class AddArtists(ProvenanceBase):
 				else:
 					uncertain = True
 					attrib_assignment_classes.append(vocab.PossibleAssignment)
-			
 			verbatim_mods = a_data.get('attrib_mod', '')
 			if STYLE_OF.intersects(mods):
 				attribute_assignment_id = self.helper.prepend_uri_key(prod_event.id, f'ASSIGNMENT,NonArtist-{seq_no}')
@@ -932,14 +932,17 @@ class AddArtists(ProvenanceBase):
 				original_subevent = model.Production(ident=original_subevent_id, label=f'Production sub-event for {artist_label}')
 				original_event.part = original_subevent
 				original_subevent.carried_out_by = person
-				
-				if uncertain:
+				if uncertain or 'copy after' in COPY_AFTER.intersects(mods):
+					
+					attribute_assignment_id = self.helper.prepend_uri_key(prod_event.id, f'ASSIGNMENT,NonArtist-{seq_no}')
 					assignment = vocab.make_multitype_obj(*attrib_assignment_classes, ident=attribute_assignment_id, label=f'Possibly influenced by {person._label}')
 					assignment.used_specific_object = sales_record
 					prod_event.attributed_by = assignment
 					assignment.assigned_property = 'influenced_by'
 					assignment.assigned = original_hmo
 					assignment.referred_to_by = vocab.Note(ident='', content=verbatim_mods)
+					#assignment.referred_to_by[0].classified_as = vocab.instances["brief text"]
+					prod_event.influenced_by = original_hmo
 				else:
 					prod_event.influenced_by = original_hmo
 				data['_original_objects'].append(add_crom_data(data={'uri': original_id}, what=original_hmo))

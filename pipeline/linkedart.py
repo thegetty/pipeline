@@ -838,31 +838,33 @@ class PopulateObject:
 			hmo.referred_to_by = formatstmt
 		
 		materials = data.get('materials')
-		q_add_comment = ". It has furthermore identified as being most probably the same artwork that was present in the following sales: "
-		note_c = 'This artwork has been positively identified by the GVP editorial team as being the same artwork that was present in the following sales: '
+		q_add_comment = "This record represents the physical object that we believe to have been used in "
+		#note_c = ''
 		if 'post_sale' in data or 'prev_sale' in data:
-			note_c = note_c + "Event leading to Ownership of"+ data['parent_data']['lot_object_id']
+			
 			if 'post_sale' in data:
 				for post in data['post_sale']:
-					note_c = note_c + q_add_comment
 					if 'q' in post:
 
 						if '?' in post['q']:
-							import pdb; pdb.set_trace()
-							note_c += f"Event leading to Ownership of {post['cat']} {post['lot']} ({post['year']}-{post['mo']} {post['day']})"
-							
+							try:
+								note_c += f"Sales Event {post['cat']} {post['lot']} ({post['year']}-{post['mo']} {post['day']}), "
+							except:
+								note_c = q_add_comment
+								note_c += f"Sales Event {post['cat']} {post['lot']} ({post['year']}-{post['mo']} {post['day']}), "
 			if 'prev_sale' in data:
 				for prev in data['prev_sale']:
-					if q_add_comment not in note_c:
-						note_c = note_c + q_add_comment
 					if 'ques' in prev:
 						if '?' in prev['ques']:
-							import pdb; pdb.set_trace()
-							note_c += f"Event leading to Ownership of {prev['cat']} {prev['lot']} ({prev['year']}-{prev['mo']} {prev['day']})"
-
-			note_c = note_c + '. For the latter, if the identity of this object is in doubt, please follow the relevant links to the original sales records to consult the primary information.'
-			note = vocab.Note(ident='', content=note_c)
-			hmo.referred_to_by = note
+							try:
+								note_c += f"Sales Event {prev['cat']} {prev['lot']} ({prev['year']}-{prev['mo']} {prev['day']}), "
+							except:
+								note_c = q_add_comment
+								note_c += f"Sales Event {prev['cat']} {prev['lot']} ({prev['year']}-{prev['mo']} {prev['day']}), "
+			if q_add_comment in note_c:
+				note_c = note_c + 'but the attribution of which is slightly uncertain.'
+				note = vocab.Note(ident='', content=note_c)
+				hmo.referred_to_by = note
 
 		if materials:
 			matstmt = vocab.MaterialStatement(ident='', content=materials)

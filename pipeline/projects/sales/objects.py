@@ -407,16 +407,23 @@ class PopulateSalesObject(Configurable, pipeline.linkedart.PopulateObject):
 		notes = data.get('hand_note', [])
 		for note in notes:
 			hand_note_content = note['hand_note']
-			owner = note.get('hand_note_so')
+			owner = note.get('hand_note_so').split(' ')
 			cno = parent['auction_of_lot']['catalog_number']
-			catalog_uri = self.helper.make_proj_uri('CATALOG', cno, owner, None)
-			catalogs = unique_catalogs.get(catalog_uri)
-			note = vocab.Note(ident='', content=hand_note_content)
-			hmo.referred_to_by = note
 			
-
-			if catalogs and len(catalogs) == 1:
+			note = vocab.Note(ident='', content=hand_note_content)
+			if owner[0] in self.helper.services['location_codes']:
+				if len(owner) > 1:
+					copy_no = owner[1]
+					catalog_uri = self.helper.make_proj_uri('PHYS-CAT', cno, owner[0], copy_no)
+				else:
+					catalog_uri = self.helper.make_proj_uri('PHYS-CAT', cno, owner[0])
+					# tag:getty.edu,2019:digital:pipeline:REPLACE-WITH-UUID:sales#PHYS-CAT,B-318,MB,II
+					# tag:getty.edu,2019:digital:pipeline:REPLACE-WITH-UUID:sales#PHYS-CAT,B-318,MB,II
+				# catalogs = unique_catalogs.get(catalog_uri)
+				#if catalogs and len(catalogs) == 1:
 				note.carried_by = vocab.AuctionCatalog(ident=catalog_uri, label=f'Sale Catalog {cno}, owned by “{owner}”')
+					
+			hmo.referred_to_by = note	
 		inscription = data.get('inscription')
 		if inscription:
 			

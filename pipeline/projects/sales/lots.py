@@ -497,6 +497,21 @@ class AddAcquisitionOrBidding(ProvenanceBase):
 		assignment.assigned = seller
 		return assignment
 
+	def create_source_attribute_assignment(self, assigned_object, sequence_num, property_assigned_label, property_assigned_id, source, assign):
+		attrib_assignment_classes = [model.AttributeAssignment]
+	
+		prod_id = self.helper.make_shared_uri('Production', 'Assignment', 'Source', assigned_object.id )
+		prod_event = model.Production(ident=prod_id, label=f'Production event for {assigned_object._label}')
+		attribute_assignment_id =  self.helper.prepend_uri_key(prod_event.id, f'ASSIGNMENT,Source-{assigned_object.id}-{sequence_num}-{source.id}')
+		assignment = vocab.make_multitype_obj(*attrib_assignment_classes, ident=attribute_assignment_id, label=f'Source attributed to {assigned_object._label}')
+		assignment.classified_as = model.Type(ident="http://vocab.getty.edu/aat/300456597", label="warrant")
+		assignment.used_specific_object = source
+		assignment.assigned_property = model.Type(ident=property_assigned_id, label=property_assigned_label)
+		if assign:
+			assignment.assigned = assigned_object
+		return assignment
+		
+
 	def copy_object_with_new_id(self, value):
 		# Some objects had trouble in the JSON-LD merging that occurs during post-processing,
 		# resulting in duplication. Adding an id to the object lets merging work correctly, and the
@@ -552,7 +567,7 @@ class AddAcquisitionOrBidding(ProvenanceBase):
 		if amnt_old:
 			identifier = "urn:uuid:%s" % uuid.uuid4()
 
-			if 'label' in amnt_old.__dict__:
+			if '_label' in amnt_old.__dict__:
 				label = amnt_old._label
 				amnt_new = model.MonetaryAmount(identifier=identifier, label=label)
 			else:
@@ -566,7 +581,7 @@ class AddAcquisitionOrBidding(ProvenanceBase):
 				for j in range(0, len(amnt_old.classified_as)):
 					old_type = amnt_old.classified_as[j]
 					cl_type = model.Type()
-					cl_type.id = 'http://vocab.getty.edu/aat/300417245'
+					cl_type.id = old_type.id 
 					cl_type._label = old_type._label
 					amnt_new.classified_as.append(cl_type)
 
@@ -586,19 +601,6 @@ class AddAcquisitionOrBidding(ProvenanceBase):
 					note_old = amnt_old.referred_to_by[k]
 					note_content = note_old.content
 					note_new = vocab.Note(ident='', content=note_content)
-					# note_new.classified_as = []
-					# for m in range(0, len(note_old.classified_as)):
-					# 	m_type_old = note_old.classified_as[m]
-					# 	m_type = model.Type()
-					# 	m_type.id='http://vocab.getty.edu/aat/300027200'
-					# 	m_label = m_type_old._label
-					# 	m_type._label = m_label
-					# 	m_type.classified_as = []
-					# 	for n in range(0, len(amnt_old.referred_to_by[k].classified_as[m].classified_as)):
-					# 		n_type = model.Type()
-					# 		n_type.id = 'http://vocab.getty.edu/aat/300418049'
-					# 		m_type.classified_as.append(n_type)
-						# note_new.classified_as.append(m_type)
 					amnt_new.referred_to_by.append(note_new)
 				
 
@@ -633,6 +635,23 @@ class AddAcquisitionOrBidding(ProvenanceBase):
 			assignment = vocab.make_multitype_obj(*attrib_assignment_classes, label=f'{valuation_label} valuation of {cno} {lno} {date}')
 			assignment.assigned_property = 'dimension'
 			assignment.assigned = amnt
+			if 'source' in amnt_data and amnt_data['source']:
+				amnt_source_parts = amnt_data['source'].replace('Handwritten Annotation:', '').split(' ')
+				if amnt_source_parts[0] in self.helper.services['location_codes']:
+					amnt_source = amnt_source_parts[0]
+					if len(amnt_source_parts) > 1:
+						copy_no = amnt_source_parts[1]
+						catalog_uri = self.helper.make_proj_uri('PHYS-CAT', cno, amnt_source, copy_no)
+					else:
+						catalog_uri = self.helper.make_proj_uri('PHYS-CAT', cno, amnt_source)
+
+				catalog_uri = self.helper.make_proj_uri('PHYS-CAT', cno, amnt_source)
+				catalogue = vocab.AuctionCatalog(ident=catalog_uri, label=f'Sale Catalog {cno}, owned by “{amnt_source}”')
+				property_assigned_label = "P90_has_value"
+				property_assigned_id = "http://www.cidoc-crm.org/cidoc-crm/P90_has_value"
+				assignment.attributed_by = self.create_source_attribute_assignment(amnt, 0, property_assigned_label, property_assigned_id, catalogue, False)
+				
+
 		for seq_no, buyer_data in enumerate(buyers):
 			buyer = get_crom_object(buyer_data)
 			if 'auth_nameq' in buyer_data:
@@ -869,14 +888,32 @@ class AddAcquisitionOrBidding(ProvenanceBase):
 						paym.attributed_by = self.create_uncertainty_atribute(buyer, seq_no, label, ident, parent)
 				payments_used.add('buy')
 
-		if prices:
+		for i in range(len(prices)):
 			# We clone the price and give it a new id so that it when serialized
 			# it will appear distinct from the use of the same payment amount
 			# in other branches of the mode. For example, here it is used as
 			# a Payment.paid_amount, but elsewhere it may be used to set the
 			# "Hammer price" valuation on the lot set.
-			amnt_data = prices[0]
+			amnt_data = prices[i]
 			amnt = self.copy_object_with_new_id(get_crom_object(amnt_data))
+			amnt_source = amnt_data['source'].replace('Handwritten Annotation:', '').strip()
+			if amnt_source:
+				#create the id of the physical object of the catalogue
+				amnt_source_parts = amnt_source.replace('Handwritten Annotation:', '').split(' ')
+				if amnt_source_parts[0] in self.helper.services['location_codes']:
+					amnt_source = amnt_source_parts[0]
+					if len(amnt_source_parts) > 1:
+						copy_no = amnt_source_parts[1]
+						catalog_uri = self.helper.make_proj_uri('PHYS-CAT', cno, amnt_source, copy_no)
+					else:
+						catalog_uri = self.helper.make_proj_uri('PHYS-CAT', cno, amnt_source)
+
+					catalogue = vocab.AuctionCatalog(ident=catalog_uri, label=f'Sale Catalog {cno}, owned by “{amnt_source}”')
+					property_assigned_label = "P90_has_value"
+					property_assigned_id = "http://www.cidoc-crm.org/cidoc-crm/P90_has_value"
+					amnt.attributed_by = self.create_source_attribute_assignment(amnt, 0, property_assigned_label, property_assigned_id, catalogue, False)
+					
+
 			add_crom_data(amnt_data, amnt)
 			# for p in payments.values():
 			# 	self.set_possible_attribute(p, 'paid_amount', amnt_data)
@@ -891,10 +928,10 @@ class AddAcquisitionOrBidding(ProvenanceBase):
 
 				paym.paid_amount.identified_by = price_statement
 
-			for price in prices[1:]:
-				content = self._price_note(price)
-				if content:
-					paym.referred_to_by = vocab.PriceStatement(ident='', content=content)
+		for price in prices[1:]:
+			content = self._price_note(price)
+			if content:
+				paym.referred_to_by = vocab.PriceStatement(ident='', content=content)
 
 		# elif ask_price:
 		# 	# for non-auction sales, the ask price is the amount paid for the acquisition
@@ -1075,6 +1112,19 @@ class AddAcquisitionOrBidding(ProvenanceBase):
 				act.referred_to_by = note
 #				act.referred_to_by = self.select_county(data)
 
+	def create_source_attribute_assignment_name(self, assigned_object, sequence_num, property_assigned_label, property_assigned_id, source):
+		attrib_assignment_classes = [model.AttributeAssignment]
+		prod_id = self.helper.make_shared_uri('Production', 'Assignment', 'Source', assigned_object.id )
+		# original_event = model.Production(ident=original_event_id, label=f'Production event for {original_label}')
+		prod_event = model.Production(ident=prod_id, label=f'Production event for {assigned_object._label}')
+		attribute_assignment_id =  self.helper.prepend_uri_key(prod_event.id, f'ASSIGNMENT,Source, Name-{assigned_object.id}-{sequence_num}-{source.id}')
+		assignment = vocab.make_multitype_obj(*attrib_assignment_classes, ident=attribute_assignment_id, label=f'Source attributed to the Name of {assigned_object._label}')
+		assignment.classified_as = model.Type(ident="http://vocab.getty.edu/aat/300456597", label="warrant")
+		assignment.used_specific_object = source
+		assignment.assigned_property = model.Type(ident=property_assigned_id, label=property_assigned_label)
+		assignment.assigned = assigned_object
+		return assignment
+
 	def __call__(self, data:dict, non_auctions, event_properties, buy_sell_modifiers, transaction_types):
 		'''Determine if this record has an acquisition or bidding, and add appropriate modeling'''
 		parent = data['parent_data']
@@ -1093,6 +1143,8 @@ class AddAcquisitionOrBidding(ProvenanceBase):
 		cno, lno, date = lot_object_key
 		tx_data = parent.get('_prov_entry_data')
 		shared_lot_number = self.helper.shared_lot_number_from_lno(lno)
+
+		buyer_non_auth_names = [s['name'] for s in parent['buyer']]
 		buyers = [
 			self.add_person(
 				self.helper.copy_source_information(p, parent),
@@ -1101,8 +1153,35 @@ class AddAcquisitionOrBidding(ProvenanceBase):
 				catalog_number=cno
 			) for i, p in enumerate(parent['buyer'])
 		]
+
+		
+		# Add source data assignment on buyer name 
+		for i in range(len(buyers)): 
+			if 'name_so' in buyers[i] and buyers[i]['name_so']:
+				name_source_parts = buyers[i]['name_so'].replace('Handwritten Annotation:', '').split(' ')
+				if name_source_parts[0] in self.helper.services['location_codes']:
+					name_source = name_source_parts[0]
+					if len(name_source_parts) > 1:
+						copy_no = name_source_parts[1]
+						catalog_uri = self.helper.make_proj_uri('PHYS-CAT', cno, name_source, copy_no)
+					else:
+						catalog_uri = self.helper.make_proj_uri('PHYS-CAT', cno, name_source)
+
+					catalogue = vocab.AuctionCatalog(ident=catalog_uri, label=f'Sale Catalog {cno}, owned by “{name_source}”')
+					property_assigned_label = "P1i identifies"
+					property_assigned_id = "http://www.cidoc-crm.org/cidoc-crm/P1i_identifies"
+					buyer_person = buyers[i]['_LOD_OBJECT']
+					buyer_identifiers = buyer_person.identified_by
+					for j in range(len(buyer_identifiers)):
+						if buyer_identifiers[j].content == buyer_non_auth_names[i] and not isinstance(buyer_identifiers[j], vocab.PrimaryName):
+							name_attribution = self.create_source_attribute_assignment_name(buyer_person, i, property_assigned_label, property_assigned_id, catalogue)
+							buyers[i]['_LOD_OBJECT'].identified_by[j].attributed_by = name_attribution
+
 		buyers, all_buyer_mods = self.model_people_as_possible_group(buyers, tx_data, data, object_key_string(cno, lno, date), 'Buyer')
 
+
+
+		seller_non_auth_names = [s['name'] for s in parent['seller']]
 		sellers = [
 			self.add_person(
 				self.helper.copy_source_information(p, parent),
@@ -1111,6 +1190,32 @@ class AddAcquisitionOrBidding(ProvenanceBase):
 				catalog_number=cno
 			) for i, p in enumerate(parent['seller'])
 		]
+
+
+		# Add source data assignment on seller name 
+		for i in range(len(sellers)): 
+			if 'so' in sellers[i] and sellers[i]['so']:
+				name_source_parts = sellers[i]['so'].replace('Handwritten Annotation:', '').split(' ')
+				if name_source_parts[0] in self.helper.services['location_codes']:
+					name_source = name_source_parts[0]
+					if len(name_source_parts) > 1:
+						copy_no = name_source_parts[1]
+						catalog_uri = self.helper.make_proj_uri('PHYS-CAT', cno, name_source, copy_no)
+					else:
+						catalog_uri = self.helper.make_proj_uri('PHYS-CAT', cno, name_source)
+
+					catalogue = vocab.AuctionCatalog(ident=catalog_uri, label=f'Sale Catalog {cno}, owned by “{name_source}”')
+					property_assigned_label = "P1i identifies"
+					property_assigned_id = "http://www.cidoc-crm.org/cidoc-crm/P1i_identifies"
+					seller_person = sellers[i]['_LOD_OBJECT']
+					seller_identifiers = seller_person.identified_by
+					for j in range(len(seller_identifiers)):
+						if seller_identifiers[j].content == seller_non_auth_names[i] and not isinstance(seller_identifiers[j], vocab.PrimaryName):
+							name_attribution = self.create_source_attribute_assignment_name(seller_person, i, property_assigned_label, property_assigned_id, catalogue)
+							sellers[i]['_LOD_OBJECT'].identified_by[j].attributed_by = name_attribution
+
+
+
 		sellers, all_seller_mods = self.model_people_as_possible_group(sellers, tx_data, data, object_key_string(cno, lno, date), 'Seller')
 
 		SOLD = transaction_types['sold']

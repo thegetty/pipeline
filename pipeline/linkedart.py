@@ -838,31 +838,36 @@ class PopulateObject:
 			hmo.referred_to_by = formatstmt
 		
 		materials = data.get('materials')
-		q_add_comment = "This record represents the physical object that we believe to have been used in "
+		q_add_comment = "This resource represents the physical object that is believed to have been involved in "
 		#note_c = ''
 		if 'post_sale' in data or 'prev_sale' in data:
-			
+			list_q = []
 			if 'post_sale' in data:
 				for post in data['post_sale']:
 					if 'q' in post:
-
+						
 						if '?' in post['q']:
+							extra_note = f"{post['cat']} {post['lot']} ({post['year']}-{post['mo']} {post['day']})"
+							list_q.append(extra_note)
 							try:
-								note_c += f"Sales Event {post['cat']} {post['lot']} ({post['year']}-{post['mo']} {post['day']}), "
+								note_c += f"Sales Event {extra_note}, "
 							except:
 								note_c = q_add_comment
-								note_c += f"Sales Event {post['cat']} {post['lot']} ({post['year']}-{post['mo']} {post['day']}), "
+								note_c += f"Sales Event {extra_note}, "
 			if 'prev_sale' in data:
 				for prev in data['prev_sale']:
 					if 'ques' in prev:
 						if '?' in prev['ques']:
+							extra_note = f"{prev['cat']} {prev['lot']} ({prev['year']}-{prev['mo']} {prev['day']})"
+							list_q.append(extra_note)
 							try:
-								note_c += f"Sales Event {prev['cat']} {prev['lot']} ({prev['year']}-{prev['mo']} {prev['day']}), "
+								note_c += f"Sales Event {extra_note}, "
 							except:
 								note_c = q_add_comment
-								note_c += f"Sales Event {prev['cat']} {prev['lot']} ({prev['year']}-{prev['mo']} {prev['day']}), "
+								note_c += f"Sales Event {extra_note}, "
 			if q_add_comment in note_c:
-				note_c = note_c + 'but the attribution of which is slightly uncertain.'
+				information = ", ".join(list_q)
+				note_c += f"although that attribution is uncertain. For more information, please see the Textual Work resource related to Sale recorded in catalog: {information}."
 				note = vocab.Note(ident='', content=note_c)
 				hmo.referred_to_by = note
 

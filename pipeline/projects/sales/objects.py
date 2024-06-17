@@ -177,6 +177,7 @@ class PopulateSalesObject(Configurable, pipeline.linkedart.PopulateObject):
 			record.referred_to_by = vocab.Note(ident=note_uri, content=lot_notes)
 
 		transaction = data['parent_data']['transaction']
+		transaction = transaction.replace('[?]', '').rstrip()
 		tx_cl = transaction_classification.get(transaction)
 		if tx_cl:
 			label = tx_cl.get('label')
@@ -202,6 +203,7 @@ class PopulateSalesObject(Configurable, pipeline.linkedart.PopulateObject):
 		
 		if parent.get('transaction'):
 			record.referred_to_by = vocab.PropertyStatusStatement(ident='', label='Transaction type for sales record', content=parent['transaction'])
+
 		record.referred_to_by = self.select_county(data)
 		record.about = hmo
 		data['_record'] = add_crom_data(data=record_data, what=record)

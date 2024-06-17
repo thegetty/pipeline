@@ -115,14 +115,25 @@ class PersonIdentity:
 				warnings.warn(f'*** No identifying property with which to construct a URI key: {e}')
 				print(pprint.pformat(data), file=sys.stderr)
 				raise
-			# if record_id:
-			# 	# key = ('PERSON', id_key, id_value, record_id)
-			# 	key = ('PERSON', 'AUTH', auth_name)
-			# 	return key, self.make_proj_uri
+			if record_id:
+				# key = ('PERSON', id_key, id_value, record_id)
+				name = data.get('name', '')
+				if auth_name:
+					key = ('PERSON', 'AUTH', auth_name)
+				elif name:
+					key = ('PERSON', 'AUTH', name)
+				else:
+					warnings.warn(f'*** No record identifier given for person identified only by {id_key} {id_value}')
+					key = ('PERSON', 'AUTH', auth_name)
+				return key, self.make_proj_uri
 			else:
 				warnings.warn(f'*** No record identifier given for person identified only by {id_key} {id_value}')
 				# key = ('PERSON', id_key, id_value)
-				key = ('PERSON', 'AUTH', auth_name)
+				name = data.get('name', '')
+				if auth_name:
+					key = ('PERSON', 'AUTH', auth_name)
+				elif name:
+					key = ('PERSON', 'AUTH', name)
 				return key, self.make_shared_uri
 
 	def add_person(self, a, record=None, relative_id=None, **kwargs):
@@ -466,7 +477,6 @@ class PersonIdentity:
 		name_types = [vocab.PrimaryName]
 		
 		personalNameType = vocab.CorporateName if group else vocab.PersonalName
-
 		if disp_name:
 			if auth_name:
 				data['identifiers'].append(vocab.PrimaryName(ident='', content=auth_name))
@@ -509,12 +519,14 @@ class PersonIdentity:
 			elif referrer:
 				name_kwargs['referred_to_by'] = [referrer]
 			data['names'].append((name, name_kwargs))
-			data.setdefault('label', name)
+			if auth_name:
+				data.setdefault('label', name)
+			else:
+				data.setdefault('label', name + " catalog_number:" + kwargs['catalog_number'])
 		data.setdefault('label', '(Anonymous)')
 
 		if role and not role_label:
 			role_label = f'anonymous {role}'
-
 		if role:
 			data['role_label'] = role_label
 

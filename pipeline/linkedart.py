@@ -101,6 +101,7 @@ class MakeLinkedArtRecord:
 
 		for identifier in data.get('identifiers', []):
 			if isinstance(identifier, tuple):
+				import pdb; pdb.set_trace()
 				content, itype = identifier
 				if itype is not None:
 					if isinstance(itype, type):
@@ -131,7 +132,14 @@ class MakeLinkedArtRecord:
 			# ["A. Name"]
 			# ["A. Name", {'referred_to_by': [{'uri': 'URI-OF-LINGUISTIC_OBJECT'}, model.LinguisticObject()]}]
 			if isinstance(namedata, tuple):
-				name, *properties = namedata
+				if 'auth_name' in data:
+					if data.get('auth_name', '')=='':
+						name, *properties = namedata
+						name = data['label']
+					else:
+						name, *properties = namedata
+				else:
+					name, *properties = namedata
 			else:
 				name = namedata
 				properties = []
@@ -273,7 +281,7 @@ class MakeLinkedArtLinguisticObject(MakeLinkedArtRecord):
 				name = model.Name()
 				name.classified_as = title_type
 				name.content = label
-
+	
 				indexing = model.Type(label=label)
 				if not label:
 					warnings.warn(f'Setting empty name on {indexing.id}')

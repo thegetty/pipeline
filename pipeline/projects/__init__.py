@@ -479,6 +479,7 @@ class PersonIdentity:
 			if role:
 				role_label = f'{role} “{auth_name}”'
 			data.setdefault('label', auth_name)
+			
 			pname = vocab.make_multitype_obj(*name_types, ident='', content=auth_name) # NOTE: most of these are also vocab.SortName, but not 100%, so witholding that assertion for now
 			if isinstance(referrer, list):
 				for r in referrer:
@@ -486,9 +487,9 @@ class PersonIdentity:
 			elif referrer:
 				pname.referred_to_by = referrer
 			data['identifiers'].append(pname)
-
+			
 		data.setdefault('names', [])
-
+		
 		names = []
 		name = data.get('name')
 		if name:
@@ -497,7 +498,7 @@ class PersonIdentity:
 		variant_names = data.get('variant_names')
 		if variant_names:
 			names += [n.strip() for n in variant_names.split(';')]
-
+		
 		for name in names:
 			if role and not role_label:
 				role_label = f'{role} “{name}”'
@@ -508,8 +509,23 @@ class PersonIdentity:
 				name_kwargs['referred_to_by'] = referrer
 			elif referrer:
 				name_kwargs['referred_to_by'] = [referrer]
+			if 'name_ques' in data :
+				if '?' in data['name_ques'] and '?' not in name:
+					name = name + " " + data['name_ques']
+			elif 'ques' in data:
+				if '?' in data['ques'] and '?' not in name:
+					name = name + " " + data['ques']
+			elif 'own_ques' in data:
+				if '?' in data['own_ques'] and '?' not in name:
+					name = name + " " + data['own_ques']
+			elif 'own_q' in data:
+				if '?' in data['own_q'] and '?' not in name:
+					name = name + " " + data['own_q']
+			
 			data['names'].append((name, name_kwargs))
+
 			data.setdefault('label', name)
+			
 		data.setdefault('label', '(Anonymous)')
 
 		if role and not role_label:

@@ -836,8 +836,44 @@ class PopulateObject:
 				else: 
 					formatstmt.referred_to_by = sales_record
 			hmo.referred_to_by = formatstmt
-
+		
 		materials = data.get('materials')
+		q_add_comment = "This resource represents the physical object that is believed to have been involved in "
+		
+		if 'post_sale' in data or 'prev_sale' in data:
+			list_q = []
+			flag = False
+			if 'post_sale' in data:
+				for post in data['post_sale']:
+					if 'q' in post:
+						
+						if '?' in post['q']:
+							flag = True
+							extra_note = f"{post['cat']} {post['lot']} ({post['year']}-{post['mo']} {post['day']})"
+							list_q.append(extra_note)
+							try:
+								note_c += f"Sales Event {extra_note}, "
+							except:
+								note_c = q_add_comment
+								note_c += f"Sales Event {extra_note}, "
+			if 'prev_sale' in data:
+				for prev in data['prev_sale']:
+					if 'ques' in prev:
+						if '?' in prev['ques']:
+							flag = True
+							extra_note = f"{prev['cat']} {prev['lot']} ({prev['year']}-{prev['mo']} {prev['day']})"
+							list_q.append(extra_note)
+							try:
+								note_c += f"Sales Event {extra_note}, "
+							except:
+								note_c = q_add_comment
+								note_c += f"Sales Event {extra_note}, "
+			if flag:
+				information = ", ".join(list_q)
+				note_c += f"although that attribution is uncertain. For more information, please see the Textual Work resource related to Sale recorded in catalog: {information}."
+				note = vocab.Note(ident='', content=note_c)
+				hmo.referred_to_by = note
+						
 		if materials:
 			matstmt = vocab.MaterialStatement(ident='', content=materials)
 			if sales_record:

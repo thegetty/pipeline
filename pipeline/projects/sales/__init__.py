@@ -116,13 +116,16 @@ class SalesUtilityHelper(UtilityHelper):
 			person = super().add_person(data, record=record, relative_id=relative_id, **kwargs)
 
 		primaryName = ''
-		for i in range(len(person.identified_by)):
-			if isinstance(person.identified_by[i], vocab.PrimaryName):
-				primaryName = person.identified_by[i].content
+		try:
+			for i in range(len(person.identified_by)):
+				if isinstance(person.identified_by[i], vocab.PrimaryName):
+					primaryName = person.identified_by[i].content
 
-		for i in range(len(person.identified_by)):
-			if person.identified_by[i].content == primaryName and not isinstance(person.identified_by[i], vocab.PrimaryName):
-				del person.identified_by[i]
+			for i in range(len(person.identified_by)):
+				if person.identified_by[i].content == primaryName and not isinstance(person.identified_by[i], vocab.PrimaryName):
+					del person.identified_by[i]
+		except:
+			warnings.warn(f'*** TODO: model person there is not identified_by: {pprint.pformat(person._label)}')
 
 		if record:
 			person.referred_to_by = record

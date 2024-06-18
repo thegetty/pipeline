@@ -103,7 +103,6 @@ class ProvenanceBase(Configurable):
 			pxfer.transferred_custody_from = seller
 		
 		if owner_record and 'own_auth_q' in owner_record:
-			import pdb; pdb.set_trace()
 			if '[?]' in owner_record['own_auth_q'] or '?' in owner_record['own_auth_q']:
 				owner = get_crom_object(owner_record)
 				ident="http://www.cidoc-crm.org/cidoc-crm/P29_custody_received_by"
@@ -765,7 +764,6 @@ class ProvenanceBase(Configurable):
 				}
 			g_label = f'Group containing the {label.lower()} of {object_key}'
 			g = vocab.UncertainMemberClosedGroup(ident=group_uri, label=g_label)
-			import pdb; pdb.set_trace()
 			g.identified_by = model.Name(ident='', content=group_name)
 			
 			for person_data in people:

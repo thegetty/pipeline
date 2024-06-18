@@ -137,8 +137,13 @@ class ProvenanceBase(Configurable):
 			'pi_record_no': data['pi_record_no'],
 			'ulan': owner_record.get('ulan', owner_record.get('own_ulan')),
 		})
-		self.add_person(owner_record, record=sales_record, relative_id=record_id, role='artist')
-		owner = get_crom_object(owner_record)
+		try:
+			cno = parent['auction_of_lot']['catalog_number']
+			self.add_person(owner_record, record=sales_record, relative_id=record_id, catalog_number = cno, role='artist')
+			owner = get_crom_object(owner_record)
+		except KeyError as e:
+			self.add_person(owner_record, record=sales_record, relative_id=record_id, role='artist')
+			owner = get_crom_object(owner_record)
 
 		# TODO: handle other fields of owner_record: own_auth_d, own_auth_q, own_ques, own_so
 

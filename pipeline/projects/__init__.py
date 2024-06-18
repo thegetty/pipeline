@@ -522,7 +522,7 @@ class PersonIdentity:
 			if auth_name:
 				data.setdefault('label', name)
 			else:
-				data.setdefault('label', name + " catalog_number:" + kwargs['catalog_number'])
+				data.setdefault('label', name + " referred to in " + kwargs['catalog_number'])
 		data.setdefault('label', '(Anonymous)')
 
 		if role and not role_label:

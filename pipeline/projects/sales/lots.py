@@ -461,9 +461,16 @@ class AddAcquisitionOrBidding(ProvenanceBase):
 				
 				xfer.part = subxfer
 			else:
+				if 'or' in mods or 'or anonymous' in mods:
+				# or/or others/or another
+					mod_non_auth = seller_data.get('auth_mod')
+					if mod_non_auth:
+						xfer.referred_to_by = vocab.Note(ident='', label=f'seller author modifier', content=mod_non_auth)
+
 				xfer.transferred_custody_from = seller
-				if 'auth_nameq' in seller_data:
-					if '[?]' in seller_data['auth_nameq']:
+				if 'auth_nameq' in seller_data or 'auth_mod_a' in seller_data:
+					
+					if '[?]' in seller_data['auth_nameq'] or 'or' in seller_data['auth_mod_a']:
 						ident="http://www.cidoc-crm.org/cidoc-crm/P28_custody_surrendered_by"
 						label="P28 custody surrendered by"
 						xfer.attributed_by = self.create_uncertainty_atribute(seller, agent_seq, label, ident, parent)
@@ -479,7 +486,7 @@ class AddAcquisitionOrBidding(ProvenanceBase):
 				subxfer.carried_out_by = buyer
 				xfer.part = subxfer
 			else:
-				
+
 				xfer.transferred_custody_to = buyer
 				if 'auth_nameq' in buyer_data:
 					if '[?]' in buyer_data['auth_nameq']:
@@ -713,7 +720,6 @@ class AddAcquisitionOrBidding(ProvenanceBase):
 		acq_id = hmo.id + '-Acq'
 		acq = model.Acquisition(ident=acq_id, label=acq_label)
 		acq.transferred_title_of = hmo
-
 		self.attach_source_catalog(data, acq, buyers + sellers)
 
 		multi = tx_data.get('multi_lot_tx')
@@ -751,6 +757,13 @@ class AddAcquisitionOrBidding(ProvenanceBase):
 			seller = get_crom_object(seller_data)
 			mod = self.modifiers(seller_data, 'auth_mod_a')
 			attrib_assignment_classes = [model.AttributeAssignment]
+			if 'or' in mod or 'or anonymous' in mod:
+				# or/or others/or another
+					mod_non_auth = seller_data.get('auth_mod')
+					if mod_non_auth:
+						acq.referred_to_by = vocab.Note(ident='', label=f'seller author modifier ', content=mod_non_auth)
+						paym.referred_to_by = vocab.Note(ident='', label=f'seller author modifier', content=mod_non_auth)
+					warnings.warn(f'Handle buyer modifier: {mod}') # TODO: some way to model this uncertainty?
 			if uncertain_attribution:
 				attrib_assignment_classes.append(vocab.PossibleAssignment)
 
@@ -772,15 +785,16 @@ class AddAcquisitionOrBidding(ProvenanceBase):
 				#test added
 			elif FOR.intersects(mod):
 				acq.transferred_title_from = seller
-				if 'auth_nameq' in seller_data:
-					if '[?]' in seller_data['auth_nameq']:
+				
+				if 'auth_nameq' in seller_data or 'auth_mod_a' in seller_data:
+					if '[?]' in seller_data['auth_nameq'] or 'or' in seller_data['auth_mod_a']:
 						ident="http://www.cidoc-crm.org/cidoc-crm/P23_transferred_title_from"
 						label="transferred title from"
 						acq.attributed_by = self.create_uncertainty_atribute(seller, seq_no, label, ident, parent)
 				# payments['sell'].paid_to = seller
 				paym.paid_to = seller
-				if 'auth_nameq' in seller_data:
-					if '[?]' in seller_data['auth_nameq']:
+				if 'auth_nameq' in seller_data or 'auth_mod_a' in seller_data:
+					if '[?]' in seller_data['auth_nameq'] or 'or' in seller_data['auth_mod_a']:
 						ident="https://linked.art/ns/terms/paid_to"
 						label="paid to"
 						paym.attributed_by = self.create_uncertainty_atribute(seller, seq_no, label, ident, parent)   
@@ -792,7 +806,6 @@ class AddAcquisitionOrBidding(ProvenanceBase):
 				acq_assignment_uri = acq.id + f'-seller-assignment-{seq_no}'
 				# paym_assignment_uri = payments['sell'].id + f'-seller-assignment-{seq_no}'
 				paym_assignment_uri = paym.id + f'-seller-assignment-{seq_no}'
-
 				acq_assignment_label = f'Uncertain seller as previous title holder in acquisition'
 				acq_assignment = vocab.PossibleAssignment(ident=acq_assignment_uri, label=acq_assignment_label)
 				acq_assignment.referred_to_by = vocab.Note(ident='', content=acq_assignment_label)
@@ -808,12 +821,14 @@ class AddAcquisitionOrBidding(ProvenanceBase):
 				# payments['sell'].attributed_by = paym_assignment
 				paym.attributed_by = paym_assignment   
 				payments_used.add('sell')
+				
 			else:
 				# covers non-modified
 # 				acq.carried_out_by = seller
 				acq.transferred_title_from = seller
-				if 'auth_nameq' in seller_data:
-					if '[?]' in seller_data['auth_nameq']:
+				if 'auth_nameq' in seller_data or 'auth_mod_a' in seller_data:
+
+					if '[?]' in seller_data['auth_nameq'] or 'or' in seller_data['auth_mod_a']:
 						ident="http://www.cidoc-crm.org/cidoc-crm/P23_transferred_title_from"
 						label="transferred title from"
 						acq.attributed_by = self.create_uncertainty_atribute(seller, seq_no, label, ident, parent)
@@ -822,8 +837,8 @@ class AddAcquisitionOrBidding(ProvenanceBase):
 				payments_used.add('sell')
 				
 				paym.paid_to = seller
-				if 'auth_nameq' in seller_data:
-					if '[?]' in seller_data['auth_nameq']:
+				if 'auth_nameq' in seller_data or 'auth_mod_a' in seller_data:
+					if '[?]' in seller_data['auth_nameq'] or 'or' in seller_data['auth_mod_a']:
 						ident="https://linked.art/ns/terms/paid_to"
 						label="paid to"
 						paym.attributed_by = self.create_uncertainty_atribute(seller, seq_no, label, ident, parent)
@@ -1108,6 +1123,7 @@ class AddAcquisitionOrBidding(ProvenanceBase):
 		if act and all_mods:
 			# Preserve the seller modifier strings as notes on the acquisition/bidding activity
 			for mod in all_mods:
+				import pdb; pdb.set_trace()
 				note = vocab.Note(ident='', label=label, content=mod)
 				note.classified_as = vocab.instances['qualifier']
 				if classification:
@@ -1193,8 +1209,6 @@ class AddAcquisitionOrBidding(ProvenanceBase):
 				catalog_number=cno
 			) for i, p in enumerate(parent['seller'])
 		]
-
-
 		# Add source data assignment on seller name 
 		for i in range(len(sellers)): 
 			if 'so' in sellers[i] and sellers[i]['so']:

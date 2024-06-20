@@ -126,7 +126,7 @@ class MakeLinkedArtRecord:
 
 		if not hasattr(thing, '_label') and 'label' in data:
 			setattr(thing, '_label', data['label'])
-
+		
 		for namedata in data.get('names', []):
 			# namedata should take the form of:
 			# ["A. Name"]
@@ -149,9 +149,13 @@ class MakeLinkedArtRecord:
 					cl = props['classified_as']
 					del props['classified_as']
 					name_kwargs['title_type'] = cl
-
-			n = set_la_name(thing, name, **name_kwargs)
-			self.set_lo_properties(n, *properties)
+			identified_by = []
+			if hasattr(thing, 'identified_by'):
+				for identified in thing.identified_by:
+					identified_by.append(identified.content)
+			if name not in identified_by:
+				n = set_la_name(thing, name, **name_kwargs)
+				self.set_lo_properties(n, *properties)
 
 	def set_lo_properties(self, n, *properties):
 		for props in properties:

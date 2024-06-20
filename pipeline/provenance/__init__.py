@@ -36,7 +36,7 @@ class ProvenanceBase(Configurable):
 		self.helper.add_person(data, record=record, relative_id=relative_id, **kwargs)
 		return data
 
-	def related_procurement(self, hmo, tx_label_args, current_tx=None, current_ts=None, buyer=None, seller=None, previous=False, ident=None, make_label=None, sales_record=None, owner_record=None, seq_no=0, parent=None):
+	def related_procurement(self, data, hmo, tx_label_args, current_tx=None, current_ts=None, buyer=None, seller=None, previous=False, ident=None, make_label=None, sales_record=None, owner_record=None, seq_no=0, parent=None):
 		'''
 		Returns a new `vocab.ProvenanceEntry` object (and related acquisition) that is temporally
 		related to the supplied procurement and associated data. The new procurement is for
@@ -101,11 +101,12 @@ class ProvenanceBase(Configurable):
 		if seller:
 			pacq.transferred_title_from = seller
 			pxfer.transferred_custody_from = seller
-		
+
+		owner = get_crom_object(owner_record)
 		if owner_record and 'own_auth_q' in owner_record:
 
 			if '[?]' in owner_record['own_auth_q'] or '?' in owner_record['own_auth_q']:
-				owner = get_crom_object(owner_record)
+				
 				ident="http://www.cidoc-crm.org/cidoc-crm/P29_custody_received_by"
 				label="P29 custody received by"
 				pxfer.attributed_by = self.create_uncertainty_atribute(owner, seq_no, label, ident, parent)
@@ -114,24 +115,50 @@ class ProvenanceBase(Configurable):
 				pacq.attributed_by = self.create_uncertainty_atribute(owner, seq_no, label, ident, parent)
 
 		if owner_record and 'own_so' in owner_record and owner_record['own_so']:
-			owner_source_parts = owner_record['own_so'].replace('Handwritten Annotation:', '').split(' ')
-			if owner_source_parts[0] in self.helper.services['location_codes']:
-				owner_source = owner_source_parts[0]
-				if len(owner_source) > 1:
-					copy_no = owner_source[1]
-					catalog_uri = self.helper.make_proj_uri('PHYS-CAT', cno, owner_source, copy_no)
-				else:
-					catalog_uri = self.helper.make_proj_uri('PHYS-CAT', cno, owner_source)
+			owner_source = owner_record['own_so']
+			cno = parent['auction_of_lot']['catalog_number']
 
-				cno = parent['auction_of_lot']['catalog_number']
-				catalog_uri = self.helper.make_proj_uri('PHYS-CAT', cno, owner_source)
-				catalogue = vocab.AuctionCatalog(ident=catalog_uri, label=f'Sale Catalog {cno}, owned by “{owner_source}”')
-				property_assigned_label = "P29 custody received by"
-				property_assigned_id = "http://www.cidoc-crm.org/cidoc-crm/P29_custody_received_by"
-				pxfer.attributed_by = self.create_source_attribute_assignment(owner, seq_no, property_assigned_label, property_assigned_id, catalogue, True)
-				property_assigned_label = "P22 transferred title to"
-				property_assigned_id = "http://www.cidoc-crm.org/cidoc-crm/P22_transferred_title_to"
-				pacq.attributed_by = self.create_source_attribute_assignment(owner, seq_no, property_assigned_label, property_assigned_id, catalogue, True)
+			if owner_source == "Catalogue" or owner_source == "Descriptive Catalogue":
+				source = self.helper.catalog_text(cno, 'Auction')
+			else:
+				if 'Handwritten Annotation' in owner_source:
+					owner_source_parts = owner_record['own_so'].replace('Handwritten Annotation:', '').split(' ')
+					owner_source = owner_source_parts[0]
+
+				if owner_source in self.helper.services['location_codes']:
+					if len(owner_source) > 1:
+						copy_no = owner_source[1]
+						catalog_uri = self.helper.make_proj_uri('PHYS-CAT', cno, owner_source, copy_no)
+					else:
+						catalog_uri = self.helper.make_proj_uri('PHYS-CAT', cno, owner_source)
+
+					catalog_uri = self.helper.make_proj_uri('PHYS-CAT', cno, owner_source)
+					catalogue = vocab.AuctionCatalog(ident=catalog_uri, label=f'Sale Catalog {cno}, owned by “{owner_source}”')
+					source = catalogue
+				else:
+					citation_text_work_uri = self.helper.make_proj_uri('LINGOBJECT', 'SOURCE', 'CITATION', owner_source)
+					citation_lo= model.LinguisticObject(ident=citation_text_work_uri, label = owner_source)
+					citation_lo.identified_by = vocab.PrimaryName(ident='', content=owner_source)
+					citation_lo.referred_to_by = self.select_county(data)
+					
+					citation_data = {
+						'citation_uri': citation_text_work_uri,
+						'citation_label': citation_lo._label
+					}
+					
+					add_crom_data(data=citation_data, what=citation_lo)
+					if not '_citation_references' in data:
+						data['_citation_references'] = [] 
+					data['_citation_references'].append(citation_data)
+					source = citation_lo
+
+			property_assigned_label = "P29 custody received by"
+			property_assigned_id = "http://www.cidoc-crm.org/cidoc-crm/P29_custody_received_by"
+			pxfer.attributed_by = self.create_source_attribute_assignment(owner, seq_no, property_assigned_label, property_assigned_id, source, True)
+			property_assigned_label = "P22 transferred title to"
+			property_assigned_id = "http://www.cidoc-crm.org/cidoc-crm/P22_transferred_title_to"
+			pacq.attributed_by = self.create_source_attribute_assignment(owner, seq_no, property_assigned_label, property_assigned_id, source, True)
+
 
 		tx.part = pacq
 		tx.part = pxfer
@@ -188,16 +215,16 @@ class ProvenanceBase(Configurable):
 		tx_uri = self.helper.prepend_uri_key(hmo.id, f'PROV-{record_id}')
 		
 		tx_label_args = tuple([self.helper, sale_type, 'Event', rel] + list(lot_object_key))
-		tx, _ = self.related_procurement(hmo, tx_label_args, current_tx, ts, buyer=owner, previous=rev, ident=tx_uri, make_label=make_label, sales_record=sales_record, owner_record=owner_record, seq_no=seq_no, parent=parent)
+		tx, _ = self.related_procurement(data, hmo, tx_label_args, current_tx, ts, buyer=owner, previous=rev, ident=tx_uri, make_label=make_label, sales_record=sales_record, owner_record=owner_record, seq_no=seq_no, parent=parent)
 		
 		if owner_record.get('own_auth_e'):
 			content = owner_record['own_auth_e']
 			tx.referred_to_by = vocab.Note(ident='', content=content)
 
-		own_info_source = owner_record.get('own_so')
-		if own_info_source:
-			note = vocab.SourceStatement(ident='', content=own_info_source, label=source_label)
-			tx.referred_to_by = note
+		# own_info_source = owner_record.get('own_so')
+		# if own_info_source:
+		# 	note = vocab.SourceStatement(ident='', content=own_info_source, label=source_label)
+		# 	tx.referred_to_by = note
 
 		ptx_data = tx_data.copy()
 		ptx_data['uri'] = tx_uri

@@ -675,6 +675,11 @@ class ProvenanceBase(Configurable):
 		if 'present_location' in data:
 			for present_location  in data['present_location']:
 				if '?' in present_location['accq']:
+					parent = data['parent_data']
+					for seq_no, name in enumerate(hmo.current_owner):
+						ident="http://www.cidoc-crm.org/cidoc-crm/P52_has_current_owner"
+						label="P52 has current owner"
+						hmo.attributed_by = self.helper.create_uncertainty_atribute(name, seq_no, label, ident, parent)
 					for identified in hmo.identified_by:
 						if present_location['acc'] in identified.content:
 							

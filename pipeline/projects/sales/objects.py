@@ -873,7 +873,6 @@ class AddArtists(ProvenanceBase):
 		non_artist_all_mods = {m.lower().strip() for a in non_artist_assertions for m in a.get('attrib_mod_auth', '').split(';')} - {''}
 		non_artist_group_flag = len(non_artist_assertions) and all(['or' in a['modifiers'] for a in non_artist_assertions])
 		non_artist_group = None
-		import pdb; pdb.set_trace()
 		if non_artist_group_flag:
 			non_artist_mod = list(NON_ARTIST_MODS.intersection(non_artist_all_mods))[0]
 			# The artist group URI is just the production event URI with a suffix. When URIs are

@@ -565,12 +565,12 @@ class PopulateSalesObject(Configurable, pipeline.linkedart.PopulateObject):
 				hmo._label = f'{typestring}: “{title}”'
 			del data['title']
 			#shorter = truncate_with_ellipsis(title, 100)
-			shorter = title
-			if shorter:
-				description = vocab.Description(ident='', content=title)
-				description.referred_to_by = record
-				hmo.referred_to_by = description
-				title = shorter
+			# shorter = title
+			# if shorter:
+			# 	description = vocab.Description(ident='', content=title)
+			# 	description.referred_to_by = record
+			# 	hmo.referred_to_by = description
+			# 	title = shorter
 			title_class = vocab.Name if modified_title else vocab.PrimaryName
 			t = title_class(ident='', content=title)
 			t.classified_as = title_type

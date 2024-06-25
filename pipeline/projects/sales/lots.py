@@ -225,16 +225,16 @@ class AddAuctionOfLot(ProvenanceBase):
 				note.classified_as = problem_classification
 				lot.referred_to_by = note
 
-		cite_content = []
-		if data.get('transaction_so'):
-			cite_content.append(data['transaction_so'])
-		if data.get('transaction_cite'):
-			cite_content.append(data['transaction_cite'])
-		if cite_content:
-			content = ', '.join(cite_content)
-			cite = vocab.BibliographyStatement(ident='', content=content, label='Source of transaction type')
-			cite.identified_by = model.Name(ident='', content='Source of transaction type')
-			lot.referred_to_by = cite
+		# cite_content = []
+		# if data.get('transaction_so'):
+		# 	cite_content.append(data['transaction_so'])
+		# if data.get('transaction_cite'):
+		# 	cite_content.append(data['transaction_cite'])
+		# if cite_content:
+		# 	content = ', '.join(cite_content)
+		# 	cite = vocab.BibliographyStatement(ident='', content=content, label='Source of transaction type')
+		# 	cite.identified_by = model.Name(ident='', content='Source of transaction type')
+		# 	lot.referred_to_by = cite
 
 		transaction = data.get('transaction')
 		SOLD = transaction_types['sold']
@@ -278,9 +278,51 @@ class AddAuctionOfLot(ProvenanceBase):
 			if tx_cl:
 				label = tx_cl.get('label')
 				url = tx_cl.get('url')
-				tx.classified_as = model.Type(ident=url, label=label)
+				transaction_type = model.Type(ident=url, label=label)
+				if 'transaction_so' in data and data['transaction_so']:
+					transaction_publication = data['transaction_so']
+					if 'transaction_cite' in data and data['transaction_cite']:
+						transaction_citation = data['transaction_cite']
+
+						publication_text_work_uri = self.helper.make_proj_uri('LINGOBJECT', 'SOURCE', 'PUBLICATION', transaction_publication)
+						publication_lo= model.LinguisticObject(ident=publication_text_work_uri, label = transaction_publication)
+						publication_lo.identified_by = vocab.PrimaryName(ident='', content=transaction_publication)
+						publication_lo.referred_to_by = self.select_county(data)
+
+						citation_text_work_uri = self.helper.make_proj_uri('LINGOBJECT', 'SOURCE', 'CITATION', transaction_citation)
+						citation_lo= model.LinguisticObject(ident=citation_text_work_uri, label = transaction_citation)
+						citation_lo.identified_by = vocab.PrimaryName(ident='', content=transaction_citation)
+						citation_lo.referred_to_by = self.select_county(data)
+						citation_lo.part_of = publication_lo
+
+						publication_data = {
+							'publication_uri': publication_text_work_uri,
+							'publication_label': transaction_publication,
+						}
+
+						citation_data = {
+							'citation_uri': citation_text_work_uri,
+							'citation_label': citation_lo._label
+						}
+						add_crom_data(data=publication_data, what=publication_lo)
+						add_crom_data(data=citation_data, what=citation_lo)
+						if not '_citation_references' in data:
+							data['_citation_references'] = []
+						data['_citation_references'].append(publication_data)
+						data['_citation_references'].append(citation_data)
+						source = citation_lo
+
+						property_assigned_label = "P2i is type of"
+						property_assigned_id = "http://www.cidoc-crm.org/cidoc-crm/P2i_is_type_of"
+						attribution_label = f'Attribution of type {label} to {tx._label}'
+						transaction_type.attributed_by = self.helper.create_source_attribute_assignment(tx, 0, attribution_label, property_assigned_label, property_assigned_id, source, True)
+
+					tx.classified_as = transaction_type
 			else:
 				warnings.warn(f'*** No classification found for transaction type: {transaction!r}')
+
+
+		
 			tx.caused_by = lot
 			tx_data = {'uri': tx_uri}
 
@@ -497,20 +539,6 @@ class AddAcquisitionOrBidding(ProvenanceBase):
 		assignment.assigned = seller
 		return assignment
 
-	def create_source_attribute_assignment(self, assigned_object, sequence_num, property_assigned_label, property_assigned_id, source, assign):
-		attrib_assignment_classes = [model.AttributeAssignment]
-	
-		prod_id = self.helper.make_shared_uri('Production', 'Assignment', 'Source', assigned_object.id )
-		prod_event = model.Production(ident=prod_id, label=f'Production event for {assigned_object._label}')
-		attribute_assignment_id =  self.helper.prepend_uri_key(prod_event.id, f'ASSIGNMENT,Source-{assigned_object.id}-{sequence_num}-{source.id}')
-		assignment = vocab.make_multitype_obj(*attrib_assignment_classes, ident=attribute_assignment_id, label=f'Source attributed to {assigned_object._label}')
-		assignment.classified_as = model.Type(ident="http://vocab.getty.edu/aat/300456597", label="warrant")
-		assignment.used_specific_object = source
-		assignment.assigned_property = model.Type(ident=property_assigned_id, label=property_assigned_label)
-		if assign:
-			assignment.assigned = assigned_object
-		return assignment
-		
 
 	def copy_object_with_new_id(self, value):
 		# Some objects had trouble in the JSON-LD merging that occurs during post-processing,
@@ -995,7 +1023,8 @@ class AddAcquisitionOrBidding(ProvenanceBase):
 
 		property_assigned_label = "P90_has_value"
 		property_assigned_id = "http://www.cidoc-crm.org/cidoc-crm/P90_has_value"
-		amnt.attributed_by = self.create_source_attribute_assignment(amnt, 0, property_assigned_label, property_assigned_id, source, False)
+		attribution_label = f'Source attributed to {amnt._label}'
+		amnt.attributed_by = self.helper.create_source_attribute_assignment(amnt, 0, attribution_label, property_assigned_label, property_assigned_id, source, False)
 		
 		return amnt
 
@@ -1150,19 +1179,6 @@ class AddAcquisitionOrBidding(ProvenanceBase):
 				act.referred_to_by = note
 #				act.referred_to_by = self.select_county(data)
 
-	def create_source_attribute_assignment_name(self, assigned_object, sequence_num, property_assigned_label, property_assigned_id, source):
-		attrib_assignment_classes = [model.AttributeAssignment]
-		prod_id = self.helper.make_shared_uri('Production', 'Assignment', 'Source', assigned_object.id )
-		# original_event = model.Production(ident=original_event_id, label=f'Production event for {original_label}')
-		prod_event = model.Production(ident=prod_id, label=f'Production event for {assigned_object._label}')
-		attribute_assignment_id =  self.helper.prepend_uri_key(prod_event.id, f'ASSIGNMENT,Source, Name-{assigned_object.id}-{sequence_num}-{source.id}')
-		assignment = vocab.make_multitype_obj(*attrib_assignment_classes, ident=attribute_assignment_id, label=f'Source attributed to the Name of {assigned_object._label}')
-		assignment.classified_as = model.Type(ident="http://vocab.getty.edu/aat/300456597", label="warrant")
-		assignment.used_specific_object = source
-		assignment.assigned_property = model.Type(ident=property_assigned_id, label=property_assigned_label)
-		assignment.assigned = assigned_object
-		return assignment
-
 	def __call__(self, data:dict, non_auctions, event_properties, buy_sell_modifiers, transaction_types):
 		'''Determine if this record has an acquisition or bidding, and add appropriate modeling'''
 		parent = data['parent_data']
@@ -1247,7 +1263,8 @@ class AddAcquisitionOrBidding(ProvenanceBase):
 				buyer_identifiers = buyer_person.identified_by
 				for j in range(len(buyer_identifiers)):
 					if buyer_identifiers[j].content == buyer_non_auth_names[i] and not isinstance(buyer_identifiers[j], vocab.PrimaryName):
-						name_attribution = self.create_source_attribute_assignment_name(buyer_person, i, property_assigned_label, property_assigned_id, source)
+						attribution_label = f'Source attributed to the Name of {buyer_person._label}'
+						name_attribution = self.helper.create_source_attribute_assignment(buyer_person, i, attribution_label, property_assigned_label, property_assigned_id, source, True)
 						buyers[i]['_LOD_OBJECT'].identified_by[j].attributed_by = name_attribution
 
 		buyers, all_buyer_mods = self.model_people_as_possible_group(buyers, tx_data, data, object_key_string(cno, lno, date), 'Buyer')
@@ -1286,7 +1303,8 @@ class AddAcquisitionOrBidding(ProvenanceBase):
 				seller_identifiers = seller_person.identified_by
 				for j in range(len(seller_identifiers)):
 					if seller_identifiers[j].content == seller_non_auth_names[i] and not isinstance(seller_identifiers[j], vocab.PrimaryName):
-						name_attribution = self.create_source_attribute_assignment_name(seller_person, i, property_assigned_label, property_assigned_id, catalogue)
+						attribution_label = f'Source attributed to the Name of {seller_person._label}'
+						name_attribution = self.helper.create_source_attribute_assignment(seller_person, i, attribution_label, property_assigned_label, property_assigned_id, catalogue, True)
 						sellers[i]['_LOD_OBJECT'].identified_by[j].attributed_by = name_attribution
 
 

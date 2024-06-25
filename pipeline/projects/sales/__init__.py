@@ -130,6 +130,19 @@ class SalesUtilityHelper(UtilityHelper):
 		return person
 
 
+	def create_source_attribute_assignment(self, assigned_object, sequence_num, attribution_label, property_assigned_label, property_assigned_id, source, assign):
+		attrib_assignment_classes = [model.AttributeAssignment]
+	
+		prod_id = self.make_shared_uri('Production', 'Assignment', 'Source', assigned_object.id )
+		prod_event = model.Production(ident=prod_id, label=f'Production event for {assigned_object._label}')
+		attribute_assignment_id =  self.prepend_uri_key(prod_event.id, f'ASSIGNMENT,Source-{assigned_object.id}-{sequence_num}-{source.id}')
+		assignment = vocab.make_multitype_obj(*attrib_assignment_classes, ident=attribute_assignment_id, label=attribution_label)
+		assignment.classified_as = model.Type(ident="http://vocab.getty.edu/aat/300456597", label="warrant")
+		assignment.used_specific_object = source
+		assignment.assigned_property = model.Type(ident=property_assigned_id, label=property_assigned_label)
+		if assign:
+			assignment.assigned = assigned_object
+		return assignment
 
 	def event_type_for_sale_type(self, sale_type):
 		if sale_type in ('Private Contract Sale', 'Stock List'):

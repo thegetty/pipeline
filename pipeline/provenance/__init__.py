@@ -122,7 +122,9 @@ class ProvenanceBase(Configurable):
 				source = self.helper.catalog_text(cno, 'Auction')
 			else:
 				if 'Handwritten Annotation' in owner_source:
-					owner_source_parts = owner_record['own_so'].replace('Handwritten Annotation:', '').split(' ')
+					owner_source = owner_record['own_so'].replace('Handwritten Annotation:', '')
+					owner_source_parts_tmp = owner_source.split(' ')
+					owner_source_parts = [x for x in owner_source_parts_tmp if x != '']
 					owner_source = owner_source_parts[0]
 
 				if owner_source in self.helper.services['location_codes']:
@@ -140,7 +142,7 @@ class ProvenanceBase(Configurable):
 					citation_lo= model.LinguisticObject(ident=citation_text_work_uri, label = owner_source)
 					citation_lo.identified_by = vocab.PrimaryName(ident='', content=owner_source)
 					citation_lo.referred_to_by = self.select_county(data)
-					
+
 					citation_data = {
 						'citation_uri': citation_text_work_uri,
 						'citation_label': citation_lo._label
@@ -154,10 +156,11 @@ class ProvenanceBase(Configurable):
 
 			property_assigned_label = "P29 custody received by"
 			property_assigned_id = "http://www.cidoc-crm.org/cidoc-crm/P29_custody_received_by"
-			pxfer.attributed_by = self.create_source_attribute_assignment(owner, seq_no, property_assigned_label, property_assigned_id, source, True)
+			attribution_label = f'Source attributed to {owner._label}'
+			pxfer.attributed_by = self.helper.create_source_attribute_assignment(owner, seq_no, attribution_label, property_assigned_label, property_assigned_id, source, True)
 			property_assigned_label = "P22 transferred title to"
 			property_assigned_id = "http://www.cidoc-crm.org/cidoc-crm/P22_transferred_title_to"
-			pacq.attributed_by = self.create_source_attribute_assignment(owner, seq_no, property_assigned_label, property_assigned_id, source, True)
+			pacq.attributed_by = self.helper.create_source_attribute_assignment(owner, seq_no, attribution_label, property_assigned_label, property_assigned_id, source, True)
 
 
 		tx.part = pacq

@@ -871,7 +871,7 @@ class PopulateObject:
 			if flag:
 				information = ", ".join(list_q)
 				note_c += f"although that attribution is uncertain. For more information, please see the Textual Work resource related to Sale recorded in catalog: {information}."
-				note = vocab.Note(ident='', content=note_c)
+				note = vocab.ResearchStatement(ident='', content=note_c)
 				hmo.referred_to_by = note
 						
 		if materials:

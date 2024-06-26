@@ -565,16 +565,16 @@ class AddAcquisitionOrBidding(ProvenanceBase):
 		if ask_price:
 			self.add_valuation(data, ask_price, lot_object_key, current_tx, valuation_type=vocab.AppraisingAssignment, valuation_label='Appraising')
 
-	def copy_monetary_amnt(self, amnt_old):
+	def copy_monetary_amnt(self, amnt_old, cno, lno):
 		
 		if amnt_old:
-			identifier = "urn:uuid:%s" % uuid.uuid4()
-
+			identifier = self.helper.make_shared_uri('ATTR','ACC','LOT', cno, lno)
+#			identifier = "urn:uuid:%s" % uuid.uuid4()
 			if '_label' in amnt_old.__dict__:
 				label = amnt_old._label
-				amnt_new = model.MonetaryAmount(identifier=identifier, label=label)
+				amnt_new = model.MonetaryAmount(ident=identifier, label=label)
 			else:
-				amnt_new = model.MonetaryAmount(identifier=identifier, label='')
+				amnt_new = model.MonetaryAmount(ident=identifier, label='')
 
 			if 'currency' in amnt_old.__dict__:
 				amnt_new.currency = amnt_old.currency
@@ -622,8 +622,9 @@ class AddAcquisitionOrBidding(ProvenanceBase):
 		cno, lno, date = lot_object_key
 
 		# amnt = self.copy_object_with_new_id(get_crom_object(amnt_data))
+		#amnt_data['_LOD_OBJECT'].id = self.helper.make_shared_uri('ATTR','ACC','LOT', cno, lno)
 		amnt = get_crom_object(amnt_data)
-		amnt = self.copy_monetary_amnt(amnt)
+		amnt = self.copy_monetary_amnt(amnt, cno, self.helper.shared_lot_number_from_lno(lno))
 
 		lno_re = '[0-9]+\[[a-z]\]'
 		if re.search(lno_re, lno):
@@ -633,6 +634,7 @@ class AddAcquisitionOrBidding(ProvenanceBase):
 			assignment.assigned_property = 'dimension'
 			assignment.assigned = amnt
 		else:
+			
 			attrib_assignment_classes = [model.AttributeAssignment, valuation_type]
 			# lno = self.helper.shared_lot_number_from_lno(lno)
 			assignment = vocab.make_multitype_obj(*attrib_assignment_classes, label=f'{valuation_label} valuation of {cno} {lno} {date}')

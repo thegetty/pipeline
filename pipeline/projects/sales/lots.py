@@ -471,6 +471,12 @@ class AddAcquisitionOrBidding(ProvenanceBase):
 		for agent_seq, buyer_data in enumerate(buyers):
 			buyer = get_crom_object(buyer_data)
 			mods = self.modifiers(buyer_data, 'auth_mod_a')
+			if 'or' in mods or 'or anonymous' in mods:
+				# or/or others/or another
+				mod_non_auth = buyer_data.get('auth_mod')
+				if mod_non_auth:
+					xfer.referred_to_by = vocab.Note(ident='', label=f'Buyer modifier', content=mod_non_auth)
+
 			if THROUGH.intersects(mods):
 				# when an agent is acting on behalf of the buyer, model their involvement in a sub-activity
 				subxfer_id = self.helper.prepend_uri_key(hmo.id, f'CustodyTransfer,{sequence},BuyerAgent,{agent_seq}')
@@ -479,10 +485,9 @@ class AddAcquisitionOrBidding(ProvenanceBase):
 				subxfer.carried_out_by = buyer
 				xfer.part = subxfer
 			else:
-				
 				xfer.transferred_custody_to = buyer
 				if 'auth_nameq' in buyer_data:
-					if '[?]' in buyer_data['auth_nameq']:
+					if '[?]' in buyer_data['auth_nameq'] or 'or' in buyer_data['auth_mod_a']:
 						ident="http://www.cidoc-crm.org/cidoc-crm/P29_custody_received_by"
 						label="P29 custody received by"
 						xfer.attributed_by = self.create_uncertainty_atribute(buyer, agent_seq, label, ident, parent)
@@ -658,7 +663,7 @@ class AddAcquisitionOrBidding(ProvenanceBase):
 		for seq_no, buyer_data in enumerate(buyers):
 			buyer = get_crom_object(buyer_data)
 			if 'auth_nameq' in buyer_data:
-					if '[?]' in buyer_data['auth_nameq']:
+					if '[?]' in buyer_data['auth_nameq'] or 'or' in buyer_data['auth_mod_a']:
 						parent = data['parent_data']
 						ident="http://www.cidoc-crm.org/cidoc-crm/P14_carried_out_by"
 						label="carried out by"
@@ -832,11 +837,12 @@ class AddAcquisitionOrBidding(ProvenanceBase):
 			buyer = get_crom_object(buyer_data)
 			mod = self.modifiers(buyer_data, 'auth_mod_a')
 
-			if 'or' in mod:
+			if 'or' in mod or 'or anonymous' in mod:
 				# or/or others/or another
 				mod_non_auth = buyer_data.get('auth_mod')
 				if mod_non_auth:
 					acq.referred_to_by = vocab.Note(ident='', label=f'Buyer modifier', content=mod_non_auth)
+					paym.referred_to_by = vocab.Note(ident='', label=f'Buyer modifier', content=mod_non_auth)
 				warnings.warn(f'Handle buyer modifier: {mod}') # TODO: some way to model this uncertainty?
 
 			if THROUGH.intersects(mod):
@@ -855,10 +861,9 @@ class AddAcquisitionOrBidding(ProvenanceBase):
 				subacq.carried_out_by = buyer
 				acq.part = subacq
 			elif FOR.intersects(mod):
-
 				acq.transferred_title_to = buyer
 				if 'auth_nameq' in buyer_data:
-					if '[?]' in buyer_data['auth_nameq']:
+					if '[?]' in buyer_data['auth_nameq'] or 'or' in buyer_data['auth_mod_a']:
 						ident="http://www.cidoc-crm.org/cidoc-crm/P22_transferred_title_to"
 						label="transferred title to"
 						acq.attributed_by = self.create_uncertainty_atribute(buyer, seq_no, label, ident, parent)		
@@ -866,7 +871,7 @@ class AddAcquisitionOrBidding(ProvenanceBase):
 				# payments['buy'].paid_from = buyer
 				paym.paid_from = buyer
 				if 'auth_nameq' in buyer_data:
-					if '[?]' in buyer_data['auth_nameq']:
+					if '[?]' in buyer_data['auth_nameq'] or 'or' in buyer_data['auth_mod_a']:
 						ident="https://linked.art/ns/terms/paid_from"
 						label="paid from"
 						paym.attributed_by = self.create_uncertainty_atribute(buyer, seq_no, label, ident, parent)
@@ -874,10 +879,9 @@ class AddAcquisitionOrBidding(ProvenanceBase):
 			else:
 				# covers FOR modifiers and non-modified
 # 				acq.carried_out_by = buyer
-
 				acq.transferred_title_to = buyer
 				if 'auth_nameq' in buyer_data:
-					if '[?]' in buyer_data['auth_nameq']:
+					if '[?]' in buyer_data['auth_nameq'] or 'or' in buyer_data['auth_mod_a']:
 						ident="http://www.cidoc-crm.org/cidoc-crm/P22_transferred_title_to"
 						label="transferred title to"
 						acq.attributed_by = self.create_uncertainty_atribute(buyer, seq_no, label, ident, parent)			
@@ -885,7 +889,7 @@ class AddAcquisitionOrBidding(ProvenanceBase):
 				paym.paid_from = buyer
 # 				payments['buy'].carried_out_by = buyer
 				if 'auth_nameq' in buyer_data:
-					if '[?]' in buyer_data['auth_nameq']:
+					if '[?]' in buyer_data['auth_nameq'] or 'or' in buyer_data['auth_mod_a']:
 						ident="https://linked.art/ns/terms/paid_from"
 						label="paid from"
 						paym.attributed_by = self.create_uncertainty_atribute(buyer, seq_no, label, ident, parent)

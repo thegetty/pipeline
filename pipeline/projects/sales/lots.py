@@ -322,7 +322,7 @@ class AddAuctionOfLot(ProvenanceBase):
 				warnings.warn(f'*** No classification found for transaction type: {transaction!r}')
 
 
-		
+
 			tx.caused_by = lot
 			tx_data = {'uri': tx_uri}
 
@@ -665,7 +665,7 @@ class AddAcquisitionOrBidding(ProvenanceBase):
 			assignment.assigned = amnt
 
 			if 'source' in amnt_data and amnt_data['source']:
-				amnt_source = amnt_data['source'].replace('Handwritten Annotation:', '').strip()
+				amnt_source = amnt_data['source']
 				if amnt_source:
 					amnt = self.add_monetary_source_data_assignment(data, amnt_data, amnt, amnt_source, cno)
 
@@ -914,7 +914,7 @@ class AddAcquisitionOrBidding(ProvenanceBase):
 			# "Hammer price" valuation on the lot set.
 			amnt_data = prices[i]
 			amnt = self.copy_object_with_new_id(get_crom_object(amnt_data))
-			amnt_source = amnt_data['source'].replace('Handwritten Annotation:', '').strip()
+			amnt_source = amnt_data['source']
 			if amnt_source:
 				amnt = self.add_monetary_source_data_assignment(data, amnt_data, amnt, amnt_source, cno)
 
@@ -1007,19 +1007,26 @@ class AddAcquisitionOrBidding(ProvenanceBase):
 		# elif amnt_source == 'Catalogue':
 
 		else:
-			#create the id of the physical object of the catalogue
-			amnt_source_parts = amnt_source.replace('Handwritten Annotation:', '').split(' ')
-			amnt_source = amnt_source_parts[0]
+			
 			if amnt_source == "Catalogue" or amnt_source == "Descriptive Catalogue":
 				source = self.helper.catalog_text(cno, 'Auction')
-			elif amnt_source in self.helper.services['location_codes']:
-				if len(amnt_source_parts) > 1:
-					copy_no = amnt_source_parts[1]
-					catalog_uri = self.helper.make_proj_uri('PHYS-CAT', cno, amnt_source, copy_no)
-				else:
-					catalog_uri = self.helper.make_proj_uri('PHYS-CAT', cno, amnt_source)
+			else:
+				if 'Handwritten Annotation:' in amnt_source:
+					amnt_source = amnt_source.replace('Handwritten Annotation:', '')
+			 	
+				amnt_source_parts = [x for x in amnt_source.split(' ') if x != '']
+				amnt_source = amnt_source_parts[0]
 
-				source = vocab.AuctionCatalog(ident=catalog_uri, label=f'Sale Catalog {cno}, owned by “{amnt_source}”')
+				if amnt_source in self.helper.services['location_codes']:
+					if len(amnt_source_parts) == 2:
+						copy_no = amnt_source_parts[1]
+						catalog_uri = self.helper.make_proj_uri('PHYS-CAT', cno, amnt_source, copy_no)
+						cat_label = f'Sale Catalog {cno}, owned by “{amnt_source}”, copy {copy_no}'
+					else:
+						catalog_uri = self.helper.make_proj_uri('PHYS-CAT', cno, amnt_source)
+						cat_label = f'Sale Catalog {cno}, owned by “{amnt_source}”'
+
+					source = vocab.AuctionCatalog(ident=catalog_uri, label=cat_label)
 
 		property_assigned_label = "P90_has_value"
 		property_assigned_id = "http://www.cidoc-crm.org/cidoc-crm/P90_has_value"
@@ -1211,12 +1218,14 @@ class AddAcquisitionOrBidding(ProvenanceBase):
 		
 		# Add source data assignment on buyer name 
 		for i in range(len(buyers)): 
-			if 'name_so' in buyers[i] and buyers[i]['name_so']:
-				name_source_parts = buyers[i]['name_so'].replace('Handwritten Annotation:', '').split(' ')
-				name_source = name_source_parts[0]
-
+			if 'name_so' in buyers[i] and buyers[i]['name_so']:	
+				name_source = buyers[i]['name_so']
+				if 'Handwritten Annotation:' in name_source :
+					name_source = buyers[i]['name_so'].replace('Handwritten Annotation:', '')
+				
 				if name_source == "Catalogue" or name_source == "Descriptive Catalogue":
-					catalogue = self.helper.catalog_text(cno, 'Auction')
+					catalogue = self.helper.catalog_text(cno, 'Auction')	
+				
 				elif 'name_cite' in buyers[i] and buyers[i]['name_cite']:
 					buyer_citation = buyers[i]['name_cite']
 					publication_text_work_uri = self.helper.make_proj_uri('LINGOBJECT', 'SOURCE', 'PUBLICATION', name_source)
@@ -1247,15 +1256,20 @@ class AddAcquisitionOrBidding(ProvenanceBase):
 					data['_citation_references'].append(publication_data)
 					data['_citation_references'].append(citation_data)
 					source = citation_lo
-				elif name_source_parts[0] in self.helper.services['location_codes']:
+				else:
+					name_source_parts = [x for x in name_source.split(' ') if x != '']
 					name_source = name_source_parts[0]
-					if len(name_source_parts) > 1:
-						copy_no = name_source_parts[1]
-						catalog_uri = self.helper.make_proj_uri('PHYS-CAT', cno, name_source, copy_no)
-					else:
-						catalog_uri = self.helper.make_proj_uri('PHYS-CAT', cno, name_source)
+					if name_source in self.helper.services['location_codes']:
+					
+						if len(name_source_parts) == 2:
+							copy_no = name_source_parts[1]
+							catalog_uri = self.helper.make_proj_uri('PHYS-CAT', cno, name_source, copy_no)
+							cat_label = f'Sale Catalog {cno}, owned by “{name_source}”, copy {copy_no}'
+						else:
+							catalog_uri = self.helper.make_proj_uri('PHYS-CAT', cno, name_source)
+							cat_label = f'Sale Catalog {cno}, owned by “{name_source}”'
 
-					source = vocab.AuctionCatalog(ident=catalog_uri, label=f'Sale Catalog {cno}, owned by “{name_source}”')
+					source = vocab.AuctionCatalog(ident=catalog_uri, label=cat_label)
 
 				property_assigned_label = "P1i identifies"
 				property_assigned_id = "http://www.cidoc-crm.org/cidoc-crm/P1i_identifies"
@@ -1284,19 +1298,28 @@ class AddAcquisitionOrBidding(ProvenanceBase):
 
 		# Add source data assignment on seller name 
 		for i in range(len(sellers)): 
-			if 'so' in sellers[i] and sellers[i]['so']:				
-				name_source_parts = sellers[i]['so'].replace('Handwritten Annotation:', '').split(' ')
-				name_source = name_source_parts[0]
+			if 'so' in sellers[i] and sellers[i]['so']:	
+				name_source = sellers[i]['so']
+				
+				if 'Handwritten Annotation:' in name_source:
+					name_source = name_source.replace('Handwritten Annotation:', '')
+
 				if name_source == "Catalogue" or name_source == "Descriptive Catalogue":
 					catalogue = self.helper.catalog_text(cno, 'Auction')
-				elif name_source in self.helper.services['location_codes']:
-					if len(name_source_parts) > 1:
-						copy_no = name_source_parts[1]
-						catalog_uri = self.helper.make_proj_uri('PHYS-CAT', cno, name_source, copy_no)
-					else:
-						catalog_uri = self.helper.make_proj_uri('PHYS-CAT', cno, name_source)
+				else:
+					name_source_parts = [x for x in name_source.split(' ') if x != '']
+					name_source = name_source_parts[0]
+					
+					if name_source in self.helper.services['location_codes'] :	
+						if len(name_source_parts) == 2:
+							copy_no = name_source_parts[1]
+							catalog_uri = self.helper.make_proj_uri('PHYS-CAT', cno, name_source, copy_no)
+							cat_label = f'Sale Catalog {cno}, owned by “{name_source}”, copy {copy_no}'
+						else:
+							catalog_uri = self.helper.make_proj_uri('PHYS-CAT', cno, name_source)
+							cat_label = f'Sale Catalog {cno}, owned by “{name_source}”'
 
-					catalogue = vocab.AuctionCatalog(ident=catalog_uri, label=f'Sale Catalog {cno}, owned by “{name_source}”')
+					catalogue = vocab.AuctionCatalog(ident=catalog_uri, label=cat_label)
 				property_assigned_label = "P1i identifies"
 				property_assigned_id = "http://www.cidoc-crm.org/cidoc-crm/P1i_identifies"
 				seller_person = sellers[i]['_LOD_OBJECT']

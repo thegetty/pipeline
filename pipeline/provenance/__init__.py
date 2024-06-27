@@ -118,41 +118,44 @@ class ProvenanceBase(Configurable):
 			owner_source = owner_record['own_so']
 			cno = parent['auction_of_lot']['catalog_number']
 
-			if owner_source == "Catalogue" or owner_source == "Descriptive Catalogue":
-				source = self.helper.catalog_text(cno, 'Auction')
-			else:
-				if 'Handwritten Annotation' in owner_source:
-					owner_source = owner_record['own_so'].replace('Handwritten Annotation:', '')
-					owner_source_parts_tmp = owner_source.split(' ')
-					owner_source_parts = [x for x in owner_source_parts_tmp if x != '']
-					owner_source = owner_source_parts[0]
+			if 'Handwritten Annotation' in owner_source:
+				owner_source = owner_source.replace('Handwritten Annotation:', '')
+				owner_source_parts = [x for x in owner_source.split(' ') if x != '']
+				owner_source = owner_source_parts[0]
 
-				if owner_source in self.helper.services['location_codes']:
-					if len(owner_source) > 1:
-						copy_no = owner_source[1]
-						catalog_uri = self.helper.make_proj_uri('PHYS-CAT', cno, owner_source, copy_no)
-					else:
-						catalog_uri = self.helper.make_proj_uri('PHYS-CAT', cno, owner_source)
+			
 
-					catalog_uri = self.helper.make_proj_uri('PHYS-CAT', cno, owner_source)
-					catalogue = vocab.AuctionCatalog(ident=catalog_uri, label=f'Sale Catalog {cno}, owned by “{owner_source}”')
-					source = catalogue
+			if owner_source in self.helper.services['location_codes'] :
+								
+				if len(owner_source) == 2:
+					copy_no = owner_source[1]
+					catalog_uri = self.helper.make_proj_uri('PHYS-CAT', cno, owner_source, copy_no)
+					cat_label = f'Sale Catalog {cno}, owned by “{owner_source}”, copy {copy_no}'
 				else:
-					citation_text_work_uri = self.helper.make_proj_uri('LINGOBJECT', 'SOURCE', 'CITATION', owner_source)
-					citation_lo= model.LinguisticObject(ident=citation_text_work_uri, label = owner_source)
-					citation_lo.identified_by = vocab.PrimaryName(ident='', content=owner_source)
-					citation_lo.referred_to_by = self.select_county(data)
+					catalog_uri = self.helper.make_proj_uri('PHYS-CAT', cno, owner_source)
+					cat_label = f'Sale Catalog {cno}, owned by “{owner_source}”'
 
-					citation_data = {
-						'citation_uri': citation_text_work_uri,
-						'citation_label': citation_lo._label
-					}
-					
-					add_crom_data(data=citation_data, what=citation_lo)
-					if not '_citation_references' in data:
-						data['_citation_references'] = [] 
-					data['_citation_references'].append(citation_data)
-					source = citation_lo
+				catalog_uri = self.helper.make_proj_uri('PHYS-CAT', cno, owner_source)
+				source = vocab.AuctionCatalog(ident=catalog_uri, label=cat_label)
+
+			elif owner_source == "Catalogue" or owner_source == "Descriptive Catalogue":
+				source = self.helper.catalog_text(cno, 'Auction')
+				
+			else:
+				citation_text_work_uri = self.helper.make_proj_uri('LINGOBJECT', 'SOURCE', 'CITATION', owner_source)
+				source = model.LinguisticObject(ident=citation_text_work_uri, label = owner_source)
+				source.identified_by = vocab.PrimaryName(ident='', content=owner_source)
+				source.referred_to_by = self.select_county(data)
+
+				citation_data = {
+					'citation_uri': citation_text_work_uri,
+					'citation_label': source._label
+				}
+				
+				add_crom_data(data=citation_data, what=source)
+				if not '_citation_references' in data:
+					data['_citation_references'] = [] 
+				data['_citation_references'].append(citation_data)
 
 			property_assigned_label = "P29 custody received by"
 			property_assigned_id = "http://www.cidoc-crm.org/cidoc-crm/P29_custody_received_by"

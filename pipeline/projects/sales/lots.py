@@ -786,15 +786,15 @@ class AddAcquisitionOrBidding(ProvenanceBase):
 			elif FOR.intersects(mod):
 				acq.transferred_title_from = seller
 				
-				if 'auth_nameq' in seller_data or 'auth_mod_a' in seller_data:
-					if '[?]' in seller_data['auth_nameq'] or 'or' in seller_data['auth_mod_a']:
+				if 'auth_nameq' in seller_data :
+					if '[?]' in seller_data['auth_nameq']:
 						ident="http://www.cidoc-crm.org/cidoc-crm/P23_transferred_title_from"
 						label="transferred title from"
 						acq.attributed_by = self.create_uncertainty_atribute(seller, seq_no, label, ident, parent)
 				# payments['sell'].paid_to = seller
 				paym.paid_to = seller
-				if 'auth_nameq' in seller_data or 'auth_mod_a' in seller_data:
-					if '[?]' in seller_data['auth_nameq'] or 'or' in seller_data['auth_mod_a']:
+				if 'auth_nameq' in seller_data :
+					if '[?]' in seller_data['auth_nameq'] :
 						ident="https://linked.art/ns/terms/paid_to"
 						label="paid to"
 						paym.attributed_by = self.create_uncertainty_atribute(seller, seq_no, label, ident, parent)   
@@ -1123,7 +1123,6 @@ class AddAcquisitionOrBidding(ProvenanceBase):
 		if act and all_mods:
 			# Preserve the seller modifier strings as notes on the acquisition/bidding activity
 			for mod in all_mods:
-				import pdb; pdb.set_trace()
 				note = vocab.Note(ident='', label=label, content=mod)
 				note.classified_as = vocab.instances['qualifier']
 				if classification:

@@ -465,7 +465,7 @@ class AddAcquisitionOrBidding(ProvenanceBase):
 				# or/or others/or another
 					mod_non_auth = seller_data.get('auth_mod')
 					if mod_non_auth:
-						xfer.referred_to_by = vocab.Note(ident='', label=f'seller author modifier', content=mod_non_auth)
+						statement= vocab.Note(ident='', label=f'seller author modifier', content=mod_non_auth)
 
 				xfer.transferred_custody_from = seller
 				if 'auth_nameq' in seller_data or 'auth_mod_a' in seller_data:
@@ -473,7 +473,7 @@ class AddAcquisitionOrBidding(ProvenanceBase):
 					if '[?]' in seller_data['auth_nameq'] or 'or' in seller_data['auth_mod_a']:
 						ident="http://www.cidoc-crm.org/cidoc-crm/P28_custody_surrendered_by"
 						label="P28 custody surrendered by"
-						xfer.attributed_by = self.create_uncertainty_atribute(seller, agent_seq, label, ident, parent)
+						xfer.attributed_by = self.create_uncertainty_atribute(seller, agent_seq, label, ident, parent, statement=statement)
 
 		for agent_seq, buyer_data in enumerate(buyers):
 			buyer = get_crom_object(buyer_data)
@@ -496,7 +496,8 @@ class AddAcquisitionOrBidding(ProvenanceBase):
 
 		current_tx.part = xfer
 
-	def create_uncertainty_atribute(self, seller, agent_seq, label, ident, parent):
+	def create_uncertainty_atribute(self, seller, agent_seq, label, ident, parent, statement=None):
+		
 		attrib_assignment_classes = [model.AttributeAssignment]
 		prod_event = model.Production(ident=seller.id, label=f'Production event for {seller._label}')
 		attribute_assignment_id =  self.helper.prepend_uri_key(prod_event.id, f'ASSIGNMENT,Seller-{agent_seq}')
@@ -504,6 +505,8 @@ class AddAcquisitionOrBidding(ProvenanceBase):
 		assignment.classified_as = model.Type(ident="http://vocab.getty.edu/aat/300435722", label="Possibly")
 		assignment.used_specific_object = get_crom_object(parent['_sale_record'])
 		assignment.assigned_property = model.Type(ident=ident, label=label)
+		if statement:
+			assignment.referred_to_by = statement
 		assignment.assigned = seller
 		return assignment
 
@@ -550,7 +553,6 @@ class AddAcquisitionOrBidding(ProvenanceBase):
 					phys_catalogs[source_catalog_key] = catalog
 					catalog.carries = hand_notes
 				acq.referred_to_by = hand_notes
-				# import pdb; pdb.set_trace()
 		data['_phys_catalog_notes'] = [add_crom_data(data={}, what=n) for n in phys_catalog_notes.values()]
 		data['_phys_catalogs'] = [add_crom_data(data={}, what=c) for c in phys_catalogs.values()]
 
@@ -736,7 +738,6 @@ class AddAcquisitionOrBidding(ProvenanceBase):
 		# 	house = get_crom_object(house_data)
 		# 	# payments['buy'].paid_to = house
 		# 	# payments['sell'].paid_from = house
-		# 	import pdb; pdb.set_trace()
 		# 	paym.paid_from = house
 		# 	paym.paid_to = house
 
@@ -763,8 +764,7 @@ class AddAcquisitionOrBidding(ProvenanceBase):
 				# or/or others/or another
 					mod_non_auth = seller_data.get('auth_mod')
 					if mod_non_auth:
-						acq.referred_to_by = vocab.Note(ident='', label=f'seller author modifier ', content=mod_non_auth)
-						paym.referred_to_by = vocab.Note(ident='', label=f'seller author modifier', content=mod_non_auth)
+						statement = vocab.Note(ident='', label=f'seller author modifier ', content=mod_non_auth)
 					warnings.warn(f'Handle buyer modifier: {mod}') # TODO: some way to model this uncertainty?
 			if uncertain_attribution:
 				attrib_assignment_classes.append(vocab.PossibleAssignment)
@@ -833,7 +833,7 @@ class AddAcquisitionOrBidding(ProvenanceBase):
 					if '[?]' in seller_data['auth_nameq'] or 'or' in seller_data['auth_mod_a']:
 						ident="http://www.cidoc-crm.org/cidoc-crm/P23_transferred_title_from"
 						label="transferred title from"
-						acq.attributed_by = self.create_uncertainty_atribute(seller, seq_no, label, ident, parent)
+						acq.attributed_by = self.create_uncertainty_atribute(seller, seq_no, label, ident, parent, statement=statement)
 # 				payments['sell'].carried_out_by = seller
 				# payments['sell'].paid_to = seller
 				payments_used.add('sell')
@@ -843,7 +843,7 @@ class AddAcquisitionOrBidding(ProvenanceBase):
 					if '[?]' in seller_data['auth_nameq'] or 'or' in seller_data['auth_mod_a']:
 						ident="https://linked.art/ns/terms/paid_to"
 						label="paid to"
-						paym.attributed_by = self.create_uncertainty_atribute(seller, seq_no, label, ident, parent)
+						paym.attributed_by = self.create_uncertainty_atribute(seller, seq_no, label, ident, parent, statement=statement)
 
 		for seq_no, buyer_data in enumerate(buyers):
 			buyer = get_crom_object(buyer_data)
@@ -974,7 +974,6 @@ class AddAcquisitionOrBidding(ProvenanceBase):
 	# 	lot_uid, lot_uri = helper.shared_lot_number_ids(cno, lno)
 		# TODO: `annotation` here is from add_physical_catalog_objects
 	# 	paym.referred_to_by = annotation
-		#import pdb; pdb.set_trace()
 		#paym.__dict__.get('id').split('#PROV', 1)[1][1]
 		
 		data['_acquisition'] = add_crom_data(data={'uri': acq_id}, what=acq)

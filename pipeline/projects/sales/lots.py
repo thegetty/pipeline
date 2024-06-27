@@ -461,16 +461,19 @@ class AddAcquisitionOrBidding(ProvenanceBase):
 				
 				xfer.part = subxfer
 			else:
+				flags = False
 				if 'or' in mods or 'or anonymous' in mods:
 				# or/or others/or another
 					mod_non_auth = seller_data.get('auth_mod')
 					if mod_non_auth:
-						statement= vocab.Note(ident='', label=f'seller author modifier', content=mod_non_auth)
+						statement= vocab.Name(ident='', label=f'seller author modifier', content=mod_non_auth)
+						statement.classified_as = model.Type(ident='http://vocab.getty.edu/aat/300456607', label='verbatim text/texts')
+						flags = True
 
 				xfer.transferred_custody_from = seller
 				if 'auth_nameq' in seller_data or 'auth_mod_a' in seller_data:
 					
-					if '[?]' in seller_data['auth_nameq'] or 'or' in seller_data['auth_mod_a']:
+					if '[?]' in seller_data['auth_nameq'] or flags:
 						ident="http://www.cidoc-crm.org/cidoc-crm/P28_custody_surrendered_by"
 						label="P28 custody surrendered by"
 						xfer.attributed_by = self.create_uncertainty_atribute(seller, agent_seq, label, ident, parent, statement=statement)
@@ -760,11 +763,14 @@ class AddAcquisitionOrBidding(ProvenanceBase):
 			seller = get_crom_object(seller_data)
 			mod = self.modifiers(seller_data, 'auth_mod_a')
 			attrib_assignment_classes = [model.AttributeAssignment]
+			flags = False
 			if 'or' in mod or 'or anonymous' in mod:
 				# or/or others/or another
 					mod_non_auth = seller_data.get('auth_mod')
 					if mod_non_auth:
-						statement = vocab.Note(ident='', label=f'seller author modifier ', content=mod_non_auth)
+						statement = vocab.Name(ident='', label=f'seller author modifier ', content=mod_non_auth)
+						statement.classified_as = model.Type(ident='http://vocab.getty.edu/aat/300456607', label='verbatim text/texts')
+						flags = True
 					warnings.warn(f'Handle buyer modifier: {mod}') # TODO: some way to model this uncertainty?
 			if uncertain_attribution:
 				attrib_assignment_classes.append(vocab.PossibleAssignment)
@@ -830,7 +836,7 @@ class AddAcquisitionOrBidding(ProvenanceBase):
 				acq.transferred_title_from = seller
 				if 'auth_nameq' in seller_data or 'auth_mod_a' in seller_data:
 
-					if '[?]' in seller_data['auth_nameq'] or 'or' in seller_data['auth_mod_a']:
+					if '[?]' in seller_data['auth_nameq'] or flags:
 						ident="http://www.cidoc-crm.org/cidoc-crm/P23_transferred_title_from"
 						label="transferred title from"
 						acq.attributed_by = self.create_uncertainty_atribute(seller, seq_no, label, ident, parent, statement=statement)
@@ -840,7 +846,7 @@ class AddAcquisitionOrBidding(ProvenanceBase):
 				
 				paym.paid_to = seller
 				if 'auth_nameq' in seller_data or 'auth_mod_a' in seller_data:
-					if '[?]' in seller_data['auth_nameq'] or 'or' in seller_data['auth_mod_a']:
+					if '[?]' in seller_data['auth_nameq'] or flags:
 						ident="https://linked.art/ns/terms/paid_to"
 						label="paid to"
 						paym.attributed_by = self.create_uncertainty_atribute(seller, seq_no, label, ident, parent, statement=statement)

@@ -103,16 +103,36 @@ class ProvenanceBase(Configurable):
 			pxfer.transferred_custody_from = seller
 		
 		if owner_record and 'own_auth_q' in owner_record:
-
+			import pdb; pdb.set_trace()
 			if '[?]' in owner_record['own_auth_q'] or '?' in owner_record['own_auth_q']:
 				owner = get_crom_object(owner_record)
 				ident="http://www.cidoc-crm.org/cidoc-crm/P29_custody_received_by"
 				label="P29 custody received by"
 				pxfer.attributed_by = self.create_uncertainty_atribute(owner, seq_no, label, ident, parent)
 				ident="http://www.cidoc-crm.org/cidoc-crm/P22_transferred_title_to"
-				label="transferred title to"
+				label="P22 transferred title to"
 				pacq.attributed_by = self.create_uncertainty_atribute(owner, seq_no, label, ident, parent)
-				
+
+		if owner_record and 'own_so' in owner_record and owner_record['own_so']:
+			owner_source_parts = owner_record['own_so'].replace('Handwritten Annotation:', '').split(' ')
+			if owner_source_parts[0] in self.helper.services['location_codes']:
+				owner_source = owner_source_parts[0]
+				if len(owner_source) > 1:
+					copy_no = owner_source[1]
+					catalog_uri = self.helper.make_proj_uri('PHYS-CAT', cno, owner_source, copy_no)
+				else:
+					catalog_uri = self.helper.make_proj_uri('PHYS-CAT', cno, owner_source)
+
+				cno = parent['auction_of_lot']['catalog_number']
+				catalog_uri = self.helper.make_proj_uri('PHYS-CAT', cno, owner_source)
+				catalogue = vocab.AuctionCatalog(ident=catalog_uri, label=f'Sale Catalog {cno}, owned by “{owner_source}”')
+				property_assigned_label = "P29 custody received by"
+				property_assigned_id = "http://www.cidoc-crm.org/cidoc-crm/P29_custody_received_by"
+				pxfer.attributed_by = self.create_source_attribute_assignment(owner, seq_no, property_assigned_label, property_assigned_id, catalogue, True)
+				property_assigned_label = "P22 transferred title to"
+				property_assigned_id = "http://www.cidoc-crm.org/cidoc-crm/P22_transferred_title_to"
+				pacq.attributed_by = self.create_source_attribute_assignment(owner, seq_no, property_assigned_label, property_assigned_id, catalogue, True)
+
 		tx.part = pacq
 		tx.part = pxfer
 		if current_ts:
@@ -759,6 +779,7 @@ class ProvenanceBase(Configurable):
 				}
 			g_label = f'Group containing the {label.lower()} of {object_key}'
 			g = vocab.UncertainMemberClosedGroup(ident=group_uri, label=g_label)
+			import pdb; pdb.set_trace()
 			g.identified_by = model.Name(ident='', content=group_name)
 			
 			for person_data in people:

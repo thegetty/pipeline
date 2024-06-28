@@ -177,6 +177,7 @@ class PopulateSalesObject(Configurable, pipeline.linkedart.PopulateObject):
 			record.referred_to_by = vocab.Note(ident=note_uri, content=lot_notes)
 
 		transaction = data['parent_data']['transaction']
+		transaction = transaction.replace('[?]', '').rstrip()
 		tx_cl = transaction_classification.get(transaction)
 		if tx_cl:
 			label = tx_cl.get('label')
@@ -202,6 +203,7 @@ class PopulateSalesObject(Configurable, pipeline.linkedart.PopulateObject):
 		
 		if parent.get('transaction'):
 			record.referred_to_by = vocab.PropertyStatusStatement(ident='', label='Transaction type for sales record', content=parent['transaction'])
+
 		record.referred_to_by = self.select_county(data)
 		record.about = hmo
 		data['_record'] = add_crom_data(data=record_data, what=record)
@@ -407,16 +409,23 @@ class PopulateSalesObject(Configurable, pipeline.linkedart.PopulateObject):
 		notes = data.get('hand_note', [])
 		for note in notes:
 			hand_note_content = note['hand_note']
-			owner = note.get('hand_note_so')
+			owner = note.get('hand_note_so').split(' ')
 			cno = parent['auction_of_lot']['catalog_number']
-			catalog_uri = self.helper.make_proj_uri('CATALOG', cno, owner, None)
-			catalogs = unique_catalogs.get(catalog_uri)
-			note = vocab.Note(ident='', content=hand_note_content)
-			hmo.referred_to_by = note
 			
-
-			if catalogs and len(catalogs) == 1:
+			note = vocab.Note(ident='', content=hand_note_content)
+			if owner[0] in self.helper.services['location_codes']:
+				if len(owner) > 1:
+					copy_no = owner[1]
+					catalog_uri = self.helper.make_proj_uri('PHYS-CAT', cno, owner[0], copy_no)
+				else:
+					catalog_uri = self.helper.make_proj_uri('PHYS-CAT', cno, owner[0])
+					# tag:getty.edu,2019:digital:pipeline:REPLACE-WITH-UUID:sales#PHYS-CAT,B-318,MB,II
+					# tag:getty.edu,2019:digital:pipeline:REPLACE-WITH-UUID:sales#PHYS-CAT,B-318,MB,II
+				# catalogs = unique_catalogs.get(catalog_uri)
+				#if catalogs and len(catalogs) == 1:
 				note.carried_by = vocab.AuctionCatalog(ident=catalog_uri, label=f'Sale Catalog {cno}, owned by “{owner}”')
+					
+			hmo.referred_to_by = note	
 		inscription = data.get('inscription')
 		if inscription:
 			
@@ -897,7 +906,6 @@ class AddArtists(ProvenanceBase):
 				else:
 					uncertain = True
 					attrib_assignment_classes.append(vocab.PossibleAssignment)
-			
 			verbatim_mods = a_data.get('attrib_mod', '')
 			if STYLE_OF.intersects(mods):
 				attribute_assignment_id = self.helper.prepend_uri_key(prod_event.id, f'ASSIGNMENT,NonArtist-{seq_no}')
@@ -932,14 +940,17 @@ class AddArtists(ProvenanceBase):
 				original_subevent = model.Production(ident=original_subevent_id, label=f'Production sub-event for {artist_label}')
 				original_event.part = original_subevent
 				original_subevent.carried_out_by = person
-				
-				if uncertain:
+				if uncertain or 'copy after' in COPY_AFTER.intersects(mods):
+					
+					attribute_assignment_id = self.helper.prepend_uri_key(prod_event.id, f'ASSIGNMENT,NonArtist-{seq_no}')
 					assignment = vocab.make_multitype_obj(*attrib_assignment_classes, ident=attribute_assignment_id, label=f'Possibly influenced by {person._label}')
 					assignment.used_specific_object = sales_record
 					prod_event.attributed_by = assignment
 					assignment.assigned_property = 'influenced_by'
 					assignment.assigned = original_hmo
 					assignment.referred_to_by = vocab.Note(ident='', content=verbatim_mods)
+					#assignment.referred_to_by[0].classified_as = vocab.instances["brief text"]
+					prod_event.influenced_by = original_hmo
 				else:
 					prod_event.influenced_by = original_hmo
 				data['_original_objects'].append(add_crom_data(data={'uri': original_id}, what=original_hmo))

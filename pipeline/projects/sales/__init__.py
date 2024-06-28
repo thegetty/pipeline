@@ -79,7 +79,7 @@ import pipeline.projects.sales.events
 import pipeline.projects.sales.lots
 import pipeline.projects.sales.objects
 import pipeline.projects.sales.catalogs
-
+from pipeline.projects.sales.lots import AddAcquisitionOrBidding
 #mark - utility functions and classes
 
 class SalesPersonIdentity(PersonIdentity):
@@ -115,9 +115,21 @@ class SalesUtilityHelper(UtilityHelper):
 		else :
 			person = super().add_person(data, record=record, relative_id=relative_id, **kwargs)
 
+		primaryName = ''
+		for i in range(len(person.identified_by)):
+			if isinstance(person.identified_by[i], vocab.PrimaryName):
+				primaryName = person.identified_by[i].content
+
+		for i in range(len(person.identified_by)):
+			if person.identified_by[i].content == primaryName and not isinstance(person.identified_by[i], vocab.PrimaryName):
+				del person.identified_by[i]
+
 		if record:
 			person.referred_to_by = record
+
 		return person
+
+
 
 	def event_type_for_sale_type(self, sale_type):
 		if sale_type in ('Private Contract Sale', 'Stock List'):
@@ -616,6 +628,9 @@ class SalesPipeline(PipelineBase):
 		
 		services['tgn_descr'] = tgn_places_descr
 		services['sales_tgn_descr'] = sales_tgn_descr
+
+
+		services['location_codes'] = services.get('location_codes', {})
 		# make these case-insensitive by wrapping the value lists in CaseFoldingSet
 		for name in ('transaction_types', 'attribution_modifiers', 'date_modifiers'):
 			if name in services:

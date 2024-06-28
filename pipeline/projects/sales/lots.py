@@ -466,8 +466,7 @@ class AddAcquisitionOrBidding(ProvenanceBase):
 				# or/or others/or another
 					mod_non_auth = seller_data.get('auth_mod')
 					if mod_non_auth:
-						statement= vocab.Name(ident='', label=f'seller author modifier', content=mod_non_auth)
-						statement.classified_as = model.Type(ident='http://vocab.getty.edu/aat/300456607', label='verbatim text/texts')
+						statement= vocab.VerbatimTexts(ident='', content=mod_non_auth)
 						flags = True
 
 				xfer.transferred_custody_from = seller
@@ -768,8 +767,8 @@ class AddAcquisitionOrBidding(ProvenanceBase):
 				# or/or others/or another
 					mod_non_auth = seller_data.get('auth_mod')
 					if mod_non_auth:
-						statement = vocab.Name(ident='', label=f'seller author modifier ', content=mod_non_auth)
-						statement.classified_as = model.Type(ident='http://vocab.getty.edu/aat/300456607', label='verbatim text/texts')
+						statement = vocab.VerbatimTexts(ident='', content=mod_non_auth)
+						statement2 = vocab.VerbatimTexts(ident='', content=mod_non_auth)
 						flags = True
 					warnings.warn(f'Handle buyer modifier: {mod}') # TODO: some way to model this uncertainty?
 			if uncertain_attribution:
@@ -849,7 +848,7 @@ class AddAcquisitionOrBidding(ProvenanceBase):
 					if '[?]' in seller_data['auth_nameq'] or flags:
 						ident="https://linked.art/ns/terms/paid_to"
 						label="paid to"
-						paym.attributed_by = self.create_uncertainty_atribute(seller, seq_no, label, ident, parent, statement=statement)
+						paym.attributed_by = self.create_uncertainty_atribute(seller, seq_no, label, ident, parent, statement=statement2)
 
 		for seq_no, buyer_data in enumerate(buyers):
 			buyer = get_crom_object(buyer_data)

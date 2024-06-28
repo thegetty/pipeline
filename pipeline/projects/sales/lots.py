@@ -476,8 +476,9 @@ class AddAcquisitionOrBidding(ProvenanceBase):
 				# or/or others/or another
 				mod_non_auth = buyer_data.get('auth_mod')
 				if mod_non_auth:
-					statement = vocab.Name(ident='', content=mod_non_auth)
-					statement.classified_as = model.Type(ident='http://vocab.getty.edu/aat/300456607', label='verbatim text/texts')
+					statement = vocab.VerbatimTexts(ident='', content=mod_non_auth)
+					# statement = vocab.Name(ident='', content=mod_non_auth)
+					# statement.classified_as = model.Type(ident='http://vocab.getty.edu/aat/300456607', label='verbatim text/texts')
 					flagb = True
 
 			if THROUGH.intersects(mods):
@@ -847,8 +848,12 @@ class AddAcquisitionOrBidding(ProvenanceBase):
 				# or/or others/or another
 				mod_non_auth = buyer_data.get('auth_mod')
 				if mod_non_auth:
-					statement = vocab.Name(ident='', content=mod_non_auth)
-					statement.classified_as = model.Type(ident='http://vocab.getty.edu/aat/300456607', label='verbatim text/texts')
+					import pdb; pdb.set_trace()
+					statement2 = vocab.VerbatimTexts(ident='', content=mod_non_auth)
+					statement= vocab.VerbatimTexts(ident='', content=mod_non_auth)
+					#statement = vocab.LinguisticObject(ident='http://vocab.getty.edu/aat/300456607', label='verbatim text/texts',  metatype=vocab.instances["brief text"], content=mod_non_auth)
+					#statement.content = mod_non_auth
+					#statement.classified_as = model.Type(ident='http://vocab.getty.edu/aat/300456607', label='verbatim text/texts',  metatype=vocab.instances["brief text"])
 					flagb = True
 				warnings.warn(f'Handle buyer modifier: {mod}') # TODO: some way to model this uncertainty?
 
@@ -899,7 +904,8 @@ class AddAcquisitionOrBidding(ProvenanceBase):
 					if '[?]' in buyer_data['auth_nameq'] or flagb:
 						ident="https://linked.art/ns/terms/paid_from"
 						label="paid from"
-						paym.attributed_by = self.create_uncertainty_atribute(buyer, seq_no, label, ident, parent, statement=statement)
+						import pdb; pdb.set_trace()
+						paym.attributed_by = self.create_uncertainty_atribute(buyer, seq_no, label, ident, parent, statement=statement2)
 				payments_used.add('buy')
 
 		for i in range(len(prices)):
@@ -937,6 +943,7 @@ class AddAcquisitionOrBidding(ProvenanceBase):
 			# 			p.referred_to_by = vocab.PriceStatement(ident='', content=content)
 			self.set_possible_attribute(paym, 'paid_amount', amnt_data)
 			if hasattr(paym, 'paid_amount') and 'full' in amnt_data:
+				import pdb; pdb.set_trace()
 				price_statement = vocab.Name(ident='', content=amnt_data.get("full"))
 				price_statement.classified_as = model.Type(ident='http://vocab.getty.edu/aat/300456607', label='verbatim text/texts')
 

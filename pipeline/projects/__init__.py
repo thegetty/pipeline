@@ -475,7 +475,8 @@ class PersonIdentity:
 		auth_name = data.get('auth_name', '')
 		disp_name = data.get('auth_display_name')
 		name_types = [vocab.PrimaryName]
-		
+		name = data.get('name')
+
 		personalNameType = vocab.CorporateName if group else vocab.PersonalName
 		if disp_name:
 			if auth_name:
@@ -490,24 +491,28 @@ class PersonIdentity:
 				role_label = f'{role} “{auth_name}”'
 			data.setdefault('label', auth_name)
 			pname = vocab.make_multitype_obj(*name_types, ident='', content=auth_name) # NOTE: most of these are also vocab.SortName, but not 100%, so witholding that assertion for now
-			if isinstance(referrer, list):
-				for r in referrer:
-					pname.referred_to_by = r
-			elif referrer:
-				pname.referred_to_by = referrer
+			# if isinstance(referrer, list):
+			# 	for r in referrer:
+			# 		pname.referred_to_by = r
+			# elif referrer:
+			# 	pname.referred_to_by = referrer
 			data['identifiers'].append(pname)
+		else:
+			if not auth_name and name:
+				data.setdefault('label', name)
+				pname = vocab.PrimaryName(ident='', content=name + " referred to in " + kwargs['catalog_number'])
+				data['identifiers'].append(pname)
 
 		data.setdefault('names', [])
 
 		names = []
-		name = data.get('name')
+		
 		if name:
 			del data['name'] # this will be captured in the 'names' array, so remove it here so the output isn't duplicated
 			names.append(name)
 		variant_names = data.get('variant_names')
 		if variant_names:
 			names += [n.strip() for n in variant_names.split(';')]
-
 		for name in names:
 			if role and not role_label:
 				role_label = f'{role} “{name}”'
@@ -522,7 +527,7 @@ class PersonIdentity:
 			if auth_name:
 				data.setdefault('label', name)
 			else:
-				data.setdefault('label', name + " referred to in " + kwargs['catalog_number'])
+				data.setdefault('label', name )
 		data.setdefault('label', '(Anonymous)')
 
 		if role and not role_label:

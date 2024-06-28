@@ -157,8 +157,13 @@ class ProvenanceBase(Configurable):
 			'pi_record_no': data['pi_record_no'],
 			'ulan': owner_record.get('ulan', owner_record.get('own_ulan')),
 		})
-		self.add_person(owner_record, record=sales_record, relative_id=record_id, role='artist')
-		owner = get_crom_object(owner_record)
+		try:
+			cno = parent['auction_of_lot']['catalog_number']
+			self.add_person(owner_record, record=sales_record, relative_id=record_id, catalog_number = cno, role='artist')
+			owner = get_crom_object(owner_record)
+		except KeyError as e:
+			self.add_person(owner_record, record=sales_record, relative_id=record_id, role='artist')
+			owner = get_crom_object(owner_record)
 
 		# TODO: handle other fields of owner_record: own_auth_d, own_auth_q, own_ques, own_so
 
@@ -169,12 +174,21 @@ class ProvenanceBase(Configurable):
 			if canonical_place:
 				place = canonical_place
 				place_data = add_crom_data(data={'uri': place.id}, what=place)
+				owner.residence = place
+				data['_owner_locations'].append(place_data)
 			else:
-				current = parse_location_name(loc, uri_base=self.helper.uid_tag_prefix)
-				place_data = self.helper.make_place(current)
-				place = get_crom_object(place_data)
-			owner.residence = place
-			data['_owner_locations'].append(place_data)
+				residences = []
+				if hasattr(owner, 'residence'):
+					
+					for residence in owner.residence:
+						residences.append(residence._label)
+
+				if loc not in residences:
+					current = parse_location_name(loc, uri_base=self.helper.uid_tag_prefix)
+					place_data = self.helper.make_place(current)
+					place = get_crom_object(place_data)
+					owner.residence = place
+					data['_owner_locations'].append(place_data)
 		if owner_record.get('own_auth_p'):
 			content = owner_record['own_auth_p']
 			owner.referred_to_by = vocab.Note(ident='', content=content)

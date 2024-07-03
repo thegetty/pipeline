@@ -826,6 +826,11 @@ class AddArtists(ProvenanceBase):
 
 					# TODO: this assigns an uncertain carried_out_by property directly to the top-level production;
 					#       should it instead be an uncertain sub-production part?
+					if isinstance(sales_record, list):
+						for sale in sales_record:
+							assignment.used_specific_object = sale
+					else:
+						assignment.used_specific_object = sales_record
 					prod_event.attributed_by = assignment
 					assignment.assigned_property = 'carried_out_by'
 					assignment.assigned = person
@@ -838,6 +843,11 @@ class AddArtists(ProvenanceBase):
 					prod_event.attributed_by = assignment
 					assignment.assigned_property = 'carried_out_by'
 					assignment.assigned = person
+					if isinstance(sales_record, list):
+						for sale in sales_record:
+							assignment.used_specific_object = sale
+					else:
+						assignment.used_specific_object = sales_record
 					assignment.referred_to_by = vocab.Note(ident='', content=verbatim_mods)
 				else:
 					
@@ -850,10 +860,22 @@ class AddArtists(ProvenanceBase):
 						assignment.assigned = person
 						assignment.referred_to_by = vocab.Note(ident='', content=verbatim_mods)
 					else:
+						
+						assignment = vocab.make_multitype_obj(*attrib_assignment_classes, ident=attribute_assignment_id, label=f'Possibly attributed to {artist_label}')
+						assignment.used_specific_object = sales_record
+						prod_event.attributed_by = assignment
+						assignment.assigned_property = 'carried_out_by'
+						assignment.assigned = person
+						if isinstance(sales_record, list):
+							for sale in sales_record:
+								assignment.used_specific_object = sale
+						else:
+							assignment.used_specific_object = sales_record
+						assignment.referred_to_by = vocab.Note(ident='', content=verbatim_mods)
 						subevent = model.Production(ident=subevent_id, label=f'Production sub-event for {artist_label}')
 						subevent.carried_out_by = person
 						prod_event.part = subevent
-
+						
 	def model_object_influence(self, data, people, hmo, prod_event, attribution_modifiers, attribution_group_types, attribution_group_names, all_uncertain=False):
 		STYLE_OF = attribution_modifiers['style of']
 		COPY_AFTER = attribution_modifiers['copy after']

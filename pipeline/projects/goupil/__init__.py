@@ -454,9 +454,12 @@ class PopulateGoupilObject(Configurable, PopulateObject):
         odata = data["book_record"]
 
         # split the title and reference in a value such as 「"Collecting her strength" title info from Sales Book 3, 1874-1879, f.252」
-        label = self.helper.title_value(odata["title"])
-        title_ref = self.helper.add_title_reference(data, odata["title"])
-
+        if "title" in odata:
+            label = self.helper.title_value(odata["title"])
+            title_ref = self.helper.add_title_reference(data, odata["title"])
+        else: 
+            label = ''
+            title_ref = ''
         typestring = odata.get("object_type", "")
         identifiers = []
 
@@ -1062,13 +1065,14 @@ class GoupilTransactionHandler(TransactionHandler):
             act.referred_to_by = record
 
     def model_prev_post_owners(self, data, owner: str, role, people_groups):
-        splitOwners = [{k: v if k != "name" else x for k, v in owner.items()} for x in owner["name"].split("; ")]
-        for i, p in enumerate(splitOwners):
-            person_dict = self.helper.copy_source_information(p, data)
-            person = self.helper.add_group_or_person(
-                person_dict, relative_id=f"{role}_{i+1}", people_groups=people_groups, data=data
-            )
-            data["_people"].append(person_dict)
+        if 'name' in owner :
+            splitOwners = [{k: v if k != "name" else x for k, v in owner.items()} for x in owner["name"].split("; ")]
+            for i, p in enumerate(splitOwners):
+                person_dict = self.helper.copy_source_information(p, data)
+                person = self.helper.add_group_or_person(
+                    person_dict, relative_id=f"{role}_{i+1}", people_groups=people_groups, data=data
+                )
+                data["_people"].append(person_dict)
 
     def _apprasing_assignment(self, data):
         odata = data["_object"]
@@ -2135,6 +2139,37 @@ class GoupilPipeline(PipelineBase):
 								],
                                 "prefixes": ("joint_own", "joint_own_sh", "joint_own_auth"),
                             },
+                            'prev_own': {
+								'postprocess': [
+									lambda x, _: strip_key_prefix('prev_own_', x),
+									lambda d, p: associate_with_tgn_record_goupil(d, p, services['goupil_tgn'],"prev_own_loc")
+								],
+								'rename_keys': {
+									'prev_own': 'name',
+									'prev_own_auth': 'auth_name',
+									'prev_own_loc': 'loc',
+								},
+								'prefixes': (
+									"prev_own",
+									"prev_own_auth",
+									"prev_own_loc",
+								)
+                            },
+                            "post_own": {
+                                 "postprocess": [
+                                    lambda x, _: strip_key_prefix("post_own", x),
+                                    ],
+                                "rename_keys": {
+                                    "post_own_auth": "auth_name",
+                                    "post_own": "name",
+                                    "post_own_so": "so",
+                                    },
+                                "prefixes": (
+                                    "post_own_auth",
+                                    "post_own",
+                                    "post_own_so",
+                                ),
+                            },
                             "sale_buyer": {
                                 "postprocess": [ lambda d, p: associate_with_tgn_record_goupil(d, p, services['goupil_tgn'],"buy_auth")],
                                 "rename_keys": {
@@ -2170,26 +2205,6 @@ class GoupilPipeline(PipelineBase):
                                     "sale_date_year",
                                     "sale_date_month",
                                     "sale_date_day",
-                                ),
-                            },
-                            "prev_own": {
-                                "rename_keys": {
-                                    "previous_owner": "name",
-                                    "previous_sales": "sales",
-                                },
-                                "properties": (
-                                    "previous_owner",
-                                    "previous_sales",
-                                ),
-                            },
-                            "post_own": {
-                                "rename_keys": {
-                                    "post_owner": "name",
-                                    "post_sales": "sales",
-                                },
-                                "properties": (
-                                    "post_owner",
-                                    "post_sales",
                                 ),
                             },
                             "sale": {

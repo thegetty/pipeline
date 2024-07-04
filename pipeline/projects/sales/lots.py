@@ -1127,7 +1127,6 @@ class AddAcquisitionOrBidding(ProvenanceBase):
 		if act and all_mods:
 			# Preserve the seller modifier strings as notes on the acquisition/bidding activity
 			text =""
-			import pdb; pdb.set_trace()
 			for i, name in enumerate(buyer_seller):
 				if i==0:
 					text = name['auth_name'] + ' ' + name['auth_mod'] + ' '
@@ -1322,8 +1321,8 @@ class AddAcquisitionOrBidding(ProvenanceBase):
 
 				bid_count += 1
 				act = get_crom_object(data.get('_bidding'))
-				self.add_mod_notes(acq, all_seller_mods, label=f'Seller modifier', classification=vocab.instances["seller description"], buyer_seller=sellers)
-				self.add_mod_notes(acq, all_buyer_mods, label=f'Buyer modifier', classification=vocab.instances["buyer description"], buyer_seller=buyers)
+				self.add_mod_notes(act, all_seller_mods, label=f'Seller modifier', classification=vocab.instances["seller description"], buyer_seller=sellers)
+				self.add_mod_notes(act, all_buyer_mods, label=f'Buyer modifier', classification=vocab.instances["buyer description"], buyer_seller=buyers)
 				yield data
 			if not bid_count:
 				# there was no bidding, but we still want to model the seller(s) as
@@ -1348,8 +1347,8 @@ class AddAcquisitionOrBidding(ProvenanceBase):
 					self.add_non_sale_valuations(data, parent, lot_object_key, current_tx)
 
 					act = get_crom_object(data.get('_bidding'))
-					self.add_mod_notes(acq, all_seller_mods, label=f'Seller modifier', classification=vocab.instances["seller description"], buyer_seller=sellers)
-					self.add_mod_notes(acq, all_buyer_mods, label=f'Buyer modifier', classification=vocab.instances["buyer description"], buyer_seller=buyers)
+					self.add_mod_notes(act, all_seller_mods, label=f'Seller modifier', classification=vocab.instances["seller description"], buyer_seller=sellers)
+					self.add_mod_notes(act, all_buyer_mods, label=f'Buyer modifier', classification=vocab.instances["buyer description"], buyer_seller=buyers)
 					yield data
 		else:
 			prev_procurements = self.add_non_sale_sellers(data, sellers, sale_type, transaction, transaction_types)

@@ -456,7 +456,8 @@ class AddAcquisitionOrBidding(ProvenanceBase):
 				# when an agent is acting on behalf of the seller, model their involvement in a sub-activity
 				subxfer_id = self.helper.prepend_uri_key(hmo.id, f'CustodyTransfer,{sequence},SellerAgent,{agent_seq}')
 				subxfer = model.Activity(ident=subxfer_id, label="Seller's agent's role in transfer of custody")
-				subxfer.classified_as = vocab.instances['SellersAgent']
+				mod_non_auth = seller_data.get('auth_mod')
+				subxfer.referred_to_by =  vocab.VerbatimTexts(ident='', content=mod_non_auth)
 				subxfer.carried_out_by = seller
 				
 				xfer.part = subxfer
@@ -485,7 +486,8 @@ class AddAcquisitionOrBidding(ProvenanceBase):
 				# when an agent is acting on behalf of the buyer, model their involvement in a sub-activity
 				subxfer_id = self.helper.prepend_uri_key(hmo.id, f'CustodyTransfer,{sequence},BuyerAgent,{agent_seq}')
 				subxfer = model.Activity(ident=subxfer_id, label="Buyer's agent's role in transfer of custody")
-				subxfer.classified_as = vocab.instances['BuyersAgent']
+				mod_non_auth = buyer_data.get('auth_mod')
+				subxfer.referred_to_by =  vocab.VerbatimTexts(ident='', content=mod_non_auth)
 				subxfer.carried_out_by = buyer
 				xfer.part = subxfer
 			else:
@@ -771,14 +773,16 @@ class AddAcquisitionOrBidding(ProvenanceBase):
 				payments_used.add('sell')
 				subpaym_id = self.helper.prepend_uri_key(hmo.id, f'Payment,SellerAgent,{seq_no}')
 				subpaym = model.Activity(ident=subpaym_id, label="Seller's agent's role in payment")
-				subpaym.classified_as = vocab.instances['SellersAgent']
+				mod_non_auth = seller_data.get('auth_mod')
+				subpaym.referred_to_by =  vocab.VerbatimTexts(ident='', content=mod_non_auth)
 				subpaym.carried_out_by = seller
 				# payments['sell'].part = subpaym
 				paym.part = subpaym 
 
 				subacq_id = self.helper.prepend_uri_key(hmo.id, f'Acquisition,SellerAgent,{seq_no}')
 				subacq = model.Activity(ident=subacq_id, label="Seller's agent's role in acquisition")
-				subacq.classified_as = vocab.instances['SellersAgent']
+				mod_non_auth = seller_data.get('auth_mod')
+				subacq.referred_to_by =  vocab.VerbatimTexts(ident='', content=mod_non_auth)
 				subacq.carried_out_by = seller
 				acq.part = subacq
 				#test added
@@ -862,14 +866,16 @@ class AddAcquisitionOrBidding(ProvenanceBase):
 				payments_used.add('buy')
 				subpaym_id = self.helper.prepend_uri_key(hmo.id, f'Payment,BuyerAgent,{seq_no}')
 				subpaym = model.Activity(ident=subpaym_id, label="Buyer's agent's role in payment")
-				subpaym.classified_as = vocab.instances['BuyersAgent']
+				mod_non_auth = buyer_data.get('auth_mod')
+				subpaym.referred_to_by =  vocab.VerbatimTexts(ident='', content=mod_non_auth)
 				subpaym.carried_out_by = buyer
 				# payments['buy'].part = subpaym
 				paym.part = subpaym 
 
 				subacq_id = self.helper.prepend_uri_key(hmo.id, f'Acquisition,BuyerAgent,{seq_no}')
 				subacq = model.Activity(ident=subacq_id, label="Buyer's agent's role in acquisition")
-				subacq.classified_as = vocab.instances['BuyersAgent']
+				mod_non_auth = buyer_data.get('auth_mod')
+				subacq.referred_to_by =  vocab.VerbatimTexts(ident='', content=mod_non_auth)
 				subacq.carried_out_by = buyer
 				acq.part = subacq
 			elif FOR.intersects(mod):

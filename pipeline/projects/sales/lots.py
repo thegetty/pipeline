@@ -456,7 +456,9 @@ class AddAcquisitionOrBidding(ProvenanceBase):
 				# when an agent is acting on behalf of the seller, model their involvement in a sub-activity
 				subxfer_id = self.helper.prepend_uri_key(hmo.id, f'CustodyTransfer,{sequence},SellerAgent,{agent_seq}')
 				subxfer = model.Activity(ident=subxfer_id, label="Seller's agent's role in transfer of custody")
-				subxfer.classified_as = vocab.instances['SellersAgent']
+				import pdb; pdb.set_trace()
+				mod_non_auth = seller_data.get('auth_mod')
+				subxfer.referred_to_by = vocab.VerbatimTexts(ident='', content=mod_non_auth)
 				subxfer.carried_out_by = seller
 				
 				xfer.part = subxfer
@@ -1144,7 +1146,7 @@ class AddAcquisitionOrBidding(ProvenanceBase):
 					elif i != len(buyer_seller)-1:
 						if 'for' in name['auth_mod_a'] or 'through' in name['auth_mod_a']:
 							text += name['auth_name'] + ' and '
-						elif 'or anonymous' in mod:
+						elif 'or anonymous' in name['auth_mod_a']:
 							import pdb; pdb.set_trace()
 							text += name['auth_name'] + ' or '
 						else:
@@ -1153,11 +1155,7 @@ class AddAcquisitionOrBidding(ProvenanceBase):
 						text += name['auth_name']
 							
 			for mod in all_mods:
-				note = vocab.Note(ident='', label=label, content=mod)
-				note.classified_as = vocab.instances['qualifier']
-				if classification:
-					note.classified_as = classification
-				act.referred_to_by = note
+				
 				if 'Buyer' in label:
 					if 'for' in mod or 'through' in mod:
 						text += ' were recorded as either buyer or buyer’s agent for the Physical Object in this Provenance Activity'
@@ -1175,8 +1173,10 @@ class AddAcquisitionOrBidding(ProvenanceBase):
 					else:
 						text += ' were recorded as possible alternate sellers of the Physical Object in this Provenance Activity'
 			note = vocab.Note(ident='', label=label, content=text)
-			note.classified_as = vocab.instances['qualifier']
+			if classification:
+					note.classified_as = classification
 			lod_object[0]['_LOD_OBJECT'].referred_to_by = note
+
 			
 #			act.referred_to_by = self.select_county(data)
 

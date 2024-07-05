@@ -1059,6 +1059,7 @@ class AddAcquisitionOrBidding(ProvenanceBase):
 		own_info_source = f'Listed as the seller of object in {cno} {lno} ({date}) that was privately sold'
 		note = vocab.SourceStatement(ident='', content=own_info_source)
 		rel = 'leading to Ownership of'
+		import pdb; pdb.set_trace()
 		return self.add_sellers(data, sale_type, 'Event', sellers, rel, source=note)
 
 	def add_bidding(self, data:dict, buyers, sellers, buy_sell_modifiers, sale_type, transaction, transaction_types, auction_houses_data, include_custody_transfer=False):
@@ -1125,38 +1126,58 @@ class AddAcquisitionOrBidding(ProvenanceBase):
 				acq.referred_to_by = vocab.Note(ident='', content=note)
 			data['_prov_entries'].append(add_crom_data(data={}, what=tx))
 
-	def add_mod_notes(self, act, all_mods, label, classification=None, buyer_seller=None):
+	def add_mod_notes(self, act, all_mods, label, classification=None,lod_object=None, buyer_seller=None):
 		if act and all_mods:
 			text =""
-
 			for i, name in enumerate(buyer_seller):
-				if i==0:
-					text = name['auth_name'] + ' ' + name['auth_mod'] + ' '
-				elif i != len(buyer_seller)-1:
-					text = text + name['auth_name'] + name['auth_mod'] + ' '
+				
+					if i==0:
+						if 'for' in name['auth_mod_a'] or 'through' in name['auth_mod_a']:
+							text = name['auth_name'] + ' and '
+						elif 'or anonymous' in name['auth_mod_a']:
+							if i == len(buyer_seller)-1:
+								text = name['auth_name']
+							else:
+								text = name['auth_name'] + ' or '
+						else:
+							text = name['auth_name'] + ' ' + name['auth_mod_a'] + ' '
+					elif i != len(buyer_seller)-1:
+						if 'for' in name['auth_mod_a'] or 'through' in name['auth_mod_a']:
+							text += name['auth_name'] + ' and '
+						elif 'or anonymous' in mod:
+							import pdb; pdb.set_trace()
+							text += name['auth_name'] + ' or '
+						else:
+							text += name['auth_name'] + ' ' + name['auth_mod_a'] + ' '
+					else:
+						text += name['auth_name']
+							
 			for mod in all_mods:
+				note = vocab.Note(ident='', label=label, content=mod)
+				note.classified_as = vocab.instances['qualifier']
+				if classification:
+					note.classified_as = classification
+				act.referred_to_by = note
 				if 'Buyer' in label:
 					if 'for' in mod or 'through' in mod:
-						text = text + 'were recorded as either buyer or buyer’s agent for the Physical Object in this Provenance Activity'
+						text += ' were recorded as either buyer or buyer’s agent for the Physical Object in this Provenance Activity'
 					elif 'and' in mod:
-						text = text + 'were recorded as joint buyers of the Physical Object in this Provenance Activity'
+						text += ' were recorded as joint buyers of the Physical Object in this Provenance Activity'
 					else:
-						text = text + 'were recorded as possible alternate buyers of the Physical Object in this Provenance Activity'
+						text += ' were recorded as possible alternate buyers of the Physical Object in this Provenance Activity'
 				elif 'Seller' in label:
 					if 'for' in mod or 'through' in mod:
-						text = text + 'were recorded as either seller or seller’s agent for the Physical Object in this Provenance Activity'
+						text += ' were recorded as either seller or seller’s agent for the Physical Object in this Provenance Activity'
 					elif 'and' in mod:
-						text = text + 'were recorded as joint sellers of the Physical Object in this Provenance Activity'
+						text += ' were recorded as joint sellers of the Physical Object in this Provenance Activity'
 					elif 'or anonymous' in mod:
-						text = text + 'or other unspecified actors were recorded as possible alternate sellers of the Physical Object in this Provenance Activity'
+						text += ' or other unspecified actors were recorded as possible alternate sellers of the Physical Object in this Provenance Activity'
 					else:
-						text = text + 'were recorded as possible alternate sellers of the Physical Object in this Provenance Activity'
-
+						text += ' were recorded as possible alternate sellers of the Physical Object in this Provenance Activity'
 			note = vocab.Note(ident='', label=label, content=text)
 			note.classified_as = vocab.instances['qualifier']
-			if classification:
-				note.classified_as = classification
-			act.referred_to_by = note
+			lod_object[0]['_LOD_OBJECT'].referred_to_by = note
+			
 #			act.referred_to_by = self.select_county(data)
 
 	def create_source_attribute_assignment_name(self, assigned_object, sequence_num, property_assigned_label, property_assigned_id, source):
@@ -1179,7 +1200,7 @@ class AddAcquisitionOrBidding(ProvenanceBase):
 		auction_houses_data = event_properties['auction_houses']
 		event_experts = event_properties['experts']
 		event_commissaires = event_properties['commissaire']
-		data.setdefault('_prov_entries', [])
+		lod_object = data.setdefault('_prov_entries', [])
 		data.setdefault('_other_owners', [])
 
 		sales_record = get_crom_object(data['_record'])
@@ -1275,11 +1296,10 @@ class AddAcquisitionOrBidding(ProvenanceBase):
 			
 
 			for data, current_tx in self.add_acquisition(data, buyers, sellers, houses, non_auctions, buy_sell_modifiers, transaction, transaction_types):
-				
 				self.add_non_sale_valuations(data, parent, lot_object_key, current_tx)
 				acq = get_crom_object(data['_acquisition'])
-				self.add_mod_notes(acq, all_seller_mods, label=f'Seller modifier', classification=vocab.instances["seller description"], buyer_seller=sellers)
-				self.add_mod_notes(acq, all_buyer_mods, label=f'Buyer modifier', classification=vocab.instances["buyer description"], buyer_seller=buyers)
+				self.add_mod_notes(acq, all_seller_mods, label=f'Seller modifier', classification=vocab.instances["seller description"], lod_object=lod_object, buyer_seller=sellers)
+				self.add_mod_notes(acq, all_buyer_mods, label=f'Buyer modifier', classification=vocab.instances["buyer description"], lod_object=lod_object, buyer_seller=buyers )
 				experts = event_experts.get(cno, [])
 				commissaires = event_commissaires.get(cno, [])
 				custody_recievers = houses + [add_crom_data(data={}, what=r) for r in experts + commissaires]
@@ -1321,8 +1341,8 @@ class AddAcquisitionOrBidding(ProvenanceBase):
 
 				bid_count += 1
 				act = get_crom_object(data.get('_bidding'))
-				self.add_mod_notes(act, all_seller_mods, label=f'Seller modifier', classification=vocab.instances["seller description"], buyer_seller=sellers)
-				self.add_mod_notes(act, all_buyer_mods, label=f'Buyer modifier', classification=vocab.instances["buyer description"], buyer_seller=buyers)
+				self.add_mod_notes(act, all_seller_mods, label=f'Seller modifier', classification=vocab.instances["seller description"], lod_object=lod_object, buyer_seller=sellers)
+				self.add_mod_notes(act, all_buyer_mods, label=f'Buyer modifier', classification=vocab.instances["buyer description"], lod_object=lod_object, buyer_seller=buyers)
 				yield data
 			if not bid_count:
 				# there was no bidding, but we still want to model the seller(s) as
@@ -1347,8 +1367,8 @@ class AddAcquisitionOrBidding(ProvenanceBase):
 					self.add_non_sale_valuations(data, parent, lot_object_key, current_tx)
 
 					act = get_crom_object(data.get('_bidding'))
-					self.add_mod_notes(act, all_seller_mods, label=f'Seller modifier', classification=vocab.instances["seller description"], buyer_seller=sellers)
-					self.add_mod_notes(act, all_buyer_mods, label=f'Buyer modifier', classification=vocab.instances["buyer description"], buyer_seller=buyers)
+					self.add_mod_notes(act, all_seller_mods, label=f'Seller modifier', classification=vocab.instances["seller description"], lod_object=lod_object, buyer_seller=sellers)
+					self.add_mod_notes(act, all_buyer_mods, label=f'Buyer modifier', classification=vocab.instances["buyer description"], lod_object=lod_object, buyer_seller=buyers)
 					yield data
 		else:
 			prev_procurements = self.add_non_sale_sellers(data, sellers, sale_type, transaction, transaction_types)

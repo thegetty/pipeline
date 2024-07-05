@@ -1155,11 +1155,7 @@ class AddAcquisitionOrBidding(ProvenanceBase):
 				else:
 					text += name['auth_name']
 			for mod in all_mods:
-				note = vocab.Note(ident='', label=label, content=mod)
-				note.classified_as = vocab.instances['qualifier']
-				if classification:
-					note.classified_as = classification
-				act.referred_to_by = note
+				
 				if 'Buyer' in label:
 					if 'for' in mod or 'through' in mod:
 						text += ' were recorded as either buyer or buyer’s agent for the Physical Object in this Provenance Activity'
@@ -1177,7 +1173,7 @@ class AddAcquisitionOrBidding(ProvenanceBase):
 					else:
 						text += ' were recorded as possible alternate sellers of the Physical Object in this Provenance Activity'
 			note = vocab.Note(ident='', label=label, content=text)
-			note.classified_as = vocab.instances['qualifier']
+			note.classified_as = classification
 			lod_object[0]['_LOD_OBJECT'].referred_to_by = note
 
 	def create_source_attribute_assignment_name(self, assigned_object, sequence_num, property_assigned_label, property_assigned_id, source):

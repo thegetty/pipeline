@@ -456,7 +456,6 @@ class AddAcquisitionOrBidding(ProvenanceBase):
 				# when an agent is acting on behalf of the seller, model their involvement in a sub-activity
 				subxfer_id = self.helper.prepend_uri_key(hmo.id, f'CustodyTransfer,{sequence},SellerAgent,{agent_seq}')
 				subxfer = model.Activity(ident=subxfer_id, label="Seller's agent's role in transfer of custody")
-				import pdb; pdb.set_trace()
 				mod_non_auth = seller_data.get('auth_mod')
 				subxfer.referred_to_by = vocab.VerbatimTexts(ident='', content=mod_non_auth)
 				subxfer.carried_out_by = seller
@@ -486,7 +485,8 @@ class AddAcquisitionOrBidding(ProvenanceBase):
 				# when an agent is acting on behalf of the buyer, model their involvement in a sub-activity
 				subxfer_id = self.helper.prepend_uri_key(hmo.id, f'CustodyTransfer,{sequence},BuyerAgent,{agent_seq}')
 				subxfer = model.Activity(ident=subxfer_id, label="Buyer's agent's role in transfer of custody")
-				subxfer.classified_as = vocab.instances['BuyersAgent']
+				mod_non_auth = buyer_data.get('auth_mod')
+				subxfer.referred_to_by = vocab.VerbatimTexts(ident='', content=mod_non_auth)
 				subxfer.carried_out_by = buyer
 				xfer.part = subxfer
 			else:
@@ -781,14 +781,16 @@ class AddAcquisitionOrBidding(ProvenanceBase):
 				payments_used.add('sell')
 				subpaym_id = self.helper.prepend_uri_key(hmo.id, f'Payment,SellerAgent,{seq_no}')
 				subpaym = model.Activity(ident=subpaym_id, label="Seller's agent's role in payment")
-				subpaym.classified_as = vocab.instances['SellersAgent']
+				mod_non_auth = seller_data.get('auth_mod')
+				subpaym.referred_to_by = vocab.VerbatimTexts(ident='', content=mod_non_auth)
 				subpaym.carried_out_by = seller
 				# payments['sell'].part = subpaym
 				paym.part = subpaym 
 
 				subacq_id = self.helper.prepend_uri_key(hmo.id, f'Acquisition,SellerAgent,{seq_no}')
 				subacq = model.Activity(ident=subacq_id, label="Seller's agent's role in acquisition")
-				subacq.classified_as = vocab.instances['SellersAgent']
+				mod_non_auth = seller_data.get('auth_mod')
+				subacq.referred_to_by = vocab.VerbatimTexts(ident='', content=mod_non_auth)
 				subacq.carried_out_by = seller
 				acq.part = subacq
 				#test added
@@ -817,7 +819,7 @@ class AddAcquisitionOrBidding(ProvenanceBase):
 				paym_assignment_uri = paym.id + f'-seller-assignment-{seq_no}'
 				acq_assignment_label = f'Uncertain seller as previous title holder in acquisition'
 				acq_assignment = vocab.PossibleAssignment(ident=acq_assignment_uri, label=acq_assignment_label)
-				acq_assignment.referred_to_by = vocab.Note(ident='', content=acq_assignment_label)
+				acq_assignment.referred_to_by =vocab.VerbatimTexts(ident='', content=mod_non_auth)
 				acq_assignment.assigned_property = 'transferred_title_from'
 				acq_assignment.assigned = seller
 				acq.attributed_by = acq_assignment
@@ -868,14 +870,16 @@ class AddAcquisitionOrBidding(ProvenanceBase):
 				payments_used.add('buy')
 				subpaym_id = self.helper.prepend_uri_key(hmo.id, f'Payment,BuyerAgent,{seq_no}')
 				subpaym = model.Activity(ident=subpaym_id, label="Buyer's agent's role in payment")
-				subpaym.classified_as = vocab.instances['BuyersAgent']
+				mod_non_auth = buyer_data.get('auth_mod')
+				subpaym.referred_to_by = vocab.VerbatimTexts(ident='', content=mod_non_auth)
 				subpaym.carried_out_by = buyer
 				# payments['buy'].part = subpaym
 				paym.part = subpaym 
 
 				subacq_id = self.helper.prepend_uri_key(hmo.id, f'Acquisition,BuyerAgent,{seq_no}')
 				subacq = model.Activity(ident=subacq_id, label="Buyer's agent's role in acquisition")
-				subacq.classified_as = vocab.instances['BuyersAgent']
+				mod_non_auth = buyer_data.get('auth_mod')
+				subacq.referred_to_by = vocab.VerbatimTexts(ident='', content=mod_non_auth)
 				subacq.carried_out_by = buyer
 				acq.part = subacq
 			elif FOR.intersects(mod):
@@ -1153,24 +1157,31 @@ class AddAcquisitionOrBidding(ProvenanceBase):
 							text += name['auth_name'] + ' ' + name['auth_mod_a'] + ' '
 					else:
 						text += name['auth_name']
-							
+			flag = True			
 			for mod in all_mods:
 				
 				if 'Buyer' in label:
-					if 'for' in mod or 'through' in mod:
+					if ('for' in mod or 'through' in mod) and flag:
+						flag = False
 						text += ' were recorded as either buyer or buyer’s agent for the Physical Object in this Provenance Activity'
-					elif 'and' in mod:
+					elif 'and' in mod and flag:
+						flag = False
 						text += ' were recorded as joint buyers of the Physical Object in this Provenance Activity'
-					else:
+					elif flag:
+						flag = False
 						text += ' were recorded as possible alternate buyers of the Physical Object in this Provenance Activity'
 				elif 'Seller' in label:
-					if 'for' in mod or 'through' in mod:
+					if ('for' in mod or 'through' in mod) and flag:
+						flag = False
 						text += ' were recorded as either seller or seller’s agent for the Physical Object in this Provenance Activity'
-					elif 'and' in mod:
+					elif 'and' in mod and flag:
+						flag = False
 						text += ' were recorded as joint sellers of the Physical Object in this Provenance Activity'
-					elif 'or anonymous' in mod:
+					elif 'or anonymous' in mod and flag:
+						flag = False
 						text += ' or other unspecified actors were recorded as possible alternate sellers of the Physical Object in this Provenance Activity'
-					else:
+					elif flag:
+						flag = False
 						text += ' were recorded as possible alternate sellers of the Physical Object in this Provenance Activity'
 			note = vocab.Note(ident='', label=label, content=text)
 			if classification:

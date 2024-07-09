@@ -811,14 +811,14 @@ class AddAcquisitionOrBidding(ProvenanceBase):
 
 				acq_assignment_label = f'Uncertain seller as previous title holder in acquisition'
 				acq_assignment = vocab.PossibleAssignment(ident=acq_assignment_uri, label=acq_assignment_label)
-				acq_assignment.referred_to_by = vocab.Note(ident='', content=acq_assignment_label)
+				acq_assignment.referred_to_by = vocab.VerbatimTexts(ident='', content=mod_non_auth)
 				acq_assignment.assigned_property = 'transferred_title_from'
 				acq_assignment.assigned = seller
 				acq.attributed_by = acq_assignment
 
 				paym_assignment_label = f'Uncertain seller as recipient of payment'
 				paym_assignment = vocab.PossibleAssignment(ident=paym_assignment_uri, label=paym_assignment_label)
-				paym_assignment.referred_to_by = vocab.Note(ident='', content=paym_assignment_label)
+				paym_assignment.referred_to_by = vocab.VerbatimTexts(ident='', content=mod_non_auth)
 				paym_assignment.assigned_property = 'paid_to'
 				paym_assignment.assigned = seller
 				# payments['sell'].attributed_by = paym_assignment
@@ -1148,32 +1148,41 @@ class AddAcquisitionOrBidding(ProvenanceBase):
 					if 'for' in name['auth_mod_a'] or 'through' in name['auth_mod_a']:
 						text += name['auth_name'] + ' and '
 					elif 'or anonymous' in name['auth_mod_a']:
-						import pdb; pdb.set_trace()
 						text += name['auth_name'] + ' or '
 					else:
 						text += name['auth_name'] + ' ' + name['auth_mod_a'] + ' '
 				else:
 					text += name['auth_name']
+
+			flag = True			
 			for mod in all_mods:
 				
 				if 'Buyer' in label:
-					if 'for' in mod or 'through' in mod:
+					if ('for' in mod or 'through' in mod) and flag:
+						flag = False
 						text += ' were recorded as either buyer or buyer’s agent for the Physical Object in this Provenance Activity'
-					elif 'and' in mod:
+					elif 'and' in mod and flag:
+						flag = False
 						text += ' were recorded as joint buyers of the Physical Object in this Provenance Activity'
-					else:
+					elif flag:
+						flag = False
 						text += ' were recorded as possible alternate buyers of the Physical Object in this Provenance Activity'
 				elif 'Seller' in label:
-					if 'for' in mod or 'through' in mod:
+					if ('for' in mod or 'through' in mod) and flag:
+						flag = False
 						text += ' were recorded as either seller or seller’s agent for the Physical Object in this Provenance Activity'
-					elif 'and' in mod:
+					elif 'and' in mod and flag:
+						flag = False
 						text += ' were recorded as joint sellers of the Physical Object in this Provenance Activity'
-					elif 'or anonymous' in mod:
+					elif 'or anonymous' in mod and flag:
+						flag = False
 						text += ' or other unspecified actors were recorded as possible alternate sellers of the Physical Object in this Provenance Activity'
-					else:
+					elif flag:
+						flag = False
 						text += ' were recorded as possible alternate sellers of the Physical Object in this Provenance Activity'
 			note = vocab.Note(ident='', label=label, content=text)
-			note.classified_as = classification
+			if classification:
+					note.classified_as = classification
 			lod_object[0]['_LOD_OBJECT'].referred_to_by = note
 
 	def create_source_attribute_assignment_name(self, assigned_object, sequence_num, property_assigned_label, property_assigned_id, source):

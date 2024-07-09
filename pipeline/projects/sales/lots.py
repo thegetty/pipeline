@@ -819,14 +819,14 @@ class AddAcquisitionOrBidding(ProvenanceBase):
 				paym_assignment_uri = paym.id + f'-seller-assignment-{seq_no}'
 				acq_assignment_label = f'Uncertain seller as previous title holder in acquisition'
 				acq_assignment = vocab.PossibleAssignment(ident=acq_assignment_uri, label=acq_assignment_label)
-				acq_assignment.referred_to_by =vocab.VerbatimTexts(ident='', content=mod_non_auth)
+				acq_assignment.referred_to_by = vocab.VerbatimTexts(ident='', content=mod_non_auth)
 				acq_assignment.assigned_property = 'transferred_title_from'
 				acq_assignment.assigned = seller
 				acq.attributed_by = acq_assignment
 
 				paym_assignment_label = f'Uncertain seller as recipient of payment'
 				paym_assignment = vocab.PossibleAssignment(ident=paym_assignment_uri, label=paym_assignment_label)
-				paym_assignment.referred_to_by = vocab.Note(ident='', content=paym_assignment_label)
+				paym_assignment.referred_to_by = vocab.VerbatimTexts(ident='', content=mod_non_auth)
 				paym_assignment.assigned_property = 'paid_to'
 				paym_assignment.assigned = seller
 				# payments['sell'].attributed_by = paym_assignment

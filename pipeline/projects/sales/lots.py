@@ -775,7 +775,7 @@ class AddAcquisitionOrBidding(ProvenanceBase):
 					warnings.warn(f'Handle buyer modifier: {mod}') # TODO: some way to model this uncertainty?
 			if uncertain_attribution:
 				attrib_assignment_classes.append(vocab.PossibleAssignment)
-
+			import pdb; pdb.set_trace()
 			if THROUGH.intersects(mod):
 				# when an agent is acting on behalf of the seller, model their involvement in a sub-activities
 				payments_used.add('sell')
@@ -823,14 +823,16 @@ class AddAcquisitionOrBidding(ProvenanceBase):
 				acq_assignment.assigned_property = 'transferred_title_from'
 				acq_assignment.assigned = seller
 				acq.attributed_by = acq_assignment
-
+				acq.transferred_title_from = seller
+				
 				paym_assignment_label = f'Uncertain seller as recipient of payment'
 				paym_assignment = vocab.PossibleAssignment(ident=paym_assignment_uri, label=paym_assignment_label)
 				paym_assignment.referred_to_by = vocab.VerbatimTexts(ident='', content=mod_non_auth)
 				paym_assignment.assigned_property = 'paid_to'
 				paym_assignment.assigned = seller
 				# payments['sell'].attributed_by = paym_assignment
-				paym.attributed_by = paym_assignment   
+				paym.attributed_by = paym_assignment
+				paym.paid_to = seller
 				payments_used.add('sell')
 				
 			else:

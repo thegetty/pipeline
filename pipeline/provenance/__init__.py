@@ -443,8 +443,8 @@ class ProvenanceBase(Configurable):
 				# The original object URI is just the object URI with a suffix. When URIs are
 				# reconciled during prev/post sale rewriting, this will allow us to also reconcile
 				# the URIs for the original object (of which there should be at most one per object)
-				original_id = hmo.id + '-Original'
-				original_label = f'Original of {hmo_label}'
+				original_id = hmo.id + artist_label
+				original_label = f'Original of {artist_label}'
 				original_hmo = cls(ident=original_id, label=original_label)
 				
 				# original title

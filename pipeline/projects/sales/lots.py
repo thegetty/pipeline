@@ -490,6 +490,7 @@ class AddAcquisitionOrBidding(ProvenanceBase):
 		current_tx.part = xfer
 
 	def create_uncertainty_atribute(self, seller, agent_seq, label, ident, parent):
+		import pdb; pdb.set_trace()
 		attrib_assignment_classes = [model.AttributeAssignment]
 		prod_event = model.Production(ident=seller.id, label=f'Production event for {seller._label}')
 		attribute_assignment_id =  self.helper.prepend_uri_key(prod_event.id, f'ASSIGNMENT,Seller-{agent_seq}')

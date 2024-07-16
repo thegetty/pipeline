@@ -101,6 +101,7 @@ class MakeLinkedArtRecord:
 
 		for identifier in data.get('identifiers', []):
 			if isinstance(identifier, tuple):
+				import pdb; pdb.set_trace()
 				content, itype = identifier
 				if itype is not None:
 					if isinstance(itype, type):
@@ -125,13 +126,20 @@ class MakeLinkedArtRecord:
 
 		if not hasattr(thing, '_label') and 'label' in data:
 			setattr(thing, '_label', data['label'])
-
+		
 		for namedata in data.get('names', []):
 			# namedata should take the form of:
 			# ["A. Name"]
 			# ["A. Name", {'referred_to_by': [{'uri': 'URI-OF-LINGUISTIC_OBJECT'}, model.LinguisticObject()]}]
 			if isinstance(namedata, tuple):
-				name, *properties = namedata
+				if 'auth_name' in data:
+					if data.get('auth_name', '')=='':
+						name, *properties = namedata
+						name = data['label']
+					else:
+						name, *properties = namedata
+				else:
+					name, *properties = namedata
 			else:
 				name = namedata
 				properties = []
@@ -141,9 +149,13 @@ class MakeLinkedArtRecord:
 					cl = props['classified_as']
 					del props['classified_as']
 					name_kwargs['title_type'] = cl
-
-			n = set_la_name(thing, name, **name_kwargs)
-			self.set_lo_properties(n, *properties)
+			identified_by = []
+			if hasattr(thing, 'identified_by'):
+				for identified in thing.identified_by:
+					identified_by.append(identified.content)
+			if name not in identified_by:
+				n = set_la_name(thing, name, **name_kwargs)
+				self.set_lo_properties(n, *properties)
 
 	def set_lo_properties(self, n, *properties):
 		for props in properties:
@@ -273,7 +285,7 @@ class MakeLinkedArtLinguisticObject(MakeLinkedArtRecord):
 				name = model.Name()
 				name.classified_as = title_type
 				name.content = label
-
+	
 				indexing = model.Type(label=label)
 				if not label:
 					warnings.warn(f'Setting empty name on {indexing.id}')

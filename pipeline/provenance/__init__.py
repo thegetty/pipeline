@@ -103,6 +103,7 @@ class ProvenanceBase(Configurable):
 			pxfer.transferred_custody_from = seller
 		
 		if owner_record and 'own_auth_q' in owner_record:
+
 			if '?' in owner_record['own_auth_q']:
 				owner = get_crom_object(owner_record)
 				ident="http://www.cidoc-crm.org/cidoc-crm/P29_custody_received_by"
@@ -773,10 +774,10 @@ class ProvenanceBase(Configurable):
 		For example, label='buyer' and object_key='B-340 0291 (1820-07-19)'.
 		'''
 		all_mods = {m.lower().strip() for a in people for m in a.get(mod_key, '').split(';')} - {''}
+
 		# group = (all_mods == {'or'}) # the person is *one* of the named people, model as a group
 		# if group:
 		# 	import pdb; pdb.set_trace()
-
 		# 	names = []
 		# 	for person_data in people:
 		# 		if len(person_data['identifiers']):

@@ -500,8 +500,9 @@ class AddAcquisitionOrBidding(ProvenanceBase):
 
 		current_tx.part = xfer
 
+
 	def create_uncertainty_atribute(self, seller, agent_seq, label, ident, parent, statement=None):
-		
+
 		attrib_assignment_classes = [model.AttributeAssignment]
 		prod_event = model.Production(ident=seller.id, label=f'Production event for {seller._label}')
 		attribute_assignment_id =  self.helper.prepend_uri_key(prod_event.id, f'ASSIGNMENT,Seller-{agent_seq}')
@@ -578,6 +579,7 @@ class AddAcquisitionOrBidding(ProvenanceBase):
 		if ask_price:
 			self.add_valuation(data, ask_price, lot_object_key, current_tx, valuation_type=vocab.AppraisingAssignment, valuation_label='Appraising')
 
+
 	def copy_monetary_amnt(self, amnt_old, cno, lno):
 		
 		if amnt_old:
@@ -647,7 +649,7 @@ class AddAcquisitionOrBidding(ProvenanceBase):
 			assignment.assigned_property = 'dimension'
 			assignment.assigned = amnt
 		else:
-			
+
 			attrib_assignment_classes = [model.AttributeAssignment, valuation_type]
 			# lno = self.helper.shared_lot_number_from_lno(lno)
 			assignment = vocab.make_multitype_obj(*attrib_assignment_classes, label=f'{valuation_label} valuation of {cno} {lno} {date}')
@@ -961,10 +963,12 @@ class AddAcquisitionOrBidding(ProvenanceBase):
 
 				paym.paid_amount.identified_by = price_statement
 
+
 		for price in prices[1:]:
 			content = self._price_note(price)
 			if content:
 				paym.referred_to_by = vocab.PriceStatement(ident='', content=content)
+
 
 		# elif ask_price:
 		# 	# for non-auction sales, the ask price is the amount paid for the acquisition

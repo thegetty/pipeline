@@ -224,16 +224,16 @@ class AddAuctionOfLot(ProvenanceBase):
 				note.classified_as = problem_classification
 				lot.referred_to_by = note
 
-		cite_content = []
-		if data.get('transaction_so'):
-			cite_content.append(data['transaction_so'])
-		if data.get('transaction_cite'):
-			cite_content.append(data['transaction_cite'])
-		if cite_content:
-			content = ', '.join(cite_content)
-			cite = vocab.BibliographyStatement(ident='', content=content, label='Source of transaction type')
-			cite.identified_by = model.Name(ident='', content='Source of transaction type')
-			lot.referred_to_by = cite
+		# cite_content = []
+		# if data.get('transaction_so'):
+		# 	cite_content.append(data['transaction_so'])
+		# if data.get('transaction_cite'):
+		# 	cite_content.append(data['transaction_cite'])
+		# if cite_content:
+		# 	content = ', '.join(cite_content)
+		# 	cite = vocab.BibliographyStatement(ident='', content=content, label='Source of transaction type')
+		# 	cite.identified_by = model.Name(ident='', content='Source of transaction type')
+		# 	lot.referred_to_by = cite
 
 		transaction = data.get('transaction')
 		transaction = transaction.replace('[?]', '').rstrip()
@@ -281,9 +281,51 @@ class AddAuctionOfLot(ProvenanceBase):
 			if tx_cl:
 				label = tx_cl.get('label')
 				url = tx_cl.get('url')
-				tx.classified_as = model.Type(ident=url, label=label)
+				transaction_type = model.Type(ident=url, label=label)
+				if 'transaction_so' in data and data['transaction_so']:
+					transaction_publication = data['transaction_so']
+					if 'transaction_cite' in data and data['transaction_cite']:
+						transaction_citation = data['transaction_cite']
+
+						publication_text_work_uri = self.helper.make_proj_uri('LINGOBJECT', 'SOURCE', 'PUBLICATION', transaction_publication)
+						publication_lo= model.LinguisticObject(ident=publication_text_work_uri, label = transaction_publication)
+						publication_lo.identified_by = vocab.PrimaryName(ident='', content=transaction_publication)
+						publication_lo.referred_to_by = self.select_county(data)
+
+						citation_text_work_uri = self.helper.make_proj_uri('LINGOBJECT', 'SOURCE', 'CITATION', transaction_citation)
+						citation_lo= model.LinguisticObject(ident=citation_text_work_uri, label = transaction_citation)
+						citation_lo.identified_by = vocab.PrimaryName(ident='', content=transaction_citation)
+						citation_lo.referred_to_by = self.select_county(data)
+						citation_lo.part_of = publication_lo
+
+						publication_data = {
+							'publication_uri': publication_text_work_uri,
+							'publication_label': transaction_publication,
+						}
+
+						citation_data = {
+							'citation_uri': citation_text_work_uri,
+							'citation_label': citation_lo._label
+						}
+						add_crom_data(data=publication_data, what=publication_lo)
+						add_crom_data(data=citation_data, what=citation_lo)
+						if not '_citation_references' in data:
+							data['_citation_references'] = []
+						data['_citation_references'].append(publication_data)
+						data['_citation_references'].append(citation_data)
+						source = citation_lo
+
+						property_assigned_label = "P2i is type of"
+						property_assigned_id = "http://www.cidoc-crm.org/cidoc-crm/P2i_is_type_of"
+						attribution_label = f'Attribution of type {label} to {tx._label}'
+						transaction_type.attributed_by = self.helper.create_source_attribute_assignment(tx, 0, attribution_label, property_assigned_label, property_assigned_id, source, True)
+
+					tx.classified_as = transaction_type
 			else:
 				warnings.warn(f'*** No classification found for transaction type: {transaction!r}')
+
+
+
 			tx.caused_by = lot
 			tx_data = {'uri': tx_uri}
 
@@ -397,7 +439,7 @@ class AddAcquisitionOrBidding(ProvenanceBase):
 			label += f'; {content}'
 		return label
 
-	def final_owner_prov_entry(self, tx_label_args, final_owner, current_tx, hmo, current_ts, sales_record):
+	def final_owner_prov_entry(self, data, tx_label_args, final_owner, current_tx, hmo, current_ts, sales_record):
 		# It's conceivable that there could be more than one "present location" for an
 		# object that is reconciled based on prev/post sale rewriting. Therefore, the
 		# provenance entry URI must not share a prefix with the object URI, otherwise all
@@ -405,7 +447,7 @@ class AddAcquisitionOrBidding(ProvenanceBase):
 		# part of the prev/post sale rewriting.
 
 		tx_uri = self.helper.prepend_uri_key(hmo.id, f'PROV,CURROWN')
-		tx, acq = self.related_procurement(hmo, tx_label_args, current_tx, current_ts, buyer=final_owner, ident=tx_uri, make_label=prov_entry_label, sales_record=sales_record)
+		tx, acq = self.related_procurement(data, hmo, tx_label_args, current_tx, current_ts, buyer=final_owner, ident=tx_uri, make_label=prov_entry_label, sales_record=sales_record)
 		return tx, acq
 
 	def add_transfer_of_custody(self, data, current_tx, xfer_to, xfer_from, buy_sell_modifiers, sequence=1, purpose=None):
@@ -525,20 +567,6 @@ class AddAcquisitionOrBidding(ProvenanceBase):
 		assignment.assigned = seller
 		return assignment
 
-	def create_source_attribute_assignment(self, assigned_object, sequence_num, property_assigned_label, property_assigned_id, source, assign):
-		attrib_assignment_classes = [model.AttributeAssignment]
-	
-		prod_id = self.helper.make_shared_uri('Production', 'Assignment', 'Source', assigned_object.id )
-		prod_event = model.Production(ident=prod_id, label=f'Production event for {assigned_object._label}')
-		attribute_assignment_id =  self.helper.prepend_uri_key(prod_event.id, f'ASSIGNMENT,Source-{assigned_object.id}-{sequence_num}-{source.id}')
-		assignment = vocab.make_multitype_obj(*attrib_assignment_classes, ident=attribute_assignment_id, label=f'Source attributed to {assigned_object._label}')
-		assignment.classified_as = model.Type(ident="http://vocab.getty.edu/aat/300456597", label="warrant")
-		assignment.used_specific_object = source
-		assignment.assigned_property = model.Type(ident=property_assigned_id, label=property_assigned_label)
-		if assign:
-			assignment.assigned = assigned_object
-		return assignment
-		
 
 	def copy_object_with_new_id(self, value):
 		# Some objects had trouble in the JSON-LD merging that occurs during post-processing,
@@ -665,22 +693,12 @@ class AddAcquisitionOrBidding(ProvenanceBase):
 			assignment = vocab.make_multitype_obj(*attrib_assignment_classes, label=f'{valuation_label} valuation of {cno} {lno} {date}')
 			assignment.assigned_property = 'dimension'
 			assignment.assigned = amnt
-			if 'source' in amnt_data and amnt_data['source']:
-				amnt_source_parts = amnt_data['source'].replace('Handwritten Annotation:', '').split(' ')
-				if amnt_source_parts[0] in self.helper.services['location_codes']:
-					amnt_source = amnt_source_parts[0]
-					if len(amnt_source_parts) > 1:
-						copy_no = amnt_source_parts[1]
-						catalog_uri = self.helper.make_proj_uri('PHYS-CAT', cno, amnt_source, copy_no)
-					else:
-						catalog_uri = self.helper.make_proj_uri('PHYS-CAT', cno, amnt_source)
 
-				catalog_uri = self.helper.make_proj_uri('PHYS-CAT', cno, amnt_source)
-				catalogue = vocab.AuctionCatalog(ident=catalog_uri, label=f'Sale Catalog {cno}, owned by “{amnt_source}”')
-				property_assigned_label = "P90_has_value"
-				property_assigned_id = "http://www.cidoc-crm.org/cidoc-crm/P90_has_value"
-				assignment.attributed_by = self.create_source_attribute_assignment(amnt, 0, property_assigned_label, property_assigned_id, catalogue, False)
-				
+			if 'source' in amnt_data and amnt_data['source']:
+				amnt_source = amnt_data['source']
+				if amnt_source:
+					amnt = self.add_monetary_source_data_assignment(data, amnt_data, amnt, amnt_source, cno)
+
 
 		for seq_no, buyer_data in enumerate(buyers):
 			buyer = get_crom_object(buyer_data)
@@ -949,23 +967,9 @@ class AddAcquisitionOrBidding(ProvenanceBase):
 			# "Hammer price" valuation on the lot set.
 			amnt_data = prices[i]
 			amnt = self.copy_object_with_new_id(get_crom_object(amnt_data))
-			amnt_source = amnt_data['source'].replace('Handwritten Annotation:', '').strip()
+			amnt_source = amnt_data['source']
 			if amnt_source:
-				#create the id of the physical object of the catalogue
-				amnt_source_parts = amnt_source.replace('Handwritten Annotation:', '').split(' ')
-				if amnt_source_parts[0] in self.helper.services['location_codes']:
-					amnt_source = amnt_source_parts[0]
-					if len(amnt_source_parts) > 1:
-						copy_no = amnt_source_parts[1]
-						catalog_uri = self.helper.make_proj_uri('PHYS-CAT', cno, amnt_source, copy_no)
-					else:
-						catalog_uri = self.helper.make_proj_uri('PHYS-CAT', cno, amnt_source)
-
-					catalogue = vocab.AuctionCatalog(ident=catalog_uri, label=f'Sale Catalog {cno}, owned by “{amnt_source}”')
-					property_assigned_label = "P90_has_value"
-					property_assigned_id = "http://www.cidoc-crm.org/cidoc-crm/P90_has_value"
-					amnt.attributed_by = self.create_source_attribute_assignment(amnt, 0, property_assigned_label, property_assigned_id, catalogue, False)
-					
+				amnt = self.add_monetary_source_data_assignment(data, amnt_data, amnt, amnt_source, cno)
 
 			add_crom_data(amnt_data, amnt)
 			# for p in payments.values():
@@ -1016,6 +1020,76 @@ class AddAcquisitionOrBidding(ProvenanceBase):
 		self.add_prev_post_owners(data, hmo, tx_data, sale_type, lot_object_key, ts)
 		yield data, current_tx
 
+	def add_monetary_source_data_assignment(self, data, amnt_data, amnt, amnt_source, cno):
+		if 'citation' in amnt_data and amnt_data['citation']:
+			if 'referred_to_by' in amnt.__dict__ and amnt.referred_to_by:
+				amnt_refs = amnt.referred_to_by
+				for i in range(len(amnt_refs)):
+					if isinstance(amnt_refs[i],vocab.BibliographyStatement):
+						del amnt_refs[i]
+
+			publication_text_work_uri = self.helper.make_proj_uri('LINGOBJECT', 'SOURCE', 'PUBLICATION', amnt_source)
+			publication_lo= model.LinguisticObject(ident=publication_text_work_uri, label = amnt_source)
+			publication_lo.identified_by = vocab.PrimaryName(ident='', content=amnt_source)
+			publication_lo.referred_to_by = self.select_county(data)
+
+			amnt_citation = amnt_data['citation']
+			citation_text_work_uri = self.helper.make_proj_uri('LINGOBJECT', 'SOURCE', 'CITATION', amnt_citation)
+			citation_lo= model.LinguisticObject(ident=citation_text_work_uri, label = amnt_citation)
+			citation_lo.identified_by = vocab.PrimaryName(ident='', content=amnt_citation)
+			citation_lo.referred_to_by = self.select_county(data)
+			citation_lo.part_of = publication_lo
+			
+			publication_data = {
+				'publication_uri': publication_text_work_uri,
+				'publication_label': amnt_source,
+			}
+
+			citation_data = {
+				'citation_uri': citation_text_work_uri,
+				'citation_label': amnt_citation
+			}
+			
+			add_crom_data(data=publication_data, what=publication_lo)
+			add_crom_data(data=citation_data, what=citation_lo)
+			if not '_citation_references' in data:
+				data['_citation_references'] = []
+			data['_citation_references'].append(publication_data)
+			data['_citation_references'].append(citation_data)
+			source = citation_lo
+
+		# elif amnt_source == 'Catalogue':
+
+		else:
+			
+			if amnt_source == "Catalogue" or amnt_source == "Descriptive Catalogue":
+				source = self.helper.catalog_text(cno, 'Auction')
+			else:
+				if 'Handwritten Annotation:' in amnt_source:
+					amnt_source = amnt_source.replace('Handwritten Annotation:', '')
+			 	
+				amnt_source_parts = [x for x in amnt_source.split(' ') if x != '']
+				amnt_source = amnt_source_parts[0]
+
+				if amnt_source in self.helper.services['location_codes']:
+					if len(amnt_source_parts) == 2:
+						copy_no = amnt_source_parts[1]
+						catalog_uri = self.helper.make_proj_uri('PHYS-CAT', cno, amnt_source, copy_no)
+						cat_label = f'Sale Catalog {cno}, owned by “{amnt_source}”, copy {copy_no}'
+					else:
+						catalog_uri = self.helper.make_proj_uri('PHYS-CAT', cno, amnt_source)
+						cat_label = f'Sale Catalog {cno}, owned by “{amnt_source}”'
+
+					source = vocab.AuctionCatalog(ident=catalog_uri, label=cat_label)
+
+		property_assigned_label = "P90_has_value"
+		property_assigned_id = "http://www.cidoc-crm.org/cidoc-crm/P90_has_value"
+		attribution_label = f'Source attributed to {amnt._label}'
+		amnt.attributed_by = self.helper.create_source_attribute_assignment(amnt, 0, attribution_label, property_assigned_label, property_assigned_id, source, False)
+		
+		return amnt
+
+
 	def add_prev_post_owners(self, data, hmo, tx_data, sale_type, lot_object_key, ts=None):
 		post_own = data.get('post_owner', [])
 		prev_own = data.get('prev_owner', [])
@@ -1061,7 +1135,7 @@ class AddAcquisitionOrBidding(ProvenanceBase):
 # 			tx.referred_to_by = get_crom_object(data['_sale_record'])
 
 			sales_record = get_crom_object(data.get('_record'))
-			tx, acq = self.related_procurement(hmo, tx_label_args, current_ts=ts, buyer=seller, previous=True, ident=tx_uri, make_label=prov_entry_label, sales_record=sales_record, seq_no=i, parent=parent)
+			tx, acq = self.related_procurement(data, hmo, tx_label_args, current_ts=ts, buyer=seller, previous=True, ident=tx_uri, make_label=prov_entry_label, sales_record=sales_record, seq_no=i, parent=parent)
 			self.attach_source_catalog(data, acq, [seller_data])
 			if source:
 				tx.referred_to_by = source
@@ -1149,7 +1223,7 @@ class AddAcquisitionOrBidding(ProvenanceBase):
 			hmo = get_crom_object(data)
 			tx_label_args = tuple([self.helper, sale_type, 'Event', 'leading to the currently known location of'] + list(lot_object_key))
 			sales_record = get_crom_object(data.get('_record'))
-			tx, acq = self.final_owner_prov_entry(tx_label_args, final_owner, current_tx, hmo, ts, sales_record)
+			tx, acq = self.final_owner_prov_entry(data, tx_label_args, final_owner, current_tx, hmo, ts, sales_record)
 			note = final_owner_data.get('note')
 			
 			if note:
@@ -1212,19 +1286,6 @@ class AddAcquisitionOrBidding(ProvenanceBase):
 					note.classified_as = classification
 			lod_object[0]['_LOD_OBJECT'].referred_to_by = note
 
-	def create_source_attribute_assignment_name(self, assigned_object, sequence_num, property_assigned_label, property_assigned_id, source):
-		attrib_assignment_classes = [model.AttributeAssignment]
-		prod_id = self.helper.make_shared_uri('Production', 'Assignment', 'Source', assigned_object.id )
-		# original_event = model.Production(ident=original_event_id, label=f'Production event for {original_label}')
-		prod_event = model.Production(ident=prod_id, label=f'Production event for {assigned_object._label}')
-		attribute_assignment_id =  self.helper.prepend_uri_key(prod_event.id, f'ASSIGNMENT,Source, Name-{assigned_object.id}-{sequence_num}-{source.id}')
-		assignment = vocab.make_multitype_obj(*attrib_assignment_classes, ident=attribute_assignment_id, label=f'Source attributed to the Name of {assigned_object._label}')
-		assignment.classified_as = model.Type(ident="http://vocab.getty.edu/aat/300456597", label="warrant")
-		assignment.used_specific_object = source
-		assignment.assigned_property = model.Type(ident=property_assigned_id, label=property_assigned_label)
-		assignment.assigned = assigned_object
-		return assignment
-
 	def __call__(self, data:dict, non_auctions, event_properties, buy_sell_modifiers, transaction_types):
 		'''Determine if this record has an acquisition or bidding, and add appropriate modeling'''
 		parent = data['parent_data']
@@ -1257,25 +1318,68 @@ class AddAcquisitionOrBidding(ProvenanceBase):
 		
 		# Add source data assignment on buyer name 
 		for i in range(len(buyers)): 
-			if 'name_so' in buyers[i] and buyers[i]['name_so']:
-				name_source_parts = buyers[i]['name_so'].replace('Handwritten Annotation:', '').split(' ')
-				if name_source_parts[0] in self.helper.services['location_codes']:
-					name_source = name_source_parts[0]
-					if len(name_source_parts) > 1:
-						copy_no = name_source_parts[1]
-						catalog_uri = self.helper.make_proj_uri('PHYS-CAT', cno, name_source, copy_no)
-					else:
-						catalog_uri = self.helper.make_proj_uri('PHYS-CAT', cno, name_source)
+			if 'name_so' in buyers[i] and buyers[i]['name_so']:	
+				name_source = buyers[i]['name_so']
+				if 'Handwritten Annotation:' in name_source :
+					name_source = buyers[i]['name_so'].replace('Handwritten Annotation:', '')
+				
+				if name_source == "Catalogue" or name_source == "Descriptive Catalogue":
+					catalogue = self.helper.catalog_text(cno, 'Auction')	
+				
+				elif 'name_cite' in buyers[i] and buyers[i]['name_cite']:
+					buyer_citation = buyers[i]['name_cite']
+					publication_text_work_uri = self.helper.make_proj_uri('LINGOBJECT', 'SOURCE', 'PUBLICATION', name_source)
+					publication_lo= model.LinguisticObject(ident=publication_text_work_uri, label = name_source)
+					publication_lo.identified_by = vocab.PrimaryName(ident='', content=name_source)
+					publication_lo.referred_to_by = self.select_county(data)
 
-					catalogue = vocab.AuctionCatalog(ident=catalog_uri, label=f'Sale Catalog {cno}, owned by “{name_source}”')
-					property_assigned_label = "P1i identifies"
-					property_assigned_id = "http://www.cidoc-crm.org/cidoc-crm/P1i_identifies"
-					buyer_person = buyers[i]['_LOD_OBJECT']
-					buyer_identifiers = buyer_person.identified_by
-					for j in range(len(buyer_identifiers)):
-						if buyer_identifiers[j].content == buyer_non_auth_names[i] and not isinstance(buyer_identifiers[j], vocab.PrimaryName):
-							name_attribution = self.create_source_attribute_assignment_name(buyer_person, i, property_assigned_label, property_assigned_id, catalogue)
-							buyers[i]['_LOD_OBJECT'].identified_by[j].attributed_by = name_attribution
+					citation_text_work_uri = self.helper.make_proj_uri('LINGOBJECT', 'SOURCE', 'CITATION', buyer_citation)
+					citation_lo= model.LinguisticObject(ident=citation_text_work_uri, label = buyer_citation)
+					citation_lo.identified_by = vocab.PrimaryName(ident='', content=buyer_citation)
+					citation_lo.referred_to_by = self.select_county(data)
+					citation_lo.part_of = publication_lo
+					
+					publication_data = {
+						'publication_uri': publication_text_work_uri,
+						'publication_label': name_source,
+					}
+
+					citation_data = {
+						'citation_uri': citation_text_work_uri,
+						'citation_label': citation_lo._label
+					}
+
+					add_crom_data(data=publication_data, what=publication_lo)
+					add_crom_data(data=citation_data, what=citation_lo)
+					if not '_citation_references' in data:
+						data['_citation_references'] = []
+					data['_citation_references'].append(publication_data)
+					data['_citation_references'].append(citation_data)
+					source = citation_lo
+				else:
+					name_source_parts = [x for x in name_source.split(' ') if x != '']
+					name_source = name_source_parts[0]
+					if name_source in self.helper.services['location_codes']:
+					
+						if len(name_source_parts) == 2:
+							copy_no = name_source_parts[1]
+							catalog_uri = self.helper.make_proj_uri('PHYS-CAT', cno, name_source, copy_no)
+							cat_label = f'Sale Catalog {cno}, owned by “{name_source}”, copy {copy_no}'
+						else:
+							catalog_uri = self.helper.make_proj_uri('PHYS-CAT', cno, name_source)
+							cat_label = f'Sale Catalog {cno}, owned by “{name_source}”'
+
+					source = vocab.AuctionCatalog(ident=catalog_uri, label=cat_label)
+
+				property_assigned_label = "P1i identifies"
+				property_assigned_id = "http://www.cidoc-crm.org/cidoc-crm/P1i_identifies"
+				buyer_person = buyers[i]['_LOD_OBJECT']
+				buyer_identifiers = buyer_person.identified_by
+				for j in range(len(buyer_identifiers)):
+					if buyer_identifiers[j].content == buyer_non_auth_names[i] and not isinstance(buyer_identifiers[j], vocab.PrimaryName):
+						attribution_label = f'Source attributed to the Name of {buyer_person._label}'
+						name_attribution = self.helper.create_source_attribute_assignment(buyer_person, i, attribution_label, property_assigned_label, property_assigned_id, source, True)
+						buyers[i]['_LOD_OBJECT'].identified_by[j].attributed_by = name_attribution
 
 		buyers, all_buyer_mods = self.model_people_as_possible_group(buyers, tx_data, data, object_key_string(cno, lno, date), 'Buyer')
 
@@ -1292,25 +1396,37 @@ class AddAcquisitionOrBidding(ProvenanceBase):
 		]
 		# Add source data assignment on seller name 
 		for i in range(len(sellers)): 
-			if 'so' in sellers[i] and sellers[i]['so']:
-				name_source_parts = sellers[i]['so'].replace('Handwritten Annotation:', '').split(' ')
-				if name_source_parts[0] in self.helper.services['location_codes']:
-					name_source = name_source_parts[0]
-					if len(name_source_parts) > 1:
-						copy_no = name_source_parts[1]
-						catalog_uri = self.helper.make_proj_uri('PHYS-CAT', cno, name_source, copy_no)
-					else:
-						catalog_uri = self.helper.make_proj_uri('PHYS-CAT', cno, name_source)
+			if 'so' in sellers[i] and sellers[i]['so']:	
+				name_source = sellers[i]['so']
+				
+				if 'Handwritten Annotation:' in name_source:
+					name_source = name_source.replace('Handwritten Annotation:', '')
 
-					catalogue = vocab.AuctionCatalog(ident=catalog_uri, label=f'Sale Catalog {cno}, owned by “{name_source}”')
-					property_assigned_label = "P1i identifies"
-					property_assigned_id = "http://www.cidoc-crm.org/cidoc-crm/P1i_identifies"
-					seller_person = sellers[i]['_LOD_OBJECT']
-					seller_identifiers = seller_person.identified_by
-					for j in range(len(seller_identifiers)):
-						if seller_identifiers[j].content == seller_non_auth_names[i] and not isinstance(seller_identifiers[j], vocab.PrimaryName):
-							name_attribution = self.create_source_attribute_assignment_name(seller_person, i, property_assigned_label, property_assigned_id, catalogue)
-							sellers[i]['_LOD_OBJECT'].identified_by[j].attributed_by = name_attribution
+				if name_source == "Catalogue" or name_source == "Descriptive Catalogue":
+					catalogue = self.helper.catalog_text(cno, 'Auction')
+				else:
+					name_source_parts = [x for x in name_source.split(' ') if x != '']
+					name_source = name_source_parts[0]
+					
+					if name_source in self.helper.services['location_codes'] :	
+						if len(name_source_parts) == 2:
+							copy_no = name_source_parts[1]
+							catalog_uri = self.helper.make_proj_uri('PHYS-CAT', cno, name_source, copy_no)
+							cat_label = f'Sale Catalog {cno}, owned by “{name_source}”, copy {copy_no}'
+						else:
+							catalog_uri = self.helper.make_proj_uri('PHYS-CAT', cno, name_source)
+							cat_label = f'Sale Catalog {cno}, owned by “{name_source}”'
+
+					catalogue = vocab.AuctionCatalog(ident=catalog_uri, label=cat_label)
+				property_assigned_label = "P1i identifies"
+				property_assigned_id = "http://www.cidoc-crm.org/cidoc-crm/P1i_identifies"
+				seller_person = sellers[i]['_LOD_OBJECT']
+				seller_identifiers = seller_person.identified_by
+				for j in range(len(seller_identifiers)):
+					if seller_identifiers[j].content == seller_non_auth_names[i] and not isinstance(seller_identifiers[j], vocab.PrimaryName):
+						attribution_label = f'Source attributed to the Name of {seller_person._label}'
+						name_attribution = self.helper.create_source_attribute_assignment(seller_person, i, attribution_label, property_assigned_label, property_assigned_id, catalogue, True)
+						sellers[i]['_LOD_OBJECT'].identified_by[j].attributed_by = name_attribution
 
 
 

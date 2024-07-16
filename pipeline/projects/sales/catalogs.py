@@ -193,10 +193,10 @@ class PopulateAuctionCatalog(Configurable):
 
 	def lugt_number_id(self, content):
 		lugt_number = str(content)
-		lugt_id = vocab.LocalNumber(ident='', label=f'Lugt Number: {lugt_number}', content=lugt_number)
-		assignment = model.AttributeAssignment(ident='')
+		lugt_id = vocab.LugtNumber(ident='', label=f'Lugt Number: {lugt_number}', content=lugt_number)
+		# assignment = model.AttributeAssignment(ident='')
 		# assignment.carried_out_by = self.static_instances.get_instance('Person', 'lugt')
-		lugt_id.assigned_by = assignment
+		# lugt_id.assigned_by = assignment
 
 		return lugt_id
 

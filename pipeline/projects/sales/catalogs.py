@@ -147,10 +147,8 @@ class AddPhysicalCatalogOwners(Configurable):
 		copy_number = data.get('copy_number', '')
 		owner_name = None
 		# if data['gri_has_copy'] == "No":
-		# 	import pdb; pdb.set_trace()
 		entry_record = get_crom_object(data.get('_catalog'))
 		# else:
-		# 	import pdb; pdb.set_trace()
 		# 	entry_record = None
 		
 		entry_record1 = self.helper.static_instances.get_instance('LinguisticObject', 'db-sales_catalogs')

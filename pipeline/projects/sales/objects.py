@@ -238,7 +238,6 @@ class PopulateSalesObject(Configurable, pipeline.linkedart.PopulateObject):
 			
 
 		except AttributeError as e:
-			# import pdb; pdb.set_trace()
 			import traceback
 			traceback.print_exc()
 			with open('log_sales_res_act.txt', 'a') as f:
@@ -410,7 +409,6 @@ class PopulateSalesObject(Configurable, pipeline.linkedart.PopulateObject):
 					data_a['name_org']=data_a['label']
 					owner = get_crom_object(data_a)
 					hmo.current_owner = owner
-					# import pdb; pdb.set_trace()
 					res_act = self.new_residence_activity(owner_place, owner, sales_record)
 					owner.carried_out = res_act
 					owner.referred_to_by = self.select_county(data)
@@ -494,7 +492,6 @@ class PopulateSalesObject(Configurable, pipeline.linkedart.PopulateObject):
 				loc = sale_record.get('loc')
 # 				plot = self.helper.shared_lot_number_from_lno(plno)
 				pdate = implode_date(sale_record, '')
-				import pdb; pdb.set_trace()
 				if pcno and plno and pdate:
 					if pcno == 'NA' or pcno == 'X' or pcno == 'na':
 						desc = f'Also sold in an unidentified sale: {plno} ({pdate}) {loc}'
@@ -1019,7 +1016,6 @@ class AddArtists(ProvenanceBase):
 				assignment.assigned = person
 				assignment.referred_to_by = vocab.Note(ident='', content=verbatim_mods)
 			elif COPY_AFTER.intersects(mods):
-				import pdb; pdb.set_trace()
 				cls = type(hmo)
 				# The original object URI is just the object URI with a suffix. When URIs are
 				# reconciled during prev/post sale rewriting, this will allow us to also reconcile
@@ -1035,7 +1031,6 @@ class AddArtists(ProvenanceBase):
 				# Similarly for the production of the original object.
 				original_event_id = original_hmo.id + '-Production'
 				original_event = model.Production(ident=original_event_id, label=f'Production event for {original_label}')
-				import pdb; pdb.set_trace()
 				original_hmo.produced_by = original_event
 				#object database country
 				original_hmo.referred_to_by = self.select_county(data)

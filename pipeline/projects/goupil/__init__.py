@@ -224,7 +224,6 @@ class AddArtists(ProvenanceBase, GoupilProvenance):
         # Matt:  as per George, semantics for 'or' are different in buyer/seller field than in artwork production role. The first does not to my knowledge exist in Goupil.
         # basically treat or as attributed to!
         if "or " in mod or " or" in mod:
-            import pdb; pdb.set_trace()
             # matched 'or' a separate word
             mod = mod.replace("or", "attributed to")
         mods = CaseFoldingSet({m.strip() for m in mod.split(";")} - {""})
@@ -288,7 +287,6 @@ class AddArtists(ProvenanceBase, GoupilProvenance):
         )
         
         attrs = hmo.produced_by.attributed_by if hasattr(hmo.produced_by, "attributed_by") else []
-        import pdb; pdb.set_trace()
         for production_assingment in attrs:
             production_assingment.carried_out_by = None
             production_assingment.carried_out_by = self.helper.static_instances.get_instance("Group", "goupil")
@@ -399,7 +397,6 @@ class GoupilUtilityHelper(SharedUtilityHelper):
             base_uri=self.uid_tag_prefix,
             sales_records=sales_records,
         )
-        # import pdb; pdb.set_trace()
 
         if not place_verbatim:
             tx.referred_to_by = vocab.Note(ident="", content=place_verbatim)
@@ -410,7 +407,6 @@ class GoupilUtilityHelper(SharedUtilityHelper):
 
     def add_person_residence(self, person: dict, place_verbatim: str, data: dict):
         sales_records = get_crom_objects(data["_records"])
-        # import pdb; pdb.set_trace()
         places = make_place_with_cities_db(
             {"location": place_verbatim},
              data,
@@ -586,7 +582,6 @@ class PopulateGoupilObject(Configurable, PopulateObject):
             if tgn_data:
                 part_of = tgn_data.get("part_of") # this is a tgn id
                 same_as = tgn_data.get('same_as') # this is a tgn id
-                # import pdb; pdb.set_trace()
 
                 if part_of:
                     tgn_instance = self.helper.static_instances.get_instance('Place', part_of)
@@ -926,7 +921,6 @@ class AddRows(Configurable, GoupilProvenance):
                     if k in ("stock_book_no", "stock_book_gno", "page_number", "row_number")
                 }
             )
-            # import pdb; pdb.set_trace()
             make_la_lo(row)
 
             o_page = get_crom_object(p_data)
@@ -996,7 +990,6 @@ class GoupilTransactionHandler(TransactionHandler):
         )
 
     def person_sojourn(self, p_data: dict, sojourn, data: dict):
-        # import pdb; pdb.set_trace()
 
         sales_records = get_crom_objects(data["_records"])
         act = model.Activity(ident=self.helper.make_proj_uri("ACT", p_data["label"]), label="Sojourn activity")
@@ -1196,7 +1189,6 @@ class GoupilTransactionHandler(TransactionHandler):
         sn_ident = self.helper.stock_number_identifier(data["_object"], date)
         sale_location = data["book_record"].get("object_sale_location", {})
         sale_location_verbatim = sale_location.get("location")
-        # import pdb; pdb.set_trace()
         # places = make_place_with_cities_db(
         #     sale_location,
         #     data,
@@ -1266,7 +1258,6 @@ class GoupilTransactionHandler(TransactionHandler):
         acq.transferred_title_of = hmo
 
         # if data['_locations']:
-        #     # import pdb; pdb.set_trace()
         #     for place in data['_locations']:
         #         acq.took_place_at = place
         # elif sale_location_verbatim:
@@ -1507,7 +1498,6 @@ class GoupilTransactionHandler(TransactionHandler):
             #     base_uri=self.helper.uid_tag_prefix,
             #     sales_records=sales_records,
             # )
-            # import pdb; pdb.set_trace()
             # if data['_locations']:
             #     for place in data['_locations']:
             #         person.residence = place

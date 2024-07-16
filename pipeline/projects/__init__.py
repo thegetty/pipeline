@@ -359,7 +359,6 @@ class PersonIdentity:
 
 	def add_props(self, data:dict, role=None, split_notes=True, **kwargs):
 		if 'sojourns' in data:
-			import pdb; pdb.set_trace()
 			role = role if role else 'person'
 			auth_name = data.get('auth_name', '')
 			generic_name = data.get('generic_name', '')
@@ -569,7 +568,6 @@ class StaticInstanceHolder:
 
 	def get_instance(self, model, name):
 		m = self.instances.get(model)
-		# import pdb; pdb.set_trace()
 		if not m:
 			return None
 		if type(m) is tuple:
@@ -587,7 +585,6 @@ class StaticInstanceHolder:
 		return None
 
 	def used_instances(self):
-		# import pdb; pdb.set_trace()
 		used = defaultdict(dict)
 		for model, name in self.used:
 			if not type(self.instances[model]) is tuple:
@@ -965,7 +962,6 @@ class UtilityHelper:
 		if name.casefold() in canonical_location_names:
 			name = canonical_location_names.get(name.casefold(), name)
 		si = self.static_instances
-		# import pdb; pdb.set_trace()
 		if si:
 			return si.get_instance('Place', name)
 		return None

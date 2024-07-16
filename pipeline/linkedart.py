@@ -101,7 +101,6 @@ class MakeLinkedArtRecord:
 
 		for identifier in data.get('identifiers', []):
 			if isinstance(identifier, tuple):
-				import pdb; pdb.set_trace()
 				content, itype = identifier
 				if itype is not None:
 					if isinstance(itype, type):
@@ -386,7 +385,6 @@ class MakeLinkedArtAgent(MakeLinkedArtRecord):
 
 		for uri in data.get('exact_match', []):
 			thing.exact_match = uri
-		# import pdb; pdb.set_trace()
 		for sdata in data.get('sojourns', []):
 			if 'active_city' not in sdata:
 				label = sdata.get('label', 'Sojourn activity')
@@ -398,7 +396,6 @@ class MakeLinkedArtAgent(MakeLinkedArtRecord):
 				else:
 					place = get_crom_object(sdata.get('place'))
 				act.timespan = ts
-				# import pdb; pdb.set_trace()
 				act.took_place_at = place
 				thing.carried_out = act
 				self.set_referred_to_by(sdata, act)
@@ -429,7 +426,6 @@ class MakeLinkedArtOrganization(MakeLinkedArtAgent):
 		super().set_properties(data, thing)
 		with suppress(KeyError):
 			thing._label = str(data['label'])
-		# import pdb; pdb.set_trace()
 		# iterate events only if we want professional activity block to exist (if there is active city). Else, we don't need events, so delete them.
 		if 'active_city_date' in data:
 			for event in data.get('events', []):
@@ -563,7 +559,6 @@ class MakeLinkedArtPerson(MakeLinkedArtAgent):
 
 		for n in data.get('occupation', []):
 			if isinstance(n, model.BaseResource):
-				# import pdb; pdb.set_trace()
 				who.classified_as = n
 
 		# nationality field can contain other information, but not useful.
@@ -583,7 +578,6 @@ class MakeLinkedArtPerson(MakeLinkedArtAgent):
 			who.carried_out = act
 
 		for event in data.get('events', []):
-			# import pdb; pdb.set_trace()			
 			# MAYBE HERE ITERATE DATA[SOJOURNS] AND TAKE PLACE 
 
 			for sdata in data.get('sojourns', []):
@@ -711,7 +705,6 @@ def geo_json(lat, lon, label):
 
 def make_tgn_place(tgn_data: dict, uri_creator=None, tgn_lookup = {}):
 	place_shared_uri = uri_creator(('PLACE', 'TGN-ID', tgn_data.get('tgn_id')))
-	# import pdb; pdb.set_trace()
 	if tgn_data is None:
 		return None
 

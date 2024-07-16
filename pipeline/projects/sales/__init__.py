@@ -108,7 +108,6 @@ class SalesUtilityHelper(UtilityHelper):
 	def add_person(self, data, record, relative_id, **kwargs):
 		self.person_identity.add_uri(data, record_id=relative_id)
 		key = data['uri_keys']
-		# import pdb; pdb.set_trace()
 		if key in self.services['people_groups']:
 			warnings.warn(f'*** TODO: model person record as a GROUP: {pprint.pformat(key)}')
 			person = super().add_group(data, record=record, relative_id=relative_id, **kwargs)
@@ -472,7 +471,6 @@ def add_crom_price(data, parent, services, add_citations=False):
 	Add modeling data for `MonetaryAmount`, `StartingPrice`, or `EstimatedPrice`,
 	based on properties of the supplied `data` dict.
 	'''
-	# import pdb; pdb.set_trace()
 	currencies = services['currencies']
 	decimalization = services['currencies_decimalization']
 	region_currencies = services['region_currencies']
@@ -534,7 +532,6 @@ def add_crom_price(data, parent, services, add_citations=False):
 							data[k] = decimalized_value
 
 	amnt = extract_monetary_amount(data, currency_mapping=c, add_citations=add_citations)
-	#import pdb; pdb.set_trace()
 	if amnt:
 		if '[or]' in data.get('price', ''):
 			amnt.identified_by.clear()
@@ -633,7 +630,6 @@ class SalesPipeline(PipelineBase):
 			tgn_places.update(services.get(f'tgn_{n}', {}))
 			sales_tgn.update(services.get(f'sales_{n}_tgn', {}))
 
-		# import pdb; pdb.set_trace()
 		services['tgn'] = tgn_places
 		services['sales_tgn'] = sales_tgn
 
@@ -892,7 +888,6 @@ class SalesPipeline(PipelineBase):
 		return bid_acqs
 
 	def add_sales_chain(self, graph, records, services, serialize=True):
-		# import pdb; pdb.set_trace()
 		'''Add transformation of sales records to the bonobo pipeline.'''
 		sales = graph.add_chain(
 			PreserveCSVFields(key='star_csv_data', order=self.contents_headers),
@@ -1414,7 +1409,6 @@ class SalesPipeline(PipelineBase):
 				CurriedCSVReader(fs='fs.data.sales', limit=self.limit, field_names=self.contents_headers),
 # 				AddFieldNames(field_names=self.contents_headers),
 			)
-			# import pdb; pdb.set_trace()
 			sales = self.add_sales_chain(g, contents_records, services, serialize=True)
 			_ = self.add_lot_set_chain(g, sales, serialize=True)
 			_ = self.add_texts_chain(g, sales, serialize=True)

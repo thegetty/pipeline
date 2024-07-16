@@ -268,7 +268,7 @@ class AddAuctionOfLot(ProvenanceBase):
 			tx = vocab.ProvenanceEntry(ident=tx_uri)
 			tx.used_specific_object = get_crom_object(data['_lot_object_set'])
 			tx_label = prov_entry_label(self.helper, sale_type, transaction, 'of', cno, lots, date)
-			if '[?]' in data.get('transaction'):
+			if '?' in data.get('transaction'):
 				tx.referred_to_by = vocab.PropertyStatusStatement(ident='', label='Transaction type for sales record', content=data['transaction'])
 		
 			tx.referred_to_by = get_crom_object(data['_sale_record'])
@@ -474,7 +474,7 @@ class AddAcquisitionOrBidding(ProvenanceBase):
 				xfer.transferred_custody_from = seller
 				if 'auth_nameq' in seller_data or 'auth_mod_a' in seller_data:
 					
-					if '[?]' in seller_data['auth_nameq'] or flags:
+					if '?' in seller_data['auth_nameq'] or flags:
 						ident="http://www.cidoc-crm.org/cidoc-crm/P28_custody_surrendered_by"
 						label="P28 custody surrendered by"
 						xfer.attributed_by = self.create_uncertainty_atribute(seller, agent_seq, label, ident, parent, statement=statement)
@@ -504,7 +504,7 @@ class AddAcquisitionOrBidding(ProvenanceBase):
 
 				xfer.transferred_custody_to = buyer
 				if 'auth_nameq' in buyer_data:
-					if '[?]' in buyer_data['auth_nameq'] or flagb:
+					if '?' in buyer_data['auth_nameq'] or flagb:
 						ident="http://www.cidoc-crm.org/cidoc-crm/P29_custody_received_by"
 						label="P29 custody received by"
 						xfer.attributed_by = self.create_uncertainty_atribute(buyer, agent_seq, label, ident, parent, statement=statement)
@@ -685,8 +685,7 @@ class AddAcquisitionOrBidding(ProvenanceBase):
 		for seq_no, buyer_data in enumerate(buyers):
 			buyer = get_crom_object(buyer_data)
 			if 'auth_nameq' in buyer_data:
-					if '[?]' in buyer_data['auth_nameq']:
-						import pdb; pdb.set_trace()
+					if '?' in buyer_data['auth_nameq']:
 						parent = data['parent_data']
 						ident="http://www.cidoc-crm.org/cidoc-crm/P14_carried_out_by"
 						label="carried out by"
@@ -788,7 +787,6 @@ class AddAcquisitionOrBidding(ProvenanceBase):
 					warnings.warn(f'Handle buyer modifier: {mod}') # TODO: some way to model this uncertainty?
 			if uncertain_attribution:
 				attrib_assignment_classes.append(vocab.PossibleAssignment)
-			import pdb; pdb.set_trace()
 			if THROUGH.intersects(mod):
 				# when an agent is acting on behalf of the seller, model their involvement in a sub-activities
 				payments_used.add('sell')
@@ -813,14 +811,14 @@ class AddAcquisitionOrBidding(ProvenanceBase):
 				acq.transferred_title_from = seller
 				
 				if 'auth_nameq' in seller_data :
-					if '[?]' in seller_data['auth_nameq']:
+					if '?' in seller_data['auth_nameq']:
 						ident="http://www.cidoc-crm.org/cidoc-crm/P23_transferred_title_from"
 						label="transferred title from"
 						acq.attributed_by = self.create_uncertainty_atribute(seller, seq_no, label, ident, parent)
 				# payments['sell'].paid_to = seller
 				paym.paid_to = seller
 				if 'auth_nameq' in seller_data :
-					if '[?]' in seller_data['auth_nameq'] :
+					if '?' in seller_data['auth_nameq'] :
 						ident="https://linked.art/ns/terms/paid_to"
 						label="paid to"
 						paym.attributed_by = self.create_uncertainty_atribute(seller, seq_no, label, ident, parent)   
@@ -856,7 +854,7 @@ class AddAcquisitionOrBidding(ProvenanceBase):
 				acq.transferred_title_from = seller
 				if 'auth_nameq' in seller_data or 'auth_mod_a' in seller_data:
 
-					if '[?]' in seller_data['auth_nameq'] or flags:
+					if '?' in seller_data['auth_nameq'] or flags:
 						ident="http://www.cidoc-crm.org/cidoc-crm/P23_transferred_title_from"
 						label="transferred title from"
 						acq.attributed_by = self.create_uncertainty_atribute(seller, seq_no, label, ident, parent, statement=statement)
@@ -866,7 +864,7 @@ class AddAcquisitionOrBidding(ProvenanceBase):
 				
 				paym.paid_to = seller
 				if 'auth_nameq' in seller_data or 'auth_mod_a' in seller_data:
-					if '[?]' in seller_data['auth_nameq'] or flags:
+					if '?' in seller_data['auth_nameq'] or flags:
 						ident="https://linked.art/ns/terms/paid_to"
 						label="paid to"
 						paym.attributed_by = self.create_uncertainty_atribute(seller, seq_no, label, ident, parent, statement=statement2)
@@ -928,7 +926,7 @@ class AddAcquisitionOrBidding(ProvenanceBase):
 # 				acq.carried_out_by = buyer
 				acq.transferred_title_to = buyer
 				if 'auth_nameq' in buyer_data:
-					if '[?]' in buyer_data['auth_nameq'] or flagb:
+					if '?' in buyer_data['auth_nameq'] or flagb:
 						ident="http://www.cidoc-crm.org/cidoc-crm/P22_transferred_title_to"
 						label="transferred title to"
 						acq.attributed_by = self.create_uncertainty_atribute(buyer, seq_no, label, ident, parent, statement=statement)			
@@ -936,7 +934,7 @@ class AddAcquisitionOrBidding(ProvenanceBase):
 				paym.paid_from = buyer
 # 				payments['buy'].carried_out_by = buyer
 				if 'auth_nameq' in buyer_data:
-					if '[?]' in buyer_data['auth_nameq'] or flagb:
+					if '?' in buyer_data['auth_nameq'] or flagb:
 						ident="https://linked.art/ns/terms/paid_from"
 						label="paid from"
 						
@@ -978,7 +976,6 @@ class AddAcquisitionOrBidding(ProvenanceBase):
 			# 			p.referred_to_by = vocab.PriceStatement(ident='', content=content)
 			self.set_possible_attribute(paym, 'paid_amount', amnt_data)
 			if hasattr(paym, 'paid_amount') and 'full' in amnt_data:
-				import pdb; pdb.set_trace()
 				price_statement = vocab.Name(ident='', content=amnt_data.get("full"))
 				price_statement.classified_as = model.Type(ident='http://vocab.getty.edu/aat/300456607', label='verbatim text/texts')
 
@@ -1092,7 +1089,6 @@ class AddAcquisitionOrBidding(ProvenanceBase):
 		own_info_source = f'Listed as the seller of object in {cno} {lno} ({date}) that was privately sold'
 		note = vocab.SourceStatement(ident='', content=own_info_source)
 		rel = 'leading to Ownership of'
-		import pdb; pdb.set_trace()
 		return self.add_sellers(data, sale_type, 'Event', sellers, rel, source=note)
 
 	def add_bidding(self, data:dict, buyers, sellers, buy_sell_modifiers, sale_type, transaction, transaction_types, auction_houses_data, include_custody_transfer=False):

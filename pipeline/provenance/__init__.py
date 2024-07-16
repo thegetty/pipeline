@@ -104,7 +104,6 @@ class ProvenanceBase(Configurable):
 		
 		if owner_record and 'own_auth_q' in owner_record:
 
-
 			if '?' in owner_record['own_auth_q']:
 				owner = get_crom_object(owner_record)
 				ident="http://www.cidoc-crm.org/cidoc-crm/P29_custody_received_by"

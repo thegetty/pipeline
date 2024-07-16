@@ -491,15 +491,17 @@ class PopulateSalesObject(Configurable, pipeline.linkedart.PopulateObject):
 			for sale_record in sales_data:
 				pcno = sale_record.get('cat')
 				plno = sale_record.get('lot')
+				loc = sale_record.get('loc')
 # 				plot = self.helper.shared_lot_number_from_lno(plno)
 				pdate = implode_date(sale_record, '')
+				import pdb; pdb.set_trace()
 				if pcno and plno and pdate:
-					if pcno == 'NA':
-						desc = f'Also sold in an unidentified sale: {plno} ({pdate})'
+					if pcno == 'NA' or pcno == 'X' or pcno == 'na':
+						desc = f'Also sold in an unidentified sale: {plno} ({pdate}) {loc}'
 						note = vocab.Note(ident='', content=desc)
 						hmo.referred_to_by = note
 					elif 'or' in plno.lower():
-						desc = f'Also sold in an uncertain lot: {pcno} {plno} ({pdate})'
+						desc = f'Also sold in an uncertain lot: {pcno} {plno} ({pdate}) {loc}'
 						note = vocab.Note(ident='', content=desc)
 						hmo.referred_to_by = note
 					else:

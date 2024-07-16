@@ -103,7 +103,6 @@ class ProvenanceBase(Configurable):
 			pxfer.transferred_custody_from = seller
 		
 		if owner_record and 'own_auth_q' in owner_record:
-
 			if '?' in owner_record['own_auth_q']:
 				owner = get_crom_object(owner_record)
 				ident="http://www.cidoc-crm.org/cidoc-crm/P29_custody_received_by"
@@ -774,40 +773,41 @@ class ProvenanceBase(Configurable):
 		For example, label='buyer' and object_key='B-340 0291 (1820-07-19)'.
 		'''
 		all_mods = {m.lower().strip() for a in people for m in a.get(mod_key, '').split(';')} - {''}
-		group = (all_mods == {'or'}) # the person is *one* of the named people, model as a group
-		if group:
-			names = []
-			for person_data in people:
-				if len(person_data['identifiers']):
-					names.append(person_data['identifiers'][0].content)
-				else:
-					names.append(person_data['label'])
-			group_name = ' OR '.join(names)
-			if tx_data: # if there is a prov entry (e.g. was not withdrawn)
-				current_tx = get_crom_object(tx_data)
-				# The person group URI is just the provenance entry URI with a suffix.
-				# In any case where the provenance entry is merged, the person group
-				# should be merged as well.
-				group_uri = current_tx.id + f'-{label}Group'
-				group_data = {
-					'uri': group_uri,
-				}
-			else:
-				pi_record_no = data['pi_record_no']
-				group_uri_key = ('GROUP', 'PI', pi_record_no, f'{label}Group')
-				group_uri = self.helper.make_proj_uri(*group_uri_key)
-				group_data = {
-					'uri_keys': group_uri_key,
-					'uri': group_uri,
-				}
-			g_label = f'Group containing the {label.lower()} of {object_key}'
-			g = vocab.UncertainMemberClosedGroup(ident=group_uri, label=g_label)
-			import pdb; pdb.set_trace()
-			g.identified_by = model.Name(ident='', content=group_name)
+		# group = (all_mods == {'or'}) # the person is *one* of the named people, model as a group
+		# if group:
+		# 	import pdb; pdb.set_trace()
+
+		# 	names = []
+		# 	for person_data in people:
+		# 		if len(person_data['identifiers']):
+		# 			names.append(person_data['identifiers'][0].content)
+		# 		else:
+		# 			names.append(person_data['label'])
+		# 	group_name = ' OR '.join(names)
+		# 	if tx_data: # if there is a prov entry (e.g. was not withdrawn)
+		# 		current_tx = get_crom_object(tx_data)
+		# 		# The person group URI is just the provenance entry URI with a suffix.
+		# 		# In any case where the provenance entry is merged, the person group
+		# 		# should be merged as well.
+		# 		group_uri = current_tx.id + f'-{label}Group'
+		# 		group_data = {
+		# 			'uri': group_uri,
+		# 		}
+		# 	else:
+		# 		pi_record_no = data['pi_record_no']
+		# 		group_uri_key = ('GROUP', 'PI', pi_record_no, f'{label}Group')
+		# 		group_uri = self.helper.make_proj_uri(*group_uri_key)
+		# 		group_data = {
+		# 			'uri_keys': group_uri_key,
+		# 			'uri': group_uri,
+		# 		}
+		# 	g_label = f'Group containing the {label.lower()} of {object_key}'
+		# 	g = vocab.UncertainMemberClosedGroup(ident=group_uri, label=g_label)
+		# 	g.identified_by = model.Name(ident='', content=group_name)
 			
-			for person_data in people:
-				person = get_crom_object(person_data)
-				person.member_of = g
-				data['_other_owners'].append(person_data)
-			people = [add_crom_data(group_data, g)]
+		# 	for person_data in people:
+		# 		person = get_crom_object(person_data)
+		# 		person.member_of = g
+		# 		data['_other_owners'].append(person_data)
+		# 	people = [add_crom_data(group_data, g)]
 		return people, all_mods

@@ -519,7 +519,10 @@ class AddAcquisitionOrBidding(ProvenanceBase):
 					if '?' in seller_data['auth_nameq'] or flags:
 						ident="http://www.cidoc-crm.org/cidoc-crm/P28_custody_surrendered_by"
 						label="P28 custody surrendered by"
-						xfer.attributed_by = self.create_uncertainty_atribute(seller, agent_seq, label, ident, parent, statement=statement)
+						if flags:
+							xfer.attributed_by = self.create_uncertainty_atribute(seller, agent_seq, label, ident, parent, statement=statement)
+						else:
+							xfer.attributed_by = self.create_uncertainty_atribute(seller, agent_seq, label, ident, parent)
 
 		for agent_seq, buyer_data in enumerate(buyers):
 			buyer = get_crom_object(buyer_data)
@@ -549,7 +552,10 @@ class AddAcquisitionOrBidding(ProvenanceBase):
 					if '?' in buyer_data['auth_nameq'] or flagb:
 						ident="http://www.cidoc-crm.org/cidoc-crm/P29_custody_received_by"
 						label="P29 custody received by"
-						xfer.attributed_by = self.create_uncertainty_atribute(buyer, agent_seq, label, ident, parent, statement=statement)
+						if flagb:
+							xfer.attributed_by = self.create_uncertainty_atribute(buyer, agent_seq, label, ident, parent, statement=statement)
+						else:
+							xfer.attributed_by = self.create_uncertainty_atribute(buyer, agent_seq, label, ident, parent)
 
 		current_tx.part = xfer
 
@@ -875,7 +881,10 @@ class AddAcquisitionOrBidding(ProvenanceBase):
 					if '?' in seller_data['auth_nameq'] or flags:
 						ident="http://www.cidoc-crm.org/cidoc-crm/P23_transferred_title_from"
 						label="transferred title from"
-						acq.attributed_by = self.create_uncertainty_atribute(seller, seq_no, label, ident, parent, statement=statement)
+						if flags:
+							acq.attributed_by = self.create_uncertainty_atribute(seller, seq_no, label, ident, parent, statement=statement)
+						else:
+							acq.attributed_by = self.create_uncertainty_atribute(seller, seq_no, label, ident, parent)
 # 				payments['sell'].carried_out_by = seller
 				# payments['sell'].paid_to = seller
 				payments_used.add('sell')
@@ -885,7 +894,10 @@ class AddAcquisitionOrBidding(ProvenanceBase):
 					if '?' in seller_data['auth_nameq'] or flags:
 						ident="https://linked.art/ns/terms/paid_to"
 						label="paid to"
-						paym.attributed_by = self.create_uncertainty_atribute(seller, seq_no, label, ident, parent, statement=statement2)
+						if flags:
+							paym.attributed_by = self.create_uncertainty_atribute(seller, seq_no, label, ident, parent, statement=statement2)
+						else:
+							paym.attributed_by = self.create_uncertainty_atribute(seller, seq_no, label, ident, parent)
 
 		for seq_no, buyer_data in enumerate(buyers):
 			buyer = get_crom_object(buyer_data)
@@ -947,7 +959,10 @@ class AddAcquisitionOrBidding(ProvenanceBase):
 					if '?' in buyer_data['auth_nameq'] or flagb:
 						ident="http://www.cidoc-crm.org/cidoc-crm/P22_transferred_title_to"
 						label="transferred title to"
-						acq.attributed_by = self.create_uncertainty_atribute(buyer, seq_no, label, ident, parent, statement=statement)			
+						if flagb:
+							acq.attributed_by = self.create_uncertainty_atribute(buyer, seq_no, label, ident, parent, statement=statement)
+						else:
+							acq.attributed_by = self.create_uncertainty_atribute(buyer, seq_no, label, ident, parent)			
 				# payments['buy'].paid_from = buyer
 				paym.paid_from = buyer
 # 				payments['buy'].carried_out_by = buyer
@@ -955,8 +970,10 @@ class AddAcquisitionOrBidding(ProvenanceBase):
 					if '?' in buyer_data['auth_nameq'] or flagb:
 						ident="https://linked.art/ns/terms/paid_from"
 						label="paid from"
-						
-						paym.attributed_by = self.create_uncertainty_atribute(buyer, seq_no, label, ident, parent, statement=statement2)
+						if flagb:
+							paym.attributed_by = self.create_uncertainty_atribute(buyer, seq_no, label, ident, parent, statement=statement2)
+						else:
+							paym.attributed_by = self.create_uncertainty_atribute(buyer, seq_no, label, ident, parent)
 				payments_used.add('buy')
 
 		for i in range(len(prices)):

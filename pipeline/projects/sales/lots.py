@@ -162,7 +162,6 @@ class AddAuctionOfLot(ProvenanceBase):
 		self.helper.copy_source_information(data['_object'], data)
 
 		auction_houses_data = event_properties['auction_houses']
-		
 		auction_locations = event_properties['auction_locations']
 		auction_data = data['auction_of_lot']
 		try:
@@ -237,6 +236,7 @@ class AddAuctionOfLot(ProvenanceBase):
 			lot.referred_to_by = cite
 
 		transaction = data.get('transaction')
+		transaction = transaction.replace('[?]', '').rstrip()
 		SOLD = transaction_types['sold']
 		WITHDRAWN = transaction_types['withdrawn']
 		self.set_lot_objects(lot, cno, lno, sale_data['uri'], data, lot_object_key, sale_type, non_auctions, event_properties)
@@ -268,6 +268,9 @@ class AddAuctionOfLot(ProvenanceBase):
 			tx = vocab.ProvenanceEntry(ident=tx_uri)
 			tx.used_specific_object = get_crom_object(data['_lot_object_set'])
 			tx_label = prov_entry_label(self.helper, sale_type, transaction, 'of', cno, lots, date)
+			if '[?]' in data.get('transaction'):
+				tx.referred_to_by = vocab.PropertyStatusStatement(ident='', label='Transaction type for sales record', content=data['transaction'])
+		
 			tx.referred_to_by = get_crom_object(data['_sale_record'])
 			#provenance data country
 			tx.referred_to_by = self.select_county(data)
@@ -563,16 +566,18 @@ class AddAcquisitionOrBidding(ProvenanceBase):
 		if ask_price:
 			self.add_valuation(data, ask_price, lot_object_key, current_tx, valuation_type=vocab.AppraisingAssignment, valuation_label='Appraising')
 
-	def copy_monetary_amnt(self, amnt_old):
+
+	def copy_monetary_amnt(self, amnt_old, cno, lno):
+
 		
 		if amnt_old:
-			identifier = "urn:uuid:%s" % uuid.uuid4()
-
+			identifier = self.helper.make_shared_uri('ATTR','ACC','LOT', cno, lno)
+#			identifier = "urn:uuid:%s" % uuid.uuid4()
 			if '_label' in amnt_old.__dict__:
 				label = amnt_old._label
-				amnt_new = model.MonetaryAmount(identifier=identifier, label=label)
+				amnt_new = model.MonetaryAmount(ident=identifier, label=label)
 			else:
-				amnt_new = model.MonetaryAmount(identifier=identifier, label='')
+				amnt_new = model.MonetaryAmount(ident=identifier, label='')
 
 			if 'currency' in amnt_old.__dict__:
 				amnt_new.currency = amnt_old.currency
@@ -620,8 +625,9 @@ class AddAcquisitionOrBidding(ProvenanceBase):
 		cno, lno, date = lot_object_key
 
 		# amnt = self.copy_object_with_new_id(get_crom_object(amnt_data))
+		#amnt_data['_LOD_OBJECT'].id = self.helper.make_shared_uri('ATTR','ACC','LOT', cno, lno)
 		amnt = get_crom_object(amnt_data)
-		amnt = self.copy_monetary_amnt(amnt)
+		amnt = self.copy_monetary_amnt(amnt, cno, self.helper.shared_lot_number_from_lno(lno))
 
 		lno_re = '[0-9]+\[[a-z]\]'
 		if re.search(lno_re, lno):
@@ -631,6 +637,7 @@ class AddAcquisitionOrBidding(ProvenanceBase):
 			assignment.assigned_property = 'dimension'
 			assignment.assigned = amnt
 		else:
+
 			attrib_assignment_classes = [model.AttributeAssignment, valuation_type]
 			# lno = self.helper.shared_lot_number_from_lno(lno)
 			assignment = vocab.make_multitype_obj(*attrib_assignment_classes, label=f'{valuation_label} valuation of {cno} {lno} {date}')
@@ -929,10 +936,12 @@ class AddAcquisitionOrBidding(ProvenanceBase):
 
 				paym.paid_amount.identified_by = price_statement
 
+
 		for price in prices[1:]:
 			content = self._price_note(price)
 			if content:
 				paym.referred_to_by = vocab.PriceStatement(ident='', content=content)
+
 
 		# elif ask_price:
 		# 	# for non-auction sales, the ask price is the amount paid for the acquisition

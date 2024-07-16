@@ -115,14 +115,25 @@ class PersonIdentity:
 				warnings.warn(f'*** No identifying property with which to construct a URI key: {e}')
 				print(pprint.pformat(data), file=sys.stderr)
 				raise
-			# if record_id:
-			# 	# key = ('PERSON', id_key, id_value, record_id)
-			# 	key = ('PERSON', 'AUTH', auth_name)
-			# 	return key, self.make_proj_uri
+			if record_id:
+				# key = ('PERSON', id_key, id_value, record_id)
+				name = data.get('name', '')
+				if auth_name:
+					key = ('PERSON', 'AUTH', auth_name)
+				elif name:
+					key = ('PERSON', 'AUTH', name)
+				else:
+					warnings.warn(f'*** No record identifier given for person identified only by {id_key} {id_value}')
+					key = ('PERSON', 'AUTH', auth_name)
+				return key, self.make_proj_uri
 			else:
 				warnings.warn(f'*** No record identifier given for person identified only by {id_key} {id_value}')
 				# key = ('PERSON', id_key, id_value)
-				key = ('PERSON', 'AUTH', auth_name)
+				name = data.get('name', '')
+				if auth_name:
+					key = ('PERSON', 'AUTH', auth_name)
+				elif name:
+					key = ('PERSON', 'AUTH', name)
 				return key, self.make_shared_uri
 
 	def add_person(self, a, record=None, relative_id=None, **kwargs):
@@ -464,9 +475,9 @@ class PersonIdentity:
 		auth_name = data.get('auth_name', '')
 		disp_name = data.get('auth_display_name')
 		name_types = [vocab.PrimaryName]
-		
-		personalNameType = vocab.CorporateName if group else vocab.PersonalName
+		name = data.get('name')
 
+		personalNameType = vocab.CorporateName if group else vocab.PersonalName
 		if disp_name:
 			if auth_name:
 				data['identifiers'].append(vocab.PrimaryName(ident='', content=auth_name))
@@ -479,18 +490,25 @@ class PersonIdentity:
 			if role:
 				role_label = f'{role} “{auth_name}”'
 			data.setdefault('label', auth_name)
+			
 			pname = vocab.make_multitype_obj(*name_types, ident='', content=auth_name) # NOTE: most of these are also vocab.SortName, but not 100%, so witholding that assertion for now
-			if isinstance(referrer, list):
-				for r in referrer:
-					pname.referred_to_by = r
-			elif referrer:
-				pname.referred_to_by = referrer
+			# if isinstance(referrer, list):
+			# 	for r in referrer:
+			# 		pname.referred_to_by = r
+			# elif referrer:
+			# 	pname.referred_to_by = referrer
 			data['identifiers'].append(pname)
 
+		else:
+			if not auth_name and name:
+				data.setdefault('label', name)
+				pname = vocab.PrimaryName(ident='', content=name + " referred to in " + kwargs['catalog_number'])
+				data['identifiers'].append(pname)
+        
 		data.setdefault('names', [])
-
+		
 		names = []
-		name = data.get('name')
+		
 		if name:
 			del data['name'] # this will be captured in the 'names' array, so remove it here so the output isn't duplicated
 			names.append(name)
@@ -508,13 +526,30 @@ class PersonIdentity:
 				name_kwargs['referred_to_by'] = referrer
 			elif referrer:
 				name_kwargs['referred_to_by'] = [referrer]
+			if 'name_ques' in data :
+				if '?' in data['name_ques'] and '?' not in name:
+					name = name + " " + data['name_ques']
+			elif 'ques' in data:
+				if '?' in data['ques'] and '?' not in name:
+					name = name + " " + data['ques']
+			elif 'own_ques' in data:
+				if '?' in data['own_ques'] and '?' not in name:
+					name = name + " " + data['own_ques']
+			elif 'own_q' in data:
+				if '?' in data['own_q'] and '?' not in name:
+					name = name + " " + data['own_q']
+			
 			data['names'].append((name, name_kwargs))
-			data.setdefault('label', name)
+
+			if auth_name:
+				data.setdefault('label', name)
+			else:
+				data.setdefault('label', name )
+
 		data.setdefault('label', '(Anonymous)')
 
 		if role and not role_label:
 			role_label = f'anonymous {role}'
-
 		if role:
 			data['role_label'] = role_label
 

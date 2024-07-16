@@ -116,13 +116,16 @@ class SalesUtilityHelper(UtilityHelper):
 			person = super().add_person(data, record=record, relative_id=relative_id, **kwargs)
 
 		primaryName = ''
-		for i in range(len(person.identified_by)):
-			if isinstance(person.identified_by[i], vocab.PrimaryName):
-				primaryName = person.identified_by[i].content
+		try:
+			for i in range(len(person.identified_by)):
+				if isinstance(person.identified_by[i], vocab.PrimaryName):
+					primaryName = person.identified_by[i].content
 
-		for i in range(len(person.identified_by)):
-			if person.identified_by[i].content == primaryName and not isinstance(person.identified_by[i], vocab.PrimaryName):
-				del person.identified_by[i]
+			for i in range(len(person.identified_by)):
+				if person.identified_by[i].content == primaryName and not isinstance(person.identified_by[i], vocab.PrimaryName):
+					del person.identified_by[i]
+		except:
+			warnings.warn(f'*** TODO: model person there is not identified_by: {pprint.pformat(person._label)}')
 
 		if record:
 			person.referred_to_by = record
@@ -153,6 +156,18 @@ class SalesUtilityHelper(UtilityHelper):
 		else:
 			warnings.warn(f'*** Unexpected sale type: {sale_type!r}')
 
+	def create_uncertainty_atribute(self, seller, agent_seq, label, ident, parent):
+		
+		attrib_assignment_classes = [model.AttributeAssignment]
+		prod_event = model.Production(ident=seller.id, label=f'Production event for {seller._label}')
+		attribute_assignment_id =  self.prepend_uri_key(prod_event.id, f'ASSIGNMENT,Seller-{agent_seq}')
+		assignment = vocab.make_multitype_obj(*attrib_assignment_classes, ident=attribute_assignment_id, label=f'Possibly attributed to {seller._label}')
+		assignment.classified_as = model.Type(ident="http://vocab.getty.edu/aat/300435722", label="Possibly")
+		assignment.used_specific_object = get_crom_object(parent['_sale_record'])
+		assignment.assigned_property = model.Type(ident=ident, label=label)
+		assignment.assigned = seller
+		return assignment
+	
 	def set_type_name_for_sale_type(self, sale_type):
 		if sale_type in ('Private Contract Sale', 'Stock List', 'Collection Catalog'):
 			return 'Object Set'

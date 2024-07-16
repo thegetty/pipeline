@@ -103,14 +103,19 @@ class ProvenanceBase(Configurable):
 			pxfer.transferred_custody_from = seller
 		
 		if owner_record and 'own_auth_q' in owner_record:
-			if '[?]' in owner_record['own_auth_q'] or '?' in owner_record['own_auth_q']:
+
+
+			if '?' in owner_record['own_auth_q']:
 				owner = get_crom_object(owner_record)
 				ident="http://www.cidoc-crm.org/cidoc-crm/P29_custody_received_by"
 				label="P29 custody received by"
-				pxfer.attributed_by = self.create_uncertainty_atribute(owner, seq_no, label, ident, parent)
+				pxfer.attributed_by = self.helper.create_uncertainty_atribute(owner, seq_no, label, ident, parent)
 				ident="http://www.cidoc-crm.org/cidoc-crm/P22_transferred_title_to"
-				label="P22 transferred title to"
-				pacq.attributed_by = self.create_uncertainty_atribute(owner, seq_no, label, ident, parent)
+
+				label="transferred title to"
+				pacq.attributed_by = self.helper.create_uncertainty_atribute(owner, seq_no, label, ident, parent)
+				
+
 
 		if owner_record and 'own_so' in owner_record and owner_record['own_so']:
 			owner_source_parts = owner_record['own_so'].replace('Handwritten Annotation:', '').split(' ')
@@ -682,6 +687,26 @@ class ProvenanceBase(Configurable):
 		# the URIs for the production events (of which there should only be one per object)
 		event_uri = hmo.id + '-Production'
 		prod_event = model.Production(ident=event_uri, label=f'Production event for {hmo_label}')
+		if 'present_location' in data:
+			for present_location  in data['present_location']:
+				if '?' in present_location['accq']:
+					parent = data['parent_data']
+					for seq_no, name in enumerate(hmo.current_owner):
+						ident="http://www.cidoc-crm.org/cidoc-crm/P52_has_current_owner"
+						label="P52 has current owner"
+						hmo.attributed_by = self.helper.create_uncertainty_atribute(name, seq_no, label, ident, parent)
+					for identified in hmo.identified_by:
+						if present_location['acc'] in identified.content:
+							
+							for assign in identified.assigned_by:
+								assign.classified_as = model.Type(ident="http://vocab.getty.edu/aat/300435722", label="Possibly")
+				if '?' in present_location['insq']:
+					parent = data['parent_data']
+					for seq_no, name in enumerate(hmo.current_owner):
+						ident="http://www.cidoc-crm.org/cidoc-crm/P52_has_current_owner"
+						label="P52 has current owner"
+						hmo.attributed_by = self.helper.create_uncertainty_atribute(name, seq_no, label, ident, parent)
+
 		hmo.produced_by = prod_event
 		if "help_sales" in data:
 			hmo.referred_to_by = self.select_county(data)
@@ -750,40 +775,41 @@ class ProvenanceBase(Configurable):
 		For example, label='buyer' and object_key='B-340 0291 (1820-07-19)'.
 		'''
 		all_mods = {m.lower().strip() for a in people for m in a.get(mod_key, '').split(';')} - {''}
-		group = (all_mods == {'or'}) # the person is *one* of the named people, model as a group
-		if group:
-			names = []
-			for person_data in people:
-				if len(person_data['identifiers']):
-					names.append(person_data['identifiers'][0].content)
-				else:
-					names.append(person_data['label'])
-			group_name = ' OR '.join(names)
-			if tx_data: # if there is a prov entry (e.g. was not withdrawn)
-				current_tx = get_crom_object(tx_data)
-				# The person group URI is just the provenance entry URI with a suffix.
-				# In any case where the provenance entry is merged, the person group
-				# should be merged as well.
-				group_uri = current_tx.id + f'-{label}Group'
-				group_data = {
-					'uri': group_uri,
-				}
-			else:
-				pi_record_no = data['pi_record_no']
-				group_uri_key = ('GROUP', 'PI', pi_record_no, f'{label}Group')
-				group_uri = self.helper.make_proj_uri(*group_uri_key)
-				group_data = {
-					'uri_keys': group_uri_key,
-					'uri': group_uri,
-				}
-			g_label = f'Group containing the {label.lower()} of {object_key}'
-			g = vocab.UncertainMemberClosedGroup(ident=group_uri, label=g_label)
-			import pdb; pdb.set_trace()
-			g.identified_by = model.Name(ident='', content=group_name)
+
+		# group = (all_mods == {'or'}) # the person is *one* of the named people, model as a group
+		# if group:
+		# 	import pdb; pdb.set_trace()
+		# 	names = []
+		# 	for person_data in people:
+		# 		if len(person_data['identifiers']):
+		# 			names.append(person_data['identifiers'][0].content)
+		# 		else:
+		# 			names.append(person_data['label'])
+		# 	group_name = ' OR '.join(names)
+		# 	if tx_data: # if there is a prov entry (e.g. was not withdrawn)
+		# 		current_tx = get_crom_object(tx_data)
+		# 		# The person group URI is just the provenance entry URI with a suffix.
+		# 		# In any case where the provenance entry is merged, the person group
+		# 		# should be merged as well.
+		# 		group_uri = current_tx.id + f'-{label}Group'
+		# 		group_data = {
+		# 			'uri': group_uri,
+		# 		}
+		# 	else:
+		# 		pi_record_no = data['pi_record_no']
+		# 		group_uri_key = ('GROUP', 'PI', pi_record_no, f'{label}Group')
+		# 		group_uri = self.helper.make_proj_uri(*group_uri_key)
+		# 		group_data = {
+		# 			'uri_keys': group_uri_key,
+		# 			'uri': group_uri,
+		# 		}
+		# 	g_label = f'Group containing the {label.lower()} of {object_key}'
+		# 	g = vocab.UncertainMemberClosedGroup(ident=group_uri, label=g_label)
+		# 	g.identified_by = model.Name(ident='', content=group_name)
 			
-			for person_data in people:
-				person = get_crom_object(person_data)
-				person.member_of = g
-				data['_other_owners'].append(person_data)
-			people = [add_crom_data(group_data, g)]
+		# 	for person_data in people:
+		# 		person = get_crom_object(person_data)
+		# 		person.member_of = g
+		# 		data['_other_owners'].append(person_data)
+		# 	people = [add_crom_data(group_data, g)]
 		return people, all_mods

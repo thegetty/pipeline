@@ -36,7 +36,7 @@ class ProvenanceBase(Configurable):
 		self.helper.add_person(data, record=record, relative_id=relative_id, **kwargs)
 		return data
 
-	def related_procurement(self, hmo, tx_label_args, current_tx=None, current_ts=None, buyer=None, seller=None, previous=False, ident=None, make_label=None, sales_record=None, owner_record=None, seq_no=0, parent=None):
+	def related_procurement(self, data, hmo, tx_label_args, current_tx=None, current_ts=None, buyer=None, seller=None, previous=False, ident=None, make_label=None, sales_record=None, owner_record=None, seq_no=0, parent=None):
 		'''
 		Returns a new `vocab.ProvenanceEntry` object (and related acquisition) that is temporally
 		related to the supplied procurement and associated data. The new procurement is for
@@ -58,12 +58,10 @@ class ProvenanceBase(Configurable):
 		'''
 		
 		def _make_label_default(helper, sale_type, transaction, rel, *args):
-			# import pdb; pdb.set_trace()
 			str = f'Provenance Entry {rel} object identified in book {args[2]}, page {args[3]}, row {args[4]}'
 			
 			#strs = [str(x) for x in args]
 			
-			# import pdb; pdb.set_trace()
 			#return ', '.join(strs)
 			return str
 		
@@ -101,18 +99,74 @@ class ProvenanceBase(Configurable):
 		if seller:
 			pacq.transferred_title_from = seller
 			pxfer.transferred_custody_from = seller
-		
+
+		owner = get_crom_object(owner_record)
 		if owner_record and 'own_auth_q' in owner_record:
 
-			if '[?]' in owner_record['own_auth_q'] or '?' in owner_record['own_auth_q']:
+			if '?' in owner_record['own_auth_q']:
 				owner = get_crom_object(owner_record)
 				ident="http://www.cidoc-crm.org/cidoc-crm/P29_custody_received_by"
 				label="P29 custody received by"
-				pxfer.attributed_by = self.create_uncertainty_atribute(owner, seq_no, label, ident, parent)
+				pxfer.attributed_by = self.helper.create_uncertainty_atribute(owner, seq_no, label, ident, parent)
 				ident="http://www.cidoc-crm.org/cidoc-crm/P22_transferred_title_to"
+
 				label="transferred title to"
-				pacq.attributed_by = self.create_uncertainty_atribute(owner, seq_no, label, ident, parent)
+				pacq.attributed_by = self.helper.create_uncertainty_atribute(owner, seq_no, label, ident, parent)
 				
+
+
+		if owner_record and 'own_so' in owner_record and owner_record['own_so']:
+			owner_source = owner_record['own_so']
+			cno = parent['auction_of_lot']['catalog_number']
+
+			if 'Handwritten Annotation' in owner_source:
+				owner_source = owner_source.replace('Handwritten Annotation:', '')
+				owner_source_parts = [x for x in owner_source.split(' ') if x != '']
+				owner_source = owner_source_parts[0]
+
+			
+
+			if owner_source in self.helper.services['location_codes'] :
+								
+				if len(owner_source) == 2:
+					copy_no = owner_source[1]
+					catalog_uri = self.helper.make_proj_uri('PHYS-CAT', cno, owner_source, copy_no)
+					cat_label = f'Sale Catalog {cno}, owned by “{owner_source}”, copy {copy_no}'
+				else:
+					catalog_uri = self.helper.make_proj_uri('PHYS-CAT', cno, owner_source)
+					cat_label = f'Sale Catalog {cno}, owned by “{owner_source}”'
+
+				catalog_uri = self.helper.make_proj_uri('PHYS-CAT', cno, owner_source)
+				source = vocab.AuctionCatalog(ident=catalog_uri, label=cat_label)
+
+			elif owner_source == "Catalogue" or owner_source == "Descriptive Catalogue":
+				source = self.helper.catalog_text(cno, 'Auction')
+				
+			else:
+				citation_text_work_uri = self.helper.make_proj_uri('LINGOBJECT', 'SOURCE', 'CITATION', owner_source)
+				source = model.LinguisticObject(ident=citation_text_work_uri, label = owner_source)
+				source.identified_by = vocab.PrimaryName(ident='', content=owner_source)
+				source.referred_to_by = self.select_county(data)
+
+				citation_data = {
+					'citation_uri': citation_text_work_uri,
+					'citation_label': source._label
+				}
+				
+				add_crom_data(data=citation_data, what=source)
+				if not '_citation_references' in data:
+					data['_citation_references'] = [] 
+				data['_citation_references'].append(citation_data)
+
+			property_assigned_label = "P29 custody received by"
+			property_assigned_id = "http://www.cidoc-crm.org/cidoc-crm/P29_custody_received_by"
+			attribution_label = f'Source attributed to {owner._label}'
+			pxfer.attributed_by = self.helper.create_source_attribute_assignment(owner, seq_no, attribution_label, property_assigned_label, property_assigned_id, source, True)
+			property_assigned_label = "P22 transferred title to"
+			property_assigned_id = "http://www.cidoc-crm.org/cidoc-crm/P22_transferred_title_to"
+			pacq.attributed_by = self.helper.create_source_attribute_assignment(owner, seq_no, attribution_label, property_assigned_label, property_assigned_id, source, True)
+
+
 		tx.part = pacq
 		tx.part = pxfer
 		if current_ts:
@@ -137,8 +191,13 @@ class ProvenanceBase(Configurable):
 			'pi_record_no': data['pi_record_no'],
 			'ulan': owner_record.get('ulan', owner_record.get('own_ulan')),
 		})
-		self.add_person(owner_record, record=sales_record, relative_id=record_id, role='artist')
-		owner = get_crom_object(owner_record)
+		try:
+			cno = parent['auction_of_lot']['catalog_number']
+			self.add_person(owner_record, record=sales_record, relative_id=record_id, catalog_number = cno, role='artist')
+			owner = get_crom_object(owner_record)
+		except KeyError as e:
+			self.add_person(owner_record, record=sales_record, relative_id=record_id, role='artist')
+			owner = get_crom_object(owner_record)
 
 		# TODO: handle other fields of owner_record: own_auth_d, own_auth_q, own_ques, own_so
 
@@ -149,12 +208,21 @@ class ProvenanceBase(Configurable):
 			if canonical_place:
 				place = canonical_place
 				place_data = add_crom_data(data={'uri': place.id}, what=place)
+				owner.residence = place
+				data['_owner_locations'].append(place_data)
 			else:
-				current = parse_location_name(loc, uri_base=self.helper.uid_tag_prefix)
-				place_data = self.helper.make_place(current)
-				place = get_crom_object(place_data)
-			owner.residence = place
-			data['_owner_locations'].append(place_data)
+				residences = []
+				if hasattr(owner, 'residence'):
+					
+					for residence in owner.residence:
+						residences.append(residence._label)
+
+				if loc not in residences:
+					current = parse_location_name(loc, uri_base=self.helper.uid_tag_prefix)
+					place_data = self.helper.make_place(current)
+					place = get_crom_object(place_data)
+					owner.residence = place
+					data['_owner_locations'].append(place_data)
 		if owner_record.get('own_auth_p'):
 			content = owner_record['own_auth_p']
 			owner.referred_to_by = vocab.Note(ident='', content=content)
@@ -168,16 +236,16 @@ class ProvenanceBase(Configurable):
 		tx_uri = self.helper.prepend_uri_key(hmo.id, f'PROV-{record_id}')
 		
 		tx_label_args = tuple([self.helper, sale_type, 'Event', rel] + list(lot_object_key))
-		tx, _ = self.related_procurement(hmo, tx_label_args, current_tx, ts, buyer=owner, previous=rev, ident=tx_uri, make_label=make_label, sales_record=sales_record, owner_record=owner_record, seq_no=seq_no, parent=parent)
+		tx, _ = self.related_procurement(data, hmo, tx_label_args, current_tx, ts, buyer=owner, previous=rev, ident=tx_uri, make_label=make_label, sales_record=sales_record, owner_record=owner_record, seq_no=seq_no, parent=parent)
 		
 		if owner_record.get('own_auth_e'):
 			content = owner_record['own_auth_e']
 			tx.referred_to_by = vocab.Note(ident='', content=content)
 
-		own_info_source = owner_record.get('own_so')
-		if own_info_source:
-			note = vocab.SourceStatement(ident='', content=own_info_source, label=source_label)
-			tx.referred_to_by = note
+		# own_info_source = owner_record.get('own_so')
+		# if own_info_source:
+		# 	note = vocab.SourceStatement(ident='', content=own_info_source, label=source_label)
+		# 	tx.referred_to_by = note
 
 		ptx_data = tx_data.copy()
 		ptx_data['uri'] = tx_uri
@@ -212,7 +280,6 @@ class ProvenanceBase(Configurable):
 	def model_person_or_group(self, data:dict, a:dict, attribution_group_types, attribution_group_names, role='artist', seq_no=0, sales_record=None):
 		if get_crom_object(a):
 			return a
-		# import pdb; pdb.set_trace()
 		mods = a['modifiers']
 			
 		artist = self.helper.add_person(a, record=sales_record, relative_id=f'artist-{seq_no+1}', role=role)
@@ -409,8 +476,8 @@ class ProvenanceBase(Configurable):
 				# The original object URI is just the object URI with a suffix. When URIs are
 				# reconciled during prev/post sale rewriting, this will allow us to also reconcile
 				# the URIs for the original object (of which there should be at most one per object)
-				original_id = hmo.id + '-Original'
-				original_label = f'Original of {hmo_label}'
+				original_id = hmo.id + artist_label
+				original_label = f'Original of {artist_label}'
 				original_hmo = cls(ident=original_id, label=original_label)
 				
 				# original title
@@ -435,7 +502,6 @@ class ProvenanceBase(Configurable):
 					assignment.carried_out_by = self.helper.static_instances.get_instance('Group', 'knoedler')
 				else:
 					prod_event.influenced_by = original_hmo
-				# import pdb; pdb.set_trace()
 				data['_original_objects'].append(add_crom_data(data={'uri': original_id}, what=original_hmo))
 				if 'object' in data:
 					self.populate_original_object_visual_item(data['_original_objects'], data['object'], original_hmo, sales_record, original_label, seq_no)
@@ -450,7 +516,6 @@ class ProvenanceBase(Configurable):
 		EDIT_BY = attribution_modifiers['edit by']
 
 		event_uri = prod_event.id
-		# import pdb; pdb.set_trace()
 		if '_record' not in data:
 			sales_record = get_crom_objects(data.get('_records', []))
 			if len(sales_record) > 1:
@@ -523,7 +588,6 @@ class ProvenanceBase(Configurable):
 				if EDIT_BY.intersects(mods):
 					# goupil only attribution modifier that's modelled seperately and not a sub event of the production
 					continue
-				# import pdb; pdb.set_trace()
 				uncertain = all_uncertain
 				verbatim_mods = a_data.get('attrib_mod_auth', '')
 				attribute_assignment_id = self.helper.prepend_uri_key(prod_event.id, f'ASSIGNMENT,Artist-{seq_no}')
@@ -626,7 +690,6 @@ class ProvenanceBase(Configurable):
 	def model_artists_with_modifers(self, data:dict, hmo, attribution_modifiers, attribution_group_types, attribution_group_names):
 		'''Add modeling for artists as people involved in the production of an object'''
 		# sales_record = get_crom_object(data['_record'])
-		# import pdb; pdb.set_trace()
 		data.setdefault('_organizations', [])
 		data.setdefault('_original_objects', [])
 		
@@ -649,6 +712,26 @@ class ProvenanceBase(Configurable):
 		# the URIs for the production events (of which there should only be one per object)
 		event_uri = hmo.id + '-Production'
 		prod_event = model.Production(ident=event_uri, label=f'Production event for {hmo_label}')
+		if 'present_location' in data:
+			for present_location  in data['present_location']:
+				if '?' in present_location['accq']:
+					parent = data['parent_data']
+					for seq_no, name in enumerate(hmo.current_owner):
+						ident="http://www.cidoc-crm.org/cidoc-crm/P52_has_current_owner"
+						label="P52 has current owner"
+						hmo.attributed_by = self.helper.create_uncertainty_atribute(name, seq_no, label, ident, parent)
+					for identified in hmo.identified_by:
+						if present_location['acc'] in identified.content:
+							
+							for assign in identified.assigned_by:
+								assign.classified_as = model.Type(ident="http://vocab.getty.edu/aat/300435722", label="Possibly")
+				if '?' in present_location['insq']:
+					parent = data['parent_data']
+					for seq_no, name in enumerate(hmo.current_owner):
+						ident="http://www.cidoc-crm.org/cidoc-crm/P52_has_current_owner"
+						label="P52 has current owner"
+						hmo.attributed_by = self.helper.create_uncertainty_atribute(name, seq_no, label, ident, parent)
+
 		hmo.produced_by = prod_event
 		if "help_sales" in data:
 			hmo.referred_to_by = self.select_county(data)
@@ -717,39 +800,38 @@ class ProvenanceBase(Configurable):
 		For example, label='buyer' and object_key='B-340 0291 (1820-07-19)'.
 		'''
 		all_mods = {m.lower().strip() for a in people for m in a.get(mod_key, '').split(';')} - {''}
-		group = (all_mods == {'or'}) # the person is *one* of the named people, model as a group
-		if group:
-			names = []
-			for person_data in people:
-				if len(person_data['identifiers']):
-					names.append(person_data['identifiers'][0].content)
-				else:
-					names.append(person_data['label'])
-			group_name = ' OR '.join(names)
-			if tx_data: # if there is a prov entry (e.g. was not withdrawn)
-				current_tx = get_crom_object(tx_data)
-				# The person group URI is just the provenance entry URI with a suffix.
-				# In any case where the provenance entry is merged, the person group
-				# should be merged as well.
-				group_uri = current_tx.id + f'-{label}Group'
-				group_data = {
-					'uri': group_uri,
-				}
-			else:
-				pi_record_no = data['pi_record_no']
-				group_uri_key = ('GROUP', 'PI', pi_record_no, f'{label}Group')
-				group_uri = self.helper.make_proj_uri(*group_uri_key)
-				group_data = {
-					'uri_keys': group_uri_key,
-					'uri': group_uri,
-				}
-			g_label = f'Group containing the {label.lower()} of {object_key}'
-			g = vocab.UncertainMemberClosedGroup(ident=group_uri, label=g_label)
-			g.identified_by = model.Name(ident='', content=group_name)
-			
-			for person_data in people:
-				person = get_crom_object(person_data)
-				person.member_of = g
-				data['_other_owners'].append(person_data)
-			people = [add_crom_data(group_data, g)]
+		# group = (all_mods == {'or'}) # the person is *one* of the named people, model as a group
+		# if group:
+		# 	names = []
+		# 	for person_data in people:
+		# 		if len(person_data['identifiers']):
+		# 			names.append(person_data['identifiers'][0].content)
+		# 		else:
+		# 			names.append(person_data['label'])
+		# 	group_name = ' OR '.join(names)
+		# 	if tx_data: # if there is a prov entry (e.g. was not withdrawn)
+		# 		current_tx = get_crom_object(tx_data)
+		# 		# The person group URI is just the provenance entry URI with a suffix.
+		# 		# In any case where the provenance entry is merged, the person group
+		# 		# should be merged as well.
+		# 		group_uri = current_tx.id + f'-{label}Group'
+		# 		group_data = {
+		# 			'uri': group_uri,
+		# 		}
+		# 	else:
+		# 		pi_record_no = data['pi_record_no']
+		# 		group_uri_key = ('GROUP', 'PI', pi_record_no, f'{label}Group')
+		# 		group_uri = self.helper.make_proj_uri(*group_uri_key)
+		# 		group_data = {
+		# 			'uri_keys': group_uri_key,
+		# 			'uri': group_uri,
+		# 		}
+		# 	g_label = f'Group containing the {label.lower()} of {object_key}'
+		# 	g = vocab.UncertainMemberClosedGroup(ident=group_uri, label=g_label)
+		# 	g.identified_by = model.Name(ident='', content=group_name)
+		# 	for person_data in people:
+		# 		person = get_crom_object(person_data)
+		# 		person.member_of = g
+		# 		data['_other_owners'].append(person_data)
+		# 	people = [add_crom_data(group_data, g)]
 		return people, all_mods

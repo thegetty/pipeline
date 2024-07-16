@@ -57,7 +57,6 @@ class MergingMemoryWriter(Configurable):
 			raise
 
 	def __call__(self, data: dict):
-		# import pdb; pdb.set_trace()
 		# check what is going on with LOD_OBJECT
 		if '_LOD_OBJECT' in data:
 			# with open('no_LOD.txt', 'a') as f:

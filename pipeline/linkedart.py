@@ -125,13 +125,20 @@ class MakeLinkedArtRecord:
 
 		if not hasattr(thing, '_label') and 'label' in data:
 			setattr(thing, '_label', data['label'])
-
+		
 		for namedata in data.get('names', []):
 			# namedata should take the form of:
 			# ["A. Name"]
 			# ["A. Name", {'referred_to_by': [{'uri': 'URI-OF-LINGUISTIC_OBJECT'}, model.LinguisticObject()]}]
 			if isinstance(namedata, tuple):
-				name, *properties = namedata
+				if 'auth_name' in data:
+					if data.get('auth_name', '')=='':
+						name, *properties = namedata
+						name = data['label']
+					else:
+						name, *properties = namedata
+				else:
+					name, *properties = namedata
 			else:
 				name = namedata
 				properties = []
@@ -141,9 +148,13 @@ class MakeLinkedArtRecord:
 					cl = props['classified_as']
 					del props['classified_as']
 					name_kwargs['title_type'] = cl
-
-			n = set_la_name(thing, name, **name_kwargs)
-			self.set_lo_properties(n, *properties)
+			identified_by = []
+			if hasattr(thing, 'identified_by'):
+				for identified in thing.identified_by:
+					identified_by.append(identified.content)
+			if name not in identified_by:
+				n = set_la_name(thing, name, **name_kwargs)
+				self.set_lo_properties(n, *properties)
 
 	def set_lo_properties(self, n, *properties):
 		for props in properties:
@@ -273,7 +284,7 @@ class MakeLinkedArtLinguisticObject(MakeLinkedArtRecord):
 				name = model.Name()
 				name.classified_as = title_type
 				name.content = label
-
+	
 				indexing = model.Type(label=label)
 				if not label:
 					warnings.warn(f'Setting empty name on {indexing.id}')
@@ -374,7 +385,6 @@ class MakeLinkedArtAgent(MakeLinkedArtRecord):
 
 		for uri in data.get('exact_match', []):
 			thing.exact_match = uri
-		# import pdb; pdb.set_trace()
 		for sdata in data.get('sojourns', []):
 			if 'active_city' not in sdata:
 				label = sdata.get('label', 'Sojourn activity')
@@ -386,7 +396,6 @@ class MakeLinkedArtAgent(MakeLinkedArtRecord):
 				else:
 					place = get_crom_object(sdata.get('place'))
 				act.timespan = ts
-				# import pdb; pdb.set_trace()
 				act.took_place_at = place
 				thing.carried_out = act
 				self.set_referred_to_by(sdata, act)
@@ -417,7 +426,6 @@ class MakeLinkedArtOrganization(MakeLinkedArtAgent):
 		super().set_properties(data, thing)
 		with suppress(KeyError):
 			thing._label = str(data['label'])
-		# import pdb; pdb.set_trace()
 		# iterate events only if we want professional activity block to exist (if there is active city). Else, we don't need events, so delete them.
 		if 'active_city_date' in data:
 			for event in data.get('events', []):
@@ -551,7 +559,6 @@ class MakeLinkedArtPerson(MakeLinkedArtAgent):
 
 		for n in data.get('occupation', []):
 			if isinstance(n, model.BaseResource):
-				# import pdb; pdb.set_trace()
 				who.classified_as = n
 
 		# nationality field can contain other information, but not useful.
@@ -571,7 +578,6 @@ class MakeLinkedArtPerson(MakeLinkedArtAgent):
 			who.carried_out = act
 
 		for event in data.get('events', []):
-			# import pdb; pdb.set_trace()			
 			# MAYBE HERE ITERATE DATA[SOJOURNS] AND TAKE PLACE 
 
 			for sdata in data.get('sojourns', []):
@@ -699,7 +705,6 @@ def geo_json(lat, lon, label):
 
 def make_tgn_place(tgn_data: dict, uri_creator=None, tgn_lookup = {}):
 	place_shared_uri = uri_creator(('PLACE', 'TGN-ID', tgn_data.get('tgn_id')))
-	# import pdb; pdb.set_trace()
 	if tgn_data is None:
 		return None
 
@@ -836,8 +841,44 @@ class PopulateObject:
 				else: 
 					formatstmt.referred_to_by = sales_record
 			hmo.referred_to_by = formatstmt
-
+		
 		materials = data.get('materials')
+		q_add_comment = "This resource represents the physical object that is believed to have been involved in "
+		
+		if 'post_sale' in data or 'prev_sale' in data:
+			list_q = []
+			flag = False
+			if 'post_sale' in data:
+				for post in data['post_sale']:
+					if 'q' in post:
+						
+						if '?' in post['q']:
+							flag = True
+							extra_note = f"{post['cat']} {post['lot']} ({post['year']}-{post['mo']} {post['day']})"
+							list_q.append(extra_note)
+							try:
+								note_c += f"Sales Event {extra_note}, "
+							except:
+								note_c = q_add_comment
+								note_c += f"Sales Event {extra_note}, "
+			if 'prev_sale' in data:
+				for prev in data['prev_sale']:
+					if 'ques' in prev:
+						if '?' in prev['ques']:
+							flag = True
+							extra_note = f"{prev['cat']} {prev['lot']} ({prev['year']}-{prev['mo']} {prev['day']})"
+							list_q.append(extra_note)
+							try:
+								note_c += f"Sales Event {extra_note}, "
+							except:
+								note_c = q_add_comment
+								note_c += f"Sales Event {extra_note}, "
+			if flag:
+				information = ", ".join(list_q)
+				note_c += f"although that attribution is uncertain. For more information, please see the Textual Work resource related to Sale recorded in catalog: {information}."
+				note = vocab.Note(ident='', content=note_c)
+				hmo.referred_to_by = note
+						
 		if materials:
 			matstmt = vocab.MaterialStatement(ident='', content=materials)
 			if sales_record:

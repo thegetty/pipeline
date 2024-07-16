@@ -358,101 +358,102 @@ class PersonIdentity:
 		return {}
 
 	def add_props(self, data:dict, role=None, split_notes=True, **kwargs):
-		role = role if role else 'person'
-		auth_name = data.get('auth_name', '')
-		generic_name = data.get('generic_name', '')
-		century_active = data.get('century_active', '')
-		period_match = self.anon_period_re.match(auth_name)
-		nationalities = []
-		if 'nationality' in data:
-			nationality = data['nationality']
-			if isinstance(nationality, str):
-				nationalities += [n.lower().strip() for n in nationality.split(';')]
-			elif isinstance(nationality, list):
-				nationalities += [n.lower() for n in nationality]
+		if 'sojourns' in data:
+			import pdb; pdb.set_trace()
+			role = role if role else 'person'
+			auth_name = data.get('auth_name', '')
+			generic_name = data.get('generic_name', '')
+			century_active = data.get('century_active', '')
+			period_match = self.anon_period_re.match(auth_name)
+			nationalities = []
+			if 'nationality' in data:
+				nationality = data['nationality']
+				if isinstance(nationality, str):
+					nationalities += [n.lower().strip() for n in nationality.split(';')]
+				elif isinstance(nationality, list):
+					nationalities += [n.lower() for n in nationality]
 
-		data['nationality'] = []
-		data.setdefault('referred_to_by', [])
+			data['nationality'] = []
+			data.setdefault('referred_to_by', [])
 
-# 		name = data['label']
-# 		active = self.clamped_timespan_args(data, name)
-# 		cb = data.get('corporate_body')
-# 		if active:
-# 			pact_uri = data['uri'] + '-ProfAct-active'
-# 			a = self.professional_activity(name, ident=pact_uri, **active)
-# 			data['events'].append(a)
+	# 		name = data['label']
+	# 		active = self.clamped_timespan_args(data, name)
+	# 		cb = data.get('corporate_body')
+	# 		if active:
+	# 			pact_uri = data['uri'] + '-ProfAct-active'
+	# 			a = self.professional_activity(name, ident=pact_uri, **active)
+	# 			data['events'].append(a)
 
-		
-		notes_field_classification = {
-			'brief_notes': (vocab.BiographyStatement, vocab.External),
-			'text': (vocab.BiographyStatement, vocab.Internal),
-			'working_notes': (vocab.ResearchStatement, vocab.Internal),
-		}
-		for key, note_classification in notes_field_classification.items():
-			if key in data:
-				# there's a chance that a `;` separated field might end with a `;`, thus creating an extra entry which is empty
-				# the following line splits the field and then filters all empty out
-				contents = [n.strip() for n in data[key].split(';') if n.strip()]
-				for content in contents:
-					cite = vocab.make_multitype_obj(*note_classification, ident='', content=content)
-					data['referred_to_by'].append(cite)
-		
-		if split_notes:
-			if 'internal_notes' in data:
-				for content in [n.strip() for n in data['internal_notes'].split(';') if n.strip()]:
-					cite = vocab.make_multitype_obj(*(vocab.BiographyStatement, vocab.Internal), ident='', content=content)
-					data['referred_to_by'].append(cite)
-		else:
-			if 'internal_notes' in data:
-				cite = vocab.make_multitype_obj(*(vocab.BiographyStatement, vocab.Internal), ident='', content=data['internal_notes'])
-				data['referred_to_by'].append(cite)
 			
-		for key in ('name_cite', 'bibliography'):
-			if data.get(key):
-				cite = vocab.BibliographyStatement(ident='', content=data[key])
-				data['referred_to_by'].append(cite)
-
-		if data.get('name_cite'):
-			cite = vocab.BibliographyStatement(ident='', content=data['name_cite'])
-			data['referred_to_by'].append(cite)
-
-		if self.is_anonymous_group(generic_name):
-			data.setdefault('events', [])
-			if nationalities and not century_active:
-				with suppress(ValueError):
-					data['label'] = self.make_label_for_professional_activity(role, authority_name=auth_name, nationality=nationalities[0])
-			elif nationalities and century_active:
-				with suppress(ValueError):
-					c_range = self.century_range_from_century_active(century_active)
-					group_label = self.make_label_for_professional_activity(role, authority_name=auth_name, century_range=c_range, nationality=nationalities[0])
-					data['label'] = group_label
-					pact_uri = data['uri'] + '-ProfAct-dated-natl'
-					a = self.professional_activity(group_label, classified_as=[vocab.ActiveOccupation], ident=pact_uri, century_range=c_range, narrow=True)
-					data['events'].append(a)
-			elif century_active:
-				with suppress(ValueError):
-					c_range = self.century_range_from_century_active(century_active)
-					group_label = self.make_label_for_professional_activity(role, authority_name=auth_name, century_range=c_range)
-					data['label'] = group_label
-					pact_uri = data['uri'] + '-ProfAct-dated'
-					a = self.professional_activity(group_label, classified_as=[vocab.ActiveOccupation], ident=pact_uri, century_range=c_range, narrow=True)
-					data['events'].append(a)
-			elif period_match:
-				period = period_match.group(1).lower()
-				data['label'] = f'anonymous {period} {role}s'
-		for nationality in nationalities:
-			if nationality == "netherlandish":
-				nationality = "dutch"
-				
-			if "and" in nationality or "or" in nationality:
-				nx = nationality.split()
-				for x in nx:
-					if x != "and" and x !="or":
-						data = self.add_nationality(x, data)		
+			notes_field_classification = {
+				'brief_notes': (vocab.BiographyStatement, vocab.External),
+				'text': (vocab.BiographyStatement, vocab.Internal),
+				'working_notes': (vocab.ResearchStatement, vocab.Internal),
+			}
+			for key, note_classification in notes_field_classification.items():
+				if key in data:
+					# there's a chance that a `;` separated field might end with a `;`, thus creating an extra entry which is empty
+					# the following line splits the field and then filters all empty out
+					contents = [n.strip() for n in data[key].split(';') if n.strip()]
+					for content in contents:
+						cite = vocab.make_multitype_obj(*note_classification, ident='', content=content)
+						data['referred_to_by'].append(cite)
+			
+			if split_notes:
+				if 'internal_notes' in data:
+					for content in [n.strip() for n in data['internal_notes'].split(';') if n.strip()]:
+						cite = vocab.make_multitype_obj(*(vocab.BiographyStatement, vocab.Internal), ident='', content=content)
+						data['referred_to_by'].append(cite)
 			else:
-				data = self.add_nationality(nationality, data)
-			
+				if 'internal_notes' in data:
+					cite = vocab.make_multitype_obj(*(vocab.BiographyStatement, vocab.Internal), ident='', content=data['internal_notes'])
+					data['referred_to_by'].append(cite)
+				
+			for key in ('name_cite', 'bibliography'):
+				if data.get(key):
+					cite = vocab.BibliographyStatement(ident='', content=data[key])
+					data['referred_to_by'].append(cite)
 
+			if data.get('name_cite'):
+				cite = vocab.BibliographyStatement(ident='', content=data['name_cite'])
+				data['referred_to_by'].append(cite)
+
+			if self.is_anonymous_group(generic_name):
+				data.setdefault('events', [])
+				if nationalities and not century_active:
+					with suppress(ValueError):
+						data['label'] = self.make_label_for_professional_activity(role, authority_name=auth_name, nationality=nationalities[0])
+				elif nationalities and century_active:
+					with suppress(ValueError):
+						c_range = self.century_range_from_century_active(century_active)
+						group_label = self.make_label_for_professional_activity(role, authority_name=auth_name, century_range=c_range, nationality=nationalities[0])
+						data['label'] = group_label
+						pact_uri = data['uri'] + '-ProfAct-dated-natl'
+						a = self.professional_activity(group_label, classified_as=[vocab.ActiveOccupation], ident=pact_uri, century_range=c_range, narrow=True)
+						data['events'].append(a)
+				elif century_active:
+					with suppress(ValueError):
+						c_range = self.century_range_from_century_active(century_active)
+						group_label = self.make_label_for_professional_activity(role, authority_name=auth_name, century_range=c_range)
+						data['label'] = group_label
+						pact_uri = data['uri'] + '-ProfAct-dated'
+						a = self.professional_activity(group_label, classified_as=[vocab.ActiveOccupation], ident=pact_uri, century_range=c_range, narrow=True)
+						data['events'].append(a)
+				elif period_match:
+					period = period_match.group(1).lower()
+					data['label'] = f'anonymous {period} {role}s'
+			for nationality in nationalities:
+				if nationality == "netherlandish":
+					nationality = "dutch"
+					
+				if "and" in nationality or "or" in nationality:
+					nx = nationality.split()
+					for x in nx:
+						if x != "and" and x !="or":
+							data = self.add_nationality(x, data)		
+				else:
+					data = self.add_nationality(nationality, data)
+		
 	def add_nationality(self, nationality, data):
 		key = f'{nationality.lower()} nationality'
 		n = vocab.instances.get(key)

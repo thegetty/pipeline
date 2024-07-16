@@ -131,7 +131,6 @@ class PopulateAuctionEvent(Configurable):
 					city['names'] = [place_verbatim]
 
 		else:
-			# import pdb; pdb.set_trace()
 			# check in which type of location the tgn refers to
 			tgn_ref = data.get('loc_tgn_ref')
 			l = data.get(tgn_ref)
@@ -156,7 +155,6 @@ class PopulateAuctionEvent(Configurable):
 		auction_locations = event_properties['auction_locations']
 		event_experts = event_properties['experts']
 		event_commissaires = event_properties['commissaire']
-		# import pdb; pdb.set_trace()
 		auction = get_crom_object(data)
 		catalog = data['_catalog']['_LOD_OBJECT']
 
@@ -212,7 +210,6 @@ class PopulateAuctionEvent(Configurable):
 				auction.took_place_at = o_place
 				auction_locations[cno] = o_place.clone(minimal=True)
 			if same_as:
-				# import pdb; pdb.set_trace()
 				tgn_instance = self.helper.static_instances.get_instance('Place', same_as)
 				if tgn_instance:
 					traverse_static_place_instances(self, tgn_instance)
@@ -416,7 +413,7 @@ class AddAuctionHouses(Configurable):
 			
 			if 'sell_auth_q' in seller_q:
 				
-				if '?' in  seller_q['sell_auth_q'] or '[?]' in seller_q['sell_auth_q']:
+				if '?' in  seller_q['sell_auth_q']:
 					
 					ident="http://www.cidoc-crm.org/cidoc-crm/P14_carried_out_by"
 					label="carried out by"

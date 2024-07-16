@@ -115,14 +115,25 @@ class PersonIdentity:
 				warnings.warn(f'*** No identifying property with which to construct a URI key: {e}')
 				print(pprint.pformat(data), file=sys.stderr)
 				raise
-			# if record_id:
-			# 	# key = ('PERSON', id_key, id_value, record_id)
-			# 	key = ('PERSON', 'AUTH', auth_name)
-			# 	return key, self.make_proj_uri
+			if record_id:
+				# key = ('PERSON', id_key, id_value, record_id)
+				name = data.get('name', '')
+				if auth_name:
+					key = ('PERSON', 'AUTH', auth_name)
+				elif name:
+					key = ('PERSON', 'AUTH', name)
+				else:
+					warnings.warn(f'*** No record identifier given for person identified only by {id_key} {id_value}')
+					key = ('PERSON', 'AUTH', auth_name)
+				return key, self.make_proj_uri
 			else:
 				warnings.warn(f'*** No record identifier given for person identified only by {id_key} {id_value}')
 				# key = ('PERSON', id_key, id_value)
-				key = ('PERSON', 'AUTH', auth_name)
+				name = data.get('name', '')
+				if auth_name:
+					key = ('PERSON', 'AUTH', auth_name)
+				elif name:
+					key = ('PERSON', 'AUTH', name)
 				return key, self.make_shared_uri
 
 	def add_person(self, a, record=None, relative_id=None, **kwargs):
@@ -347,101 +358,101 @@ class PersonIdentity:
 		return {}
 
 	def add_props(self, data:dict, role=None, split_notes=True, **kwargs):
-		role = role if role else 'person'
-		auth_name = data.get('auth_name', '')
-		generic_name = data.get('generic_name', '')
-		century_active = data.get('century_active', '')
-		period_match = self.anon_period_re.match(auth_name)
-		nationalities = []
-		if 'nationality' in data:
-			nationality = data['nationality']
-			if isinstance(nationality, str):
-				nationalities += [n.lower().strip() for n in nationality.split(';')]
-			elif isinstance(nationality, list):
-				nationalities += [n.lower() for n in nationality]
+		if 'sojourns' in data:
+			role = role if role else 'person'
+			auth_name = data.get('auth_name', '')
+			generic_name = data.get('generic_name', '')
+			century_active = data.get('century_active', '')
+			period_match = self.anon_period_re.match(auth_name)
+			nationalities = []
+			if 'nationality' in data:
+				nationality = data['nationality']
+				if isinstance(nationality, str):
+					nationalities += [n.lower().strip() for n in nationality.split(';')]
+				elif isinstance(nationality, list):
+					nationalities += [n.lower() for n in nationality]
 
-		data['nationality'] = []
-		data.setdefault('referred_to_by', [])
+			data['nationality'] = []
+			data.setdefault('referred_to_by', [])
 
-# 		name = data['label']
-# 		active = self.clamped_timespan_args(data, name)
-# 		cb = data.get('corporate_body')
-# 		if active:
-# 			pact_uri = data['uri'] + '-ProfAct-active'
-# 			a = self.professional_activity(name, ident=pact_uri, **active)
-# 			data['events'].append(a)
+	# 		name = data['label']
+	# 		active = self.clamped_timespan_args(data, name)
+	# 		cb = data.get('corporate_body')
+	# 		if active:
+	# 			pact_uri = data['uri'] + '-ProfAct-active'
+	# 			a = self.professional_activity(name, ident=pact_uri, **active)
+	# 			data['events'].append(a)
 
-		
-		notes_field_classification = {
-			'brief_notes': (vocab.BiographyStatement, vocab.External),
-			'text': (vocab.BiographyStatement, vocab.Internal),
-			'working_notes': (vocab.ResearchStatement, vocab.Internal),
-		}
-		for key, note_classification in notes_field_classification.items():
-			if key in data:
-				# there's a chance that a `;` separated field might end with a `;`, thus creating an extra entry which is empty
-				# the following line splits the field and then filters all empty out
-				contents = [n.strip() for n in data[key].split(';') if n.strip()]
-				for content in contents:
-					cite = vocab.make_multitype_obj(*note_classification, ident='', content=content)
-					data['referred_to_by'].append(cite)
-		
-		if split_notes:
-			if 'internal_notes' in data:
-				for content in [n.strip() for n in data['internal_notes'].split(';') if n.strip()]:
-					cite = vocab.make_multitype_obj(*(vocab.BiographyStatement, vocab.Internal), ident='', content=content)
-					data['referred_to_by'].append(cite)
-		else:
-			if 'internal_notes' in data:
-				cite = vocab.make_multitype_obj(*(vocab.BiographyStatement, vocab.Internal), ident='', content=data['internal_notes'])
-				data['referred_to_by'].append(cite)
 			
-		for key in ('name_cite', 'bibliography'):
-			if data.get(key):
-				cite = vocab.BibliographyStatement(ident='', content=data[key])
-				data['referred_to_by'].append(cite)
-
-		if data.get('name_cite'):
-			cite = vocab.BibliographyStatement(ident='', content=data['name_cite'])
-			data['referred_to_by'].append(cite)
-
-		if self.is_anonymous_group(generic_name):
-			data.setdefault('events', [])
-			if nationalities and not century_active:
-				with suppress(ValueError):
-					data['label'] = self.make_label_for_professional_activity(role, authority_name=auth_name, nationality=nationalities[0])
-			elif nationalities and century_active:
-				with suppress(ValueError):
-					c_range = self.century_range_from_century_active(century_active)
-					group_label = self.make_label_for_professional_activity(role, authority_name=auth_name, century_range=c_range, nationality=nationalities[0])
-					data['label'] = group_label
-					pact_uri = data['uri'] + '-ProfAct-dated-natl'
-					a = self.professional_activity(group_label, classified_as=[vocab.ActiveOccupation], ident=pact_uri, century_range=c_range, narrow=True)
-					data['events'].append(a)
-			elif century_active:
-				with suppress(ValueError):
-					c_range = self.century_range_from_century_active(century_active)
-					group_label = self.make_label_for_professional_activity(role, authority_name=auth_name, century_range=c_range)
-					data['label'] = group_label
-					pact_uri = data['uri'] + '-ProfAct-dated'
-					a = self.professional_activity(group_label, classified_as=[vocab.ActiveOccupation], ident=pact_uri, century_range=c_range, narrow=True)
-					data['events'].append(a)
-			elif period_match:
-				period = period_match.group(1).lower()
-				data['label'] = f'anonymous {period} {role}s'
-		for nationality in nationalities:
-			if nationality == "netherlandish":
-				nationality = "dutch"
-				
-			if "and" in nationality or "or" in nationality:
-				nx = nationality.split()
-				for x in nx:
-					if x != "and" and x !="or":
-						data = self.add_nationality(x, data)		
+			notes_field_classification = {
+				'brief_notes': (vocab.BiographyStatement, vocab.External),
+				'text': (vocab.BiographyStatement, vocab.Internal),
+				'working_notes': (vocab.ResearchStatement, vocab.Internal),
+			}
+			for key, note_classification in notes_field_classification.items():
+				if key in data:
+					# there's a chance that a `;` separated field might end with a `;`, thus creating an extra entry which is empty
+					# the following line splits the field and then filters all empty out
+					contents = [n.strip() for n in data[key].split(';') if n.strip()]
+					for content in contents:
+						cite = vocab.make_multitype_obj(*note_classification, ident='', content=content)
+						data['referred_to_by'].append(cite)
+			
+			if split_notes:
+				if 'internal_notes' in data:
+					for content in [n.strip() for n in data['internal_notes'].split(';') if n.strip()]:
+						cite = vocab.make_multitype_obj(*(vocab.BiographyStatement, vocab.Internal), ident='', content=content)
+						data['referred_to_by'].append(cite)
 			else:
-				data = self.add_nationality(nationality, data)
-			
+				if 'internal_notes' in data:
+					cite = vocab.make_multitype_obj(*(vocab.BiographyStatement, vocab.Internal), ident='', content=data['internal_notes'])
+					data['referred_to_by'].append(cite)
+				
+			for key in ('name_cite', 'bibliography'):
+				if data.get(key):
+					cite = vocab.BibliographyStatement(ident='', content=data[key])
+					data['referred_to_by'].append(cite)
 
+			if data.get('name_cite'):
+				cite = vocab.BibliographyStatement(ident='', content=data['name_cite'])
+				data['referred_to_by'].append(cite)
+
+			if self.is_anonymous_group(generic_name):
+				data.setdefault('events', [])
+				if nationalities and not century_active:
+					with suppress(ValueError):
+						data['label'] = self.make_label_for_professional_activity(role, authority_name=auth_name, nationality=nationalities[0])
+				elif nationalities and century_active:
+					with suppress(ValueError):
+						c_range = self.century_range_from_century_active(century_active)
+						group_label = self.make_label_for_professional_activity(role, authority_name=auth_name, century_range=c_range, nationality=nationalities[0])
+						data['label'] = group_label
+						pact_uri = data['uri'] + '-ProfAct-dated-natl'
+						a = self.professional_activity(group_label, classified_as=[vocab.ActiveOccupation], ident=pact_uri, century_range=c_range, narrow=True)
+						data['events'].append(a)
+				elif century_active:
+					with suppress(ValueError):
+						c_range = self.century_range_from_century_active(century_active)
+						group_label = self.make_label_for_professional_activity(role, authority_name=auth_name, century_range=c_range)
+						data['label'] = group_label
+						pact_uri = data['uri'] + '-ProfAct-dated'
+						a = self.professional_activity(group_label, classified_as=[vocab.ActiveOccupation], ident=pact_uri, century_range=c_range, narrow=True)
+						data['events'].append(a)
+				elif period_match:
+					period = period_match.group(1).lower()
+					data['label'] = f'anonymous {period} {role}s'
+			for nationality in nationalities:
+				if nationality == "netherlandish":
+					nationality = "dutch"
+					
+				if "and" in nationality or "or" in nationality:
+					nx = nationality.split()
+					for x in nx:
+						if x != "and" and x !="or":
+							data = self.add_nationality(x, data)		
+				else:
+					data = self.add_nationality(nationality, data)
+		
 	def add_nationality(self, nationality, data):
 		key = f'{nationality.lower()} nationality'
 		n = vocab.instances.get(key)
@@ -464,9 +475,9 @@ class PersonIdentity:
 		auth_name = data.get('auth_name', '')
 		disp_name = data.get('auth_display_name')
 		name_types = [vocab.PrimaryName]
-		
-		personalNameType = vocab.CorporateName if group else vocab.PersonalName
+		name = data.get('name')
 
+		personalNameType = vocab.CorporateName if group else vocab.PersonalName
 		if disp_name:
 			if auth_name:
 				data['identifiers'].append(vocab.PrimaryName(ident='', content=auth_name))
@@ -479,18 +490,25 @@ class PersonIdentity:
 			if role:
 				role_label = f'{role} “{auth_name}”'
 			data.setdefault('label', auth_name)
+			
 			pname = vocab.make_multitype_obj(*name_types, ident='', content=auth_name) # NOTE: most of these are also vocab.SortName, but not 100%, so witholding that assertion for now
-			if isinstance(referrer, list):
-				for r in referrer:
-					pname.referred_to_by = r
-			elif referrer:
-				pname.referred_to_by = referrer
+			# if isinstance(referrer, list):
+			# 	for r in referrer:
+			# 		pname.referred_to_by = r
+			# elif referrer:
+			# 	pname.referred_to_by = referrer
 			data['identifiers'].append(pname)
 
+		else:
+			if not auth_name and name:
+				data.setdefault('label', name)
+				pname = vocab.PrimaryName(ident='', content=name + " referred to in " + kwargs['catalog_number'])
+				data['identifiers'].append(pname)
+        
 		data.setdefault('names', [])
-
+		
 		names = []
-		name = data.get('name')
+		
 		if name:
 			del data['name'] # this will be captured in the 'names' array, so remove it here so the output isn't duplicated
 			names.append(name)
@@ -508,13 +526,30 @@ class PersonIdentity:
 				name_kwargs['referred_to_by'] = referrer
 			elif referrer:
 				name_kwargs['referred_to_by'] = [referrer]
+			if 'name_ques' in data :
+				if '?' in data['name_ques'] and '?' not in name:
+					name = name + " " + data['name_ques']
+			elif 'ques' in data:
+				if '?' in data['ques'] and '?' not in name:
+					name = name + " " + data['ques']
+			elif 'own_ques' in data:
+				if '?' in data['own_ques'] and '?' not in name:
+					name = name + " " + data['own_ques']
+			elif 'own_q' in data:
+				if '?' in data['own_q'] and '?' not in name:
+					name = name + " " + data['own_q']
+			
 			data['names'].append((name, name_kwargs))
-			data.setdefault('label', name)
+
+			if auth_name:
+				data.setdefault('label', name)
+			else:
+				data.setdefault('label', name )
+
 		data.setdefault('label', '(Anonymous)')
 
 		if role and not role_label:
 			role_label = f'anonymous {role}'
-
 		if role:
 			data['role_label'] = role_label
 
@@ -533,7 +568,6 @@ class StaticInstanceHolder:
 
 	def get_instance(self, model, name):
 		m = self.instances.get(model)
-		# import pdb; pdb.set_trace()
 		if not m:
 			return None
 		if type(m) is tuple:
@@ -551,7 +585,6 @@ class StaticInstanceHolder:
 		return None
 
 	def used_instances(self):
-		# import pdb; pdb.set_trace()
 		used = defaultdict(dict)
 		for model, name in self.used:
 			if not type(self.instances[model]) is tuple:
@@ -929,7 +962,6 @@ class UtilityHelper:
 		if name.casefold() in canonical_location_names:
 			name = canonical_location_names.get(name.casefold(), name)
 		si = self.static_instances
-		# import pdb; pdb.set_trace()
 		if si:
 			return si.get_instance('Place', name)
 		return None

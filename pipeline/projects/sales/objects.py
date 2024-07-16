@@ -792,11 +792,12 @@ class AddArtists(ProvenanceBase):
 		FORMERLY_ATTRIBUTED_TO = attribution_modifiers['formerly attributed to']
 		POSSIBLY = attribution_modifiers['possibly by']
 		UNCERTAIN = attribution_modifiers['uncertain']
+		COPY_AFTER = attribution_modifiers['copy after']
 		ATTRIBUTED_TO = attribution_modifiers['attributed to']
 		
 		event_uri = prod_event.id
 		sales_record = get_crom_object(data['_record'])
-		artists = [p for p in people if not self.is_or_anon(p)]
+		artists = people
 		or_anon_records = any([self.is_or_anon(a) for a in people])
 		if or_anon_records:
 			all_uncertain = True
@@ -858,11 +859,13 @@ class AddArtists(ProvenanceBase):
 				artist_label = a_data.get('label') # TODO: this may not be right for groups
 				a_data = self.model_person_or_group(data, a_data, attribution_group_types, attribution_group_names, seq_no=seq_no, role='Artist', sales_record=sales_record)
 				person = get_crom_object(a_data)
+				
 				mods = a_data['modifiers']
 				verbatim_mods = a_data.get('attrib_mod', '')
 				attrib_assignment_classes = [model.AttributeAssignment]
 				subprod_path = self.helper.make_uri_path(*a_data["uri_keys"])
 				subevent_id = event_uri + f'-{subprod_path}'
+				
 				if UNCERTAIN.intersects(mods):
 					if POSSIBLY.intersects(mods):
 						attrib_assignment_classes.append(vocab.PossibleAssignment)
@@ -879,6 +882,11 @@ class AddArtists(ProvenanceBase):
 
 					# TODO: this assigns an uncertain carried_out_by property directly to the top-level production;
 					#       should it instead be an uncertain sub-production part?
+					if isinstance(sales_record, list):
+						for sale in sales_record:
+							assignment.used_specific_object = sale
+					else:
+						assignment.used_specific_object = sales_record
 					prod_event.attributed_by = assignment
 					assignment.assigned_property = 'carried_out_by'
 					assignment.assigned = person
@@ -891,6 +899,11 @@ class AddArtists(ProvenanceBase):
 					prod_event.attributed_by = assignment
 					assignment.assigned_property = 'carried_out_by'
 					assignment.assigned = person
+					if isinstance(sales_record, list):
+						for sale in sales_record:
+							assignment.used_specific_object = sale
+					else:
+						assignment.used_specific_object = sales_record
 					assignment.referred_to_by = vocab.Note(ident='', content=verbatim_mods)
 				else:
 					
@@ -902,11 +915,48 @@ class AddArtists(ProvenanceBase):
 						assignment.assigned_property = 'carried_out_by'
 						assignment.assigned = person
 						assignment.referred_to_by = vocab.Note(ident='', content=verbatim_mods)
+					
+					elif verbatim_mods in COPY_AFTER:
+						cls = type(hmo)
+						original_id = hmo.id + artist_label
+						original_label = f'Original of {hmo_label}'
+						original_hmo = cls(ident=original_id, label=original_label)
+						# original title
+						original_hmo.referred_to_by = sales_record
+						original_hmo.identified_by = vocab.ConstructedTitle(ident='', content=f'[Work] by {artist_label}')
+						assignment = vocab.make_multitype_obj(*attrib_assignment_classes, ident=attribute_assignment_id, label=f'Possibly attributed to {artist_label}')
+						assignment.used_specific_object = sales_record
+						prod_event.attributed_by = assignment
+						assignment.assigned_property = 'influenced_by'
+						assignment.assigned = original_hmo
+						if isinstance(sales_record, list):
+							for sale in sales_record:
+								assignment.used_specific_object = sale
+						else:
+							assignment.used_specific_object = sales_record
+						assignment.referred_to_by = vocab.Note(ident='', content=verbatim_mods)
+						# subevent = model.Production(ident=subevent_id, label=f'Production sub-event for {artist_label}')
+						# subevent.carried_out_by = person
+						prod_event.influenced_by = original_hmo
+						data['_original_objects'].append(add_crom_data(data={'uri': original_id}, what=original_hmo))
 					else:
+						assignment = vocab.make_multitype_obj(*attrib_assignment_classes, ident=attribute_assignment_id, label=f'Possibly attributed to {artist_label}')
+						assignment.used_specific_object = sales_record
+						prod_event.attributed_by = assignment
+						assignment.assigned_property = 'carried_out_by'
+						assignment.assigned = person
+						if isinstance(sales_record, list):
+							for sale in sales_record:
+								assignment.used_specific_object = sale
+						else:
+							assignment.used_specific_object = sales_record
+						assignment.referred_to_by = vocab.Note(ident='', content=verbatim_mods)
 						subevent = model.Production(ident=subevent_id, label=f'Production sub-event for {artist_label}')
 						subevent.carried_out_by = person
+						
 						prod_event.part = subevent
-
+					
+						
 	def model_object_influence(self, data, people, hmo, prod_event, attribution_modifiers, attribution_group_types, attribution_group_names, all_uncertain=False):
 		STYLE_OF = attribution_modifiers['style of']
 		COPY_AFTER = attribution_modifiers['copy after']
@@ -916,7 +966,6 @@ class AddArtists(ProvenanceBase):
 		
 		non_artist_assertions = people
 		sales_record = get_crom_object(data['_record'])
-
 		try:
 			hmo_label = f'{hmo._label}'
 		except AttributeError:
@@ -926,6 +975,7 @@ class AddArtists(ProvenanceBase):
 		non_artist_all_mods = {m.lower().strip() for a in non_artist_assertions for m in a.get('attrib_mod_auth', '').split(';')} - {''}
 		non_artist_group_flag = len(non_artist_assertions) and all(['or' in a['modifiers'] for a in non_artist_assertions])
 		non_artist_group = None
+		
 		if non_artist_group_flag:
 			non_artist_mod = list(NON_ARTIST_MODS.intersection(non_artist_all_mods))[0]
 			# The artist group URI is just the production event URI with a suffix. When URIs are
@@ -949,7 +999,6 @@ class AddArtists(ProvenanceBase):
 			artist_label = a_data.get('label')
 			a_data = self.model_person_or_group(data, a_data, attribution_group_types, attribution_group_names, seq_no=seq_no, role='NonArtist', sales_record=sales_record)
 			person = get_crom_object(a_data)
-
 			mods = a_data['modifiers']
 			attrib_assignment_classes = [model.AttributeAssignment]
 			uncertain = all_uncertain
@@ -970,11 +1019,12 @@ class AddArtists(ProvenanceBase):
 				assignment.assigned = person
 				assignment.referred_to_by = vocab.Note(ident='', content=verbatim_mods)
 			elif COPY_AFTER.intersects(mods):
+				import pdb; pdb.set_trace()
 				cls = type(hmo)
 				# The original object URI is just the object URI with a suffix. When URIs are
 				# reconciled during prev/post sale rewriting, this will allow us to also reconcile
 				# the URIs for the original object (of which there should be at most one per object)
-				original_id = hmo.id + '-Original'
+				original_id = hmo.id + artist_label
 				original_label = f'Original of {hmo_label}'
 				original_hmo = cls(ident=original_id, label=original_label)
 				original_hmo.referred_to_by = sales_record
@@ -985,6 +1035,7 @@ class AddArtists(ProvenanceBase):
 				# Similarly for the production of the original object.
 				original_event_id = original_hmo.id + '-Production'
 				original_event = model.Production(ident=original_event_id, label=f'Production event for {original_label}')
+				import pdb; pdb.set_trace()
 				original_hmo.produced_by = original_event
 				#object database country
 				original_hmo.referred_to_by = self.select_county(data)
@@ -1005,6 +1056,7 @@ class AddArtists(ProvenanceBase):
 					#assignment.referred_to_by[0].classified_as = vocab.instances["brief text"]
 					prod_event.influenced_by = original_hmo
 				else:
+					
 					prod_event.influenced_by = original_hmo
 				data['_original_objects'].append(add_crom_data(data={'uri': original_id}, what=original_hmo))
 			else:

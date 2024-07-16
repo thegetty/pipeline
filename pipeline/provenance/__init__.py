@@ -446,8 +446,8 @@ class ProvenanceBase(Configurable):
 				# The original object URI is just the object URI with a suffix. When URIs are
 				# reconciled during prev/post sale rewriting, this will allow us to also reconcile
 				# the URIs for the original object (of which there should be at most one per object)
-				original_id = hmo.id + '-Original'
-				original_label = f'Original of {hmo_label}'
+				original_id = hmo.id + artist_label
+				original_label = f'Original of {artist_label}'
 				original_hmo = cls(ident=original_id, label=original_label)
 				
 				# original title
@@ -774,7 +774,6 @@ class ProvenanceBase(Configurable):
 		For example, label='buyer' and object_key='B-340 0291 (1820-07-19)'.
 		'''
 		all_mods = {m.lower().strip() for a in people for m in a.get(mod_key, '').split(';')} - {''}
-
 		# group = (all_mods == {'or'}) # the person is *one* of the named people, model as a group
 		# if group:
 		# 	import pdb; pdb.set_trace()
@@ -805,7 +804,6 @@ class ProvenanceBase(Configurable):
 		# 	g_label = f'Group containing the {label.lower()} of {object_key}'
 		# 	g = vocab.UncertainMemberClosedGroup(ident=group_uri, label=g_label)
 		# 	g.identified_by = model.Name(ident='', content=group_name)
-			
 		# 	for person_data in people:
 		# 		person = get_crom_object(person_data)
 		# 		person.member_of = g

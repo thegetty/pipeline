@@ -254,7 +254,6 @@ class PopulateSalesObject(Configurable, pipeline.linkedart.PopulateObject):
 			return a
 
 		mods = a['modifiers']
-			
 		artist = self.helper.add_person(a, record=sales_record, relative_id=f'artist-{seq_no+1}', role=role)
 		artist.referred_to_by = sales_record
 		artist.referred_to_by = self.select_county(data)
@@ -737,8 +736,8 @@ class AddArtists(ProvenanceBase):
 			return a
 
 		mods = a['modifiers']
-			
-		artist = self.helper.add_person(a, record=sales_record, relative_id=f'artist-{seq_no+1}', role=role)
+		catalog =data['parent_data']['auction_of_lot']['catalog_number']
+		artist = self.helper.add_person(a, record=sales_record, relative_id=f'artist-{seq_no+1}', role=role, catalog_number=catalog)
 		artist.referred_to_by = sales_record
 		artist.referred_to_by = self.select_county(data)
 		artist_label = a['label']
@@ -843,7 +842,7 @@ class AddArtists(ProvenanceBase):
 					assignment = vocab.make_multitype_obj(*attrib_assignment_classes, ident=attribute_assignment_id, label=f'Possibly attributed to {artist_label}')
 					assignment._label = f'Possibly by {artist_label}'
 					person.attributed_by = assignment
-					assignment.assigned_property = 'member_of'
+					assignment.assigned_propety = model.Type(ident="https://linked.art/ns/terms/member_of", label="member_of")
 					assignment.assigned = artist_group
 				else:
 					person.member_of = artist_group

@@ -240,7 +240,8 @@ class PopulateAuctionEvent(Configurable):
 				expert,
 				record=event_record,
 				relative_id=f'expert-{seq_no+1}',
-				role='expert'
+				role='expert',
+				catalog_number=data['catalog_number']
 			)
 			event_experts[cno].append(person.clone(minimal=True))
 			data['_organizers'].append(add_crom_data(data={}, what=person))
@@ -254,7 +255,8 @@ class PopulateAuctionEvent(Configurable):
 				commissaire,
 				record=event_record,
 				relative_id=f'commissaire-{seq_no+1}',
-				role='commissaire'
+				role='commissaire',
+				catalog_number=data['catalog_number']
 			)
 			event_commissaires[cno].append(person.clone(minimal=True))
 

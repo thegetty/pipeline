@@ -119,7 +119,6 @@ class PIRModelingTest_AR80(TestSalesPipelineOutput):
         import pprint
         for r in refs:
             reftype = r['type']
-            # import pdb; pdb.set_trace()
             self.assertEqual(len(r['access_point']), 1)
             url = r['access_point'][0]['id']
             got[url] = {

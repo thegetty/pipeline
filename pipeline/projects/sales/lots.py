@@ -1041,9 +1041,10 @@ class AddAcquisitionOrBidding(ProvenanceBase):
 		if 'citation' in amnt_data and amnt_data['citation']:
 			if 'referred_to_by' in amnt.__dict__ and amnt.referred_to_by:
 				amnt_refs = amnt.referred_to_by
-				for i in range(len(amnt_refs)):
-					if isinstance(amnt_refs[i],vocab.BibliographyStatement):
-						del amnt_refs[i]
+				amnt_refs = [item for item in amnt_refs if not isinstance(item, vocab.BibliographyStatement)]
+				# for i in amnt_refs:
+				# 	if isinstance(amnt_refs[i],vocab.BibliographyStatement):
+				# 		del amnt_refs[i]
 
 			publication_text_work_uri = self.helper.make_proj_uri('LINGOBJECT', 'SOURCE', 'PUBLICATION', amnt_source)
 			publication_lo= model.LinguisticObject(ident=publication_text_work_uri, label = amnt_source)
@@ -1096,12 +1097,18 @@ class AddAcquisitionOrBidding(ProvenanceBase):
 					else:
 						catalog_uri = self.helper.make_proj_uri('PHYS-CAT', cno, amnt_source)
 						cat_label = f'Sale Catalog {cno}, owned by “{amnt_source}”'
-
 					source = vocab.AuctionCatalog(ident=catalog_uri, label=cat_label)
-
+				else:
+					catalog_uri = self.helper.make_proj_uri('PHYS-CAT', cno, amnt_source)
+					cat_label = f'Sale Catalog {cno}, owned by “{amnt_source}”'
+					source = vocab.AuctionCatalog(ident=catalog_uri, label=cat_label)
 		property_assigned_label = "P90_has_value"
 		property_assigned_id = "http://www.cidoc-crm.org/cidoc-crm/P90_has_value"
-		attribution_label = f'Source attributed to {amnt._label}'
+		if "_label" in amnt.__dict__:
+			attribution_label = f'Source attributed to {amnt._label}'
+		else:
+			attribution_label = 'Source attributed to undefined monetary amount label'
+			amnt._label = ""
 		amnt.attributed_by = self.helper.create_source_attribute_assignment(amnt, 0, attribution_label, property_assigned_label, property_assigned_id, source, False)
 		
 		return amnt
@@ -1385,7 +1392,9 @@ class AddAcquisitionOrBidding(ProvenanceBase):
 						else:
 							catalog_uri = self.helper.make_proj_uri('PHYS-CAT', cno, name_source)
 							cat_label = f'Sale Catalog {cno}, owned by “{name_source}”'
-
+					else:
+						catalog_uri = self.helper.make_proj_uri('PHYS-CAT', cno, name_source)
+						cat_label = f'Sale Catalog {cno}, owned by “{name_source}”'
 					source = vocab.AuctionCatalog(ident=catalog_uri, label=cat_label)
 
 				property_assigned_label = "P1i identifies"
@@ -1433,6 +1442,9 @@ class AddAcquisitionOrBidding(ProvenanceBase):
 						else:
 							catalog_uri = self.helper.make_proj_uri('PHYS-CAT', cno, name_source)
 							cat_label = f'Sale Catalog {cno}, owned by “{name_source}”'
+					else:
+						catalog_uri = self.helper.make_proj_uri('PHYS-CAT', cno, name_source)
+						cat_label = f'Sale Catalog {cno}, owned by “{name_source}”'
 
 					catalogue = vocab.AuctionCatalog(ident=catalog_uri, label=cat_label)
 				property_assigned_label = "P1i identifies"

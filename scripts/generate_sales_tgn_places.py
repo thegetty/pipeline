@@ -89,7 +89,6 @@ def fetch_tgn_data(tgn_id: str):
             data["place_type_label"] = response["_label"]
             aat_cache[url] = response["_label"]
         else:
-       #     import pdb; pdb.set_trace()
             data["place_type_label"] = aat_cache[url]
             
 

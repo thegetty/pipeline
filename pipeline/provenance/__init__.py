@@ -281,7 +281,6 @@ class ProvenanceBase(Configurable):
 		if get_crom_object(a):
 			return a
 		mods = a['modifiers']
-			
 		artist = self.helper.add_person(a, record=sales_record, relative_id=f'artist-{seq_no+1}', role=role)
 		artist_label = a['label']
 		person = get_crom_object(a)
@@ -716,15 +715,17 @@ class ProvenanceBase(Configurable):
 			for present_location  in data['present_location']:
 				if '?' in present_location['accq']:
 					parent = data['parent_data']
-					for seq_no, name in enumerate(hmo.current_owner):
-						ident="http://www.cidoc-crm.org/cidoc-crm/P52_has_current_owner"
-						label="P52 has current owner"
-						hmo.attributed_by = self.helper.create_uncertainty_atribute(name, seq_no, label, ident, parent)
-					for identified in hmo.identified_by:
-						if present_location['acc'] in identified.content:
-							
-							for assign in identified.assigned_by:
-								assign.classified_as = model.Type(ident="http://vocab.getty.edu/aat/300435722", label="Possibly")
+					if hasattr(hmo, 'current_owner'):
+						for seq_no, name in enumerate(hmo.current_owner):
+							ident="http://www.cidoc-crm.org/cidoc-crm/P52_has_current_owner"
+							label="P52 has current owner"
+							hmo.attributed_by = self.helper.create_uncertainty_atribute(name, seq_no, label, ident, parent)
+					if hasattr(hmo, 'identified_by'):
+						for identified in hmo.identified_by:
+							if present_location['acc'] in identified.content:
+								if hasattr(identified, 'assigned_by'):
+									for assign in identified.assigned_by:
+										assign.classified_as = model.Type(ident="http://vocab.getty.edu/aat/300435722", label="Possibly")
 				if '?' in present_location['insq']:
 					parent = data['parent_data']
 					for seq_no, name in enumerate(hmo.current_owner):

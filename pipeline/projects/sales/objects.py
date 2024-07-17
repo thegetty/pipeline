@@ -91,7 +91,7 @@ class PopulateSalesObject(Configurable, pipeline.linkedart.PopulateObject):
 				# a suffix. When URIs are reconciled during prev/post sale rewriting, this
 				# will allow us to also reconcile the URIs for the places of destruction
 				# (of which there should only be one hierarchy per object)
-				base_uri = hmo.id + '-Destruction-Place,'
+				base_uri = self.helper.make_proj_uri('PLACE', '')
 				place_data = self.helper.make_place(current, base_uri=base_uri)
 				place = get_crom_object(place_data)
 				if place:

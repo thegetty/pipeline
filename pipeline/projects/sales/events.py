@@ -169,7 +169,7 @@ class PopulateAuctionEvent(Configurable):
 		# helper.make_place is called here instead of using make_la_place as a separate graph node because the Place object
 		# gets stored in the `auction_locations` object to be used in the second graph component
 		# which uses the data to associate the place with auction lots.
-		base_uri = self.helper.make_proj_uri('AUCTION-EVENT', cno, 'PLACE', part)
+		base_uri = self.helper.make_proj_uri('PLACE', '')
 		record = get_crom_object(data.get('_record'))
 		if not tgn_data:
 			current_p = current
@@ -185,7 +185,7 @@ class PopulateAuctionEvent(Configurable):
 				place = canonical_place
 				place_data = add_crom_data(data={'uri': place.id}, what=place)
 			else:
-				place_data = self.helper.make_place(current, base_uri=base_uri, record=record)
+				place_data = self.helper.make_place(current, base_uri=base_uri)
 				place = get_crom_object(place_data)
 
 			if place:

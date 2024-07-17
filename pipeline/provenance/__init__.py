@@ -218,8 +218,9 @@ class ProvenanceBase(Configurable):
 						residences.append(residence._label)
 
 				if loc not in residences:
+					base_uri = self.helper.make_proj_uri('PLACE', '')
 					current = parse_location_name(loc, uri_base=self.helper.uid_tag_prefix)
-					place_data = self.helper.make_place(current)
+					place_data = self.helper.make_place(current, base_uri=base_uri)
 					place = get_crom_object(place_data)
 					owner.residence = place
 					data['_owner_locations'].append(place_data)

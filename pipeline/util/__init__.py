@@ -709,7 +709,7 @@ def associate_with_tgn_record_sales(data, parent, tgn, header):
 			# warnings.warn(f"`{pi_record_no}` not found within TGN service file!")
 			return data
 		else:
-			print(f"`{star_record_id}` found within TGN service file!")
+			#print(f"`{star_record_id}` found within TGN service file!")
 			with open('log_sales_res_act.txt', 'a') as f:
 				f.write(f"`{star_record_id}` found within TGN service file! \n")
 				# f.write('\n\n')
@@ -743,7 +743,7 @@ def associate_with_tgn_record_sales(data, parent, tgn, header):
 			# warnings.warn(f"`{pi_record_no}` not found within TGN service file!")
 			return data
 		else:
-			print(f"`{pi_record_no}` found within TGN service file!")
+			#print(f"`{pi_record_no}` found within TGN service file!")
 			with open('log_sales_res_act.txt', 'a') as f:
 				f.write(f"`{pi_record_no}` found within TGN service file!")
 				f.write('\n\n')

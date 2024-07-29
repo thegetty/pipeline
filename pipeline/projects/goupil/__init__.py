@@ -1263,6 +1263,7 @@ class GoupilTransactionHandler(TransactionHandler):
         acq._label = name
         acq.identified_by = model.Name(ident="", content=name)
         acq.transferred_title_of = hmo
+
         if data['_locations'] and not incoming and tgn_data :
             if tgn_data.get("part_of"):
                 for place in data['_locations']:
@@ -1270,6 +1271,7 @@ class GoupilTransactionHandler(TransactionHandler):
                     # tx.activity_location = o_place
             elif tgn_data.get("same_as"):
                 tx.took_place_at = tgn_instance
+
 
         for p in from_people:
             acq.transferred_title_from = p
@@ -1507,7 +1509,6 @@ class GoupilTransactionHandler(TransactionHandler):
             #     base_uri=self.helper.uid_tag_prefix,
             #     sales_records=sales_records,
             # )
-            # import pdb; pdb.set_trace()
             # if data['_locations']:
             #     import pdb; pdb.set_trace()
             #     for place in data['_locations']:

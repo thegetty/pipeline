@@ -633,7 +633,6 @@ def strip_key_prefix(prefix, value):
 	return d
 
 def associate_with_tgn_record(data, parent, tgn, header):
-	# import pdb; pdb.set_trace()
 	if not data:
 		return None
 	
@@ -657,7 +656,6 @@ def associate_with_tgn_record(data, parent, tgn, header):
 	return data	
 
 def associate_with_tgn_record_goupil(data, parent, tgn, header):
-	# import pdb; pdb.set_trace()
 	if not data:
 		return None
 	# purch loc, seller loc, buyer
@@ -690,7 +688,6 @@ def find_in_tgn_sales(tgn_i, loc_):
 		else: return False
 
 def associate_with_tgn_record_sales(data, parent, tgn, header):
-	# import pdb; pdb.set_trace()
 	if not data:
 		return None
 	# or 'sale_location' or 'country_auth' 
@@ -712,7 +709,7 @@ def associate_with_tgn_record_sales(data, parent, tgn, header):
 			# warnings.warn(f"`{pi_record_no}` not found within TGN service file!")
 			return data
 		else:
-			print(f"`{star_record_id}` found within TGN service file!")
+			#print(f"`{star_record_id}` found within TGN service file!")
 			with open('log_sales_res_act.txt', 'a') as f:
 				f.write(f"`{star_record_id}` found within TGN service file! \n")
 				# f.write('\n\n')
@@ -746,11 +743,10 @@ def associate_with_tgn_record_sales(data, parent, tgn, header):
 			# warnings.warn(f"`{pi_record_no}` not found within TGN service file!")
 			return data
 		else:
-			print(f"`{pi_record_no}` found within TGN service file!")
+			#print(f"`{pi_record_no}` found within TGN service file!")
 			with open('log_sales_res_act.txt', 'a') as f:
 				f.write(f"`{pi_record_no}` found within TGN service file!")
 				f.write('\n\n')
-		# import pdb; pdb.set_trace()
 		tgn_rec = tgn[pi_record_no]
 
 		for key, value in tgn_rec.items():
@@ -839,7 +835,6 @@ def associate_with_tgn_record_people(data, parent, tgn, header):
 	return data	
 
 def traverse_static_place_instances(self, tgn_instance):
-	# import pdb; pdb.set_trace()
 	traverse_tgn_instance = tgn_instance
 	# if 'part_of' not in traverse_tgn_instance.__dict__:
 	# 	with open('non-part-of.txt', 'a') as f:

@@ -146,7 +146,6 @@ class KnoedlerUtilityHelper(SharedUtilityHelper):
 	def add_person(self, data, record, relative_id, **kwargs):
 		self.person_identity.add_uri(data, record_id=relative_id)
 		key = data['uri_keys']
-		# import pdb; pdb.set_trace()
 		if key in self.services['people_groups']:
 			warnings.warn(f'*** TODO: model person record as a GROUP: {pprint.pformat(key)}')
 			person = super().add_group(data, record=record, relative_id=relative_id, **kwargs)
@@ -666,7 +665,6 @@ class PopulateKnoedlerObject(Configurable, pipeline.linkedart.PopulateObject):
 			identifiers.append(self.helper.knoedler_number_id(stock_number, vocab.StockNumber))
 		except:
 			uri_key = ('Object', 'Internal', data['pi_record_no'])
-		import pdb; pdb.set_trace()
 		uri = self.helper.make_object_uri(data['pi_record_no'], *uri_key)
 		data['_object']['uri'] = uri
 		data['_object']['uri_key'] = uri_key
@@ -909,7 +907,6 @@ class TransactionHandler(ProvenanceBase):
 			return assignment
 
 		elif 'price_info_pur' in locals() or 'price_info_pur' in globals() and len(data.get('sale_buyer')) and 'amount' in data['sale'] :
-			# import pdb;	pdb.set_trace()
 			price_info = data.get('sale')
 			amnt = get_crom_object(price_info)
 			assignment = vocab.AppraisingAssignment(ident='', label=f'Evaluated worth of {sn_ident}')
@@ -1123,11 +1120,9 @@ class TransactionHandler(ProvenanceBase):
 					shared_paym = model.Payment(ident=shared_payment_id, label=f"{person._label} share of payment for {sn_ident}")
 					# check brackets for purch knoed as well and put it as valuation if true (not partial payment)
 					if currnt_knoed_part and '[' and ']' in currnt_knoed_part:
-						# import pdb; pdb.set_trace()
 						assignment_id = tx_uri + '-Attribute assignment'
 						assignment = model.AttributeAssignment(ident=assignment_id, label=f"Attribute assignment for {sn_ident}")
 						assignment.assigned = part_amnt
-						# import pdb; pdb.set_trace()
 						if 'referred_to_by' in assignment.assigned[0].__dict__:
 							# it's only knoedler's amount, so change the "shared" note in assignment
 							assignment.assigned[0].referred_to_by[0].content = 'Knoedler amount'
@@ -1142,7 +1137,6 @@ class TransactionHandler(ProvenanceBase):
 							shared_paym.paid_amount = part_amnt
 						
 						if incoming:
-							# import pdb; pdb.set_trace()
 							shared_paym.paid_from = person
 							# Partial payment of share from Knoedler to joint owner who is also the seller
 							if joint_owner_also_seller_or_buyer_id:
@@ -2000,7 +1994,6 @@ class KnoedlerPipeline(PipelineBase):
 					
 			place = make_tgn_place(tgn_data, self.helper.make_shared_uri, tgn_places)
 			instances[tgn_id] = place
-		# import pdb; pdb.set_trace()
 		print(f"Completed in {timeit.default_timer() - start}")
 		return instances
 

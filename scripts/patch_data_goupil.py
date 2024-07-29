@@ -23,7 +23,6 @@ goupil_database = {
       "type":"LinguisticObject",
       "_label":"STAR Goupil Database"
     }
-# import pdb; pdb.set_trace()
 
 for filename in files:
 	

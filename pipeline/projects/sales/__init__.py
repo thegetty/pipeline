@@ -79,7 +79,7 @@ import pipeline.projects.sales.events
 import pipeline.projects.sales.lots
 import pipeline.projects.sales.objects
 import pipeline.projects.sales.catalogs
-
+from pipeline.projects.sales.lots import AddAcquisitionOrBidding
 #mark - utility functions and classes
 
 class SalesPersonIdentity(PersonIdentity):
@@ -105,30 +105,46 @@ class SalesUtilityHelper(UtilityHelper):
 				dst[k] = src[k]
 		return dst
 
-	def add_person(self, data, **kwargs):
-		if data.get('name_so'):
-			# handling of the name_so field happens here and not in the SalesPersonIdentity methods,
-			# because it requires access to the services data on catalogs
-			source = data.get('name_so', '').strip()
-			components = source.split(' ')
-			if len(components) == 2:
-				owner_code, copy_number = components
-			else:
-				owner_code = source
-				copy_number = ''
-			cno = kwargs['catalog_number']
-			owner_uri = self.physical_catalog_uri(cno, owner_code, None)
-			copy_uri = self.physical_catalog_uri(cno, owner_code, copy_number)
-			unique_catalogs = self.services['unique_catalogs']
-			owned_copies = unique_catalogs.get(owner_uri)
-			if owned_copies:
-				if copy_uri in owned_copies:
-					data['_name_source_catalog_key'] = (cno, owner_code, copy_number)
-				else:
-					warnings.warn(f'*** SPECIFIC PHYSICAL CATALOG COPY NOT FOUND FOR NAME SOURCE {source} in catalog {cno}')
-			else:
-				warnings.warn(f'*** NO CATALOG OWNER FOUND FOR NAME SOURCE {source} on catalog {cno}')
-		return super().add_person(data, **kwargs)
+	def add_person(self, data, record, relative_id, **kwargs):
+		self.person_identity.add_uri(data, record_id=relative_id)
+		key = data['uri_keys']
+		if key in self.services['people_groups']:
+			warnings.warn(f'*** TODO: model person record as a GROUP: {pprint.pformat(key)}')
+			person = super().add_group(data, record=record, relative_id=relative_id, **kwargs)
+		else :
+			person = super().add_person(data, record=record, relative_id=relative_id, **kwargs)
+
+		primaryName = ''
+		try:
+			for i in range(len(person.identified_by)):
+				if isinstance(person.identified_by[i], vocab.PrimaryName):
+					primaryName = person.identified_by[i].content
+
+			for i in range(len(person.identified_by)):
+				if person.identified_by[i].content == primaryName and not isinstance(person.identified_by[i], vocab.PrimaryName):
+					del person.identified_by[i]
+		except:
+			warnings.warn(f'*** TODO: model person there is not identified_by: {pprint.pformat(person._label)}')
+
+		if record:
+			person.referred_to_by = record
+
+		return person
+
+
+	def create_source_attribute_assignment(self, assigned_object, sequence_num, attribution_label, property_assigned_label, property_assigned_id, source, assign):
+		attrib_assignment_classes = [model.AttributeAssignment]
+	
+		prod_id = self.make_shared_uri('Production', 'Assignment', 'Source', assigned_object.id )
+		prod_event = model.Production(ident=prod_id, label=f'Production event for {assigned_object._label}')
+		attribute_assignment_id =  self.prepend_uri_key(prod_event.id, f'ASSIGNMENT,Source-{assigned_object.id}-{sequence_num}-{source.id}')
+		assignment = vocab.make_multitype_obj(*attrib_assignment_classes, ident=attribute_assignment_id, label=attribution_label)
+		assignment.classified_as = model.Type(ident="http://vocab.getty.edu/aat/300456597", label="warrant")
+		assignment.used_specific_object = source
+		assignment.assigned_property = model.Type(ident=property_assigned_id, label=property_assigned_label)
+		if assign:
+			assignment.assigned = assigned_object
+		return assignment
 
 	def event_type_for_sale_type(self, sale_type):
 		if sale_type in ('Private Contract Sale', 'Stock List'):
@@ -152,6 +168,18 @@ class SalesUtilityHelper(UtilityHelper):
 		else:
 			warnings.warn(f'*** Unexpected sale type: {sale_type!r}')
 
+	def create_uncertainty_atribute(self, seller, agent_seq, label, ident, parent):
+		
+		attrib_assignment_classes = [model.AttributeAssignment]
+		prod_event = model.Production(ident=seller.id, label=f'Production event for {seller._label}')
+		attribute_assignment_id =  self.prepend_uri_key(prod_event.id, f'ASSIGNMENT,Seller-{agent_seq}')
+		assignment = vocab.make_multitype_obj(*attrib_assignment_classes, ident=attribute_assignment_id, label=f'Possibly attributed to {seller._label}')
+		assignment.classified_as = model.Type(ident="http://vocab.getty.edu/aat/300435722", label="Possibly")
+		assignment.used_specific_object = get_crom_object(parent['_sale_record'])
+		assignment.assigned_property = model.Type(ident=ident, label=label)
+		assignment.assigned = seller
+		return assignment
+	
 	def set_type_name_for_sale_type(self, sale_type):
 		if sale_type in ('Private Contract Sale', 'Stock List', 'Collection Catalog'):
 			return 'Object Set'
@@ -375,11 +403,15 @@ class SalesUtilityHelper(UtilityHelper):
 		ulan = None
 		with suppress(ValueError, TypeError):
 			ulan = int(data.get('ulan'))
-		auth_name = data.get('auth')
+		if 'auth_name' in data:
+			auth_name = data.get('auth_name')
+		elif 'sell_auth_name' in data :
+			auth_name = data.get('sell_auth_name')
+		
 		if ulan:
 			return ('HOUSE', 'ULAN', ulan)
-		elif auth_name and auth_name not in self.ignore_house_authnames:
-			return ('HOUSE', 'AUTH', auth_name)
+		elif auth_name not in self.ignore_house_authnames:
+			return ('PERSON', 'AUTH', auth_name)
 		else:
 			# not enough information to identify this house uniquely, so use the source location in the input file
 			if 'pi_record_no' in data:
@@ -399,7 +431,11 @@ class SalesUtilityHelper(UtilityHelper):
 		ulan = None
 		with suppress(ValueError, TypeError):
 			ulan = int(a.get('ulan'))
-		auth_name = a.get('auth_name', a.get('auth'))
+		if 'auth_name' in a:
+			auth_name = a.get('auth_name', a.get('auth'))
+		elif 'sell_auth_name' in a:
+			auth_name = a.get('sell_auth_name', a.get('auth'))
+
 		a['identifiers'] = []
 		if ulan:
 			a['ulan'] = ulan
@@ -448,7 +484,6 @@ def add_crom_price(data, parent, services, add_citations=False):
 	Add modeling data for `MonetaryAmount`, `StartingPrice`, or `EstimatedPrice`,
 	based on properties of the supplied `data` dict.
 	'''
-	# import pdb; pdb.set_trace()
 	currencies = services['currencies']
 	decimalization = services['currencies_decimalization']
 	region_currencies = services['region_currencies']
@@ -459,6 +494,9 @@ def add_crom_price(data, parent, services, add_citations=False):
 		c.update(region_currencies[region])
 
 	verbatim = []
+
+	if '[?]' in data.get('price', '') or '[or]' in data.get('price', '') or '[?]' in data.get('currency', '') or '[or]' in data.get('currency', ''):
+		data['full'] = f'{data.get("price", "")} {data.get("currency", "")}'.strip()
 	for k in ('price', 'est_price', 'start_price', 'ask_price'):
 		# Each data record can only have one of these. We put the decimalized
 		# value back using the same key, but the verbatim strings are just
@@ -469,36 +507,47 @@ def add_crom_price(data, parent, services, add_citations=False):
 			if '-' in price:
 				with suppress(ValueError, KeyError):
 					price = price.replace('[?]', '').strip()
-					currency = data['currency']
-					currency = c.get(currency.lower(), currency)
-					parts = [int(v) for v in price.split('-')]
-					if currency in decimalization:
-						decimalization_data = decimalization[currency]
-						primary_unit = decimalization_data['primary_unit']
-						primary_value = int(parts.pop(0))
-						total_price = Fraction(primary_value)
-						part_names = [f'{primary_value} {primary_unit}']
-						denom = 1
-						for value, unit in zip(parts, decimalization_data['subunits']):
-							if value:
-								name = unit[0]
-								denom = denom * unit[1]
-								frac = Fraction(value, denom)
-								total_price += frac
-								part_names.append(f'{value} {name}')
-						decimalized_value = str(float(total_price))
-						verbatim.append(price)
+					pr_array = []
+					if '[or]' in price:
+						pr_array = price.split(' [or] ')
 					else:
-						decimalized_value = price
-						warnings.warn(f'No decimalization rules for currency {currency!r}')
-						verbatim.append(price)
-					# handle decimalization of £sd price, and preserve the original value in verbatim
-					data[k] = decimalized_value
+						pr_array.append(price)
+					
+					for price in pr_array:
+						currency = data['currency']
+						if '[or]' in currency:
+							continue
+
+						currency = c.get(currency.lower(), c.get(currency, currency))
+						parts = [int(v) for v in price.split('-')]
+						if currency in decimalization:
+							decimalization_data = decimalization[currency]
+							primary_unit = decimalization_data['primary_unit']
+							primary_value = int(parts.pop(0))
+							total_price = Fraction(primary_value)
+							part_names = [f'{primary_value} {primary_unit}']
+							denom = 1
+							for value, unit in zip(parts, decimalization_data['subunits']):
+								if value:
+									name = unit[0]
+									denom = denom * unit[1]
+									frac = Fraction(value, denom)
+									total_price += frac
+									part_names.append(f'{value} {name}')
+							decimalized_value = str(float(total_price))
+							verbatim.append(price)
+						else:
+							decimalized_value = price
+							warnings.warn(f'No decimalization rules for currency {currency!r}')
+							verbatim.append(price)
+						# handle decimalization of £sd price, and preserve the original value in verbatim
+						if '[or]' not in data.get('price', ''):
+							data[k] = decimalized_value
 
 	amnt = extract_monetary_amount(data, currency_mapping=c, add_citations=add_citations)
 	if amnt:
-		for v in verbatim:
-			amnt.identified_by = model.Name(ident='', content=v)
+		if '[or]' in data.get('price', ''):
+			amnt.identified_by.clear()
 		add_crom_data(data=data, what=amnt)
 
 	return data
@@ -530,6 +579,7 @@ class SalesPipeline(PipelineBase):
 		vocab.register_vocab_class('UncertainMemberClosedGroup', {'parent': model.Group, 'id': '300448855', 'label': 'Closed Group Representing an Uncertain Person'})
 		vocab.register_vocab_class('ConstructedTitle', {'parent': model.Name, 'id': '300417205', 'label': 'Constructed Title'})
 		vocab.register_vocab_class('AuctionHouseActivity', {'parent': model.Activity, 'id': '300417515', 'label': 'Auction House'})
+		vocab.register_vocab_class('SellerActivity', {'parent': model.Activity, 'id': '300445696', 'label': 'Seller'})
 
 		vocab.register_vocab_class('EntryNumber', {"parent": model.Identifier, "id":"300445023", "label": "Entry Number"})
 		vocab.register_vocab_class('PageNumber', {"parent": model.Identifier, "id":"300445022", "label": "Page Number"})
@@ -574,7 +624,14 @@ class SalesPipeline(PipelineBase):
 	# Set up environment
 		'''Return a `dict` of named services available to the bonobo pipeline.'''
 		services = super().setup_services()
-
+		people_groups = set()
+		pg_file = pathlib.Path(settings.pipeline_tmp_path).joinpath('people_groups.json')
+		with suppress(FileNotFoundError):
+			with pg_file.open('r') as fh:
+				data = json.load(fh)
+				for key in data['group_keys']:
+					people_groups.add(tuple(key))
+		services['people_groups'] = people_groups
 		# Register tgn files as services - begin with belgian and add to dictionary all of the rest
 		tgn_places = services.get('tgn_belgian', {})
 		sales_tgn = services.get('sales_belgian_tgn', {})
@@ -586,7 +643,6 @@ class SalesPipeline(PipelineBase):
 			tgn_places.update(services.get(f'tgn_{n}', {}))
 			sales_tgn.update(services.get(f'sales_{n}_tgn', {}))
 
-		# import pdb; pdb.set_trace()
 		services['tgn'] = tgn_places
 		services['sales_tgn'] = sales_tgn
 
@@ -596,6 +652,9 @@ class SalesPipeline(PipelineBase):
 		
 		services['tgn_descr'] = tgn_places_descr
 		services['sales_tgn_descr'] = sales_tgn_descr
+
+
+		services['location_codes'] = services.get('location_codes', {})
 		# make these case-insensitive by wrapping the value lists in CaseFoldingSet
 		for name in ('transaction_types', 'attribution_modifiers', 'date_modifiers'):
 			if name in services:
@@ -656,7 +715,6 @@ class SalesPipeline(PipelineBase):
 					
 			place = make_tgn_place(tgn_data, self.helper.make_shared_uri, tgn_places_descr)
 			instances_descr[tgn_id] = place
-		# import pdb; pdb.set_trace()
 		print(f"Completed in {timeit.default_timer() - start}")
 		return instances, instances_descr
 
@@ -843,7 +901,6 @@ class SalesPipeline(PipelineBase):
 		return bid_acqs
 
 	def add_sales_chain(self, graph, records, services, serialize=True):
-		# import pdb; pdb.set_trace()
 		'''Add transformation of sales records to the bonobo pipeline.'''
 		sales = graph.add_chain(
 			PreserveCSVFields(key='star_csv_data', order=self.contents_headers),
@@ -1365,7 +1422,6 @@ class SalesPipeline(PipelineBase):
 				CurriedCSVReader(fs='fs.data.sales', limit=self.limit, field_names=self.contents_headers),
 # 				AddFieldNames(field_names=self.contents_headers),
 			)
-			# import pdb; pdb.set_trace()
 			sales = self.add_sales_chain(g, contents_records, services, serialize=True)
 			_ = self.add_lot_set_chain(g, sales, serialize=True)
 			_ = self.add_texts_chain(g, sales, serialize=True)

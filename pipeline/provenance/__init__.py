@@ -58,11 +58,13 @@ class ProvenanceBase(Configurable):
 		'''
 		
 		def _make_label_default(helper, sale_type, transaction, rel, *args):
+
 			str = f'Provenance Entry {rel} object identified in book {args[2]}, page {args[3]}, row {args[4]}'
 			
 			#strs = [str(x) for x in args]
 			
 			#return ', '.join(strs)
+
 			return str
 		
 		if make_label is None:

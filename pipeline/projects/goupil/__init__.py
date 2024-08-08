@@ -1448,7 +1448,7 @@ class GoupilTransactionHandler(TransactionHandler):
         tx_data = add_crom_data(data={"uri": tx_uri}, what=tx)
         
         if date_key:
-            self.set_date(tx, data, date_key)
+            self.set_date(tx, data, "entry_date")
 
         role = "seller" if incoming else "buyer"
 

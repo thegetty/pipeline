@@ -1527,26 +1527,30 @@ class AddAcquisitionOrBidding(ProvenanceBase):
 				prev_procurements = self.add_non_sale_sellers(data, sellers, sale_type, transaction, transaction_types)
 				yield data
 		elif transaction in UNKNOWN:
-
+			import pdb; pdb.set_trace
+			# if sale_type == 'Lottery':
+			# 	self.add_final_owner_orgs(data, lot_object_key, sale_type, None)
+			# 	for o in data.get('_final_org', []):
+			# 		data['_organizations'].append(o)
+			# 	yield data
+			# else:
+			houses = [
+				self.helper.add_auction_house_data(h)
+				for h in auction_houses_data.get(cno, [])
+			]
 			if sale_type == 'Lottery':
 				self.add_final_owner_orgs(data, lot_object_key, sale_type, None)
 				for o in data.get('_final_org', []):
 					data['_organizations'].append(o)
-				yield data
-			else:
-				houses = [
-					self.helper.add_auction_house_data(h)
-					for h in auction_houses_data.get(cno, [])
-				]
-				for data in self.add_bidding(data, buyers, sellers, buy_sell_modifiers, sale_type, transaction, transaction_types, houses, include_custody_transfer=True):
-					tx_data = parent.get('_prov_entry_data')
-					current_tx = get_crom_object(tx_data)
-					self.add_non_sale_valuations(data, parent, lot_object_key, current_tx)
+			for data in self.add_bidding(data, buyers, sellers, buy_sell_modifiers, sale_type, transaction, transaction_types, houses, include_custody_transfer=True):
+				tx_data = parent.get('_prov_entry_data')
+				current_tx = get_crom_object(tx_data)
+				self.add_non_sale_valuations(data, parent, lot_object_key, current_tx)
 
-					act = get_crom_object(data.get('_bidding'))
-					self.add_mod_notes(act, all_seller_mods, label=f'Seller modifier', classification=vocab.instances["seller description"], lod_object=lod_object, buyer_seller=sellers)
-					self.add_mod_notes(act, all_buyer_mods, label=f'Buyer modifier', classification=vocab.instances["buyer description"], lod_object=lod_object, buyer_seller=buyers)
-					yield data
+				act = get_crom_object(data.get('_bidding'))
+				self.add_mod_notes(act, all_seller_mods, label=f'Seller modifier', classification=vocab.instances["seller description"], lod_object=lod_object, buyer_seller=sellers)
+				self.add_mod_notes(act, all_buyer_mods, label=f'Buyer modifier', classification=vocab.instances["buyer description"], lod_object=lod_object, buyer_seller=buyers)
+				yield data
 		else:
 			prev_procurements = self.add_non_sale_sellers(data, sellers, sale_type, transaction, transaction_types)
 			lot = get_crom_object(parent['_event_causing_prov_entry'])

@@ -132,9 +132,13 @@ class PersonIdentity:
 				name = data.get('name', '')
 				if auth_name:
 					key = ('PERSON', 'AUTH', auth_name)
+					return key, self.make_shared_uri
 				elif name:
 					key = ('PERSON', 'AUTH', name)
-				return key, self.make_shared_uri
+					return key, self.make_shared_uri
+				elif data.get('uri_keys') is not None:
+					key = ('PERSON', 'AUTH', 'name')
+					return key, self.make_shared_uri
 
 	def add_person(self, a, record=None, relative_id=None, **kwargs):
 		self.add_uri(a, record_id=relative_id)
@@ -501,9 +505,10 @@ class PersonIdentity:
 
 		else:
 			if not auth_name and name:
-				data.setdefault('label', name)
-				pname = vocab.PrimaryName(ident='', content=name + " referred to in " + kwargs['catalog_number'])
-				data['identifiers'].append(pname)
+				if 'catalog_number' in kwargs:
+					data.setdefault('label', name)
+					pname = vocab.PrimaryName(ident='', content=name + " referred to in " + kwargs['catalog_number'])
+					data['identifiers'].append(pname)
         
 		data.setdefault('names', [])
 		

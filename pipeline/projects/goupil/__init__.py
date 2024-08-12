@@ -319,6 +319,7 @@ class GoupilUtilityHelper(SharedUtilityHelper):
         return person
 
     def add_group(self, data, record: None, **kwargs):
+        
         group = super().add_group(data, record=record, **kwargs)
         if data.get("auth_name"):
             for identifier in group.identified_by:
@@ -1456,9 +1457,12 @@ class GoupilTransactionHandler(TransactionHandler):
 
         people = []
         people_agents = []
+        
+        print("idiiii ",  data['pi_record_no'])
         for i, p_data in enumerate(people_data):
             mod = self.modifiers(p_data, "auth_mod")
             self.model_seller_buyer_authority(p_data)
+            
             person = self.helper.add_group_or_person(
                 p_data, relative_id=f"{role}_{i+1}", people_groups=people_groups, data=data
             )
@@ -1493,6 +1497,7 @@ class GoupilTransactionHandler(TransactionHandler):
                     traverse_static_place_instances(self, tgn_instance)
                     
                     alternate_exists=False
+                    print(tgn_data)
                     for id in tgn_instance.identified_by:
                         if 'content' in id.__dict__:
                             if isinstance(id, vocab.AlternateName) and id.content == location_name:

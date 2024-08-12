@@ -151,7 +151,8 @@ class MakeLinkedArtRecord:
 			identified_by = []
 			if hasattr(thing, 'identified_by'):
 				for identified in thing.identified_by:
-					identified_by.append(identified.content)
+					if 'content' in identified.__dict__ :
+						identified_by.append(identified.content)
 			if name not in identified_by:
 				n = set_la_name(thing, name, **name_kwargs)
 				self.set_lo_properties(n, *properties)

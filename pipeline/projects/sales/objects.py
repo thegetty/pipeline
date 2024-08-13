@@ -229,6 +229,7 @@ class PopulateSalesObject(Configurable, pipeline.linkedart.PopulateObject):
 				res_act = model.Activity(ident=self.helper.make_proj_uri('Activity',  'establishment'))			
 			else:	
 				res_act = model.Activity(ident=self.helper.make_proj_uri('Activity',  'establishment', group.id, place.id))
+			
 			res_act.took_place_at = place
 			res_type = model.Type(ident='http://vocab.getty.edu/aat/300393212', label="Establishment")
 			location_type = model.Type(ident='http://vocab.getty.edu/aat/300393211', label="Location Activity or State")
@@ -316,7 +317,7 @@ class PopulateSalesObject(Configurable, pipeline.linkedart.PopulateObject):
 				# Issue AR-122 removed modeling of object destruction.
 				# self.populate_destruction_events(data, note, type_map=destruction_types_map, location=loc)
 				note = None
-
+			base_uri = self.helper.make_proj_uri('PLACE', '')
 			if loc:
 				# TODO: if `parse_location_name` fails, still preserve the location string somehow
 				current = parse_location_name(loc, uri_base=self.helper.uid_tag_prefix)
@@ -355,12 +356,14 @@ class PopulateSalesObject(Configurable, pipeline.linkedart.PopulateObject):
 					if part_of:
 						tgn_instance = self.helper.static_instances.get_instance('Place', part_of)
 						traverse_static_place_instances(self, tgn_instance)
-						place = make_la_place(
-							{
-								'name': loc,
-								'uri': self.helper.make_shared_uri(('PLACE',loc))
-							},
-						)
+						
+						place = self.helper.make_place(current, base_uri=base_uri)
+						# place = make_la_place(
+						# 	{
+						# 		'name': loc,
+						# 		'uri': self.helper.make_shared_uri(('PLACE',loc))
+						# 	},
+						# )
 						o_place = get_crom_object(place)
 						o_place.part_of = tgn_instance
 						
@@ -369,6 +372,7 @@ class PopulateSalesObject(Configurable, pipeline.linkedart.PopulateObject):
 						owner_place = o_place
 						data['_locations'].append(place)
 					if same_as:
+						
 						tgn_instance = self.helper.static_instances.get_instance('Place', same_as)
 						traverse_static_place_instances(self, tgn_instance)
 						alternate_exists=False

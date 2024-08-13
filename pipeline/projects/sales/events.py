@@ -220,7 +220,7 @@ class PopulateAuctionEvent(Configurable):
 						
 						if not alternate_exists:
 							tgn_instance.identified_by = vocab.AlternateName(ident=self.helper.make_shared_uri(('PLACE',current)), content=l)
-					
+					auction.took_place_at = tgn_instance
 					# owner_place = tgn_instance
 					# sdata['tgn'] = tgn_instance
 

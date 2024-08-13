@@ -93,6 +93,7 @@ class PersonIdentity:
 		auth_name = data.get('auth_name')
 		auth_name_q = '?' in data.get('auth_nameq', '')
 		generic_name = data.get('generic_name', '')
+		
 		if auth_name and self.is_anonymous_group(generic_name):
 			key = ('GROUP', 'AUTH', auth_name)
 			return key, self.make_shared_uri
@@ -137,8 +138,14 @@ class PersonIdentity:
 					key = ('PERSON', 'AUTH', name)
 					return key, self.make_shared_uri
 				elif data.get('uri_keys') is not None:
-					key = ('PERSON', 'AUTH', 'name')
+					key = data.get('uri_keys')
 					return key, self.make_shared_uri
+				else:
+					
+					key = ('PERSON', id_key, id_value)
+					return key, self.make_shared_uri
+				
+
 
 	def add_person(self, a, record=None, relative_id=None, **kwargs):
 		self.add_uri(a, record_id=relative_id)

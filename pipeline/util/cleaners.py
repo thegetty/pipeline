@@ -293,9 +293,7 @@ def parse_location(*parts, uri_base=None, types=None):
 # 			return loc
 
 	current = {
-		'type': country_type,
 		'name': country_name,
-		'uri': f'{uri_base}PLACE,COUNTRY-' + urllib.parse.quote(country_name),
 	}
 
 	if len(parts) == 2:

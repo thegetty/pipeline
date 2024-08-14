@@ -281,6 +281,7 @@ class AddAuctionOfLot(ProvenanceBase):
 			if tx_cl:
 				label = tx_cl.get('label')
 				url = tx_cl.get('url')
+				tx.classified_as = model.Type(ident=url, label=label)
 				transaction_type = model.Type(ident=url, label=label)
 				if 'transaction_so' in data and data['transaction_so']:
 					transaction_publication = data['transaction_so']

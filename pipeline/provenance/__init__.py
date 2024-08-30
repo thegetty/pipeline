@@ -74,7 +74,8 @@ class ProvenanceBase(Configurable):
 		tx = vocab.ProvenanceEntry(ident=ident)
 		if sales_record:
 			tx.referred_to_by = sales_record
-		tx_label = make_label(*tx_label_args)
+		tx_label1 = make_label(*tx_label_args).split('(')
+		tx_label = tx_label1[0] + "by " +  buyer._label + " (" + tx_label1[1]
 		tx._label = tx_label
 		tx.identified_by = model.Name(ident='', content=tx_label)
 		if current_tx:

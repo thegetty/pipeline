@@ -183,6 +183,7 @@ class PersonIdentity:
 
 	def add_uri(self, data:dict, **kwargs):
 		keys, make = self._uri_keys(data, **kwargs)
+		keys = tuple(key.upper() for key in keys)
 		data['uri_keys'] = keys
 		data['uri'] = make(*keys)
 
@@ -487,7 +488,6 @@ class PersonIdentity:
 		disp_name = data.get('auth_display_name')
 		name_types = [vocab.PrimaryName]
 		name = data.get('name')
-
 		personalNameType = vocab.CorporateName if group else vocab.PersonalName
 		if disp_name:
 			if auth_name:

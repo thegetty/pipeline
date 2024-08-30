@@ -27,7 +27,7 @@ if __name__ == '__main__':
 	contents = {
 		'header_file': 'sales_contents_0.csv',
 		# 'files_pattern': 'sales_contents_[!0]*.csv',
-		'files_pattern': 'sales_contentf_6.csv',
+		'files_pattern': 'all.csv',
 	}
 	auction_events = {
 		'header_file': 'sales_descriptions_0.csv',

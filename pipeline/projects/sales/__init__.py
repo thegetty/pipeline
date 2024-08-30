@@ -294,7 +294,10 @@ class SalesUtilityHelper(UtilityHelper):
 			lot_label = f'Auction of Lot {lot_id}'
 		elif sale_type in ('Private Contract Sale', 'Stock List'):
 			lot_id = f'{cno} {shared_lot_number} ({date})'
-			lot_label = f'Sale of Object Set {lot_id}'
+			if sale_type == 'Stock List':
+				lot_label = f'Stock List Sale of Object Set {lot_id}'
+			else:
+				lot_label = f'Private Contract Sale of Object Set {lot_id}'
 		elif sale_type == 'Lottery':
 			lot_id = f'{cno} {shared_lot_number} ({date})'
 			lot_label = f'Lottery Drawing of Lot {lot_id}'

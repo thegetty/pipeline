@@ -864,10 +864,12 @@ class AddRows(Configurable, GoupilProvenance):
         pages = data.get("_text_pages", [])
         data.setdefault("_records", [])
 
-        # notes = []
-        #for k in ("working_note", "verbatim_notes", "editor notes", "no_name_notes"):
-        #    if data["book_record"].get(k):
-        #        notes.append(vocab.Note(ident="", content=data["book_record"][k]))
+        notes = []
+        for k in ("working_note", "verbatim_notes", "editor_notes", "no_name_notes"):
+           if data["book_record"].get(k):
+               note = vocab.Note(ident="", content=data["book_record"][k])
+               note.classified_as = model.Type(ident="http://vocab.getty.edu/aat/300404670", label=k)
+               notes.append(note)
 
         #if data["book_record"].get("rosetta_handle"):
         #    page = vocab.DigitalImage(

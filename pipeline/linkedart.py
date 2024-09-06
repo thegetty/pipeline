@@ -585,10 +585,15 @@ class MakeLinkedArtPerson(MakeLinkedArtAgent):
 				if 'active_city' in sdata:
 					if 'Professional activity' in event.__dict__['_label']:
 						if 'tgn' in sdata:
-							place = sdata['tgn']
+							place = sdata['tgn'] + " " +sdata.get['timespan']['address_date']
 						else:
 							place = get_crom_object(sdata.get('place'))
+						
 						event.took_place_at = place
+						if 'timespan' in sdata:
+							import pdb; pdb.set_trace()
+						# 	ts = model.TimeSpan(ident='')
+						# 	ts.had_duration =sdata['timespan']
 
 			who.carried_out = event
 

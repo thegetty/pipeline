@@ -89,11 +89,12 @@ class PersonIdentity:
 		ulan = None
 		with suppress(ValueError, TypeError):
 			ulan = int(data.get('ulan'))
-
-		auth_name = data.get('auth_name')
+		if 'auth_name' in data:
+			auth_name = data.get('auth_name')
+		elif 'sell_auth_name' in data:
+			auth_name = data.get('sell_auth_name')
 		auth_name_q = '?' in data.get('auth_nameq', '')
 		generic_name = data.get('generic_name', '')
-		
 		if auth_name and self.is_anonymous_group(generic_name):
 			key = ('GROUP', 'AUTH', auth_name)
 			return key, self.make_shared_uri
@@ -149,6 +150,7 @@ class PersonIdentity:
 
 	def add_person(self, a, record=None, relative_id=None, **kwargs):
 		self.add_uri(a, record_id=relative_id)
+		
 		auth_name = a.get('auth_name')
 		generic_name = a.get('generic_name')
 		# is_group will be true here if this person record is a stand-in
@@ -183,7 +185,8 @@ class PersonIdentity:
 
 	def add_uri(self, data:dict, **kwargs):
 		keys, make = self._uri_keys(data, **kwargs)
-		keys = tuple(key.upper() for key in keys)
+		if not isinstance(keys[2], int):
+			keys = tuple(key.upper() for key in keys)
 		data['uri_keys'] = keys
 		data['uri'] = make(*keys)
 
@@ -484,7 +487,11 @@ class PersonIdentity:
 		to a value (e.g. 'artist “RUBENS, PETER PAUL”').
 		'''
 		data.setdefault('identifiers', [])
-		auth_name = data.get('auth_name', '')
+		
+		if 'auth_name' in data:
+			auth_name = data.get('auth_name', '')
+		elif 'sell_auth_name' in data:
+			auth_name = data.get('sell_auth_name', '')
 		disp_name = data.get('auth_display_name')
 		name_types = [vocab.PrimaryName]
 		name = data.get('name')

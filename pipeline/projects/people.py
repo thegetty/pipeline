@@ -225,6 +225,7 @@ class AddPerson(Configurable):
 
 	def new_residence_activity(self, place, group, record):
 		res_act = model.Activity(ident=self.helper.make_proj_uri('Activity',  'establishment', group.id, place.id))
+		import pdb; pdb.set_trace()
 		res_act.took_place_at = place
 		res_type = model.Type(ident='http://vocab.getty.edu/aat/300393212', label="Establishment")
 		location_type = model.Type(ident='http://vocab.getty.edu/aat/300393211', label="Location Activity or State")

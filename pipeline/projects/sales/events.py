@@ -395,21 +395,34 @@ class AddAuctionHouses(Configurable):
 			
 			auction.part = act
 			
-		sellers = data.get('seller', [])
-		all_sellers = []
-		for agent_seq, seller_q in enumerate(sellers):
+		#sellers = data.get('seller', [])
+		sales_record = get_crom_object(data['_record'])
+		
+		sellers = [
+			self.helper.add_person(
+				self.helper.copy_source_information(p, data),
+				record=sales_record,
+				relative_id=f'seller_{i+1}',
+				catalog_number=cno
+			) for i, p in enumerate(data['seller'])
+		]
+		seller_q=data['seller']
+		#all_sellers = []
+		for agent_seq, seller in enumerate(sellers):
 			
-			seller_dict = self.helper.copy_source_information(seller_q, data)
-			seller_dict_copy = seller_dict.copy()
-			seller_q['_catalog'] = catalog
-			self.helper.add_auction_house_data(seller_dict, sequence=agent_seq, event_record=event_record)
-			seller_dict_copy['uri'] = seller_dict['uri']
-			all_sellers.append(seller_dict_copy)
-			seller = get_crom_object(seller_q)
+			#seller_dict = self.helper.copy_source_information(seller_q, data)
+			#seller_dict_copy = seller_dict.copy()
+			
+			seller_q[agent_seq]['_catalog'] = catalog
+			#self.helper.add_auction_house_data(seller_dict, sequence=agent_seq, event_record=event_record)
+			#seller_dict_copy['uri'] = seller_dict['uri']
+			#all_sellers.append(seller_dict_copy)
+			# seller = get_crom_object(seller_q)
 			act = vocab.SellerActivity(ident='', label=f'Activity of {seller._label}')
 			act.carried_out_by = seller
 			auction.part = act
-			d1['_organizers'].append(seller_q)
+			seller.referred_to_by = self.select_county(data)
+			d1['_organizers'].append(seller_q[agent_seq])
 			#act.attributed_by = seller
 
 			
@@ -422,5 +435,4 @@ class AddAuctionHouses(Configurable):
 					act.attributed_by = self.create_uncertainty_atribute1(seller, agent_seq, label, ident, data)
 					
 		event_properties['auction_houses'][cno] += house_dicts
-		
 		return d1

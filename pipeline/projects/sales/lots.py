@@ -13,6 +13,8 @@ from cromulent.model import factory
 
 from pipeline.projects.sales.util import object_key, object_key_string
 from pipeline.util import \
+		timespan_before, \
+		timespan_after, \
 		implode_date, \
 		timespan_from_outer_bounds, \
 		label_for_timespan_range, \
@@ -369,6 +371,7 @@ def prov_entry_label(helper, sale_type, transaction, rel, cno, lots, date):
 		elif transaction == 'Event':
 			return f'Event {rel} {id}'
 		else:
+			id = f'{cno} {lots}'
 			return f'Offer {rel} {id}'
 	elif sale_type=='Stock List':
 		return f'Stock List {rel} Lot {cno} {lots} ({date})'
@@ -566,7 +569,9 @@ class AddAcquisitionOrBidding(ProvenanceBase):
 							xfer.attributed_by = self.create_uncertainty_atribute(buyer, agent_seq, label, ident, parent, statement=statement)
 						else:
 							xfer.attributed_by = self.create_uncertainty_atribute(buyer, agent_seq, label, ident, parent)
-
+		ts = tx_data.get('_date')
+		if ts:
+			xfer.timespan = ts
 		current_tx.part = xfer
 
 	def create_uncertainty_atribute(self, seller, agent_seq, label, ident, parent, statement=None):
@@ -1024,7 +1029,6 @@ class AddAcquisitionOrBidding(ProvenanceBase):
 		# 	# for p in payments.values():  
 		# 	# 	self.set_possible_attribute(p, 'paid_amount', ask_price)  
 		# 	self.set_possible_attribute(paym, 'paid_amount', ask_price)
-
 		ts = tx_data.get('_date')
 		if ts:
 			acq.timespan = ts
@@ -1537,7 +1541,7 @@ class AddAcquisitionOrBidding(ProvenanceBase):
 				prev_procurements = self.add_non_sale_sellers(data, sellers, sale_type, transaction, transaction_types)
 				yield data
 		elif transaction in UNKNOWN:
-			import pdb; pdb.set_trace
+			
 			# if sale_type == 'Lottery':
 			# 	self.add_final_owner_orgs(data, lot_object_key, sale_type, None)
 			# 	for o in data.get('_final_org', []):

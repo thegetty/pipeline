@@ -356,7 +356,6 @@ class AddPerson(Configurable):
 			if not tgn_data:
 
 				place_data = self.helper.make_place(current, base_uri=base_uri)
-				# import pdb; pdb.set_trace()
 				data['_places'].append(place_data)
 				sdata['place'] = place_data
 				# with open('log_no_tgn.txt', 'a') as f:
@@ -448,7 +447,6 @@ class AddPerson(Configurable):
 
 		if cb:
 			# This is an Organization
-			# import pdb; pdb.set_trace()
 			# with suppress(KeyError):
 			# 	del data['nationality']
 			if 'museum' in type:

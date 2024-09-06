@@ -268,7 +268,6 @@ def parse_location(*parts, uri_base=None, types=None):
 	current = None
 	country_name = re.sub(r'[.].*$', '', parts[-1])
 	country_type = None
-	# import pdb; pdb.set_trace()
 
 	if country_name in _COUNTRIES:
 		country_type = 'Country'
@@ -283,7 +282,6 @@ def parse_location(*parts, uri_base=None, types=None):
 		# might be matched to 'Netherlands'
 		country_type = 'Country'
 	else:
-		# import pdb; pdb.set_trace()
 		# warnings.warn(f'*** Expecting country name, but found unexpected value: {country_name!r}')
 		# not a recognized place name format; assert a generic Place with the associated value as a name
 		return {'name': value}
@@ -295,9 +293,7 @@ def parse_location(*parts, uri_base=None, types=None):
 # 			return loc
 
 	current = {
-		'type': country_type,
 		'name': country_name,
-		'uri': f'{uri_base}PLACE,COUNTRY-' + urllib.parse.quote(country_name),
 	}
 
 	if len(parts) == 2:

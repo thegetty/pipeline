@@ -79,7 +79,7 @@ import pipeline.projects.sales.events
 import pipeline.projects.sales.lots
 import pipeline.projects.sales.objects
 import pipeline.projects.sales.catalogs
-
+from pipeline.projects.sales.lots import AddAcquisitionOrBidding
 #mark - utility functions and classes
 
 class SalesPersonIdentity(PersonIdentity):
@@ -108,16 +108,43 @@ class SalesUtilityHelper(UtilityHelper):
 	def add_person(self, data, record, relative_id, **kwargs):
 		self.person_identity.add_uri(data, record_id=relative_id)
 		key = data['uri_keys']
-		# import pdb; pdb.set_trace()
 		if key in self.services['people_groups']:
 			warnings.warn(f'*** TODO: model person record as a GROUP: {pprint.pformat(key)}')
 			person = super().add_group(data, record=record, relative_id=relative_id, **kwargs)
 		else :
 			person = super().add_person(data, record=record, relative_id=relative_id, **kwargs)
 
+		primaryName = ''
+		try:
+			for i in range(len(person.identified_by)):
+				if isinstance(person.identified_by[i], vocab.PrimaryName):
+					primaryName = person.identified_by[i].content
+
+			for i in range(len(person.identified_by)):
+				if person.identified_by[i].content == primaryName and not isinstance(person.identified_by[i], vocab.PrimaryName):
+					del person.identified_by[i]
+		except:
+			warnings.warn(f'*** TODO: model person there is not identified_by: {pprint.pformat(person._label)}')
+
 		if record:
 			person.referred_to_by = record
+
 		return person
+
+
+	def create_source_attribute_assignment(self, assigned_object, sequence_num, attribution_label, property_assigned_label, property_assigned_id, source, assign):
+		attrib_assignment_classes = [model.AttributeAssignment]
+	
+		prod_id = self.make_shared_uri('Production', 'Assignment', 'Source', assigned_object.id )
+		prod_event = model.Production(ident=prod_id, label=f'Production event for {assigned_object._label}')
+		attribute_assignment_id =  self.prepend_uri_key(prod_event.id, f'ASSIGNMENT,Source-{assigned_object.id}-{sequence_num}-{source.id}')
+		assignment = vocab.make_multitype_obj(*attrib_assignment_classes, ident=attribute_assignment_id, label=attribution_label)
+		assignment.classified_as = model.Type(ident="http://vocab.getty.edu/aat/300456597", label="warrant")
+		assignment.used_specific_object = source
+		assignment.assigned_property = model.Type(ident=property_assigned_id, label=property_assigned_label)
+		if assign:
+			assignment.assigned = assigned_object
+		return assignment
 
 	def event_type_for_sale_type(self, sale_type):
 		if sale_type in ('Private Contract Sale', 'Stock List'):
@@ -141,6 +168,18 @@ class SalesUtilityHelper(UtilityHelper):
 		else:
 			warnings.warn(f'*** Unexpected sale type: {sale_type!r}')
 
+	def create_uncertainty_atribute(self, seller, agent_seq, label, ident, parent):
+		
+		attrib_assignment_classes = [model.AttributeAssignment]
+		prod_event = model.Production(ident=seller.id, label=f'Production event for {seller._label}')
+		attribute_assignment_id =  self.prepend_uri_key(prod_event.id, f'ASSIGNMENT,Seller-{agent_seq}')
+		assignment = vocab.make_multitype_obj(*attrib_assignment_classes, ident=attribute_assignment_id, label=f'Possibly attributed to {seller._label}')
+		assignment.classified_as = model.Type(ident="http://vocab.getty.edu/aat/300435722", label="Possibly")
+		assignment.used_specific_object = get_crom_object(parent['_sale_record'])
+		assignment.assigned_property = model.Type(ident=ident, label=label)
+		assignment.assigned = seller
+		return assignment
+	
 	def set_type_name_for_sale_type(self, sale_type):
 		if sale_type in ('Private Contract Sale', 'Stock List', 'Collection Catalog'):
 			return 'Object Set'
@@ -255,7 +294,10 @@ class SalesUtilityHelper(UtilityHelper):
 			lot_label = f'Auction of Lot {lot_id}'
 		elif sale_type in ('Private Contract Sale', 'Stock List'):
 			lot_id = f'{cno} {shared_lot_number} ({date})'
-			lot_label = f'Sale of Object Set {lot_id}'
+			if sale_type == 'Stock List':
+				lot_label = f'Stock List Sale of Object Set {lot_id}'
+			else:
+				lot_label = f'Private Contract Sale of Object Set {lot_id}'
 		elif sale_type == 'Lottery':
 			lot_id = f'{cno} {shared_lot_number} ({date})'
 			lot_label = f'Lottery Drawing of Lot {lot_id}'
@@ -364,10 +406,14 @@ class SalesUtilityHelper(UtilityHelper):
 		ulan = None
 		with suppress(ValueError, TypeError):
 			ulan = int(data.get('ulan'))
-		auth_name = data.get('auth_name')
+		if 'auth_name' in data:
+			auth_name = data.get('auth_name')
+		elif 'sell_auth_name' in data :
+			auth_name = data.get('sell_auth_name')
+		
 		if ulan:
 			return ('HOUSE', 'ULAN', ulan)
-		elif auth_name and auth_name not in self.ignore_house_authnames:
+		elif auth_name not in self.ignore_house_authnames:
 			return ('PERSON', 'AUTH', auth_name)
 		else:
 			# not enough information to identify this house uniquely, so use the source location in the input file
@@ -388,7 +434,11 @@ class SalesUtilityHelper(UtilityHelper):
 		ulan = None
 		with suppress(ValueError, TypeError):
 			ulan = int(a.get('ulan'))
-		auth_name = a.get('auth_name', a.get('auth'))
+		if 'auth_name' in a:
+			auth_name = a.get('auth_name', a.get('auth'))
+		elif 'sell_auth_name' in a:
+			auth_name = a.get('sell_auth_name', a.get('auth'))
+
 		a['identifiers'] = []
 		if ulan:
 			a['ulan'] = ulan
@@ -437,7 +487,6 @@ def add_crom_price(data, parent, services, add_citations=False):
 	Add modeling data for `MonetaryAmount`, `StartingPrice`, or `EstimatedPrice`,
 	based on properties of the supplied `data` dict.
 	'''
-	# import pdb; pdb.set_trace()
 	currencies = services['currencies']
 	decimalization = services['currencies_decimalization']
 	region_currencies = services['region_currencies']
@@ -499,7 +548,6 @@ def add_crom_price(data, parent, services, add_citations=False):
 							data[k] = decimalized_value
 
 	amnt = extract_monetary_amount(data, currency_mapping=c, add_citations=add_citations)
-	#import pdb; pdb.set_trace()
 	if amnt:
 		if '[or]' in data.get('price', ''):
 			amnt.identified_by.clear()
@@ -534,6 +582,7 @@ class SalesPipeline(PipelineBase):
 		vocab.register_vocab_class('UncertainMemberClosedGroup', {'parent': model.Group, 'id': '300448855', 'label': 'Closed Group Representing an Uncertain Person'})
 		vocab.register_vocab_class('ConstructedTitle', {'parent': model.Name, 'id': '300417205', 'label': 'Constructed Title'})
 		vocab.register_vocab_class('AuctionHouseActivity', {'parent': model.Activity, 'id': '300417515', 'label': 'Auction House'})
+		vocab.register_vocab_class('SellerActivity', {'parent': model.Activity, 'id': '300445696', 'label': 'Seller'})
 
 		vocab.register_vocab_class('EntryNumber', {"parent": model.Identifier, "id":"300445023", "label": "Entry Number"})
 		vocab.register_vocab_class('PageNumber', {"parent": model.Identifier, "id":"300445022", "label": "Page Number"})
@@ -597,7 +646,6 @@ class SalesPipeline(PipelineBase):
 			tgn_places.update(services.get(f'tgn_{n}', {}))
 			sales_tgn.update(services.get(f'sales_{n}_tgn', {}))
 
-		# import pdb; pdb.set_trace()
 		services['tgn'] = tgn_places
 		services['sales_tgn'] = sales_tgn
 
@@ -607,6 +655,9 @@ class SalesPipeline(PipelineBase):
 		
 		services['tgn_descr'] = tgn_places_descr
 		services['sales_tgn_descr'] = sales_tgn_descr
+
+
+		services['location_codes'] = services.get('location_codes', {})
 		# make these case-insensitive by wrapping the value lists in CaseFoldingSet
 		for name in ('transaction_types', 'attribution_modifiers', 'date_modifiers'):
 			if name in services:
@@ -853,7 +904,6 @@ class SalesPipeline(PipelineBase):
 		return bid_acqs
 
 	def add_sales_chain(self, graph, records, services, serialize=True):
-		# import pdb; pdb.set_trace()
 		'''Add transformation of sales records to the bonobo pipeline.'''
 		sales = graph.add_chain(
 			PreserveCSVFields(key='star_csv_data', order=self.contents_headers),
@@ -1375,7 +1425,6 @@ class SalesPipeline(PipelineBase):
 				CurriedCSVReader(fs='fs.data.sales', limit=self.limit, field_names=self.contents_headers),
 # 				AddFieldNames(field_names=self.contents_headers),
 			)
-			# import pdb; pdb.set_trace()
 			sales = self.add_sales_chain(g, contents_records, services, serialize=True)
 			_ = self.add_lot_set_chain(g, sales, serialize=True)
 			_ = self.add_texts_chain(g, sales, serialize=True)

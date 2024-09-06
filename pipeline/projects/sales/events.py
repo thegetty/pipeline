@@ -131,7 +131,6 @@ class PopulateAuctionEvent(Configurable):
 					city['names'] = [place_verbatim]
 
 		else:
-			# import pdb; pdb.set_trace()
 			# check in which type of location the tgn refers to
 			tgn_ref = data.get('loc_tgn_ref')
 			l = data.get(tgn_ref)
@@ -156,7 +155,6 @@ class PopulateAuctionEvent(Configurable):
 		auction_locations = event_properties['auction_locations']
 		event_experts = event_properties['experts']
 		event_commissaires = event_properties['commissaire']
-		# import pdb; pdb.set_trace()
 		auction = get_crom_object(data)
 		catalog = data['_catalog']['_LOD_OBJECT']
 
@@ -171,7 +169,7 @@ class PopulateAuctionEvent(Configurable):
 		# helper.make_place is called here instead of using make_la_place as a separate graph node because the Place object
 		# gets stored in the `auction_locations` object to be used in the second graph component
 		# which uses the data to associate the place with auction lots.
-		base_uri = self.helper.make_proj_uri('AUCTION-EVENT', cno, 'PLACE', part)
+		base_uri = self.helper.make_proj_uri('PLACE', '')
 		record = get_crom_object(data.get('_record'))
 		if not tgn_data:
 			current_p = current
@@ -187,7 +185,7 @@ class PopulateAuctionEvent(Configurable):
 				place = canonical_place
 				place_data = add_crom_data(data={'uri': place.id}, what=place)
 			else:
-				place_data = self.helper.make_place(current, base_uri=base_uri, record=record)
+				place_data = self.helper.make_place(current, base_uri=base_uri)
 				place = get_crom_object(place_data)
 
 			if place:
@@ -212,7 +210,6 @@ class PopulateAuctionEvent(Configurable):
 				auction.took_place_at = o_place
 				auction_locations[cno] = o_place.clone(minimal=True)
 			if same_as:
-				# import pdb; pdb.set_trace()
 				tgn_instance = self.helper.static_instances.get_instance('Place', same_as)
 				if tgn_instance:
 					traverse_static_place_instances(self, tgn_instance)
@@ -223,7 +220,7 @@ class PopulateAuctionEvent(Configurable):
 						
 						if not alternate_exists:
 							tgn_instance.identified_by = vocab.AlternateName(ident=self.helper.make_shared_uri(('PLACE',current)), content=l)
-					
+					auction.took_place_at = tgn_instance
 					# owner_place = tgn_instance
 					# sdata['tgn'] = tgn_instance
 
@@ -243,7 +240,8 @@ class PopulateAuctionEvent(Configurable):
 				expert,
 				record=event_record,
 				relative_id=f'expert-{seq_no+1}',
-				role='expert'
+				role='expert',
+				catalog_number=data['catalog_number']
 			)
 			event_experts[cno].append(person.clone(minimal=True))
 			data['_organizers'].append(add_crom_data(data={}, what=person))
@@ -257,7 +255,8 @@ class PopulateAuctionEvent(Configurable):
 				commissaire,
 				record=event_record,
 				relative_id=f'commissaire-{seq_no+1}',
-				role='commissaire'
+				role='commissaire',
+				catalog_number=data['catalog_number']
 			)
 			event_commissaires[cno].append(person.clone(minimal=True))
 
@@ -266,6 +265,7 @@ class PopulateAuctionEvent(Configurable):
 			role_id = '' # self.helper.make_proj_uri('AUCTION-EVENT', cno, 'Commissaire', seq_no)
 			role = vocab.CommissairePriseur(ident=role_id, label=f'Role of Commissaire-priseur in the event {cno}')
 			role.carried_out_by = person
+			
 			auction.part = role
 
 		notes = data.get('notes')
@@ -277,6 +277,7 @@ class PopulateAuctionEvent(Configurable):
 			seller_description = vocab.SellerDescription(ident='', content=seller)
 			seller_description.referred_to_by = record
 			auction.referred_to_by = seller_description
+			
 
 		if 'links' in data:
 			event_record = get_crom_object(data['_record'])
@@ -343,6 +344,17 @@ class AddAuctionHouses(Configurable):
 			return self.helper.static_instances.get_instance('LinguisticObject', 'db-sales_German')
 		if data['catalog_number'][:2] == "SC":
 			return self.helper.static_instances.get_instance('LinguisticObject', 'db-sales_Sandi')
+			
+	def create_uncertainty_atribute1(self, seller, agent_seq, label, ident, parent):
+		attrib_assignment_classes = [model.AttributeAssignment]
+		prod_event = model.Production(ident=seller.id, label=f'Production event for {seller._label}')
+		attribute_assignment_id =  self.helper.prepend_uri_key(prod_event.id, f'ASSIGNMENT,Seller-{agent_seq}')
+		assignment = vocab.make_multitype_obj(*attrib_assignment_classes, ident=attribute_assignment_id, label=f'Possibly attributed to {seller._label}')
+		assignment.classified_as = model.Type(ident="http://vocab.getty.edu/aat/300435722", label="Possibly")
+		assignment.used_specific_object = get_crom_object(parent['_record'])
+		assignment.assigned_property = model.Type(ident=ident, label=label)
+		assignment.assigned = seller
+		return assignment
 		
 	def __call__(self, data:dict, event_properties):
 		'''
@@ -379,8 +391,36 @@ class AddAuctionHouses(Configurable):
 								house.referred_to_by = referred
 			house.referred_to_by = self.helper.static_instances.get_instance('LinguisticObject', 'db-sales_events')
 			house.referred_to_by = self.select_county(data)
+			d1['_organizers'].append(h1)		
+			
 			auction.part = act
-			d1['_organizers'].append(h1)
+			
+		sellers = data.get('seller', [])
+		all_sellers = []
+		for agent_seq, seller_q in enumerate(sellers):
+			
+			seller_dict = self.helper.copy_source_information(seller_q, data)
+			seller_dict_copy = seller_dict.copy()
+			seller_q['_catalog'] = catalog
+			self.helper.add_auction_house_data(seller_dict, sequence=agent_seq, event_record=event_record)
+			seller_dict_copy['uri'] = seller_dict['uri']
+			all_sellers.append(seller_dict_copy)
+			seller = get_crom_object(seller_q)
+			act = vocab.SellerActivity(ident='', label=f'Activity of {seller._label}')
+			act.carried_out_by = seller
+			auction.part = act
+			d1['_organizers'].append(seller_q)
+			#act.attributed_by = seller
+
+			
+			if 'sell_auth_q' in seller_q:
+				
+				if '?' in  seller_q['sell_auth_q']:
+					
+					ident="http://www.cidoc-crm.org/cidoc-crm/P14_carried_out_by"
+					label="carried out by"
+					act.attributed_by = self.create_uncertainty_atribute1(seller, agent_seq, label, ident, data)
+					
 		event_properties['auction_houses'][cno] += house_dicts
 		
 		return d1

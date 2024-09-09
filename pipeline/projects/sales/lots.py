@@ -100,7 +100,7 @@ class AddAuctionOfLot(ProvenanceBase):
 			warnings.warn(f'Setting empty identifier on {lot.id}')
 		lno = str(lno)
 		lot.identified_by = vocab.LotNumber(ident='', content=lno)
-	
+
 	def select_county(self, data):
 		if data['auction_of_lot']['catalog_number'][:2] == "B-":
 			return self.helper.static_instances.get_instance('LinguisticObject', 'db-sales_Belgium')
@@ -114,7 +114,7 @@ class AddAuctionOfLot(ProvenanceBase):
 			return self.helper.static_instances.get_instance('LinguisticObject', 'db-sales_German')
 		if data['auction_of_lot']['catalog_number'][:2] == "SC":
 			return self.helper.static_instances.get_instance('LinguisticObject', 'db-sales_Sandi')
-		
+
 	def set_lot_objects(self, lot, cno, lno, auction_of_lot_uri, data, lot_object_key, sale_type, non_auctions, event_properties):
 		'''Associate the set of objects with the auction lot.'''
 		shared_lot_number = self.helper.shared_lot_number_from_lno(lno)
@@ -127,7 +127,7 @@ class AddAuctionOfLot(ProvenanceBase):
 		coll.identified_by = self.helper.lot_number_identifier(lno, cno, non_auctions, sale_type, date_label=event_date_label)
 		coll.referred_to_by = get_crom_object(data['_sale_record'])
 		#set database country
-		
+
 		coll.referred_to_by = self.select_county(data)
 
 		# List the actors from the auction event as having carried out the set's creation
@@ -154,7 +154,7 @@ class AddAuctionOfLot(ProvenanceBase):
 			creation.timespan = ts
 		coll.created_by = creation
 		lot.used_specific_object = coll
-		
+
 		data['_lot_object_set'] = add_crom_data(data={}, what=coll)
 
 	def __call__(self, data, non_auctions, event_properties, problematic_records, transaction_types, transaction_classification):
@@ -270,7 +270,7 @@ class AddAuctionOfLot(ProvenanceBase):
 			tx_label = prov_entry_label(self.helper, sale_type, transaction, 'of', cno, lots, date)
 			if '?' in data.get('transaction'):
 				tx.referred_to_by = vocab.PropertyStatusStatement(ident='', label='Transaction type for sales record', content=data['transaction'])
-		
+
 			tx.referred_to_by = get_crom_object(data['_sale_record'])
 			#provenance data country
 			tx.referred_to_by = self.select_county(data)
@@ -356,7 +356,7 @@ class AddAuctionOfLot(ProvenanceBase):
 			data['_prov_entry_data'] = add_crom_data(data=tx_data, what=tx)
 
 			data['_event_causing_prov_entry'] = add_crom_data(data=sale_data, what=lot)
-			
+
 		yield data
 
 def prov_entry_label(helper, sale_type, transaction, rel, cno, lots, date):
@@ -379,8 +379,8 @@ def prov_entry_label(helper, sale_type, transaction, rel, cno, lots, date):
 			return f'Event {rel} {id}'
 		else:
 			return f'Private Contract {rel} Lot {cno} {lots} ({date})'
-		
-		
+
+
 
 class AddAcquisitionOrBidding(ProvenanceBase):
 	non_auctions = Service('non_auctions')
@@ -409,7 +409,7 @@ class AddAcquisitionOrBidding(ProvenanceBase):
 			return self.helper.static_instances.get_instance('LinguisticObject', 'db-sales_German')
 		if data['parent_data']['auction_of_lot']['catalog_number'][:2] == "SC":
 			return self.helper.static_instances.get_instance('LinguisticObject', 'db-sales_Sandi')
-	
+
 	def _price_note(self, price):
 		'''
 		For lots with multiple payment records, the first is asserted as the real payment.
@@ -463,7 +463,7 @@ class AddAcquisitionOrBidding(ProvenanceBase):
 	def add_transfer_of_custody(self, data, current_tx, xfer_to, xfer_from, buy_sell_modifiers, sequence=1, purpose=None):
 		THROUGH = CaseFoldingSet(buy_sell_modifiers['through'])
 		FOR = CaseFoldingSet(buy_sell_modifiers['for'])
-		
+
 		buyers = xfer_to
 		sellers = xfer_from
 		hmo = get_crom_object(data)
@@ -492,19 +492,19 @@ class AddAcquisitionOrBidding(ProvenanceBase):
 		# part of the prev/post sale rewriting.
 		xfer_id = self.helper.prepend_uri_key(hmo.id, f'CustodyTransfer,{sequence}')
 		xfer = model.TransferOfCustody(ident=xfer_id, label=xfer_label)
-		
+
 		xfer.transferred_custody_of = hmo
 		if purpose in self.custody_xfer_purposes:
-			
+
 			xfer.general_purpose = self.custody_xfer_purposes[purpose]
 
 		for agent_seq, seller_data in enumerate(sellers):
-			
+
 			seller = get_crom_object(seller_data)
 
 			mods = self.modifiers(seller_data, 'auth_mod_a')
 			if THROUGH.intersects(mods):
-				
+
 				# when an agent is acting on behalf of the seller, model their involvement in a sub-activity
 				subxfer_id = self.helper.prepend_uri_key(hmo.id, f'CustodyTransfer,{sequence},SellerAgent,{agent_seq}')
 				subxfer = model.Activity(ident=subxfer_id, label="Seller's agent's role in transfer of custody")
@@ -512,7 +512,7 @@ class AddAcquisitionOrBidding(ProvenanceBase):
 
 				subxfer.referred_to_by = vocab.VerbatimTexts(ident='', content=mod_non_auth)
 				subxfer.carried_out_by = seller
-				
+
 				xfer.part = subxfer
 			else:
 				flags = False
@@ -525,7 +525,7 @@ class AddAcquisitionOrBidding(ProvenanceBase):
 
 				xfer.transferred_custody_from = seller
 				if 'auth_nameq' in seller_data or 'auth_mod_a' in seller_data:
-					
+
 					if '?' in seller_data['auth_nameq'] or flags:
 						ident="http://www.cidoc-crm.org/cidoc-crm/P28_custody_surrendered_by"
 						label="P28 custody surrendered by"
@@ -635,7 +635,7 @@ class AddAcquisitionOrBidding(ProvenanceBase):
 
 
 	def copy_monetary_amnt(self, amnt_old, cno, lno):
-		
+
 		if amnt_old:
 			identifier = self.helper.make_shared_uri('ATTR','ACC','LOT', cno, lno)
 #			identifier = "urn:uuid:%s" % uuid.uuid4()
@@ -647,13 +647,13 @@ class AddAcquisitionOrBidding(ProvenanceBase):
 
 			if 'currency' in amnt_old.__dict__:
 				amnt_new.currency = amnt_old.currency
-				
+
 			if 'classified_as' in amnt_old.__dict__:
 				amnt_new.classified_as = []
 				for j in range(0, len(amnt_old.classified_as)):
 					old_type = amnt_old.classified_as[j]
 					cl_type = model.Type()
-					cl_type.id = old_type.id 
+					cl_type.id = old_type.id
 					cl_type._label = old_type._label
 					amnt_new.classified_as.append(cl_type)
 
@@ -666,7 +666,7 @@ class AddAcquisitionOrBidding(ProvenanceBase):
 					name = model.Name(id='')
 					name.content = amnt_old.identified_by[i].content
 					amnt_new.identified_by.append(name)
-			
+
 			if 'referred_to_by' in amnt_old.__dict__:
 				amnt_new.referred_to_by = []
 				for k in range(0, len(amnt_old.referred_to_by)):
@@ -674,7 +674,7 @@ class AddAcquisitionOrBidding(ProvenanceBase):
 					note_content = note_old.content
 					note_new = vocab.Note(ident='', content=note_content)
 					amnt_new.referred_to_by.append(note_new)
-				
+
 
 			return amnt_new
 		else:
@@ -729,10 +729,10 @@ class AddAcquisitionOrBidding(ProvenanceBase):
 			# we ensure that the seller is added to the list of entries to be serialized.
 			# data['seller'].append(buyer_data)
 		for object_set in data.get('member_of', []):
-			
+
 			assignment.assigned_to = object_set
 		current_tx.part = assignment
-		
+
 	def add_acquisition(self, data, buyers, sellers, houses, non_auctions, buy_sell_modifiers, transaction, transaction_types):
 		'''Add modeling of an acquisition as a transfer of title from the seller to the buyer'''
 		hmo = get_crom_object(data)
@@ -783,7 +783,7 @@ class AddAcquisitionOrBidding(ProvenanceBase):
 		# 	'buy': model.Payment(ident=buy_payment_id, label=f'Payment from buyer for {paym_label}'),
 		# 	'sell': model.Payment(ident=sell_payment_id, label=f'Payment to seller for {paym_label}'),
 		# }
-		
+
 		# for house_data in houses:
 		# 	house = get_crom_object(house_data)
 		# 	# payments['buy'].paid_to = house
@@ -831,7 +831,7 @@ class AddAcquisitionOrBidding(ProvenanceBase):
 
 				subpaym.carried_out_by = seller
 				# payments['sell'].part = subpaym
-				paym.part = subpaym 
+				paym.part = subpaym
 
 				subacq_id = self.helper.prepend_uri_key(hmo.id, f'Acquisition,SellerAgent,{seq_no}')
 				subacq = model.Activity(ident=subacq_id, label="Seller's agent's role in acquisition")
@@ -843,7 +843,7 @@ class AddAcquisitionOrBidding(ProvenanceBase):
 				#test added
 			elif FOR.intersects(mod):
 				acq.transferred_title_from = seller
-				
+
 				if 'auth_nameq' in seller_data :
 					if '?' in seller_data['auth_nameq']:
 						ident="http://www.cidoc-crm.org/cidoc-crm/P23_transferred_title_from"
@@ -855,7 +855,7 @@ class AddAcquisitionOrBidding(ProvenanceBase):
 					if '?' in seller_data['auth_nameq'] :
 						ident="https://linked.art/ns/terms/paid_to"
 						label="paid to"
-						paym.attributed_by = self.create_uncertainty_atribute(seller, seq_no, label, ident, parent)   
+						paym.attributed_by = self.create_uncertainty_atribute(seller, seq_no, label, ident, parent)
 				payments_used.add('sell')
 			elif uncertain_attribution: # this is true if ANY of the sellers have an 'or anonymous' modifier
 				# The assignment URIs are just the acquisition URI with a suffix.
@@ -871,7 +871,7 @@ class AddAcquisitionOrBidding(ProvenanceBase):
 				acq_assignment.assigned = seller
 				acq.attributed_by = acq_assignment
 				acq.transferred_title_from = seller
-				
+
 				paym_assignment_label = f'Uncertain seller as recipient of payment'
 				paym_assignment = vocab.PossibleAssignment(ident=paym_assignment_uri, label=paym_assignment_label)
 				paym_assignment.referred_to_by = vocab.VerbatimTexts(ident='', content=mod_non_auth)
@@ -881,7 +881,7 @@ class AddAcquisitionOrBidding(ProvenanceBase):
 				paym.attributed_by = paym_assignment
 				paym.paid_to = seller
 				payments_used.add('sell')
-				
+
 			else:
 				# covers non-modified
 # 				acq.carried_out_by = seller
@@ -898,7 +898,7 @@ class AddAcquisitionOrBidding(ProvenanceBase):
 # 				payments['sell'].carried_out_by = seller
 				# payments['sell'].paid_to = seller
 				payments_used.add('sell')
-				
+
 				paym.paid_to = seller
 				if 'auth_nameq' in seller_data or 'auth_mod_a' in seller_data:
 					if '?' in seller_data['auth_nameq'] or flags:
@@ -917,7 +917,7 @@ class AddAcquisitionOrBidding(ProvenanceBase):
 				# or/or others/or another
 				mod_non_auth = buyer_data.get('auth_mod')
 				if mod_non_auth:
-					
+
 					statement2 = vocab.VerbatimTexts(ident='', content=mod_non_auth)
 					statement= vocab.VerbatimTexts(ident='', content=mod_non_auth)
 					#statement = vocab.LinguisticObject(ident='http://vocab.getty.edu/aat/300456607', label='verbatim text/texts',  metatype=vocab.instances["brief text"], content=mod_non_auth)
@@ -936,7 +936,7 @@ class AddAcquisitionOrBidding(ProvenanceBase):
 
 				subpaym.carried_out_by = buyer
 				# payments['buy'].part = subpaym
-				paym.part = subpaym 
+				paym.part = subpaym
 
 				subacq_id = self.helper.prepend_uri_key(hmo.id, f'Acquisition,BuyerAgent,{seq_no}')
 				subacq = model.Activity(ident=subacq_id, label="Buyer's agent's role in acquisition")
@@ -951,8 +951,8 @@ class AddAcquisitionOrBidding(ProvenanceBase):
 					if '?' in buyer_data['auth_nameq']:
 						ident="http://www.cidoc-crm.org/cidoc-crm/P22_transferred_title_to"
 						label="transferred title to"
-						acq.attributed_by = self.create_uncertainty_atribute(buyer, seq_no, label, ident, parent)		
-				
+						acq.attributed_by = self.create_uncertainty_atribute(buyer, seq_no, label, ident, parent)
+
 				# payments['buy'].paid_from = buyer
 				paym.paid_from = buyer
 				if 'auth_nameq' in buyer_data:
@@ -972,7 +972,7 @@ class AddAcquisitionOrBidding(ProvenanceBase):
 						if flagb:
 							acq.attributed_by = self.create_uncertainty_atribute(buyer, seq_no, label, ident, parent, statement=statement)
 						else:
-							acq.attributed_by = self.create_uncertainty_atribute(buyer, seq_no, label, ident, parent)			
+							acq.attributed_by = self.create_uncertainty_atribute(buyer, seq_no, label, ident, parent)
 				# payments['buy'].paid_from = buyer
 				paym.paid_from = buyer
 # 				payments['buy'].carried_out_by = buyer
@@ -1005,23 +1005,17 @@ class AddAcquisitionOrBidding(ProvenanceBase):
 			# 		content = self._price_note(price)
 			# 		if content:
 			# 			p.referred_to_by = vocab.PriceStatement(ident='', content=content)
-			self.set_possible_attribute(paym, 'paid_amount', amnt_data)
-			if hasattr(paym, 'paid_amount') and 'full' in amnt_data:
-				price_statement = vocab.Name(ident='', content=amnt_data.get("full"))
-				price_statement.classified_as = model.Type(ident='http://vocab.getty.edu/aat/300456607', label='verbatim text/texts')
 
-				paym.paid_amount.identified_by = price_statement
-
-		for price in prices[1:]:
-			content = self._price_note(price)
-			if content:
-				paym.referred_to_by = vocab.PriceStatement(ident='', content=content)
-
+			#self.set_possible_attribute(paym, 'paid_amount', amnt_data)
+			#for price in prices[1:]:
+			#	content = self._price_note(price)
+			#	if content:
+			#		paym.referred_to_by = vocab.PriceStatement(ident='', content=content)
 
 		# elif ask_price:
 		# 	# for non-auction sales, the ask price is the amount paid for the acquisition
-		# 	# for p in payments.values():  
-		# 	# 	self.set_possible_attribute(p, 'paid_amount', ask_price)  
+		# 	# for p in payments.values():
+		# 	# 	self.set_possible_attribute(p, 'paid_amount', ask_price)
 		# 	self.set_possible_attribute(paym, 'paid_amount', ask_price)
 
 		ts = tx_data.get('_date')
@@ -1032,15 +1026,15 @@ class AddAcquisitionOrBidding(ProvenanceBase):
 		# for pay_key in payments_used:
 		# 	p = payments[pay_key]
 		# 	current_tx.part = p
-		
+
 		current_tx.part = paym
-	
+
 		data['_prov_entries'] += [add_crom_data(data={}, what=current_tx)]
 	# 	lot_uid, lot_uri = helper.shared_lot_number_ids(cno, lno)
 		# TODO: `annotation` here is from add_physical_catalog_objects
 	# 	paym.referred_to_by = annotation
 		#paym.__dict__.get('id').split('#PROV', 1)[1][1]
-		
+
 		data['_acquisition'] = add_crom_data(data={'uri': acq_id}, what=acq)
 		self.add_final_owner_orgs(data, lot_object_key, sale_type, ts, current_tx=current_tx)
 		self.add_prev_post_owners(data, hmo, tx_data, sale_type, lot_object_key, ts)
@@ -1066,7 +1060,7 @@ class AddAcquisitionOrBidding(ProvenanceBase):
 			citation_lo.identified_by = vocab.PrimaryName(ident='', content=amnt_citation)
 			citation_lo.referred_to_by = self.select_county(data)
 			citation_lo.part_of = publication_lo
-			
+
 			publication_data = {
 				'publication_uri': publication_text_work_uri,
 				'publication_label': amnt_source,
@@ -1076,7 +1070,7 @@ class AddAcquisitionOrBidding(ProvenanceBase):
 				'citation_uri': citation_text_work_uri,
 				'citation_label': amnt_citation
 			}
-			
+
 			add_crom_data(data=publication_data, what=publication_lo)
 			add_crom_data(data=citation_data, what=citation_lo)
 			if not '_citation_references' in data:
@@ -1088,13 +1082,13 @@ class AddAcquisitionOrBidding(ProvenanceBase):
 		# elif amnt_source == 'Catalogue':
 
 		else:
-			
+
 			if amnt_source == "Catalogue" or amnt_source == "Descriptive Catalogue":
 				source = self.helper.catalog_text(cno, 'Auction')
 			else:
 				if 'Handwritten Annotation:' in amnt_source:
 					amnt_source = amnt_source.replace('Handwritten Annotation:', '')
-			 	
+
 				amnt_source_parts = [x for x in amnt_source.split(' ') if x != '']
 				amnt_source = amnt_source_parts[0]
 
@@ -1119,7 +1113,7 @@ class AddAcquisitionOrBidding(ProvenanceBase):
 			attribution_label = 'Source attributed to undefined monetary amount label'
 			amnt._label = ""
 		amnt.attributed_by = self.helper.create_source_attribute_assignment(amnt, 0, attribution_label, property_assigned_label, property_assigned_id, source, False)
-		
+
 		return amnt
 
 
@@ -1148,7 +1142,7 @@ class AddAcquisitionOrBidding(ProvenanceBase):
 		auction_data = parent['auction_of_lot']
 		lot_object_key = object_key(auction_data)
 		cno, lno, date = lot_object_key
-				
+
 		if '_event_causing_prov_entry' in parent:
 
 			lot = get_crom_object(parent.get('_event_causing_prov_entry'))
@@ -1207,7 +1201,7 @@ class AddAcquisitionOrBidding(ProvenanceBase):
 		lot_object_key = object_key(auction_data)
 		cno, lno, date = lot_object_key
 		lot_data = parent.get('_event_causing_prov_entry')
-		
+
 		if not lot_data:
 			return
 		lot = get_crom_object(lot_data)
@@ -1239,8 +1233,46 @@ class AddAcquisitionOrBidding(ProvenanceBase):
 		sales_record = get_crom_object(data.get('_record'))
 
 		self.add_prev_post_owners(data, hmo, tx_data, sale_type, lot_object_key, ts)
+		tx_data = parent.get('_prov_entry_data')
+		current_tx = get_crom_object(tx_data)
 
 		if prices:
+			for i in range(len(prices)):
+				# We clone the price and give it a new id so that it when serialized
+				# it will appear distinct from the use of the same payment amount
+				# in other branches of the mode. For example, here it is used as
+				# a Payment.paid_amount, but elsewhere it may be used to set the
+				# "Hammer price" valuation on the lot set.
+				amnt_data = prices[i]
+
+				payment_id = current_tx.id + '-Payment' + amnt_data.get("full", "")
+				paym = model.Payment(ident=payment_id, label=f'Payment')
+
+				amnt = self.copy_object_with_new_id(get_crom_object(amnt_data))
+				amnt_source = amnt_data['source']
+				if amnt_source:
+					amnt = self.add_monetary_source_data_assignment(data, amnt_data, amnt, amnt_source, cno)
+
+				add_crom_data(amnt_data, amnt)
+				# for p in payments.values():
+				# 	self.set_possible_attribute(p, 'paid_amount', amnt_data)
+				# 	for price in prices[1:]:
+				# 		content = self._price_note(price)
+				# 		if content:
+				# 			p.referred_to_by = vocab.PriceStatement(ident='', content=content)
+				self.set_possible_attribute(paym, 'paid_amount', amnt_data)
+				if hasattr(paym, 'paid_amount') and 'full' in amnt_data:
+					print("full", amnt_data.get("full"))
+					price_statement = vocab.Name(ident='', content=amnt_data.get("full"))
+					price_statement.classified_as = model.Type(ident='http://vocab.getty.edu/aat/300456607', label='verbatim text/texts')
+
+					paym.paid_amount.identified_by = price_statement
+
+				if i >= 1:
+					content = self._price_note(prices[i])
+					if content:
+						paym.referred_to_by = vocab.PriceStatement(ident='', content=content)
+
 			for seq_no, amnt_data in enumerate(prices):
 				self.add_valuation(data, amnt_data, lot_object_key, tx, buyers)
 			yield data
@@ -1258,7 +1290,7 @@ class AddAcquisitionOrBidding(ProvenanceBase):
 			sales_record = get_crom_object(data.get('_record'))
 			tx, acq = self.final_owner_prov_entry(data, tx_label_args, final_owner, current_tx, hmo, ts, sales_record)
 			note = final_owner_data.get('note')
-			
+
 			if note:
 				acq.referred_to_by = vocab.Note(ident='', content=note)
 			data['_prov_entries'].append(add_crom_data(data={}, what=tx))
@@ -1288,9 +1320,9 @@ class AddAcquisitionOrBidding(ProvenanceBase):
 				else:
 					text += name['auth_name']
 
-			flag = True			
+			flag = True
 			for mod in all_mods:
-				
+
 				if 'Buyer' in label:
 					if ('for' in mod or 'through' in mod) and flag:
 						flag = False
@@ -1348,17 +1380,17 @@ class AddAcquisitionOrBidding(ProvenanceBase):
 			) for i, p in enumerate(parent['buyer'])
 		]
 
-		
-		# Add source data assignment on buyer name 
-		for i in range(len(buyers)): 
-			if 'name_so' in buyers[i] and buyers[i]['name_so']:	
+
+		# Add source data assignment on buyer name
+		for i in range(len(buyers)):
+			if 'name_so' in buyers[i] and buyers[i]['name_so']:
 				name_source = buyers[i]['name_so']
 				if 'Handwritten Annotation:' in name_source :
 					name_source = buyers[i]['name_so'].replace('Handwritten Annotation:', '')
-				
+
 				if name_source == "Catalogue" or name_source == "Descriptive Catalogue":
-					catalogue = self.helper.catalog_text(cno, 'Auction')	
-				
+					catalogue = self.helper.catalog_text(cno, 'Auction')
+
 				elif 'name_cite' in buyers[i] and buyers[i]['name_cite']:
 					buyer_citation = buyers[i]['name_cite']
 					publication_text_work_uri = self.helper.make_proj_uri('LINGOBJECT', 'SOURCE', 'PUBLICATION', name_source)
@@ -1371,7 +1403,7 @@ class AddAcquisitionOrBidding(ProvenanceBase):
 					citation_lo.identified_by = vocab.PrimaryName(ident='', content=buyer_citation)
 					citation_lo.referred_to_by = self.select_county(data)
 					citation_lo.part_of = publication_lo
-					
+
 					publication_data = {
 						'publication_uri': publication_text_work_uri,
 						'publication_label': name_source,
@@ -1393,7 +1425,7 @@ class AddAcquisitionOrBidding(ProvenanceBase):
 					name_source_parts = [x for x in name_source.split(' ') if x != '']
 					name_source = name_source_parts[0]
 					if name_source in self.helper.services['location_codes']:
-					
+
 						if len(name_source_parts) == 2:
 							copy_no = name_source_parts[1]
 							catalog_uri = self.helper.make_proj_uri('PHYS-CAT', cno, name_source, copy_no)
@@ -1429,11 +1461,11 @@ class AddAcquisitionOrBidding(ProvenanceBase):
 				catalog_number=cno
 			) for i, p in enumerate(parent['seller'])
 		]
-		# Add source data assignment on seller name 
-		for i in range(len(sellers)): 
-			if 'so' in sellers[i] and sellers[i]['so']:	
+		# Add source data assignment on seller name
+		for i in range(len(sellers)):
+			if 'so' in sellers[i] and sellers[i]['so']:
 				name_source = sellers[i]['so']
-				
+
 				if 'Handwritten Annotation:' in name_source:
 					name_source = name_source.replace('Handwritten Annotation:', '')
 
@@ -1442,8 +1474,8 @@ class AddAcquisitionOrBidding(ProvenanceBase):
 				else:
 					name_source_parts = [x for x in name_source.split(' ') if x != '']
 					name_source = name_source_parts[0]
-					
-					if name_source in self.helper.services['location_codes'] :	
+
+					if name_source in self.helper.services['location_codes'] :
 						if len(name_source_parts) == 2:
 							copy_no = name_source_parts[1]
 							catalog_uri = self.helper.make_proj_uri('PHYS-CAT', cno, name_source, copy_no)
@@ -1479,7 +1511,7 @@ class AddAcquisitionOrBidding(ProvenanceBase):
 		data.setdefault('_organizations', [])
 		if transaction in SOLD:
 			houses = [self.helper.add_auction_house_data(h) for h in auction_houses_data.get(cno, [])]
-			
+
 
 			for data, current_tx in self.add_acquisition(data, buyers, sellers, houses, non_auctions, buy_sell_modifiers, transaction, transaction_types):
 				self.add_non_sale_valuations(data, parent, lot_object_key, current_tx)
@@ -1514,7 +1546,7 @@ class AddAcquisitionOrBidding(ProvenanceBase):
 						warnings.warn(f'*** not modeling transfer of custody for auction type {transaction}')
 					yield data
 		elif transaction in UNSOLD:
-			
+
 			houses = [self.helper.add_auction_house_data(h) for h in auction_houses_data.get(cno, [])]
 			experts = event_experts.get(cno, [])
 			commissaires = event_commissaires.get(cno, [])
@@ -1536,7 +1568,7 @@ class AddAcquisitionOrBidding(ProvenanceBase):
 				prev_procurements = self.add_non_sale_sellers(data, sellers, sale_type, transaction, transaction_types)
 				yield data
 		elif transaction in UNKNOWN:
-			import pdb; pdb.set_trace
+			#import pdb; pdb.set_trace
 			# if sale_type == 'Lottery':
 			# 	self.add_final_owner_orgs(data, lot_object_key, sale_type, None)
 			# 	for o in data.get('_final_org', []):

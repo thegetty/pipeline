@@ -498,7 +498,8 @@ def add_crom_price(data, parent, services, add_citations=False):
 
 	verbatim = []
 
-	data['full'] = f'{data.get("price", "")} {data.get("currency", "")}'.strip()
+	if data.get("price") or data.get("currency"):
+		data['full'] = f'{data.get("price", "")} {data.get("currency", "")}'.strip()
 	for k in ('price', 'est_price', 'start_price', 'ask_price'):
 		# Each data record can only have one of these. We put the decimalized
 		# value back using the same key, but the verbatim strings are just

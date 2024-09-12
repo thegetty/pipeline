@@ -466,7 +466,6 @@ class AddAcquisitionOrBidding(ProvenanceBase):
 	def add_transfer_of_custody(self, data, current_tx, xfer_to, xfer_from, buy_sell_modifiers, sequence=1, purpose=None):
 		THROUGH = CaseFoldingSet(buy_sell_modifiers['through'])
 		FOR = CaseFoldingSet(buy_sell_modifiers['for'])
-		
 		buyers = xfer_to
 		sellers = xfer_from
 		hmo = get_crom_object(data)
@@ -570,9 +569,11 @@ class AddAcquisitionOrBidding(ProvenanceBase):
 						else:
 							xfer.attributed_by = self.create_uncertainty_atribute(buyer, agent_seq, label, ident, parent)
 		ts = tx_data.get('_date')
+		
 		if ts:
 			xfer.timespan = ts
 		current_tx.part = xfer
+		
 
 	def create_uncertainty_atribute(self, seller, agent_seq, label, ident, parent, statement=None):
 
@@ -719,7 +720,6 @@ class AddAcquisitionOrBidding(ProvenanceBase):
 				amnt_source = amnt_data['source']
 				if amnt_source:
 					amnt = self.add_monetary_source_data_assignment(data, amnt_data, amnt, amnt_source, cno)
-
 
 		for seq_no, buyer_data in enumerate(buyers):
 			buyer = get_crom_object(buyer_data)
@@ -1203,11 +1203,12 @@ class AddAcquisitionOrBidding(ProvenanceBase):
 		rel = 'leading to Ownership of'
 		return self.add_sellers(data, sale_type, 'Event', sellers, rel, source=note)
 
-	def add_bidding(self, data:dict, buyers, sellers, buy_sell_modifiers, sale_type, transaction, transaction_types, auction_houses_data, include_custody_transfer=False):
+	def add_bidding(self, data:dict, buyers, sellers, buy_sell_modifiers, sale_type, transaction, transaction_types, auction_houses_data, expert=None, include_custody_transfer=False):
 		'''Add modeling of bids that did not lead to an acquisition'''
 		hmo = get_crom_object(data)
 		parent = data['parent_data']
 		data['seller'] = sellers
+		data['buyer'] = buyers
 		auction_data = parent['auction_of_lot']
 		lot_object_key = object_key(auction_data)
 		cno, lno, date = lot_object_key
@@ -1234,10 +1235,17 @@ class AddAcquisitionOrBidding(ProvenanceBase):
 		tx_data = parent.get('_prov_entry_data')
 		tx = get_crom_object(tx_data)
 		houses = auction_houses_data
-		if include_custody_transfer:
-			self.add_transfer_of_custody(data, tx, xfer_to=houses, xfer_from=sellers, buy_sell_modifiers=buy_sell_modifiers, sequence=1, purpose='selling')
-			if model_custody_return:
-				self.add_transfer_of_custody(data, tx, xfer_to=sellers, xfer_from=houses, buy_sell_modifiers=buy_sell_modifiers, sequence=2, purpose='returning')
+		if expert is not None and expert!=[]:
+			if include_custody_transfer:
+				self.add_transfer_of_custody(data, tx, xfer_to=expert, xfer_from=sellers, buy_sell_modifiers=buy_sell_modifiers, sequence=1, purpose='selling')
+				if model_custody_return:
+					self.add_transfer_of_custody(data, tx, xfer_to=sellers, xfer_from=expert, buy_sell_modifiers=buy_sell_modifiers, sequence=2, purpose='returning')
+
+		else:
+			if include_custody_transfer:
+				self.add_transfer_of_custody(data, tx, xfer_to=houses, xfer_from=sellers, buy_sell_modifiers=buy_sell_modifiers, sequence=1, purpose='selling')
+				if model_custody_return:
+					self.add_transfer_of_custody(data, tx, xfer_to=sellers, xfer_from=houses, buy_sell_modifiers=buy_sell_modifiers, sequence=2, purpose='returning')
 
 		data.setdefault('_prov_entries', [])
 		data['_prov_entries'].append(tx_data)
@@ -1434,6 +1442,25 @@ class AddAcquisitionOrBidding(ProvenanceBase):
 				catalog_number=cno
 			) for i, p in enumerate(parent['seller'])
 		]
+		
+		expert = [
+			self.add_person(
+				self.helper.copy_source_information(p, parent),
+				record=sales_record,
+				relative_id=f'expert{i+1}',
+				catalog_number=cno
+			) for i, p in enumerate(parent['expert'])
+		]
+		expert.extend(
+			self.add_person(
+				self.helper.copy_source_information(p, parent),
+				record=sales_record,
+				relative_id=f'commissaire{i+1}',
+				catalog_number=cno
+			) for i, p in enumerate(parent['commissaire'])
+		)
+		data['_other_owners'].extend(expert)
+		
 		# Add source data assignment on seller name 
 		for i in range(len(sellers)): 
 			if 'so' in sellers[i] and sellers[i]['so']:	
@@ -1494,13 +1521,22 @@ class AddAcquisitionOrBidding(ProvenanceBase):
 				experts = event_experts.get(cno, [])
 				commissaires = event_commissaires.get(cno, [])
 				custody_recievers = houses + [add_crom_data(data={}, what=r) for r in experts + commissaires]
-				for data in self.add_bidding(data, buyers, sellers, buy_sell_modifiers, sale_type, transaction, transaction_types, custody_recievers):
+				for data in self.add_bidding(data, buyers, sellers, buy_sell_modifiers, sale_type, transaction, transaction_types, custody_recievers, expert=None):
 					if sale_type in ('Auction', 'Collection Catalog'):
 						# 'Collection Catalog' is treated just like an Auction
-						if custody_recievers or sellers:
-							self.add_transfer_of_custody(data, current_tx, xfer_to=custody_recievers, xfer_from=sellers, buy_sell_modifiers=buy_sell_modifiers, sequence=1, purpose='selling')
-						if custody_recievers or buyers:
-							self.add_transfer_of_custody(data, current_tx, xfer_to=buyers, xfer_from=custody_recievers, buy_sell_modifiers=buy_sell_modifiers, sequence=2, purpose='completing sale')
+						if expert!=[]:
+							if sellers:
+								self.add_transfer_of_custody(data, current_tx, xfer_to=expert, xfer_from=sellers, buy_sell_modifiers=buy_sell_modifiers, sequence=1, purpose='selling')
+							if buyers:
+								self.add_transfer_of_custody(data, current_tx, xfer_to=buyers, xfer_from=expert, buy_sell_modifiers=buy_sell_modifiers, sequence=2, purpose='completing sale')
+						elif custody_recievers==[]:
+							
+							self.add_transfer_of_custody(data, current_tx, xfer_to=buyers, xfer_from=sellers, buy_sell_modifiers=buy_sell_modifiers, sequence=1, purpose='completing sale')
+						else:
+							if custody_recievers or sellers:
+								self.add_transfer_of_custody(data, current_tx, xfer_to=custody_recievers, xfer_from=sellers, buy_sell_modifiers=buy_sell_modifiers, sequence=1, purpose='selling')
+							if custody_recievers or buyers:
+								self.add_transfer_of_custody(data, current_tx, xfer_to=buyers, xfer_from=custody_recievers, buy_sell_modifiers=buy_sell_modifiers, sequence=2, purpose='completing sale')
 					elif sale_type in ('Private Contract Sale', 'Stock List'):
 						# 'Stock List' is treated just like a Private Contract Sale, except for the catalogs
 						for i, h in enumerate(custody_recievers):
@@ -1510,9 +1546,18 @@ class AddAcquisitionOrBidding(ProvenanceBase):
 							else:
 								house._label = f'Private sale organizer for {cno} {shared_lot_number} ({date})'
 							data['_organizations'].append(h)
-
-						self.add_transfer_of_custody(data, current_tx, xfer_to=custody_recievers, xfer_from=sellers, buy_sell_modifiers=buy_sell_modifiers, sequence=1, purpose='selling')
-						self.add_transfer_of_custody(data, current_tx, xfer_to=buyers, xfer_from=custody_recievers, buy_sell_modifiers=buy_sell_modifiers, sequence=2, purpose='completing sale')
+						
+						if expert!=[]:
+							if sellers:
+								self.add_transfer_of_custody(data, current_tx, xfer_to=expert, xfer_from=sellers, buy_sell_modifiers=buy_sell_modifiers, sequence=1, purpose='selling')
+							if buyers:
+								self.add_transfer_of_custody(data, current_tx, xfer_to=buyers, xfer_from=expert, buy_sell_modifiers=buy_sell_modifiers, sequence=2, purpose='completing sale')
+						
+						if custody_recievers==[]:
+							self.add_transfer_of_custody(data, current_tx, xfer_to=buyers, xfer_from=sellers, buy_sell_modifiers=buy_sell_modifiers, sequence=1, purpose='completing sale')
+						else:
+							self.add_transfer_of_custody(data, current_tx, xfer_to=custody_recievers, xfer_from=sellers, buy_sell_modifiers=buy_sell_modifiers, sequence=1, purpose='selling')
+							self.add_transfer_of_custody(data, current_tx, xfer_to=buyers, xfer_from=custody_recievers, buy_sell_modifiers=buy_sell_modifiers, sequence=2, purpose='completing sale')
 
 						prev_procurements = self.add_private_sellers(data, sellers, sale_type, transaction, transaction_types)
 					else:
@@ -1525,7 +1570,7 @@ class AddAcquisitionOrBidding(ProvenanceBase):
 			commissaires = event_commissaires.get(cno, [])
 			custody_recievers = houses + [add_crom_data(data={}, what=r) for r in experts + commissaires]
 			bid_count = 0
-			for data in self.add_bidding(data, buyers, sellers, buy_sell_modifiers, sale_type, transaction, transaction_types, custody_recievers, include_custody_transfer=True):
+			for data in self.add_bidding(data, buyers, sellers, buy_sell_modifiers, sale_type, transaction, transaction_types, custody_recievers, expert=expert, include_custody_transfer=True):
 				tx_data = parent.get('_prov_entry_data')
 				current_tx = get_crom_object(tx_data)
 				self.add_non_sale_valuations(data, parent, lot_object_key, current_tx)
@@ -1556,7 +1601,7 @@ class AddAcquisitionOrBidding(ProvenanceBase):
 				self.add_final_owner_orgs(data, lot_object_key, sale_type, None)
 				for o in data.get('_final_org', []):
 					data['_organizations'].append(o)
-			for data in self.add_bidding(data, buyers, sellers, buy_sell_modifiers, sale_type, transaction, transaction_types, houses, include_custody_transfer=True):
+			for data in self.add_bidding(data, buyers, sellers, buy_sell_modifiers, sale_type, transaction, transaction_types, houses, expert=expert, include_custody_transfer=True):
 				tx_data = parent.get('_prov_entry_data')
 				current_tx = get_crom_object(tx_data)
 				self.add_non_sale_valuations(data, parent, lot_object_key, current_tx)

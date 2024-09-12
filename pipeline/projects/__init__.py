@@ -90,9 +90,19 @@ class PersonIdentity:
 		with suppress(ValueError, TypeError):
 			ulan = int(data.get('ulan'))
 		if 'auth_name' in data:
-			auth_name = data.get('auth_name')
+			if data['auth_name'].upper()=='NEW':
+				if 'label' in data:
+					auth_name = data.get('label')
+				elif 'name' in data:
+					auth_name = data.get('name')
+			else:
+				auth_name = data.get('auth_name')
 		elif 'sell_auth_name' in data:
 			auth_name = data.get('sell_auth_name')
+		elif 'expert_auth' in data:
+			auth_name = data.get('expert_auth')
+		elif 'commissaire_pr' in data:
+			auth_name = data.get('commissaire_pr')
 		auth_name_q = '?' in data.get('auth_nameq', '')
 		generic_name = data.get('generic_name', '')
 		if auth_name and self.is_anonymous_group(generic_name):
@@ -185,8 +195,8 @@ class PersonIdentity:
 
 	def add_uri(self, data:dict, **kwargs):
 		keys, make = self._uri_keys(data, **kwargs)
-		if not isinstance(keys[2], int):
-			keys = tuple(key.upper() for key in keys)
+		# if not isinstance(keys[2], int):
+		# 	keys = tuple(key.upper() for key in keys)
 		data['uri_keys'] = keys
 		data['uri'] = make(*keys)
 
@@ -492,6 +502,10 @@ class PersonIdentity:
 			auth_name = data.get('auth_name', '')
 		elif 'sell_auth_name' in data:
 			auth_name = data.get('sell_auth_name', '')
+		elif 'expert_auth' in data:
+			auth_name = data.get('expert_auth')
+		elif 'commissaire_pr' in data:
+			auth_name = data.get('commissaire_pr')
 		disp_name = data.get('auth_display_name')
 		name_types = [vocab.PrimaryName]
 		name = data.get('name')

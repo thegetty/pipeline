@@ -957,10 +957,10 @@ def label_for_timespan_range(begin, end, inclusive=False):
 			return begin
 		elif from_y == to_y and from_m == to_m - 1 and from_d == to_d and to_d == 1:
 			# 1 month range
-			return '%04d-%02d' % (from_y, from_m)
+			return '%04d-%02d-%02d' % (from_y, from_m, 0)
 		elif from_y == to_y - 1 and from_m == to_m and to_m == 1 and from_d == to_d and to_d == 1:
 			# 1 year range
-			return str(from_y)
+			return '%04d-%02d-%02d' % (to_y, 0, 0)
 		else:
 			to_d -= 1
 			if to_d == 0:

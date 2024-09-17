@@ -374,14 +374,14 @@ def prov_entry_label(helper, sale_type, transaction, rel, cno, lots, date):
 			id = f'{cno} {lots}'
 			return f'Offer {rel} {id}'
 	elif sale_type=='Stock List':
-		return f'Stock List {rel} Lot {cno} {lots} ({date})'
+		return f'Stock List Offer {rel} Lot {cno} {lots} ({date})'
 	else:
 		if transaction in SOLD:
 			return f'Sale {rel} {id}'
 		elif transaction == 'Event':
 			return f'Event {rel} {id}'
 		else:
-			return f'Private Contract {rel} Lot {cno} {lots} ({date})'
+			return f'Private Contract Offer {rel} Lot {cno} {lots} ({date})'
 		
 		
 

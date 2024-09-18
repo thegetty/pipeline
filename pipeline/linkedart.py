@@ -881,30 +881,30 @@ class PopulateObject:
 					matstmt.referred_to_by = sales_record
 			hmo.referred_to_by = matstmt
 
-		# dimstr = data.get('dimensions')
+		dimstr = data.get('dimensions')
 
-		# if dimstr:
-		# 	dimstmt = vocab.DimensionStatement(ident='', content=dimstr)
-		# 	if sales_record:
-		# 		if isinstance(sales_record, list):
-		# 			for record in sales_record:
-		# 				dimstmt.referred_to_by = record
-		# 		else: 
-		# 			dimstmt.referred_to_by = sales_record
-		# 	hmo.referred_to_by = dimstmt
-		# 	if strip_comments:
-		# 		import re;
-		# 		dimstr = re.sub(r"\[.*\]", '', dimstr).strip()
-		# 	dimstr = dimstr.replace("X", "x")
-		# 	for dim in extract_physical_dimensions(dimstr, default_unit=default_unit):
-		# 		if sales_record:
-		# 			if isinstance(sales_record, list):
-		# 				for record in sales_record:
-		# 					dim.referred_to_by = record
-		# 			else: 
-		# 				dim.referred_to_by = sales_record
-		# 		hmo.dimension = dim
-		# else:
-		# 	pass
+		if dimstr:
+			dimstmt = vocab.DimensionStatement(ident='', content=dimstr)
+			if sales_record:
+				if isinstance(sales_record, list):
+					for record in sales_record:
+						dimstmt.referred_to_by = record
+				else: 
+					dimstmt.referred_to_by = sales_record
+			hmo.referred_to_by = dimstmt
+			if strip_comments:
+				import re;
+				dimstr = re.sub(r"\[.*\]", '', dimstr).strip()
+			dimstr = dimstr.replace("X", "x")
+			for dim in extract_physical_dimensions(dimstr, default_unit=default_unit):
+				if sales_record:
+					if isinstance(sales_record, list):
+						for record in sales_record:
+							dim.referred_to_by = record
+					else: 
+						dim.referred_to_by = sales_record
+				hmo.dimension = dim
+		else:
+			pass
 	# 		print(f'No dimension data was parsed from the dimension statement: {dimstr}')
 

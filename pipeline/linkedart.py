@@ -887,7 +887,15 @@ class PopulateObject:
 			if 'formatted_dimens' in data:
 				if data['formatted_dimens'] !='':
 					text = data['formatted_dimens']
-					hmo.referred_to_by=vocab.DimensionStatement(ident='', content=text)
+					text_work=vocab.DimensionStatement(ident='', content=text)
+					if sales_record:
+						if isinstance(sales_record, list):
+							for record in sales_record:
+								text_work.referred_to_by = record
+						else: 
+							text_work.referred_to_by = sales_record
+
+					hmo.referred_to_by=text_work
 			dimstmt = vocab.DimensionStatement(ident='', content=dimstr)
 			
 			if sales_record:

@@ -75,7 +75,7 @@ class ProvenanceBase(Configurable):
 		if sales_record:
 			tx.referred_to_by = sales_record
 		tx_label1 = make_label(*tx_label_args).split('(')
-		tx_label = tx_label1[0] + "by " +  buyer._label + " (" + tx_label1[1]
+		tx_label = tx_label1[0] + "by " +  buyer._label + " (before " + tx_label1[1]
 		tx._label = tx_label
 		tx.identified_by = model.Name(ident='', content=tx_label)
 		if current_tx:
@@ -102,7 +102,7 @@ class ProvenanceBase(Configurable):
 		if seller:
 			pacq.transferred_title_from = seller
 			pxfer.transferred_custody_from = seller
-
+			
 		owner = get_crom_object(owner_record)
 		if owner_record and 'own_auth_q' in owner_record:
 

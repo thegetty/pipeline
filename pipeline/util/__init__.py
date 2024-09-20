@@ -132,9 +132,9 @@ def implode_date_tuple(date_tuple, clamp):
 		if year and month and day:
 			return '%04d-%02d-%02d' % (int(year), month, day)
 		elif year and month:
-			return '%04d-%02d-%02d' % (int(year), month, int('0'))
+			return '%04d-%02d-%02d' % (int(year), month, int('1'))
 		elif year:
-			return '%04d-%02d-%02d' % (int(year),int('0'), int('0'))
+			return '%04d-%02d-%02d' % (int(year),int('1'), int('1'))
 	except TypeError as e:
 		warnings.warn(f'*** {e}: {pprint.pformat([int(year), month, day])}')
 	return None
@@ -957,10 +957,10 @@ def label_for_timespan_range(begin, end, inclusive=False):
 			return begin
 		elif from_y == to_y and from_m == to_m - 1 and from_d == to_d and to_d == 1:
 			# 1 month range
-			return '%04d-%02d' % (from_y, from_m)
+			return '%04d-%02d-%02d' % (from_y, from_m, 0)
 		elif from_y == to_y - 1 and from_m == to_m and to_m == 1 and from_d == to_d and to_d == 1:
 			# 1 year range
-			return str(from_y)
+			return '%04d-%02d-%02d' % (to_y, 0, 0)
 		else:
 			to_d -= 1
 			if to_d == 0:

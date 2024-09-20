@@ -315,8 +315,9 @@ class MakeLinkedArtLinguisticObject(MakeLinkedArtRecord):
 			hmo = get_crom_object(carrier)
 			thing.carried_by = hmo
 
-		for dimension in data.get('dimensions', []):
-			thing.dimension = dimension
+		# for dimension in data.get('dimensions', []):
+		# 	import pdb; pdb.set_trace()
+		# 	thing.dimension = dimension
 
 	def __call__(self, data: dict):
 		if 'object_type' not in data or data['object_type'] == []:
@@ -577,18 +578,8 @@ class MakeLinkedArtPerson(MakeLinkedArtAgent):
 			ts._label = "%s-%s" % (data['active_early'], data['active_late'])
 			act.timespan = ts
 			who.carried_out = act
-
 		for event in data.get('events', []):
 			# MAYBE HERE ITERATE DATA[SOJOURNS] AND TAKE PLACE 
-
-			for sdata in data.get('sojourns', []):
-				if 'active_city' in sdata:
-					if 'Professional activity' in event.__dict__['_label']:
-						if 'tgn' in sdata:
-							place = sdata['tgn']
-						else:
-							place = get_crom_object(sdata.get('place'))
-						event.took_place_at = place
 
 			who.carried_out = event
 
@@ -893,7 +884,20 @@ class PopulateObject:
 		dimstr = data.get('dimensions')
 
 		if dimstr:
+			if 'formatted_dimens' in data:
+				if data['formatted_dimens'] !='':
+					text = data['formatted_dimens']
+					text_work=vocab.DimensionStatement(ident='', content=text)
+					if sales_record:
+						if isinstance(sales_record, list):
+							for record in sales_record:
+								text_work.referred_to_by = record
+						else: 
+							text_work.referred_to_by = sales_record
+
+					hmo.referred_to_by=text_work
 			dimstmt = vocab.DimensionStatement(ident='', content=dimstr)
+			
 			if sales_record:
 				if isinstance(sales_record, list):
 					for record in sales_record:
@@ -912,6 +916,7 @@ class PopulateObject:
 							dim.referred_to_by = record
 					else: 
 						dim.referred_to_by = sales_record
+					
 				hmo.dimension = dim
 		else:
 			pass

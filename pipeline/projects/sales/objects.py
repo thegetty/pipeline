@@ -817,29 +817,30 @@ class AddArtists(ProvenanceBase):
 			# The artist group URI is just the production event URI with a suffix. When URIs are
 			# reconciled during prev/post sale rewriting, this will allow us to also reconcile
 			# the URIs for the artist groups (of which there should only be one per production/object)
-			group_uri = prod_event.id + '-ArtistGroup'
-			g_label = f'Group containing the artist of {hmo_label}'
-			artist_group = vocab.UncertainMemberClosedGroup(ident=group_uri, label=g_label)
-			artist_group.identified_by = model.Name(ident='', content=g_label)
-			artist_group.referred_to_by = self.select_county(data)
-			pi_record_no = data['pi_record_no']
-			group_uri_key = ('GROUP', 'PI', pi_record_no, 'ArtistGroup')
-			group_data = {
-				'uri': group_uri,
-				'uri_keys': group_uri_key,
-				'role_label': 'uncertain artist'
-			}
-			add_crom_data(data=group_data, what=artist_group)
-			data['_organizations'].append(group_data)
-
+			# group_uri = prod_event.id + '-ArtistGroup'
+			
+			# g_label = f'Group containing the artist of {hmo_label}'
+			# artist_group = vocab.UncertainMemberClosedGroup(ident=group_uri, label=g_label)
+			# artist_group.identified_by = model.Name(ident='', content=g_label)
+			# artist_group.referred_to_by = self.select_county(data)
+			# pi_record_no = data['pi_record_no']
+			# group_uri_key = ('GROUP', 'PI', pi_record_no, 'ArtistGroup')
+			# group_data = {
+			# 	'uri': group_uri,
+			# 	'uri_keys': group_uri_key,
+			# 	'role_label': 'uncertain artist'
+			# }
+			# add_crom_data(data=group_data, what=artist_group)
+			#data['_organizations'].append(group_data)
 			# 6. Model all the artist records as sub-production events:
-			prod_event.carried_out_by = artist_group
+			#prod_event.carried_out_by = artist_group
 			for seq_no, a_data in enumerate(artists):
 				mods = a_data['modifiers']
 				attribute_assignment_id = self.helper.prepend_uri_key(prod_event.id, f'ASSIGNMENT,Artist-{seq_no}')
 				artist_label = a_data.get('label') # TODO: this may not be right for groups
 				a_data = self.model_person_or_group(data, a_data, attribution_group_types, attribution_group_names, seq_no=seq_no, role='Artist', sales_record=sales_record)
 				person = get_crom_object(a_data)
+				prod_event.carried_out_by = person
 				if ATTRIBUTED_TO.intersects(mods):
 					attrib_assignment_classes = [model.AttributeAssignment]
 					attrib_assignment_classes.append(vocab.PossibleAssignment)
@@ -847,7 +848,12 @@ class AddArtists(ProvenanceBase):
 					assignment._label = f'Possibly by {artist_label}'
 					person.attributed_by = assignment
 					assignment.assigned_property = model.Type(ident="https://linked.art/ns/terms/member_of", label="member_of")
-					assignment.assigned = artist_group
+					assignment.assigned = person
+				elif 'or' in mods :
+					
+					ident="http://www.cidoc-crm.org/cidoc-crm/P14_carried_out_by"
+					label="carried out by"
+					prod_event.attributed_by = self.helper.create_uncertainty_atribute(person, seq_no, label, ident, data['parent_data'])
 				else:
 					person.member_of = artist_group
 		else:
@@ -859,7 +865,9 @@ class AddArtists(ProvenanceBase):
 				artist_label = a_data.get('label') # TODO: this may not be right for groups
 				a_data = self.model_person_or_group(data, a_data, attribution_group_types, attribution_group_names, seq_no=seq_no, role='Artist', sales_record=sales_record)
 				person = get_crom_object(a_data)
-				
+				if 'auth_name' in a_data:
+					if a_data['auth_name'].upper()=='NEW':
+						data['_artists'].append(a_data)
 				mods = a_data['modifiers']
 				verbatim_mods = a_data.get('attrib_mod', '')
 				attrib_assignment_classes = [model.AttributeAssignment]
@@ -976,23 +984,24 @@ class AddArtists(ProvenanceBase):
 		non_artist_group_flag = len(non_artist_assertions) and all(['or' in a['modifiers'] for a in non_artist_assertions])
 		non_artist_group = None
 		
-		if non_artist_group_flag:
-			non_artist_mod = list(NON_ARTIST_MODS.intersection(non_artist_all_mods))[0]
-			# The artist group URI is just the production event URI with a suffix. When URIs are
-			# reconciled during prev/post sale rewriting, this will allow us to also reconcile
-			# the URIs for the artist groups (of which there should only be one per production/object)
-			group_uri = prod_event.id + '-NonArtistGroup'
-			g_label = f'Group containing the {non_artist_mod} of {hmo_label}'
-			non_artist_group = vocab.UncertainMemberClosedGroup(ident=group_uri, label=g_label)
-			non_artist_group.identified_by = model.Name(ident='', content=g_label)
-			non_artist_group.referred_to_by = self.select_county(data)
-			group_data = {
-				'uri': group_uri,
-				'role_label': 'uncertain influencer'
-			}
-			make_la_org = pipeline.linkedart.MakeLinkedArtOrganization()
-			group_data = make_la_org(group_data)
-			data['_organizations'].append(group_data)
+		# if non_artist_group_flag:
+		# 	non_artist_mod = list(NON_ARTIST_MODS.intersection(non_artist_all_mods))[0]
+		# 	# The artist group URI is just the production event URI with a suffix. When URIs are
+		# 	# reconciled during prev/post sale rewriting, this will allow us to also reconcile
+		# 	# the URIs for the artist groups (of which there should only be one per production/object)
+		# 	group_uri = prod_event.id + '-NonArtistGroup'
+		# 	import pdb; pdb.set_trace()
+		# 	g_label = f'Group containing the {non_artist_mod} of {hmo_label}'
+		# 	non_artist_group = vocab.UncertainMemberClosedGroup(ident=group_uri, label=g_label)
+		# 	non_artist_group.identified_by = model.Name(ident='', content=g_label)
+		# 	non_artist_group.referred_to_by = self.select_county(data)
+		# 	group_data = {
+		# 		'uri': group_uri,
+		# 		'role_label': 'uncertain influencer'
+		# 	}
+		# 	make_la_org = pipeline.linkedart.MakeLinkedArtOrganization()
+		# 	group_data = make_la_org(group_data)
+		# 	data['_organizations'].append(group_data)
 
 		# 3. Model all the non-artist records as an appropriate property/relationship of the object or production event:
 		for seq_no, a_data in enumerate(non_artist_assertions):
@@ -1000,10 +1009,18 @@ class AddArtists(ProvenanceBase):
 			a_data = self.model_person_or_group(data, a_data, attribution_group_types, attribution_group_names, seq_no=seq_no, role='NonArtist', sales_record=sales_record)
 			person = get_crom_object(a_data)
 			mods = a_data['modifiers']
+			if 'auth_name' in a_data:
+					if a_data['auth_name'].upper()=='NEW':
+						data['_artists'].append(a_data)
 			attrib_assignment_classes = [model.AttributeAssignment]
 			uncertain = all_uncertain
+			
 			if uncertain or 'or' in mods:
 				if non_artist_group_flag:
+					if 'or' in mods :
+						ident="http://www.cidoc-crm.org/cidoc-crm/P14_carried_out_by"
+						label="carried out by"
+						prod_event.attributed_by = self.helper.create_uncertainty_atribute(person, seq_no, label, ident, data['parent_data'])
 					person.member_of = non_artist_group
 				else:
 					uncertain = True
@@ -1057,6 +1074,7 @@ class AddArtists(ProvenanceBase):
 					
 					prod_event.influenced_by = original_hmo
 				data['_original_objects'].append(add_crom_data(data={'uri': original_id}, what=original_hmo))
+				
 			else:
 				warnings.warn(f'Unrecognized non-artist attribution modifers: {mods}')
 

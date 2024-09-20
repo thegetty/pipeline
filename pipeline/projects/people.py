@@ -225,6 +225,7 @@ class AddPerson(Configurable):
 
 	def new_residence_activity(self, place, group, record):
 		res_act = model.Activity(ident=self.helper.make_proj_uri('Activity',  'establishment', group.id, place.id))
+		import pdb; pdb.set_trace()
 		res_act.took_place_at = place
 		res_type = model.Type(ident='http://vocab.getty.edu/aat/300393212', label="Establishment")
 		location_type = model.Type(ident='http://vocab.getty.edu/aat/300393211', label="Location Activity or State")
@@ -489,8 +490,23 @@ class AddPerson(Configurable):
 			# model professional activity, but not if this record is a generic group.
 			if not self.helper.person_identity.is_anonymous_group(generic_name):
 				for t in types:
-					a = self.helper.person_identity.professional_activity(name, classified_as=[t], **active_args)
-					data['events'].append(a)
+					for sdata in data.get('sojourns', []):
+						if 'active_city' in sdata:
+							active = self.helper.person_identity.professional_activity(name, classified_as=[t])
+							if 'Professional activity' in active._label:
+								if 'tgn' in sdata:
+									place = sdata['tgn']
+								else:
+									place = get_crom_object(sdata.get('place'))
+								
+								active.took_place_at = place
+								if 'timespan' in sdata:
+									dur_ts=  place._label + ':' + sdata['timespan']['address_date']
+									active.timespan=get_crom_object(sdata.get('timespan'))
+							data['events'].append(active)
+						else:
+							active = self.helper.person_identity.professional_activity(name, classified_as=[t], **active_args)
+							data['events'].append(active)
 
 			if self.helper.add_person(data):
 				yield data

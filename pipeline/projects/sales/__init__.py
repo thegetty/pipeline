@@ -169,7 +169,6 @@ class SalesUtilityHelper(UtilityHelper):
 			warnings.warn(f'*** Unexpected sale type: {sale_type!r}')
 
 	def create_uncertainty_atribute(self, seller, agent_seq, label, ident, parent):
-
 		attrib_assignment_classes = [model.AttributeAssignment]
 		prod_event = model.Production(ident=seller.id, label=f'Production event for {seller._label}')
 		attribute_assignment_id =  self.prepend_uri_key(prod_event.id, f'ASSIGNMENT,Seller-{agent_seq}')
@@ -912,8 +911,6 @@ class SalesPipeline(PipelineBase):
 				operations=[
 					{
 						'remove': {
-							'expert_auth_1', 'expert_ulan_1', 'expert_auth_2', 'expert_ulan_2', 'expert_auth_3', 'expert_ulan_3', 'expert_auth_4', 'expert_ulan_4',
-							'commissaire_pr_1', 'comm_ulan_1', 'commissaire_pr_2', 'comm_ulan_2', 'commissaire_pr_3', 'comm_ulan_3', 'commissaire_pr_4', 'comm_ulan_4',
 							'auction_house_1', 'house_ulan_1', 'auction_house_2', 'house_ulan_2', 'auction_house_3', 'house_ulan_3', 'auction_house_4', 'house_ulan_4',
 						},
 						'group_repeating': {

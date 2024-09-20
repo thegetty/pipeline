@@ -382,8 +382,9 @@ class PopulateSalesObject(Configurable, pipeline.linkedart.PopulateObject):
 
 						if not alternate_exists:
 							tgn_instance.identified_by = vocab.AlternateName(ident=self.helper.make_shared_uri(('PLACE',loc)), content=loc)
+						if 'current_location' not in hmo.__dict__:
+							hmo.current_location = tgn_instance
 						
-						hmo.current_location = tgn_instance
 						tgn_instance.referred_to_by = self.select_county(data)
 						owner_place = tgn_instance
 

@@ -134,7 +134,7 @@ class SalesUtilityHelper(UtilityHelper):
 
 	def create_source_attribute_assignment(self, assigned_object, sequence_num, attribution_label, property_assigned_label, property_assigned_id, source, assign):
 		attrib_assignment_classes = [model.AttributeAssignment]
-	
+
 		prod_id = self.make_shared_uri('Production', 'Assignment', 'Source', assigned_object.id )
 		prod_event = model.Production(ident=prod_id, label=f'Production event for {assigned_object._label}')
 		attribute_assignment_id =  self.prepend_uri_key(prod_event.id, f'ASSIGNMENT,Source-{assigned_object.id}-{sequence_num}-{source.id}')
@@ -178,7 +178,7 @@ class SalesUtilityHelper(UtilityHelper):
 		assignment.assigned_property = model.Type(ident=ident, label=label)
 		assignment.assigned = seller
 		return assignment
-	
+
 	def set_type_name_for_sale_type(self, sale_type):
 		if sale_type in ('Private Contract Sale', 'Stock List', 'Collection Catalog'):
 			return 'Object Set'
@@ -270,7 +270,7 @@ class SalesUtilityHelper(UtilityHelper):
 			return None
 		label = ', '.join(labels)
 		return label
-		
+
 	def physical_catalog(self, cno, sale_type, owner=None, copy=None, add_name=False):
 		uri = self.physical_catalog_uri(cno, owner, copy)
 		label = self.physical_catalog_label(cno, sale_type, owner, copy)
@@ -409,7 +409,7 @@ class SalesUtilityHelper(UtilityHelper):
 			auth_name = data.get('auth_name')
 		elif 'sell_auth_name' in data :
 			auth_name = data.get('sell_auth_name')
-		
+
 		if ulan:
 			return ('HOUSE', 'ULAN', ulan)
 		elif auth_name not in self.ignore_house_authnames:
@@ -497,7 +497,7 @@ def add_crom_price(data, parent, services, add_citations=False):
 
 	verbatim = []
 
-	if '[?]' in data.get('price', '') or '[or]' in data.get('price', '') or '[?]' in data.get('currency', '') or '[or]' in data.get('currency', ''):
+	if data.get("price") or data.get("currency"):
 		data['full'] = f'{data.get("price", "")} {data.get("currency", "")}'.strip()
 	for k in ('price', 'est_price', 'start_price', 'ask_price'):
 		# Each data record can only have one of these. We put the decimalized
@@ -514,7 +514,7 @@ def add_crom_price(data, parent, services, add_citations=False):
 						pr_array = price.split(' [or] ')
 					else:
 						pr_array.append(price)
-					
+
 					for price in pr_array:
 						currency = data['currency']
 						if '[or]' in currency:
@@ -570,10 +570,10 @@ class SalesPipeline(PipelineBase):
 		vocab.register_instance('act of returning', {'parent': model.Type, 'id': '300438467', 'label': 'Returning'})
 		vocab.register_instance('act of completing sale', {'parent': model.Type, 'id': '300448858', 'label': 'Act of Completing Sale'})
 		vocab.register_instance('qualifier', {'parent': model.Type, 'id': '300435720', 'label': 'Qualifier'})
-		vocab.register_instance('form type', {'parent': model.Type, 'id': '300444970', 'label': 'Form'})		
+		vocab.register_instance('form type', {'parent': model.Type, 'id': '300444970', 'label': 'Form'})
 		vocab.register_instance('buyer description', {'parent': model.Type, 'id': '300445024', 'label': 'Buyer description'})
 		vocab.register_instance('seller description', {'parent': model.Type, 'id': '300445025', 'label': 'Seller description'})
-		
+
 		vocab.register_instance('fire', {'parent': model.Type, 'id': '300068986', 'label': 'Fire'})
 		vocab.register_instance('animal', {'parent': model.Type, 'id': '300249395', 'label': 'Animal'})
 		vocab.register_instance('history', {'parent': model.Type, 'id': '300033898', 'label': 'History'})
@@ -586,7 +586,7 @@ class SalesPipeline(PipelineBase):
 		vocab.register_vocab_class('EntryNumber', {"parent": model.Identifier, "id":"300445023", "label": "Entry Number"})
 		vocab.register_vocab_class('PageNumber', {"parent": model.Identifier, "id":"300445022", "label": "Page Number"})
 		vocab.register_vocab_class('OrderNumber', {"parent": model.Identifier, "id":"300247348", "label": "Order"})
-		
+
 		vocab.register_vocab_class('BookNumber', {"parent": model.Identifier, "id":"300445021", "label": "Book Number"})
 		vocab.register_vocab_class('PageTextForm', {"parent": model.LinguisticObject, "id":"300194222", "label": "Page", "metatype": "form type"})
 		vocab.register_vocab_class('EntryTextForm', {"parent": model.LinguisticObject, "id":"300438434", "label": "Entry", "metatype": "form type"})
@@ -594,7 +594,7 @@ class SalesPipeline(PipelineBase):
 		vocab.register_vocab_class('CatalogForm', {"parent": model.LinguisticObject, "id":"300026059", "label": "Catalog", "metatype": "form type"})
 
 		vocab.register_vocab_class('SalePrice', {"parent": model.MonetaryAmount, "id":"300417246", "label": "Sale Price"})
-				
+
 		super().__init__(project_name, helper=helper)
 
 		self.graph_0 = None
@@ -648,10 +648,10 @@ class SalesPipeline(PipelineBase):
 		services['tgn'] = tgn_places
 		services['sales_tgn'] = sales_tgn
 
-		# Register description tgn files as services 
+		# Register description tgn files as services
 		tgn_places_descr = services.get('tgn_descriptions', {})
 		sales_tgn_descr = services.get('sales_descriptions_tgn', {})
-		
+
 		services['tgn_descr'] = tgn_places_descr
 		services['sales_tgn_descr'] = sales_tgn_descr
 
@@ -703,18 +703,18 @@ class SalesPipeline(PipelineBase):
 			places[tgn_id] = tgn_data
 		for tgn_id, tgn_data in tgn_places_descr.items():
 			places_descr[tgn_id] = tgn_data
-		
-		start = timeit.default_timer()	
+
+		start = timeit.default_timer()
 		print("Started the tranformation of Static Places Instances...")
 		for tgn_id, tgn_data in places.items():
-			tgn_id = tgn_data.get('tgn_id')		
-					
+			tgn_id = tgn_data.get('tgn_id')
+
 			place = make_tgn_place(tgn_data, self.helper.make_shared_uri, tgn_places)
 			instances[tgn_id] = place
 
 		for tgn_id, tgn_data in places_descr.items():
-			tgn_id = tgn_data.get('tgn_id')		
-					
+			tgn_id = tgn_data.get('tgn_id')
+
 			place = make_tgn_place(tgn_data, self.helper.make_shared_uri, tgn_places_descr)
 			instances_descr[tgn_id] = place
 		print(f"Completed in {timeit.default_timer() - start}")
@@ -974,7 +974,6 @@ class SalesPipeline(PipelineBase):
 							'price': {
 								'rename_keys': {
 									'price_amount': 'price',
-									'price_amount_q': 'uncertain',
 									'price_currency': 'currency',
 									'price_note': 'note',
 									'price_source': 'source',
@@ -983,7 +982,6 @@ class SalesPipeline(PipelineBase):
 								'postprocess': lambda d, p: add_crom_price(d, p, services, add_citations=True),
 								'prefixes': (
 									'price_amount',
-									'price_amount_q',
 									'price_currency',
 									'price_note',
 									'price_source',
@@ -1033,7 +1031,7 @@ class SalesPipeline(PipelineBase):
 									'prev_own_ulan': 'own_ulan'
 								},
  								'postprocess': lambda d, p: associate_with_tgn_record_sales(d, p, services['sales_tgn'],"own_auth_L"),
-								
+
 								# [
 								#	lambda d, p: associate_with_tgn_record(d, p, services['sales_tgn'],"prev_own_auth_l")
  								#	lambda x, _: replace_key_pattern(r'(prev_owner)', 'prev_own', x),
@@ -1635,7 +1633,7 @@ class SalesFilePipeline(SalesPipeline):
 # 		for k in sorted(services.keys(), key=lambda k: sizes[k]):
 # 			print(f'{k:<20}  {sizes[k]}')
 # 		objgraph.show_most_common_types(limit=50)
-		
+
 		print('Record counts:')
 		for k, v in services['counts'].items():
 			print(f'{v:<10} {k}')

@@ -524,11 +524,11 @@ class PersonIdentity:
 			data.setdefault('label', auth_name)
 			
 			pname = vocab.make_multitype_obj(*name_types, ident='', content=auth_name) # NOTE: most of these are also vocab.SortName, but not 100%, so witholding that assertion for now
-			if isinstance(referrer, list):
-				for r in referrer:
-					pname.referred_to_by = r
-			elif referrer:
-				pname.referred_to_by = referrer
+			# if isinstance(referrer, list):
+			# 	for r in referrer:
+			# 		pname.referred_to_by = r
+			# elif referrer:
+			# 	pname.referred_to_by = referrer
 			data['identifiers'].append(pname)
 
 		else:

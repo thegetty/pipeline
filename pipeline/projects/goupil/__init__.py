@@ -1252,7 +1252,6 @@ class GoupilTransactionHandler(TransactionHandler):
         else:
             dir_label = "Goupil Purchase" if incoming else "Goupil Sale"
         # We have a different way of creating the uri, becuases there are multiple rows in each entry and we don't want to create multiple Acquisition events
-        
         tx_uri = tx.id
         acq_id = tx_uri + "-Acquisition"
         acq = model.Acquisition(ident=acq_id)
@@ -1306,7 +1305,6 @@ class GoupilTransactionHandler(TransactionHandler):
 
         amnt = get_crom_object(price_info)
         goupil_price_part_amnt = get_crom_object(goupil_price_part)
-
         parts = [(goupil, goupil_price_part_amnt)]
         if shared_people:
             role = "shared-buyer" if incoming else "shared-seller"
@@ -1447,9 +1445,8 @@ class GoupilTransactionHandler(TransactionHandler):
         tx = self._empty_tx(data, incoming, purpose=purpose)
         tx_uri = tx.id
         tx_data = add_crom_data(data={"uri": tx_uri}, what=tx)
-        
         if date_key:
-            self.set_date(tx, data, "entry_date")
+            self.set_date(tx, data, date_key)
 
         role = "seller" if incoming else "buyer"
 
@@ -1523,12 +1520,12 @@ class GoupilTransactionHandler(TransactionHandler):
                 # loc_verbatim = p_data.get("location")
                 # if loc_verbatim:
                 #     tx.referred_to_by = vocab.Note(content=loc_verbatim)
-            for place in data['_locations']:
+            
                 #self.person_sojourn(p_data, place, data)
-                if THROUGH.intersects(mod):
-                    people_agents.append(person)
-                else:
-                    people.append(person)
+            if THROUGH.intersects(mod):
+                people_agents.append(person)
+            else:
+                people.append(person)
 
         goupil_group = [self.helper.static_instances.get_instance("Group", "goupil")]
         goupil_group_agents = []
@@ -1616,7 +1613,7 @@ class GoupilTransactionHandler(TransactionHandler):
         return json
 
     def add_incoming_tx(self, data, buy_sell_modifiers, people_groups=None):
-        price_info = data.get("purchase")
+        price_info = data.get("cost")
         shared_people = data.get("shared_buyer")
         sellers = data["purchase_seller"]
 
@@ -1628,12 +1625,14 @@ class GoupilTransactionHandler(TransactionHandler):
         tx = self._prov_entry(data, "entry_date", sellers, price_info, shared_people=shared_people, incoming=True, purpose = purpose, buy_sell_modifiers=buy_sell_modifiers, people_groups=people_groups)
         prev_owners = []
         lot_object_key = self.helper.transaction_key_for_record(data, incoming=True)
-        for i in range(1, 8):
+        # for i in range(1, 8):
 
-            if data.get("prev_own_"+str(i), {}):
-                prev_owners.append(self.creat_json_list(data, i))
+        #     if data.get("prev_own_"+str(i), {}):
+        #         prev_owners.append(self.creat_json_list(data, i))
         #out_tx = self._prov_entry(data, "entry_date", sellers, price_info, shared_people=shared_people, incoming=True, buy_sell_modifiers=buy_sell_modifiers, people_groups=people_groups)
-
+        
+        #if want the extra information i add it
+        #prev_owners = data.get('prev_own', [])
         if prev_owners:
             self.model_prev_owners(data, prev_owners, tx, lot_object_key)
 
@@ -1641,7 +1640,6 @@ class GoupilTransactionHandler(TransactionHandler):
 
     def model_prev_owners(self, data, prev_owners, tx, lot_object_key):
         sales_record = get_crom_object(data['_records'][0])
-
         for i, p in enumerate(prev_owners):
 
             role = 'prev_own'
@@ -1749,9 +1747,8 @@ class ModelSale(GoupilTransactionHandler):
        # cities_auth_db=None,
     ):
         sellers = data["purchase_seller"]
-        
         if not in_tx:
-            if len(sellers):
+            if len(sellers) or (data['book_record']['transaction_verbatim']=='Vendu' and int(data['book_record']['goupil_event_ord']) == 1):
                 in_tx = self.add_incoming_tx(data, buy_sell_modifiers, people_groups)
             # if there are no sellers or there is a maintenance cost create an ivnentorying event
             else:
@@ -1812,46 +1809,75 @@ class ModelInventorying(GoupilTransactionHandler):
     helper = Option(required=True)
     make_la_person = Service("make_la_person")
     buy_sell_modifiers = Service("buy_sell_modifiers")
+    people_groups = Service("people_groups")
    # cities_auth_db = Service("cities_auth_db")
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.uid_tag_prefix = self.helper.proj_prefix
 
-    def __call__(self, data: dict, make_la_person, buy_sell_modifiers): #, cities_auth_db):
+    def __call__(self, data: dict, make_la_person, buy_sell_modifiers, people_groups): #, cities_auth_db):
 
         sellers = data["purchase_seller"]
-        if len(sellers) > 0:
+        if len(sellers) > 0 :
             # if there are sellers in this record (and it is "Unsold" by design of the caller),
             # then this is not an actual Inventorying event, and handled in ModelUnsoldPurchases
             return
-
-        inv = self._new_inventorying(data)
-        appraisal = self._apprasing_assignment(data)
-        inv_label = inv._label
-        tx_out = self._empty_tx(data, incoming=False)
-        tx_out._label = inv_label
-        tx_out.identified_by = model.Name(ident="", content=inv_label)
-        self.set_date(tx_out, data, "entry_date")
-
-        tx_out.part = inv
-
-        if appraisal:
-            tx_out.part = appraisal
-
-        tx_out_data = add_crom_data(data={"uri": tx_out.id, "label": inv_label}, what=tx_out)
-
-        data["_prov_entries"].append(tx_out_data)
-
+        if  int(data['book_record']['goupil_event_ord']) > 1:
+            inv = self._new_inventorying(data)
+            appraisal = self._apprasing_assignment(data)
+            inv_label = inv._label
+            in_tx = self._empty_tx(data, incoming=True)
+            in_tx.part = inv
+            if appraisal:
+                in_tx.part = appraisal
+            in_tx.identified_by = model.Name(ident="", content=inv_label)
+            in_tx._label = inv_label
+            in_tx_data = add_crom_data(data={"uri": in_tx.id, "label": inv_label}, what=in_tx)
+            data["_prov_entries"].append(in_tx_data)
+        else:
+            in_tx = self.add_incoming_tx(data, buy_sell_modifiers, people_groups)
+        
         purch_loc_note = data["purchase"].get("location_note")
         purch_loc = data["purchase"].get("location")
-        tx_out = self.helper.add_transaction_place(tx_out, purch_loc_note, data)
-        tx_out = self.helper.add_transaction_place(tx_out, purch_loc, data)
-
+        
+        in_tx = self.helper.add_transaction_place(in_tx, purch_loc, data)
+        
+        in_tx = self.helper.add_transaction_place(in_tx, purch_loc_note, data)
+        
+        
         for seller in sellers:
+            #self.person_sojourn(seller, seller.get("location"), data)
             seller = self.helper.add_person_residence(seller, seller.get("loc"), data)
-            tx_out = self.helper.add_transaction_place(tx_out, seller.get("location"), data)
+            in_tx = self.helper.add_transaction_place(in_tx, seller.get("location"), data)
+            
+        
         yield data
+        # appraisal = self._apprasing_assignment(data)
+        # inv_label = inv._label
+        # tx_out = self._empty_tx(data, incoming=False)
+        # tx_out._label = inv_label
+        # tx_out.identified_by = model.Name(ident="", content=inv_label)
+        # self.set_date(tx_out, data, "entry_date")
+
+        # tx_out.part = inv
+
+        # if appraisal:
+        #     tx_out.part = appraisal
+
+        # tx_out_data = add_crom_data(data={"uri": tx_out.id, "label": inv_label}, what=tx_out)
+
+        # data["_prov_entries"].append(tx_out_data)
+
+        # purch_loc_note = data["purchase"].get("location_note")
+        # purch_loc = data["purchase"].get("location")
+        # tx_out = self.helper.add_transaction_place(tx_out, purch_loc_note, data)
+        # tx_out = self.helper.add_transaction_place(tx_out, purch_loc, data)
+
+        # for seller in sellers:
+        #     seller = self.helper.add_person_residence(seller, seller.get("loc"), data)
+        #     tx_out = self.helper.add_transaction_place(tx_out, seller.get("location"), data)
+        # yield data
 
 
 class ModelTheftOrLoss(GoupilTransactionHandler):

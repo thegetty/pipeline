@@ -251,8 +251,11 @@ $(GETTY_PIPELINE_TMP_PATH)/knoedler.pdf: $(GETTY_PIPELINE_TMP_PATH)/knoedler.dot
 goupil: goupildata jsonlist
 	cat $(GETTY_PIPELINE_TMP_PATH)/json_files.txt | PYTHONPATH=`pwd` $(PYTHON) ./scripts/generate_metadata_graph.py goupil
 
-goupildata: goupilpipeline goupilpostprocessing
+goupildata: goupilpreprocessing goupilpipeline goupilpostprocessing
 	find $(GETTY_PIPELINE_OUTPUT) -type d -empty -delete
+
+goupilpreprocessing:
+	$(PYTHON) ./scripts/preprocess_goupil_event_order.py
 
 goupilpipeline:
 	mkdir -p $(GETTY_PIPELINE_TMP_PATH)/pipeline

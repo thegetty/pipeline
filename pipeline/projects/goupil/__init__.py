@@ -309,8 +309,14 @@ class GoupilUtilityHelper(SharedUtilityHelper):
         return super().stock_number_identifier(data, date, stock_data_key="pi_record_no")
 
     def add_person(self, data, record: None, relative_id, **kwargs):
+        
         self.person_identity.add_uri(data, record_id=relative_id)
+
         person = super().add_person(data, record=record, relative_id=relative_id, **kwargs)
+        # import pdb; pdb.set_trace()
+        # if '' in person._label:
+        #     data['_LOD_OBJECT']._label = data['uri_keys'][2]
+        #     person._label=
         if data.get("auth_name"):
             for identifier in person.identified_by:
                 if isinstance(identifier, vocab.PrimaryName):
@@ -863,6 +869,32 @@ class AddRows(Configurable, GoupilProvenance):
     def __call__(self, data: dict, make_la_lo, make_la_hmo, transaction_classification):
         pages = data.get("_text_pages", [])
         data.setdefault("_records", [])
+        notes = []
+        
+        for k in ("working_note", "verbatim_notes", "editor_notes", "no_name_notes"):
+           if data["book_record"].get(k):
+                
+                if k=='working_note':
+                    import pdb; pdb.set_trace()
+                    note = vocab.Note(ident="", content=data["book_record"][k])
+                    note.classified_as = model.Type(ident="https://vocab.getty.edu/aat/300265639", label=k)
+                    notes.append(note)
+                elif k=='verbatim_notes':
+                    import pdb; pdb.set_trace()
+                    note = vocab.Note(ident="", content=data["book_record"][k])
+                    note.classified_as = model.Type(ident="https://vocab.getty.edu/aat/300456607", label=k)
+                    notes.append(note)
+                elif k=='editor_notes':
+                    import pdb; pdb.set_trace()
+                    note = vocab.Note(ident="", content=data["book_record"][k])
+                    note.classified_as = model.Type(ident="https://vocab.getty.edu/aat/300435416", label=k)
+                    notes.append(note)
+                elif k=='no_name_notes':
+                    import pdb; pdb.set_trace()
+                    note = vocab.Note(ident="", content=data["book_record"][k])
+                    note.classified_as = model.Type(ident="https://vocab.getty.edu/aat/300435415", label=k)
+                    notes.append(note)
+        
 
         # notes = []
         #for k in ("working_note", "verbatim_notes", "editor notes", "no_name_notes"):
@@ -915,8 +947,8 @@ class AddRows(Configurable, GoupilProvenance):
                     self.helper.goupil_gpi_number_id(data["pi_record_no"], vocab.StarNumber),
                     # self.helper.static_instances.get_instance('LinguisticObject', 'db-goupil')
                 ],
-                "also_found_on": transctiption
-               # "referred_to_by": notes,
+                "also_found_on": transctiption,
+                "referred_to_by": notes
                 # "part_of": [self.helper.static_instances.get_instance('LinguisticObject', 'db-goupil')]
             }
             row.update(
@@ -946,6 +978,7 @@ class AddRows(Configurable, GoupilProvenance):
             # self.add_goupil_creation_data(row)
             trans_creation = self.add_goupil_creation_data(row)
             date = implode_date(data['entry_date'])
+            
             if date:
                 begin_date = implode_date(data['entry_date'], clamp='begin')
                 end_date = implode_date(data['entry_date'], clamp='end')
@@ -1001,7 +1034,6 @@ class GoupilTransactionHandler(TransactionHandler):
         act.classified_as = model.Type(
             ident="http://vocab.getty.edu/aat/300393212", label="establishment (action or condition)"
         )
-        import pdb; pdb.set_trace()
 
         person = get_crom_object(p_data)
         if isinstance(sojourn, str):
@@ -1097,14 +1129,15 @@ class GoupilTransactionHandler(TransactionHandler):
         return None
 
     def _new_inventorying(self, data):
+        
         odata = data["_object"]
         date = implode_date(data["entry_date"])
 
         hmo = get_crom_object(odata)
         sn_ident = self.helper.stock_number_identifier(odata, date)
         inv_label = f"Goupil Inventorying of {sn_ident}"
-
         records = data["_records"]
+        
         book_id = page_id = row_id = ""
 
         for rec in records:
@@ -1112,13 +1145,12 @@ class GoupilTransactionHandler(TransactionHandler):
             book_id += rec["stock_book_no"]
             page_id += rec["page_number"]
             row_id += rec["row_number"]
-
         inv_uri = self.helper.make_proj_uri("INV", book_id, page_id, row_id)
         inv = vocab.Inventorying(ident=inv_uri, label=inv_label)
         inv.identified_by = model.Name(ident="", content=inv_label)
         inv.encountered = hmo
         inv.carried_out_by = self.helper.static_instances.get_instance("Group", "goupil")
-        self.set_date(inv, data, "entry_date")
+        #self.set_date(inv, data, "entry_date")
 
         return inv
 
@@ -1149,7 +1181,7 @@ class GoupilTransactionHandler(TransactionHandler):
     def _empty_tx(self, data, incoming=False, purpose=None):
         tx_uri = self.helper.transaction_uri_for_record(data, incoming)
         tx_type = data.get("book_record", {}).get("transaction", "Sold")
-        if purpose == "Returning":
+        if purpose == "Returning" or purpose == "cancel":
             tx = vocab.make_multitype_obj(vocab.SaleAsReturn, vocab.ProvenanceEntry, ident=tx_uri)
         elif purpose== "Exchange":
             tx = vocab.make_multitype_obj(vocab.Exchange, vocab.ProvenanceEntry, ident=tx_uri)
@@ -1245,6 +1277,8 @@ class GoupilTransactionHandler(TransactionHandler):
         dir = "In" if incoming else "Out"
         if purpose == "Returning":
             dir_label = "Goupil return"
+        elif purpose == "cancel":
+            dir_label = "Goupil cancel"
         elif purpose == "Exchange":
             dir_label = "Goupil exchange"
         elif purpose == "Gift":
@@ -1252,11 +1286,9 @@ class GoupilTransactionHandler(TransactionHandler):
         else:
             dir_label = "Goupil Purchase" if incoming else "Goupil Sale"
         # We have a different way of creating the uri, becuases there are multiple rows in each entry and we don't want to create multiple Acquisition events
-        
         tx_uri = tx.id
         acq_id = tx_uri + "-Acquisition"
         acq = model.Acquisition(ident=acq_id)
-
         sn_ident = self.helper.stock_number_identifier(data["_object"], date)
         name = f"{dir_label} of {sn_ident}"
         tx.identified_by = model.Name(ident="", content=name)
@@ -1306,9 +1338,8 @@ class GoupilTransactionHandler(TransactionHandler):
 
         amnt = get_crom_object(price_info)
         goupil_price_part_amnt = get_crom_object(goupil_price_part)
-
         parts = [(goupil, goupil_price_part_amnt)]
-        if shared_people:
+        if shared_people !=[]:
             role = "shared-buyer" if incoming else "shared-seller"
             for i, p in enumerate(shared_people):
                 person_dict = self.helper.copy_source_information(p, data)
@@ -1359,7 +1390,6 @@ class GoupilTransactionHandler(TransactionHandler):
                         shared_paym.paid_to = person
 
                     paym.part = shared_paym
-
         for person in people:
             if paym:
                 if incoming:
@@ -1445,11 +1475,12 @@ class GoupilTransactionHandler(TransactionHandler):
         date = implode_date(data[date_key]) if date_key in data else None
         sales_records = get_crom_objects(data["_records"])
         tx = self._empty_tx(data, incoming, purpose=purpose)
-        tx_uri = tx.id
-        tx_data = add_crom_data(data={"uri": tx_uri}, what=tx)
         
+        tx_uri = tx.id
+
+        tx_data = add_crom_data(data={"uri": tx_uri}, what=tx)
         if date_key:
-            self.set_date(tx, data, "entry_date")
+            self.set_date(tx, data, date_key)
 
         role = "seller" if incoming else "buyer"
 
@@ -1523,12 +1554,12 @@ class GoupilTransactionHandler(TransactionHandler):
                 # loc_verbatim = p_data.get("location")
                 # if loc_verbatim:
                 #     tx.referred_to_by = vocab.Note(content=loc_verbatim)
-            for place in data['_locations']:
+            
                 #self.person_sojourn(p_data, place, data)
-                if THROUGH.intersects(mod):
-                    people_agents.append(person)
-                else:
-                    people.append(person)
+            if THROUGH.intersects(mod):
+                people_agents.append(person)
+            else:
+                people.append(person)
 
         goupil_group = [self.helper.static_instances.get_instance("Group", "goupil")]
         goupil_group_agents = []
@@ -1543,7 +1574,6 @@ class GoupilTransactionHandler(TransactionHandler):
                 person = self.helper.add_group_or_person(
                     person_dict, relative_id=f"{role}_{i+1}", people_groups=people_groups, data=data
                 )
-
         from_people = []
         from_agents = []
         to_people = []
@@ -1599,7 +1629,10 @@ class GoupilTransactionHandler(TransactionHandler):
             out_tx = self._prov_entry(data, 'entry_date', sellers, sale_info, incoming=False, purpose='Exchange', buy_sell_modifiers=buy_sell_modifiers)
         elif data.get('parent_data').get('Returning') is not None :
             in_tx = self._prov_entry(data, 'entry_date', sellers, purch_info, knoedler_price_part, shared_people, incoming=True, buy_sell_modifiers=buy_sell_modifiers)
-            out_tx = self._prov_entry(data, 'entry_date', sellers, sale_info, incoming=False, purpose='Returning', buy_sell_modifiers=buy_sell_modifiers)
+            if 'Annulé' in data['parent_data']['Returning']['book_record']['transaction_verbatim']:
+                out_tx = self._prov_entry(data, 'entry_date', sellers, sale_info, incoming=False, purpose='cancel', buy_sell_modifiers=buy_sell_modifiers)
+            else:
+                out_tx = self._prov_entry(data, 'entry_date', sellers, sale_info, incoming=False, purpose='Returning', buy_sell_modifiers=buy_sell_modifiers)
         else :
             in_tx = self._prov_entry(data, 'entry_date', sellers, purch_info, knoedler_price_part, shared_people, incoming=True, buy_sell_modifiers=buy_sell_modifiers)
             sellers = data['sale_buyer']
@@ -1616,7 +1649,7 @@ class GoupilTransactionHandler(TransactionHandler):
         return json
 
     def add_incoming_tx(self, data, buy_sell_modifiers, people_groups=None):
-        price_info = data.get("purchase")
+        price_info = data.get("cost")
         shared_people = data.get("shared_buyer")
         sellers = data["purchase_seller"]
 
@@ -1624,16 +1657,48 @@ class GoupilTransactionHandler(TransactionHandler):
             self.helper.copy_source_information(p, data)
         # add transaction 
         purpose = data.get('book_record').get('transaction')
-
-        tx = self._prov_entry(data, "entry_date", sellers, price_info, shared_people=shared_people, incoming=True, purpose = purpose, buy_sell_modifiers=buy_sell_modifiers, people_groups=people_groups)
+        if (int(data['book_record']['goupil_event_ord']) > 1):
+            tx = self._new_inventorying(data)
+            inv_label = tx._label
+            in_tx = self._empty_tx(data, incoming=True)
+            if data['book_record']['last'] == 'True':
+                start = return_start(data['book_record'])
+                saled = 'tag:getty.edu,2019:digital:pipeline:REPLACE-WITH-UUID:goupil#TX,Out,'+data['book_record']['saled']
+            else:
+                
+                start = return_start(data['book_record'])
+                saled = return_before(data['book_record'])
+            #inv.ends_before_the_start_of = out_tx
+            in_tx.starts_after_the_end_of = vocab.ProvenanceEntry(ident=start)
+            in_tx.ends_before_the_start_of = vocab.ProvenanceEntry(ident=saled)
+            in_tx.part = tx
+            #value cost
+            # appraisal = self._apprasing_assignment(data)
+            # if appraisal:
+            #     in_tx.part = appraisal
+            in_tx.identified_by = model.Name(ident="", content=inv_label)
+            
+            in_tx._label = inv_label
+            in_tx.classified_as = model.Type(ident='http://vocab.getty.edu/aat/300077506', label="Inventorying")
+            in_tx_data = add_crom_data(data={"uri": in_tx.id, "label": inv_label}, what=in_tx)
+            data["_prov_entries"].append(in_tx_data)
+        else:
+            
+            tx = self._prov_entry(data, "entry_date", sellers, price_info, shared_people=shared_people, incoming=True, purpose = purpose, buy_sell_modifiers=buy_sell_modifiers, people_groups=people_groups)
+            if data['book_record']['transaction_verbatim']!= 'Vendu':
+                start = return_start(data['book_record'])
+                tx.classified_as = model.Type(ident='http://vocab.getty.edu/aat/300417642', label="Purchase")
+                tx.ends_before_the_start_of = vocab.ProvenanceEntry(ident=start)
         prev_owners = []
         lot_object_key = self.helper.transaction_key_for_record(data, incoming=True)
-        for i in range(1, 8):
+        # for i in range(1, 8):
 
-            if data.get("prev_own_"+str(i), {}):
-                prev_owners.append(self.creat_json_list(data, i))
+        #     if data.get("prev_own_"+str(i), {}):
+        #         prev_owners.append(self.creat_json_list(data, i))
         #out_tx = self._prov_entry(data, "entry_date", sellers, price_info, shared_people=shared_people, incoming=True, buy_sell_modifiers=buy_sell_modifiers, people_groups=people_groups)
-
+        
+        #if want the extra information i add it
+        #prev_owners = data.get('prev_own', [])
         if prev_owners:
             self.model_prev_owners(data, prev_owners, tx, lot_object_key)
 
@@ -1641,7 +1706,6 @@ class GoupilTransactionHandler(TransactionHandler):
 
     def model_prev_owners(self, data, prev_owners, tx, lot_object_key):
         sales_record = get_crom_object(data['_records'][0])
-
         for i, p in enumerate(prev_owners):
 
             role = 'prev_own'
@@ -1749,43 +1813,76 @@ class ModelSale(GoupilTransactionHandler):
        # cities_auth_db=None,
     ):
         sellers = data["purchase_seller"]
-        
         if not in_tx:
-            if len(sellers):
+            
+            if (data['book_record']['transaction_verbatim']=='Vendu' and (int(data['book_record']['goupil_event_ord']) == 1 or data['book_record']['last'] == 'True')):
+                
                 in_tx = self.add_incoming_tx(data, buy_sell_modifiers, people_groups)
+                if 'INV' not in in_tx.id:
+                    in_tx.classified_as = model.Type(ident='http://vocab.getty.edu/aat/300417642', label="Purchase")
+                
             # if there are no sellers or there is a maintenance cost create an ivnentorying event
             else:
                 inv = self._new_inventorying(data)
-                appraisal = self._apprasing_assignment(data)
                 inv_label = inv._label
                 in_tx = self._empty_tx(data, incoming=True)
+                if data['book_record']['last'] == 'True':
+                    start = return_start(data['book_record'])
+                    if data['book_record']['transaction_verbatim'] != "Non vendu":
+                        saled = 'tag:getty.edu,2019:digital:pipeline:REPLACE-WITH-UUID:goupil#TX,Out,'+data['book_record']['saled']
+                else:
+                    start = return_start(data['book_record'])
+                    if data['book_record']['goupil_event_ord'] == "2":
+                        saled = 'tag:getty.edu,2019:digital:pipeline:REPLACE-WITH-UUID:goupil#TX,Out,'+data['book_record']['saled']
+                    else:
+                        saled = return_before(data['book_record'])
+                #inv.ends_before_the_start_of = out_tx
+                in_tx.starts_after_the_end_of = vocab.ProvenanceEntry(ident=start)
+                if data['book_record']['last'] == 'True':
+                    if data['book_record']['transaction_verbatim'] != "Non vendu":
+                        in_tx.ends_before_the_start_of = vocab.ProvenanceEntry(ident=saled)
+                else:
+                    in_tx.ends_before_the_start_of = vocab.ProvenanceEntry(ident=saled)
+                #inv.ends_before_the_start_of = out_tx
+                
+               
                 in_tx.part = inv
+                appraisal = self._apprasing_assignment(data)
                 if appraisal:
                     in_tx.part = appraisal
                 in_tx.identified_by = model.Name(ident="", content=inv_label)
                 in_tx._label = inv_label
+                in_tx.classified_as = model.Type(ident='http://vocab.getty.edu/aat/300077506', label="Inventorying")
                 in_tx_data = add_crom_data(data={"uri": in_tx.id, "label": inv_label}, what=in_tx)
                 data["_prov_entries"].append(in_tx_data)
-        if not out_tx:
-            out_tx = self.add_outgoing_tx(data, buy_sell_modifiers, people_groups)
-        in_tx.ends_before_the_start_of = out_tx
-        out_tx.starts_after_the_end_of = in_tx
-        purch_loc_note = data["purchase"].get("location_note")
-        purch_loc = data["purchase"].get("location")
-        
-        in_tx = self.helper.add_transaction_place(in_tx, purch_loc, data)
-        out_tx = self.helper.add_transaction_place(out_tx, purch_loc, data)
+        if data['book_record']['last'] != 'True' and int(data['book_record']['goupil_event_ord']) > 1:
+            yield data
+        else:
+            if not out_tx:
+                out_tx = self.add_outgoing_tx(data, buy_sell_modifiers, people_groups)
+                out_tx.classified_as = model.Type(ident='http://vocab.getty.edu/aat/300417642', label="Purchase")
 
-        in_tx = self.helper.add_transaction_place(in_tx, purch_loc_note, data)
-        out_tx = self.helper.add_transaction_place(out_tx, purch_loc_note, data)
-        
-        for seller in sellers:
-            #self.person_sojourn(seller, seller.get("location"), data)
-            seller = self.helper.add_person_residence(seller, seller.get("loc"), data)
-            in_tx = self.helper.add_transaction_place(in_tx, seller.get("location"), data)
-            out_tx = self.helper.add_transaction_place(out_tx, seller.get("location"), data)
-        
-        yield data
+            in_tx.ends_before_the_start_of = out_tx
+            #out_tx.starts_after_the_end_of = in_tx
+            start ='tag:getty.edu,2019:digital:pipeline:REPLACE-WITH-UUID:goupil#TX,In,'+data['book_record']['saled']
+            out_tx.starts_after_the_end_of = vocab.ProvenanceEntry(ident=start)
+            purch_loc_note = data["purchase"].get("location_note")
+            purch_loc = data["purchase"].get("location")
+            
+            in_tx = self.helper.add_transaction_place(in_tx, purch_loc, data)
+            out_tx = self.helper.add_transaction_place(out_tx, purch_loc, data)
+
+            in_tx = self.helper.add_transaction_place(in_tx, purch_loc_note, data)
+            out_tx = self.helper.add_transaction_place(out_tx, purch_loc_note, data)
+            
+            for seller in sellers:
+                #self.person_sojourn(seller, seller.get("location"), data)
+                if 'INV' not in in_tx.id:
+                    seller = self.helper.add_person_residence(seller, seller.get("loc"), data)
+                    in_tx = self.helper.add_transaction_place(in_tx, seller.get("location"), data)
+                out_tx = self.helper.add_transaction_place(out_tx, seller.get("location"), data)
+            
+            yield data
 
 class ModelReturn(ModelSale):
     helper = Option(required=True)
@@ -1808,50 +1905,163 @@ class ModelReturn(ModelSale):
         
         yield from super().__call__(data, make_la_person, buy_sell_modifiers, transaction_classification,in_tx=in_tx, out_tx=out_tx)
 
+def return_start(data):
+    start =""
+    print("stddddddd, ", data['goupil_object_id'], "number ", data['goupil_event_ord'])
+    if data['goupil_event_ord'] == '1' and 'two' in data:
+        start= 'tag:getty.edu,2019:digital:pipeline:REPLACE-WITH-UUID:goupil#TX,In,'+data['two']
+    else:   
+        if data['goupil_event_ord'] == '2':
+            start= 'tag:getty.edu,2019:digital:pipeline:REPLACE-WITH-UUID:goupil#TX,In,'+data['start']
+        elif data['goupil_event_ord'] == '3':
+            if 'two' in data:
+                start= 'tag:getty.edu,2019:digital:pipeline:REPLACE-WITH-UUID:goupil#TX,In,'+data['two']
+            else: start= 'tag:getty.edu,2019:digital:pipeline:REPLACE-WITH-UUID:goupil#TX,In,'+data['start']
+        elif data['goupil_event_ord'] == '4':
+            if 'three' in data:
+                start= 'tag:getty.edu,2019:digital:pipeline:REPLACE-WITH-UUID:goupil#TX,In,'+data['three']
+            else: start= 'tag:getty.edu,2019:digital:pipeline:REPLACE-WITH-UUID:goupil#TX,In,'+data['start']
+        elif data['goupil_event_ord'] == '5':
+            if 'four' in data:
+                start= 'tag:getty.edu,2019:digital:pipeline:REPLACE-WITH-UUID:goupil#TX,In,'+data['four']
+            else: start= 'tag:getty.edu,2019:digital:pipeline:REPLACE-WITH-UUID:goupil#TX,In,'+data['start']
+        if data['goupil_event_ord'] == '6':
+            if 'five' in data:
+                start= 'tag:getty.edu,2019:digital:pipeline:REPLACE-WITH-UUID:goupil#TX,In,'+data['five']
+            else: start= 'tag:getty.edu,2019:digital:pipeline:REPLACE-WITH-UUID:goupil#TX,In,'+data['start']
+        elif data['goupil_event_ord'] == '7':
+            if 'six' in data:
+                start= 'tag:getty.edu,2019:digital:pipeline:REPLACE-WITH-UUID:goupil#TX,In,'+data['six']
+            else: start= 'tag:getty.edu,2019:digital:pipeline:REPLACE-WITH-UUID:goupil#TX,In,'+data['start']
+        elif data['goupil_event_ord'] == '8':
+            start= 'tag:getty.edu,2019:digital:pipeline:REPLACE-WITH-UUID:goupil#TX,In,'+data['seven']
+    return start
+    
+def return_before(data):
+    try:
+        before =""
+        if data['goupil_event_ord'] == '2':
+            if 'three' in data:
+                before= 'tag:getty.edu,2019:digital:pipeline:REPLACE-WITH-UUID:goupil#TX,In,'+data['three']
+            else:
+                before= 'tag:getty.edu,2019:digital:pipeline:REPLACE-WITH-UUID:goupil#TX,In,'+data['saled']
+        elif data['goupil_event_ord'] == '3':
+            if 'four' in data:
+                before= 'tag:getty.edu,2019:digital:pipeline:REPLACE-WITH-UUID:goupil#TX,In,'+data['four']
+            else: before= 'tag:getty.edu,2019:digital:pipeline:REPLACE-WITH-UUID:goupil#TX,In,'+data['saled']
+        elif data['goupil_event_ord'] == '4':
+            if 'five' in data:
+                before= 'tag:getty.edu,2019:digital:pipeline:REPLACE-WITH-UUID:goupil#TX,In,'+data['five']
+            else:
+                before= 'tag:getty.edu,2019:digital:pipeline:REPLACE-WITH-UUID:goupil#TX,In,'+data['saled']
+        elif data['goupil_event_ord'] == '5':
+            if 'six' in data:
+                before= 'tag:getty.edu,2019:digital:pipeline:REPLACE-WITH-UUID:goupil#TX,In,'+data['six']
+            else: before= 'tag:getty.edu,2019:digital:pipeline:REPLACE-WITH-UUID:goupil#TX,In,'+data['saled']
+        if data['goupil_event_ord'] == '6':
+            if 'seven' in data:
+                before= 'tag:getty.edu,2019:digital:pipeline:REPLACE-WITH-UUID:goupil#TX,In,'+data['seven']
+            else: before= 'tag:getty.edu,2019:digital:pipeline:REPLACE-WITH-UUID:goupil#TX,In,'+data['saled']
+        elif data['goupil_event_ord'] == '7':
+            before= 'tag:getty.edu,2019:digital:pipeline:REPLACE-WITH-UUID:goupil#TX,In,'+data['saled']
+        return before
+    except Exception as e:
+        print("ddd")
+
 class ModelInventorying(GoupilTransactionHandler):
     helper = Option(required=True)
     make_la_person = Service("make_la_person")
     buy_sell_modifiers = Service("buy_sell_modifiers")
+    people_groups = Service("people_groups")
    # cities_auth_db = Service("cities_auth_db")
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.uid_tag_prefix = self.helper.proj_prefix
-
-    def __call__(self, data: dict, make_la_person, buy_sell_modifiers): #, cities_auth_db):
+    
+    def __call__(self, data: dict, make_la_person, buy_sell_modifiers, people_groups): #, cities_auth_db):
 
         sellers = data["purchase_seller"]
-        if len(sellers) > 0:
+        if len(sellers) > 0 :
             # if there are sellers in this record (and it is "Unsold" by design of the caller),
             # then this is not an actual Inventorying event, and handled in ModelUnsoldPurchases
             return
-
-        inv = self._new_inventorying(data)
-        appraisal = self._apprasing_assignment(data)
-        inv_label = inv._label
-        tx_out = self._empty_tx(data, incoming=False)
-        tx_out._label = inv_label
-        tx_out.identified_by = model.Name(ident="", content=inv_label)
-        self.set_date(tx_out, data, "entry_date")
-
-        tx_out.part = inv
-
-        if appraisal:
-            tx_out.part = appraisal
-
-        tx_out_data = add_crom_data(data={"uri": tx_out.id, "label": inv_label}, what=tx_out)
-
-        data["_prov_entries"].append(tx_out_data)
+        if  int(data['book_record']['goupil_event_ord']) > 1:
+            inv = self._new_inventorying(data)
+            inv_label = inv._label
+            in_tx = self._empty_tx(data, incoming=True)
+            
+            if data['book_record']['last'] == 'True':
+                start = return_start(data['book_record'])
+                if data['book_record']['transaction_verbatim'] != "Non vendu":
+                    saled = 'tag:getty.edu,2019:digital:pipeline:REPLACE-WITH-UUID:goupil#TX,Out,'+data['book_record']['saled']
+            else:
+                start = return_start(data['book_record'])
+                saled = return_before(data['book_record'])
+            
+            #inv.ends_before_the_start_of = out_tx
+            in_tx.starts_after_the_end_of = vocab.ProvenanceEntry(ident=start)
+            if data['book_record']['last'] == 'True':
+                if data['book_record']['transaction_verbatim'] != "Non vendu":
+                    in_tx.ends_before_the_start_of = vocab.ProvenanceEntry(ident=saled)
+            else:
+                in_tx.ends_before_the_start_of = vocab.ProvenanceEntry(ident=saled)
+            in_tx.part = inv
+            # appraisal = self._apprasing_assignment(data)
+            # if appraisal:
+            #     in_tx.part = appraisal
+            in_tx.identified_by = model.Name(ident="", content=inv_label)
+            in_tx._label = inv_label
+            in_tx.classified_as = model.Type(ident='http://vocab.getty.edu/aat/300077506', label="Inventorying")
+            in_tx_data = add_crom_data(data={"uri": in_tx.id, "label": inv_label}, what=in_tx)
+            data["_prov_entries"].append(in_tx_data)
+        else:
+            in_tx = self.add_incoming_tx(data, buy_sell_modifiers, people_groups)
+            if len(in_tx.classified_as)==1:
+                in_tx.classified_as = model.Type(ident='http://vocab.getty.edu/aat/300417642', label="Purchase")
+            
+            
 
         purch_loc_note = data["purchase"].get("location_note")
         purch_loc = data["purchase"].get("location")
-        tx_out = self.helper.add_transaction_place(tx_out, purch_loc_note, data)
-        tx_out = self.helper.add_transaction_place(tx_out, purch_loc, data)
-
+        
+        in_tx = self.helper.add_transaction_place(in_tx, purch_loc, data)
+        
+        in_tx = self.helper.add_transaction_place(in_tx, purch_loc_note, data)
+        
+        
         for seller in sellers:
+            #self.person_sojourn(seller, seller.get("location"), data)
             seller = self.helper.add_person_residence(seller, seller.get("loc"), data)
-            tx_out = self.helper.add_transaction_place(tx_out, seller.get("location"), data)
+            in_tx = self.helper.add_transaction_place(in_tx, seller.get("location"), data)
+            
+        
         yield data
+        # appraisal = self._apprasing_assignment(data)
+        # inv_label = inv._label
+        # tx_out = self._empty_tx(data, incoming=False)
+        # tx_out._label = inv_label
+        # tx_out.identified_by = model.Name(ident="", content=inv_label)
+        # self.set_date(tx_out, data, "entry_date")
+
+        # tx_out.part = inv
+
+        # if appraisal:
+        #     tx_out.part = appraisal
+
+        # tx_out_data = add_crom_data(data={"uri": tx_out.id, "label": inv_label}, what=tx_out)
+
+        # data["_prov_entries"].append(tx_out_data)
+
+        # purch_loc_note = data["purchase"].get("location_note")
+        # purch_loc = data["purchase"].get("location")
+        # tx_out = self.helper.add_transaction_place(tx_out, purch_loc_note, data)
+        # tx_out = self.helper.add_transaction_place(tx_out, purch_loc, data)
+
+        # for seller in sellers:
+        #     seller = self.helper.add_person_residence(seller, seller.get("loc"), data)
+        #     tx_out = self.helper.add_transaction_place(tx_out, seller.get("location"), data)
+        # yield data
 
 
 class ModelTheftOrLoss(GoupilTransactionHandler):
@@ -1870,7 +2080,8 @@ class ModelTheftOrLoss(GoupilTransactionHandler):
 
         in_tx = self.add_incoming_tx(data, buy_sell_modifiers)
         in_tx_cl = transaction_classification.get('Vendu')
-        in_tx.classified_as = model.Type(ident=in_tx_cl.get('url'), label=in_tx_cl.get('label'))
+        if 'INV' not in in_tx.id:
+            in_tx.classified_as = model.Type(ident=in_tx_cl.get('url'), label=in_tx_cl.get('label'))
         tx_out = self._empty_tx(data, incoming=False)
         
         tx_type = rec['transaction']
@@ -1948,10 +2159,10 @@ class ModelUnsoldPurchases(GoupilTransactionHandler):
 
         in_tx = self.helper.add_transaction_place(in_tx, purch_loc_note, data)
         in_tx = self.helper.add_transaction_place(in_tx, purch_loc, data)
-
-        for seller in sellers:
-            seller = self.helper.add_person_residence(seller, seller.get("loc"), data)
-            in_tx = self.helper.add_transaction_place(in_tx, seller.get("location"), data)
+        if not (data['book_record']['transaction_verbatim']=='Non vendu' and int(data['book_record']['goupil_event_ord']) > 1):
+            for seller in sellers:
+                seller = self.helper.add_person_residence(seller, seller.get("loc"), data)
+                in_tx = self.helper.add_transaction_place(in_tx, seller.get("location"), data)
         yield data
 
 
@@ -2312,6 +2523,15 @@ class GoupilPipeline(PipelineBase):
                                     "goupil_object_id",
                                     "goupil_event_ord",  # TODO: for future reference only, semantics uknown at this point
                                     "transaction",
+                                    "last",
+                                    "start",
+                                    "saled",
+                                    "two",
+                                    "three",
+                                    "four",
+                                    "five",
+                                    "six",
+                                    "seven",
                                 ),
                             },
                         },

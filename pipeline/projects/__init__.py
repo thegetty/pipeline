@@ -506,9 +506,12 @@ class PersonIdentity:
 			auth_name = data.get('expert_auth')
 		elif 'commissaire_pr' in data:
 			auth_name = data.get('commissaire_pr')
-		disp_name = data.get('auth_display_name')
+		
+		disp_name = data.get('location')
 		name_types = [vocab.PrimaryName]
 		name = data.get('name')
+		if auth_name=='' and 'location' in data and name == '':
+			name = data.get('commissaire_pr')
 		personalNameType = vocab.CorporateName if group else vocab.PersonalName
 		if disp_name:
 			if auth_name:
@@ -516,7 +519,7 @@ class PersonIdentity:
 				data['label'] = auth_name
 			auth_name = disp_name
 			name_types = [personalNameType, vocab.DisplayName]
-
+		
 		role_label = None
 		if self.acceptable_person_auth_name(auth_name):
 			if role:
@@ -530,7 +533,18 @@ class PersonIdentity:
 			# elif referrer:
 			# 	pname.referred_to_by = referrer
 			data['identifiers'].append(pname)
-
+		elif self.acceptable_person_auth_name(name):
+			if role:
+				role_label = f'{role} “{name}”'
+			data.setdefault('label', name)
+			
+			pname = vocab.make_multitype_obj(*name_types, ident='', content=name) # NOTE: most of these are also vocab.SortName, but not 100%, so witholding that assertion for now
+			# if isinstance(referrer, list):
+			# 	for r in referrer:
+			# 		pname.referred_to_by = r
+			# elif referrer:
+			# 	pname.referred_to_by = referrer
+			data['identifiers'].append(pname)
 		else:
 			if not auth_name and name:
 				if 'catalog_number' in kwargs:
@@ -609,6 +623,7 @@ class StaticInstanceHolder:
 		else:
 			i = m.get(name)
 			idesc = None
+		
 		if i:
 			self.used.add((model, name))
 			return i
@@ -726,8 +741,8 @@ class PipelineBase:
 		gci.identified_by = vocab.PrimaryName(ident='', content='Getty Conservation Institute')
 		gci.exact_match = model.BaseResource(ident=f'http://vocab.getty.edu/ulan/{gci_ulan}')
 
-		gri = model.Group(ident=GETTY_GRI_URI, label='Getty Research Institute')
-		gri.identified_by = vocab.PrimaryName(ident='', content='Getty Research Institute')
+		gri = model.Group(ident=GETTY_GRI_URI, label='Getty Provenance Index')
+		gri.identified_by = vocab.PrimaryName(ident='', content='Getty Provenance Index')
 		gri.exact_match = model.BaseResource(ident=f'http://vocab.getty.edu/ulan/{gri_ulan}')
 
 		gpi = model.Group(ident=GETTY_GPI_URI, label='Getty Provenance Index')

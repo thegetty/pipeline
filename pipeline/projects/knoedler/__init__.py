@@ -144,6 +144,7 @@ class KnoedlerUtilityHelper(SharedUtilityHelper):
 		return super().stock_number_identifier(data,date)
 
 	def add_person(self, data, record, relative_id, **kwargs):
+		
 		self.person_identity.add_uri(data, record_id=relative_id)
 		key = data['uri_keys']
 		if key in self.services['people_groups']:
@@ -361,7 +362,7 @@ class KnoedlerProvenance:
 	def add_knoedler_creation_data(self, data):
 		thing_label = data['label']
 		knoedler = self.helper.static_instances.get_instance('Group', 'knoedler')
-		ny = self.helper.static_instances.get_instance('Place', 'newyork')
+		ny = self.helper.static_instances.get_instance('Place', '7007568')
 		# TODO remove when development is completed
 		# for key, value in self.helper.static_instances.instances['Place'].items():
 		# 	t = self.helper.static_instances.get_instance('Place', key)
@@ -371,7 +372,6 @@ class KnoedlerProvenance:
 		creation.carried_out_by = knoedler
 		creation.took_place_at = ny
 		o.created_by = creation
-
 		return creation
 
 class AddBook(Configurable, KnoedlerProvenance):
@@ -426,7 +426,6 @@ class AddBook(Configurable, KnoedlerProvenance):
 
 		make_la_hmo(data['_physical_book'])
 		make_la_lo(data['_text_book'])
-		
 		self.add_knoedler_creation_data(data['_text_book'])
 		
 		return data
@@ -928,7 +927,6 @@ class TransactionHandler(ProvenanceBase):
 		hmo = get_crom_object(odata)
 		sn_ident = self.helper.stock_number_identifier(odata, date)
 		inv_label = f'Knoedler Inventorying of {sn_ident}'
-
 		inv_uri = self.helper.make_proj_uri('INV', book_id, page_id, row_id)
 		inv = vocab.Inventorying(ident=inv_uri, label=inv_label)
 		inv.identified_by = model.Name(ident='', content=inv_label)
@@ -967,28 +965,29 @@ class TransactionHandler(ProvenanceBase):
 			remaining = Fraction(1, 1)
 # 			print(f'{1+len(shared_people)}-way split:')
 			for i, p in enumerate(shared_people):
-				person_dict = self.helper.copy_source_information(p, data)
-				person = self.helper.add_person(
-					person_dict,
-					record=sales_record,
-					relative_id=f'{role}_{i+1}'
-				)
-				name = p.get('name', p.get('auth_name', '(anonymous)'))
-				share = p.get('share', '1/1')
-				try:
-					if share != '':
-						share_frac = Fraction(share)
-						remaining -= share_frac
+				if 'auth_name' in p:
+					person_dict = self.helper.copy_source_information(p, data)
+					person = self.helper.add_person(
+						person_dict,
+						record=sales_record,
+						relative_id=f'{role}_{i+1}'
+					)
+					name = p.get('name', p.get('auth_name', '(anonymous)'))
+					share = p.get('share', '1/1')
+					try:
+						if share != '':
+							share_frac = Fraction(share)
+							remaining -= share_frac
 
-						right = self.ownership_right(share_frac, person)
+							right = self.ownership_right(share_frac, person)
 
-						rights.append(right)
-					people.append(person_dict)
-					knoedler_group.append(person)
-# 					print(f'   {share:<10} {name:<50}')
-				except ValueError as e:
-					warnings.warn(f'ValueError while handling shared rights ({e}): {pprint.pformat(p)}')
-					raise
+							rights.append(right)
+						people.append(person_dict)
+						knoedler_group.append(person)
+	# 					print(f'   {share:<10} {name:<50}')
+					except ValueError as e:
+						warnings.warn(f'ValueError while handling shared rights ({e}): {pprint.pformat(p)}')
+						raise
 					
 # 			print(f'   {str(remaining):<10} {knoedler._label:<50}')
 			k_right = self.ownership_right(remaining, knoedler)
@@ -1026,13 +1025,14 @@ class TransactionHandler(ProvenanceBase):
 		if shared_people:
 			role = 'shared-buyer' if incoming else 'shared-seller'
 			for i, p in enumerate(shared_people):
-				person_dict = self.helper.copy_source_information(p, data)
-				person = self.helper.add_person(
-					person_dict,
-					record=sales_record,
-					relative_id=f'{role}_{i+1}'
-				)
-				knoedler_group.append(person)
+				if 'auth_name' in p:
+					person_dict = self.helper.copy_source_information(p, data)
+					person = self.helper.add_person(
+						person_dict,
+						record=sales_record,
+						relative_id=f'{role}_{i+1}'
+					)
+					knoedler_group.append(person)
 		# Check if a joint owner is either a seller or a buyer
 		people_ids = set([x.id for x in people])
 		knoedler_group_ids = set([x.id for x in knoedler_group])
@@ -1347,17 +1347,18 @@ class TransactionHandler(ProvenanceBase):
 			# these are the people that joined Knoedler in the purchase/sale
 			role = 'shared-buyer' if incoming else 'shared-seller'
 			for i, p_data in enumerate(shared_people):
-				mod = self.modifiers(p_data, 'auth_mod')
-				person_dict = self.helper.copy_source_information(p_data, data)
-				person = self.helper.add_person(
-					person_dict,
-					record=sales_record,
-					relative_id=f'{role}_{i+1}'
-				)
-				if THROUGH.intersects(mod):
-					knoedler_group_agents.append(person)
-				else:
-					knoedler_group.append(person)
+				if 'auth_name' in p_data:
+					mod = self.modifiers(p_data, 'auth_mod')
+					person_dict = self.helper.copy_source_information(p_data, data)
+					person = self.helper.add_person(
+						person_dict,
+						record=sales_record,
+						relative_id=f'{role}_{i+1}'
+					)
+					if THROUGH.intersects(mod):
+						knoedler_group_agents.append(person)
+					else:
+						knoedler_group.append(person)
 
 		from_people = []
 		from_agents = []
@@ -1502,10 +1503,10 @@ class TransactionHandler(ProvenanceBase):
 # 					# some records seem to have metadata (source information, location, or notes)
 # 					# but no other fields set these should not constitute actual records of a prev/post owner.
 # 					continue
-				self.handle_prev_post_owner(data, hmo, tx_data, 'Sold', lot_object_key, owner_record, record_id, rev, ts, make_label=prov_entry_label)
+				if 'parent_data' in data:
+					self.handle_prev_post_owner(data, hmo, tx_data, 'Sold', lot_object_key, owner_record, record_id, rev, ts, make_label=prov_entry_label)
 
 	def add_outgoing_tx(self, data, buy_sell_modifiers):
-		import pdb; pdb.set_trace()
 		price_info = data.get('sale')
 		knoedler_price_part = data.get('sale_knoedler_share')
 		shared_people = data.get('purchase_buyer')
@@ -1669,8 +1670,8 @@ class ModelFinalSale(TransactionHandler):
 			lot_object_key = list(self.helper.transaction_key_for_record(data, incoming=True))
 			tx_data = {'uri': tx.id, 'label': f'Event leading to the currently known location of {hmo._label}'}
 			add_crom_data(data=tx_data, what=tx)
-			
-			self.handle_prev_post_owner(odata, hmo, current_tx_data, 'Sold', lot_object_key, org, f'final-owner-1', False, None, make_label=prov_entry_label)
+			if 'parent_data' in data:
+				self.handle_prev_post_owner(odata, hmo, current_tx_data, 'Sold', lot_object_key, org, f'final-owner-1', False, None, make_label=prov_entry_label)
 			odata = {k: v for k, v in odata.items() if k in ('_prov_entries', '_people')}
 			yield odata
 

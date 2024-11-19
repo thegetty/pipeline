@@ -75,7 +75,10 @@ class ProvenanceBase(Configurable):
 		if sales_record:
 			tx.referred_to_by = sales_record
 		tx_label1 = make_label(*tx_label_args).split('(')
-		tx_label = tx_label1[0] + "by " +  buyer._label + " (before " + tx_label1[1]
+		if len(tx_label1)==1:
+			tx_label = tx_label1[0]
+		else:
+			tx_label = tx_label1[0] + "by " +  buyer._label + " (before " + tx_label1[1]
 		tx._label = tx_label
 		tx.identified_by = model.Name(ident='', content=tx_label)
 		if current_tx:
@@ -182,6 +185,7 @@ class ProvenanceBase(Configurable):
 
 	def handle_prev_post_owner(self, data, hmo, tx_data, sale_type, lot_object_key, owner_record, record_id, rev, ts=None, make_label=None, rev_name="", seq_no=0):
 		current_tx = get_crom_object(tx_data)
+		
 		parent = data['parent_data']
 		sales_record = get_crom_object(data.get('_record', data.get('_text_row')))
 		if rev:

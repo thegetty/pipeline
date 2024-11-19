@@ -21,7 +21,7 @@ if __name__ == '__main__':
 
 	data = {
 		'header_file': 'knoedler_0.csv',
-		'files_pattern': 'test.csv',
+		'files_pattern': 'knoedler.csv',
 	}
 
 #	factory.production_mode()

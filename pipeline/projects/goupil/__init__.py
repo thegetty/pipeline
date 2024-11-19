@@ -1814,7 +1814,6 @@ class ModelSale(GoupilTransactionHandler):
     ):
         sellers = data["purchase_seller"]
         if not in_tx:
-            
             if (data['book_record']['transaction_verbatim']=='Vendu' and (int(data['book_record']['goupil_event_ord']) == 1 or data['book_record']['last'] == 'True')):
                 
                 in_tx = self.add_incoming_tx(data, buy_sell_modifiers, people_groups)
@@ -1978,7 +1977,7 @@ class ModelInventorying(GoupilTransactionHandler):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.uid_tag_prefix = self.helper.proj_prefix
-    
+
     def __call__(self, data: dict, make_la_person, buy_sell_modifiers, people_groups): #, cities_auth_db):
 
         sellers = data["purchase_seller"]
@@ -1988,6 +1987,7 @@ class ModelInventorying(GoupilTransactionHandler):
             return
         if  int(data['book_record']['goupil_event_ord']) > 1:
             inv = self._new_inventorying(data)
+
             inv_label = inv._label
             in_tx = self._empty_tx(data, incoming=True)
             
@@ -2013,10 +2013,12 @@ class ModelInventorying(GoupilTransactionHandler):
             in_tx.identified_by = model.Name(ident="", content=inv_label)
             in_tx._label = inv_label
             in_tx.classified_as = model.Type(ident='http://vocab.getty.edu/aat/300077506', label="Inventorying")
+
             in_tx_data = add_crom_data(data={"uri": in_tx.id, "label": inv_label}, what=in_tx)
             data["_prov_entries"].append(in_tx_data)
         else:
             in_tx = self.add_incoming_tx(data, buy_sell_modifiers, people_groups)
+
             if len(in_tx.classified_as)==1:
                 in_tx.classified_as = model.Type(ident='http://vocab.getty.edu/aat/300417642', label="Purchase")
             

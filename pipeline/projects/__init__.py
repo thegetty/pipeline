@@ -551,9 +551,11 @@ class PersonIdentity:
 					data.setdefault('label', name)
 					pname = vocab.PrimaryName(ident='', content=name + " referred to in " + kwargs['catalog_number'])
 					data['identifiers'].append(pname)
-        
+				elif not auth_name and name and 'location' in data:
+						pname = vocab.PrimaryName(ident='', content=name + " ("+data['location'] +")")
+						data['label']= name + " ("+data['location'] +")"
+						data['identifiers'].append(pname)
 		data.setdefault('names', [])
-		
 		names = []
 		
 		if name:

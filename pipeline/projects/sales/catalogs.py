@@ -68,6 +68,17 @@ class AddAuctionCatalog(Configurable):
 		catalog._validate_profile = False
 		catalog.features_are_also_found_on = row
 
+		if 'title_pg_sell' in data:
+			for seller_verbatim in data['title_pg_sell'].values():
+				catalog.part = vocab.TitlePageText(ident='', content=seller_verbatim)
+
+		# part model in arches does not accept the Brief Text classified_as and breaking the loading process
+		# The following piece of code removes the classified_as from the part model to resolve the issue
+		# the path that removes is part -> classified_as -> classified_as. The last part is removed from the output
+		for part in catalog.__dict__.get('part', []):
+			if 'classified_as' in part.__dict__['classified_as'][0].__dict__:
+				part.__dict__['classified_as'][0].__dict__['classified_as'] = []
+
 		cdata = {'uri': catalog.id}
 		puid = data.get('persistent_puid')
 		if puid:
@@ -225,11 +236,13 @@ class PopulateAuctionCatalog(Configurable):
 			if not lugt_no:
 				warnings.warn(f'Setting empty identifier on {catalog.id}')
 			catalog.identified_by = self.lugt_number_id(lugt_no)
+
 		if parent.get('cat_input_status', {}):
 			catalog.referred_to_by = vocab.Transcription(ident='', content=parent.get('cat_input_status', {}))
 			
 		for seller_verbatim in parent.get('title_pg_sell', {}).values():
 			catalog.referred_to_by = vocab.TitlePageText(ident='', content=seller_verbatim)
+
 
 		if not cno:
 			warnings.warn(f'Setting empty identifier on {catalog.id}')
